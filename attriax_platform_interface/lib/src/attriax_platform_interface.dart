@@ -1,0 +1,28 @@
+import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+import 'method_channel_attriax.dart';
+import 'types.dart';
+
+/// The interface that implementations of attriax must implement.
+abstract class AttriaxPlatform extends PlatformInterface {
+  AttriaxPlatform() : super(token: _token);
+
+  static final Object _token = Object();
+
+  static AttriaxPlatform _instance = MethodChannelAttriax();
+
+  static AttriaxPlatform get instance => _instance;
+
+  static set instance(AttriaxPlatform instance) {
+    PlatformInterface.verify(instance, _token);
+    _instance = instance;
+  }
+
+  Future<AttriaxNativeContext> collectNativeContext() {
+    throw UnimplementedError(
+      'collectNativeContext() has not been implemented.',
+    );
+  }
+
+  Future<AttriaxInstallReferrerContext> collectInstallReferrer() async =>
+      const AttriaxInstallReferrerContext();
+}

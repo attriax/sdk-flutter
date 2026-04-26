@@ -1,0 +1,20 @@
+import 'package:attriax_platform_interface/attriax_platform_interface.dart';
+
+import 'internal/attriax_runtime.dart';
+
+/// Focused synchronization facade exposed from the public Attriax SDK.
+class AttriaxSynchronization {
+  const AttriaxSynchronization(this._runtime);
+
+  final AttriaxRuntime _runtime;
+
+  /// Whether every queued SDK request has been delivered successfully.
+  bool get isSynchronized => _runtime.isSynchronized;
+
+  /// Current runtime synchronization state.
+  AttriaxSynchronizationState get state => _runtime.synchronizationState;
+
+  /// Broadcast synchronization state stream with no buffering.
+  Stream<AttriaxSynchronizationState> get states =>
+      _runtime.synchronizationStates;
+}

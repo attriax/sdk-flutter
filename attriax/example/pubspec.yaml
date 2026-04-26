@@ -1,0 +1,42 @@
+name: attriax_example
+description: Public example app for the Attriax Flutter SDK.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.0
+
+resolution: workspace
+
+dependencies:
+  cupertino_icons: ^1.0.8
+  flutter:
+    sdk: flutter
+  attriax:
+    path: ..
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: assets/branding/attriax-logo.png
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: assets/branding/attriax-logo.png
+    background_color: "#ffffff"
+    theme_color: "#ffffff"
+  windows:
+    generate: true
+    image_path: assets/branding/attriax-logo.png
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: assets/branding/attriax-logo.png
+
+flutter:
+  uses-material-design: true
