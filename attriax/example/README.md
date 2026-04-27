@@ -16,6 +16,7 @@ Minimal public example app for the Attriax Flutter SDK.
 ```bash
 cd attriax/example
 flutter run
+flutter test
 ```
 
 Before expecting successful synchronization, replace the placeholder app token
@@ -25,5 +26,7 @@ The example runner files include the Android and iOS host-side deep-link setup
 used by Attriax. Desktop platforms are still manual: if your app accepts a URL
 on macOS, Linux, or Windows, forward it into the SDK with
 `recordDeepLinkConversion(...)`.
+
+The widget tests in `test/main_test.dart` cover the two most important example flows: waiting for the app-open result and routing a matched deep link into the demo screens.
 
 If you need to validate a non-blocking startup flow, switch the example app's `main()` to use `unawaited(attriax.init())` intentionally.

@@ -31,13 +31,15 @@ Run these commands before every release:
 
 ```bash
 cd flutter-plugin && flutter pub get
-cd attriax && flutter analyze lib/
-cd ..\attriax_platform_interface && flutter analyze
-cd ..\attriax_android && flutter analyze
-cd ..\attriax_ios && flutter analyze
-cd ..\attriax\example && flutter analyze lib/ && flutter build web && flutter build apk --debug
+cd attriax && flutter analyze && flutter test
+cd ..\attriax\example && flutter analyze && flutter test && flutter build web && flutter build apk --debug
+cd ..\..\attriax_platform_interface && flutter analyze && flutter test
+cd ..\attriax_android && flutter analyze && flutter test
+cd ..\attriax_ios && flutter analyze && flutter test
 cd ..\..\flutter-internal-tester && flutter pub get && flutter analyze lib/
 ```
+
+The workspace root itself does not have a top-level `flutter test` entrypoint, so release validation should stay package-scoped.
 
 Then run publish dry-runs for each package in release order:
 

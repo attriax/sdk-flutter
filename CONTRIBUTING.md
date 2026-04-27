@@ -47,7 +47,11 @@ Be respectful and constructive in all interactions with other contributors and m
 
 3. **Run tests**:
    ```bash
-   flutter test
+   cd attriax && flutter test
+   cd ..\attriax\example && flutter test
+   cd ..\..\attriax_platform_interface && flutter test
+   cd ..\attriax_android && flutter test
+   cd ..\attriax_ios && flutter test
    ```
 
 4. **Test on both platforms**:
@@ -113,7 +117,7 @@ The internal tester lives in the sibling repository `../flutter-internal-tester/
 
 - Write tests for all new functionality
 - Tests should be in a `test/` directory within each package
-- Run: `flutter test`
+- Run tests from the package directories that own them; the workspace root does not have a top-level `test/` directory
 
 ## Documentation
 

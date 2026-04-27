@@ -14,6 +14,8 @@ This package provides the Android platform implementation for the Attriax SDK.
 - Package name: `com.attriax.attriax_android`
 - Plugin class: `AttriaxAndroidPlugin`
 - Platform: Android 5.0+ (API Level 21+)
+- Dart wrapper: `lib/src/attriax_android.dart`
+- Native handler: `android/src/main/java/com/attriax/attriax_android/AttriaxAndroidPlugin.java`
 
 ## Development
 
@@ -27,6 +29,13 @@ This package provides the Android platform implementation for the Attriax SDK.
 Validate this package through the public example or an integration app. The
 Android implementation should be checked against real app links and at least
 one Play-distributed install when verifying install referrer behavior.
+
+Run the package-level regression tests before release:
+
+```bash
+cd flutter-plugin/attriax_android
+flutter test
+```
 
 ### File Structure
 

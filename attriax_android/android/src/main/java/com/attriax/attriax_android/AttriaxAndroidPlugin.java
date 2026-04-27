@@ -1,9 +1,13 @@
 package com.attriax.attriax_android;
 
 import android.content.pm.PackageManager;
+import android.content.pm.PackageInfo;
+import android.content.pm.Signature;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.InstallSourceInfo;
+import android.content.pm.verify.domain.DomainVerificationManager;
+import android.content.pm.verify.domain.DomainVerificationUserState;
 import android.os.Build;
 import android.provider.Settings;
 import androidx.annotation.NonNull;
@@ -19,8 +23,12 @@ import io.flutter.plugin.common.MethodChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.NewIntentListener;
+import java.security.MessageDigest;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map.Entry;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -142,6 +150,7 @@ public class AttriaxAndroidPlugin implements
         metadata.put("source", "android_native");
         metadata.put("timezone", TimeZone.getDefault().getID());
         metadata.put("locale", Locale.getDefault().toLanguageTag());
+        metadata.put("packageName", context.getPackageName());
 
         try {
             PackageManager packageManager = context.getPackageManager();
@@ -164,8 +173,132 @@ public class AttriaxAndroidPlugin implements
             metadata.put("installerPackageNameError", exception.getMessage());
         }
 
+        appendSigningFingerprints(metadata);
+        appendDomainVerificationState(metadata);
+
         payload.put("metadata", metadata);
         result.success(payload);
+    }
+
+    @SuppressWarnings("deprecation")
+    private void appendSigningFingerprints(Map<String, Object> metadata) {
+        try {
+            PackageManager packageManager = context.getPackageManager();
+            PackageInfo packageInfo;
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                packageInfo = packageManager.getPackageInfo(
+                    context.getPackageName(),
+                    PackageManager.GET_SIGNING_CERTIFICATES
+                );
+            } else {
+                packageInfo = packageManager.getPackageInfo(
+                    context.getPackageName(),
+                    PackageManager.GET_SIGNATURES
+                );
+            }
+
+            List<String> fingerprints = new ArrayList<>();
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && packageInfo.signingInfo != null) {
+                Signature[] signatures = packageInfo.signingInfo.hasMultipleSigners()
+                    ? packageInfo.signingInfo.getApkContentsSigners()
+                    : packageInfo.signingInfo.getSigningCertificateHistory();
+
+                if (signatures != null) {
+                    for (Signature signature : signatures) {
+                        String fingerprint = toSha256Fingerprint(signature.toByteArray());
+                        if (fingerprint != null && !fingerprints.contains(fingerprint)) {
+                            fingerprints.add(fingerprint);
+                        }
+                    }
+                }
+            } else if (packageInfo.signatures != null) {
+                for (Signature signature : packageInfo.signatures) {
+                    String fingerprint = toSha256Fingerprint(signature.toByteArray());
+                    if (fingerprint != null && !fingerprints.contains(fingerprint)) {
+                        fingerprints.add(fingerprint);
+                    }
+                }
+            }
+
+            metadata.put("signingSha256Fingerprints", fingerprints);
+        } catch (Exception exception) {
+            metadata.put("signingSha256FingerprintError", exception.getMessage());
+        }
+    }
+
+    private void appendDomainVerificationState(Map<String, Object> metadata) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return;
+        }
+
+        try {
+            DomainVerificationManager manager = context.getSystemService(
+                DomainVerificationManager.class
+            );
+
+            if (manager == null) {
+                return;
+            }
+
+            DomainVerificationUserState userState = manager.getDomainVerificationUserState(
+                context.getPackageName()
+            );
+
+            if (userState == null) {
+                return;
+            }
+
+            Map<String, Object> domainVerification = new HashMap<>();
+            Map<String, String> hostStates = new HashMap<>();
+
+            for (Entry<String, Integer> entry : userState.getHostToStateMap().entrySet()) {
+                hostStates.put(entry.getKey(), domainStateToString(entry.getValue()));
+            }
+
+            domainVerification.put("hostStates", hostStates);
+            domainVerification.put("linkHandlingAllowed", userState.isLinkHandlingAllowed());
+            metadata.put("domainVerification", domainVerification);
+        } catch (Exception exception) {
+            metadata.put("domainVerificationError", exception.getMessage());
+        }
+    }
+
+    private String toSha256Fingerprint(byte[] certificateBytes) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(certificateBytes);
+            StringBuilder builder = new StringBuilder();
+
+            for (int index = 0; index < hash.length; index++) {
+                if (index > 0) {
+                    builder.append(':');
+                }
+                builder.append(String.format(Locale.US, "%02X", hash[index]));
+            }
+
+            return builder.toString();
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    private String domainStateToString(int state) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return "unsupported";
+        }
+
+        switch (state) {
+            case DomainVerificationUserState.DOMAIN_STATE_NONE:
+                return "none";
+            case DomainVerificationUserState.DOMAIN_STATE_SELECTED:
+                return "selected";
+            case DomainVerificationUserState.DOMAIN_STATE_VERIFIED:
+                return "verified";
+            default:
+                return "unknown_" + state;
+        }
     }
 
     private void collectInstallReferrer(@NonNull Result result) {

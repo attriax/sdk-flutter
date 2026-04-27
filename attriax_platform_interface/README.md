@@ -28,6 +28,13 @@ platform methods:
 2. Implement in each platform package
 3. Update the example app to demonstrate usage
 
+Run the package-level regression tests before release:
+
+```bash
+cd flutter-plugin/attriax_platform_interface
+flutter test
+```
+
 ## Contributing
 
 See the parent [README.md](../README.md) for contribution guidelines.

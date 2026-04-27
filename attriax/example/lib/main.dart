@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:attriax/attriax.dart';
 
+import 'example_attriax_sdk.dart';
+
 // ── SDK instance (application-level singleton) ────────────────────────────────
 //
 // Create the Attriax instance as a top-level variable. Calling init() here
@@ -18,6 +20,8 @@ final Attriax attriax = Attriax(
     },
   ),
 );
+
+final ExampleAttriaxSdk exampleSdk = LiveExampleAttriaxSdk(attriax);
 
 final GlobalKey<NavigatorState> _exampleNavigatorKey =
     GlobalKey<NavigatorState>();
@@ -104,11 +108,14 @@ void _openExampleDeepLink(AttriaxDeepLink deepLink, {required String source}) {
   );
 }
 
-Route<void> _onGenerateExampleRoute(RouteSettings settings) {
+Route<void> _onGenerateExampleRoute(
+  RouteSettings settings, {
+  required ExampleAttriaxSdk sdk,
+}) {
   switch (settings.name) {
     case '/':
       return MaterialPageRoute<void>(
-        builder: (_) => const ExampleHomePage(),
+        builder: (_) => ExampleHomePage(sdk: sdk),
         settings: settings,
       );
     case '/promo':
@@ -121,7 +128,7 @@ Route<void> _onGenerateExampleRoute(RouteSettings settings) {
       );
     default:
       return MaterialPageRoute<void>(
-        builder: (_) => const ExampleHomePage(),
+        builder: (_) => ExampleHomePage(sdk: sdk),
         settings: settings,
       );
   }
@@ -136,36 +143,40 @@ void main() async {
   // persisted state, collected context, and started listeners before the UI.
   // If your app must remain non-blocking, you can intentionally choose
   // unawaited(attriax.init()) instead.
-  await attriax.init();
+  await exampleSdk.init();
 
-  runApp(const AttriaxPackageExampleApp());
+  runApp(AttriaxPackageExampleApp());
 }
 
 // ── App widget ────────────────────────────────────────────────────────────────
 
 class AttriaxPackageExampleApp extends StatelessWidget {
-  const AttriaxPackageExampleApp({super.key});
+  AttriaxPackageExampleApp({super.key, ExampleAttriaxSdk? sdk})
+    : sdk = sdk ?? exampleSdk;
+
+  final ExampleAttriaxSdk sdk;
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Attriax Example',
       navigatorKey: _exampleNavigatorKey,
-      navigatorObservers: <NavigatorObserver>[
-        AttriaxNavigationObserver(attriax: attriax),
-      ],
+      navigatorObservers: sdk.buildNavigatorObservers(),
       theme: ThemeData(
         colorSchemeSeed: const Color(0xFF0F766E),
         useMaterial3: true,
       ),
-      onGenerateRoute: _onGenerateExampleRoute,
+      onGenerateRoute: (settings) =>
+          _onGenerateExampleRoute(settings, sdk: sdk),
       initialRoute: '/',
     );
   }
 }
 
 class ExampleHomePage extends StatefulWidget {
-  const ExampleHomePage({super.key});
+  const ExampleHomePage({super.key, required this.sdk});
+
+  final ExampleAttriaxSdk sdk;
 
   @override
   State<ExampleHomePage> createState() => _ExampleHomePageState();
@@ -191,15 +202,15 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   void initState() {
     super.initState();
 
-    _deepLinkSubscription = attriax.deepLinks.listen(_handleDeepLinkEvent);
-    _synchronizationSubscription = attriax.synchronization.states.listen((_) {
+    _deepLinkSubscription = widget.sdk.deepLinks.listen(_handleDeepLinkEvent);
+    _synchronizationSubscription = widget.sdk.synchronizationStates.listen((_) {
       if (!mounted) {
         return;
       }
       setState(() {});
     });
 
-    if (attriax.isInitialized) {
+    if (widget.sdk.isInitialized) {
       _syncStateFromSdk();
     }
   }
@@ -214,9 +225,9 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
 
   void _syncStateFromSdk() {
     setState(() {
-      _sdkEnabled = attriax.enabled;
-      _eventsEnabled = attriax.eventsEnabled;
-      _status = attriax.enabled
+      _sdkEnabled = widget.sdk.enabled;
+      _eventsEnabled = widget.sdk.eventsEnabled;
+      _status = widget.sdk.enabled
           ? 'Initialized. App open tracking is running.'
           : 'Initialized in disabled mode.';
     });
@@ -275,7 +286,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   Future<void> _waitForAppOpenTracking() async {
     setState(() => _status = 'Waiting for app open tracking...');
     try {
-      final result = await attriax.waitForAppOpenTracking();
+      final result = await widget.sdk.waitForAppOpenTracking();
       if (!mounted) return;
       setState(() {
         _appOpenResult = result;
@@ -290,7 +301,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   }
 
   Future<void> _trackSampleEvent() async {
-    await attriax.trackEvent(
+    await widget.sdk.trackEvent(
       'purchase_completed',
       eventData: const <String, Object?>{
         'value': 99,
@@ -303,7 +314,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   }
 
   Future<void> _identifySampleUser() async {
-    await attriax.identify(
+    await widget.sdk.identify(
       'demo-user-123',
       externalUserName: 'Package Example User',
     );
@@ -312,7 +323,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   }
 
   Future<void> _createSampleDynamicLink() async {
-    final result = await attriax.createDynamicLink(
+    final result = await widget.sdk.createDynamicLink(
       name: 'Package example dynamic link',
       destinationUrl: 'https://attriax.com/invite',
       group: 'package-example',
@@ -333,7 +344,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   }
 
   Future<void> _reportManualConversion() async {
-    final event = await attriax.recordDeepLinkConversion(
+    final event = await widget.sdk.recordDeepLinkConversion(
       linkPath: _manualPathController.text,
       source: 'package_example_manual',
       metadata: const <String, Object?>{'acceptedBy': 'example_button'},
@@ -348,13 +359,13 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
 
   void _toggleSdk(bool value) {
     setState(() => _sdkEnabled = value);
-    attriax.enabled = value;
+    widget.sdk.enabled = value;
     setState(() => _status = 'SDK enabled set to $value.');
   }
 
   void _toggleEvents(bool value) {
     setState(() => _eventsEnabled = value);
-    attriax.eventsEnabled = value;
+    widget.sdk.eventsEnabled = value;
     setState(() => _status = 'Custom event sending set to $value.');
   }
 
@@ -392,7 +403,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
 
   Color _synchronizationColor(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    switch (attriax.synchronization.state) {
+    switch (widget.sdk.synchronizationState) {
       case AttriaxSynchronizationState.synchronized:
         return scheme.primaryContainer;
       case AttriaxSynchronizationState.initializing:
@@ -409,7 +420,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final synchronizationState = attriax.synchronization.state;
+    final synchronizationState = widget.sdk.synchronizationState;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Attriax Example')),
@@ -473,14 +484,12 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                       const SizedBox(height: 12),
                       Text(_status),
                       const SizedBox(height: 8),
-                      Text('Initialized: ${attriax.isInitialized}'),
-                      Text(
-                        'Synchronized: ${attriax.synchronization.isSynchronized}',
-                      ),
-                      Text('SDK enabled: ${attriax.enabled}'),
-                      Text('Events enabled: ${attriax.eventsEnabled}'),
-                      Text('First launch: ${attriax.isFirstLaunch}'),
-                      Text('Device ID: ${attriax.deviceId ?? 'pending…'}'),
+                      Text('Initialized: ${widget.sdk.isInitialized}'),
+                      Text('Synchronized: ${widget.sdk.isSynchronized}'),
+                      Text('SDK enabled: ${widget.sdk.enabled}'),
+                      Text('Events enabled: ${widget.sdk.eventsEnabled}'),
+                      Text('First launch: ${widget.sdk.isFirstLaunch}'),
+                      Text('Device ID: ${widget.sdk.deviceId ?? 'pending…'}'),
                       if (_appOpenResult != null) ...<Widget>[
                         const SizedBox(height: 8),
                         Text(
@@ -562,7 +571,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                       ),
                       const SizedBox(height: 8),
                       OutlinedButton(
-                        onPressed: attriax.isInitialized
+                        onPressed: widget.sdk.isInitialized
                             ? _waitForAppOpenTracking
                             : null,
                         child: const Text('Wait for app open tracking result'),
@@ -581,21 +590,21 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                       Text('Actions', style: textTheme.titleMedium),
                       const SizedBox(height: 12),
                       FilledButton.tonal(
-                        onPressed: attriax.isInitialized
+                        onPressed: widget.sdk.isInitialized
                             ? _trackSampleEvent
                             : null,
                         child: const Text('Queue purchase_completed event'),
                       ),
                       const SizedBox(height: 8),
                       FilledButton.tonal(
-                        onPressed: attriax.isInitialized
+                        onPressed: widget.sdk.isInitialized
                             ? _identifySampleUser
                             : null,
                         child: const Text('Queue identify (demo-user-123)'),
                       ),
                       const SizedBox(height: 8),
                       FilledButton.tonal(
-                        onPressed: attriax.isInitialized
+                        onPressed: widget.sdk.isInitialized
                             ? _createSampleDynamicLink
                             : null,
                         child: const Text('Create sample dynamic link'),
@@ -612,7 +621,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                       ),
                       const SizedBox(height: 8),
                       FilledButton.tonal(
-                        onPressed: attriax.isInitialized
+                        onPressed: widget.sdk.isInitialized
                             ? _reportManualConversion
                             : null,
                         child: const Text('Report manual deep-link conversion'),

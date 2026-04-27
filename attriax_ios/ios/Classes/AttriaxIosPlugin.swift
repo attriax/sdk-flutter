@@ -1,4 +1,5 @@
 import Flutter
+import Security
 import UIKit
 
 public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandler, FlutterSceneLifeCycleDelegate {
@@ -140,6 +141,7 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             "preferredLanguages": Locale.preferredLanguages,
             "vendorIdentifier": device.identifierForVendor?.uuidString as Any,
             "deviceModel": device.model,
+            "bundleIdentifier": Bundle.main.bundleIdentifier as Any,
             "systemName": device.systemName,
             "systemVersion": device.systemVersion,
             "screenWidthPoints": screenBounds.width,
@@ -147,6 +149,32 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             "screenScale": screen.scale,
             "isLowPowerModeEnabled": ProcessInfo.processInfo.isLowPowerModeEnabled,
         ]
+
+        if let flutterDeepLinkingEnabled = Bundle.main.object(
+            forInfoDictionaryKey: "FlutterDeepLinkingEnabled"
+        ) as? Bool {
+            metadata["flutterDeepLinkingEnabled"] = flutterDeepLinkingEnabled
+        }
+
+        let associatedDomains = readEntitlementStringArray(
+            key: "com.apple.developer.associated-domains"
+        )
+        if !associatedDomains.isEmpty {
+            metadata["associatedDomains"] = associatedDomains
+        }
+
+        if let applicationIdentifier = readEntitlementString(key: "application-identifier") {
+            metadata["applicationIdentifier"] = applicationIdentifier
+            if let teamIdentifier = applicationIdentifier.split(separator: ".").first {
+                metadata["teamIdentifier"] = String(teamIdentifier)
+            }
+        }
+
+        if let explicitTeamIdentifier = readEntitlementString(
+            key: "com.apple.developer.team-identifier"
+        ) {
+            metadata["teamIdentifier"] = explicitTeamIdentifier
+        }
 
         // Interface idiom: phone, pad, mac, tv, carPlay, vision, unspecified
         switch device.userInterfaceIdiom {
@@ -165,6 +193,30 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
 #endif
 
         return ["metadata": metadata]
+    }
+
+    private func readEntitlementValue(key: String) -> Any? {
+        guard let task = SecTaskCreateFromSelf(nil) else {
+            return nil
+        }
+
+        return SecTaskCopyValueForEntitlement(task, key as CFString, nil)
+    }
+
+    private func readEntitlementString(key: String) -> String? {
+        return readEntitlementValue(key: key) as? String
+    }
+
+    private func readEntitlementStringArray(key: String) -> [String] {
+        if let values = readEntitlementValue(key: key) as? [String] {
+            return values
+        }
+
+        if let values = readEntitlementValue(key: key) as? [NSString] {
+            return values.map { String($0) }
+        }
+
+        return []
     }
 
     private func handleLink(url: URL) {

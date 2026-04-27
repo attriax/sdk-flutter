@@ -14,6 +14,8 @@ This package provides the iOS platform implementation for the Attriax SDK.
 - Plugin class: `AttriaxIosPlugin`
 - Platform: iOS 13.0+
 - Language: Swift
+- Dart wrapper: `lib/src/attriax_ios.dart`
+- Native handler: `ios/Classes/AttriaxIosPlugin.swift`
 
 ## Development
 
@@ -28,6 +30,15 @@ This package provides the iOS platform implementation for the Attriax SDK.
 Validate this package from a macOS machine before release. Universal links,
 foreground/background startup behavior, and App Store privacy disclosures must
 be verified on real iOS hardware as part of the release checklist.
+
+Run the package-level regression tests before release:
+
+```bash
+cd flutter-plugin/attriax_ios
+flutter test
+```
+
+Unlike Android, iOS does not provide an install-referrer API, so release validation should focus on universal-link delivery, initial app-open attribution, and device-context collection.
 
 ### File Structure
 

@@ -5,7 +5,7 @@
 ### Project Structure
 - **attriax/** — Main plugin (public API)
 - **attriax_platform_interface/** — Platform interface definitions
-- **attriax_android/** — Android implementation (Kotlin)
+- **attriax_android/** — Android implementation (Dart wrapper + Java plugin)
 - **attriax_ios/** — iOS implementation (Swift)
 - **attriax/example/** — Simple public example app
 - **../flutter-internal-tester/** — Internal testing app
@@ -25,7 +25,11 @@ dart analyze
 dart format .
 
 # Run tests
-flutter test
+cd attriax && flutter test
+cd ..\attriax\example && flutter test
+cd ..\..\attriax_platform_interface && flutter test
+cd ..\attriax_android && flutter test
+cd ..\attriax_ios && flutter test
 
 # Run public example
 cd attriax\example && flutter run
@@ -66,22 +70,22 @@ When adding a new feature:
    ```
 
 2. **Implement Android** in `attriax_android/lib/src/`:
-   ```kotlin
-   class AttriaxAndroidPlugin: AttriaxPlatform {
-     override suspend fun newFeature() { ... }
-   }
-   ```
-
-3. **Implement iOS** in `attriax_ios/lib/src/`:
-   ```swift
-   class AttriaxIosPlugin: AttriaxPlatform {
-     func newFeature() async throws { ... }
-   }
-   ```
-
-4. **Expose in main package** in `attriax/lib/attriax.dart`:
    ```dart
-   Future<void> newFeature() => _platform.newFeature();
+   class AttriaxAndroid extends AttriaxPlatform {
+     static const _channel = MethodChannel('attriax');
+
+     @override
+     Future<void> newFeature() => _channel.invokeMethod<void>('newFeature');
+   }
+   ```
+
+3. **Handle the method natively** in the platform plugin classes:
+   - Android: `attriax_android/android/src/main/java/.../AttriaxAndroidPlugin.java`
+   - iOS: `attriax_ios/ios/Classes/AttriaxIosPlugin.swift`
+
+4. **Expose in main package** in `attriax/lib/attriax.dart` or `attriax/lib/src/attriax.dart`:
+   ```dart
+   Future<void> newFeature() => _runtime.newFeature();
    ```
 
 5. **Demonstrate publicly** in `attriax/example/lib/main.dart` and add deeper validation to `../flutter-internal-tester/lib/main.dart`:
@@ -89,10 +93,16 @@ When adding a new feature:
    await Attriax().newFeature();
    ```
 
+6. **Add tests in the package that owns the logic**:
+   - method-channel wrapper tests in the federated package
+   - runtime/orchestration tests in `attriax/`
+   - example UI/flow tests in `attriax/example/`
+
 ### Testing
 
 - Use `flutter test` for Dart/Flutter testing
 - Use Android Studio or Xcode for native testing
+- The workspace root itself has no top-level test directory; run tests in the package folders that own them
 - Test on both simulator and real devices before PR
 
 ### Common Issues & Solutions

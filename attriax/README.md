@@ -12,9 +12,10 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  attriax:
-    path: ../attriax  # or from pub.dev when published
+  attriax: ^1.0.0
 ```
+
+For local workspace development inside this repository, keep using the existing path-based workspace setup instead of a hosted dependency.
 
 ## Usage
 
@@ -146,6 +147,8 @@ The example runner files shipped with this package include the Android and iOS
 host-side setup. Desktop examples stay intentionally minimal and expect manual
 forwarding when you wire a desktop protocol handler.
 
+Because Android install referrer is the strongest attribution input for mobile installs, validate at least one Play-distributed Android build before release. iOS does not have an install-referrer equivalent, so universal-link handling and the initial app-open request become the primary checks there.
+
 ## Synchronization
 
 - Use `attriax.synchronization.isSynchronized` when you only need a single readiness boolean.
@@ -171,6 +174,7 @@ forwarding when you wire a desktop protocol handler.
 ## Examples
 
 - Public example app: `example/`
+- Public example tests: `example/test/`
 - The example home screen includes a "Create sample dynamic link" action that calls the live SDK method and prints the generated short URL.
 
 ## Platform Support

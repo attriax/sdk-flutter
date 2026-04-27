@@ -37,8 +37,15 @@ flutter pub get
 ```bash
 cd flutter-plugin
 dart analyze
-flutter test
+cd attriax && flutter test
+cd ..\attriax\example && flutter test
+cd ..\..\attriax_platform_interface && flutter test
+cd ..\attriax_android && flutter test
+cd ..\attriax_ios && flutter test
 ```
+
+The workspace root does not own a top-level `test/` directory, so `flutter test`
+should be run from the package directories that contain tests.
 
 ### Run the public example
 
@@ -59,6 +66,7 @@ flutter run --dart-define=ATTRIAX_APP_TOKEN=... --dart-define=ATTRIAX_API_BASE_U
 
 - Prefer `await attriax.init()` as the default startup path.
 - Use `flutter pub get` at the workspace root unless you intentionally need isolated package resolution.
+- Keep package-level `analysis_options.yaml` files in sync with the workspace root so dry-run publish checks and standalone package CI see the same lint configuration.
 - Keep the public example simple and package-focused.
 - Use the internal tester for richer QA scenarios such as app-open tracking, manual deep-link conversion checks, event submission, and identification flows.
 
