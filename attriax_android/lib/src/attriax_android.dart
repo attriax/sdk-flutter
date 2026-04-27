@@ -36,10 +36,21 @@ class AttriaxAndroid extends AttriaxPlatform {
       return AttriaxInstallReferrerContext.fromPayload(result);
     } on MissingPluginException catch (error, stackTrace) {
       _logException('collectInstallReferrer', error, stackTrace);
-      return const AttriaxInstallReferrerContext();
+      return AttriaxInstallReferrerContext(
+        metadata: {
+          'installReferrerStatus': 'missing_plugin',
+          'installReferrerError': error.message ?? error.toString(),
+        },
+      );
     } on PlatformException catch (error, stackTrace) {
       _logException('collectInstallReferrer', error, stackTrace);
-      return const AttriaxInstallReferrerContext();
+      return AttriaxInstallReferrerContext(
+        metadata: {
+          'installReferrerStatus': 'platform_exception',
+          'installReferrerError':
+              error.message ?? error.code,
+        },
+      );
     }
   }
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 
 import '../attriax_deep_link_source.dart';
 
@@ -28,13 +29,27 @@ class AttriaxDeepLinkListener {
       await onLink(initialLink, isInitialLink: true);
     }
 
-    _subscription = _deepLinkSource.uriLinkStream.listen((uri) {
-      // Capture isInitialLink before _isDuplicate() updates _lastHandledUri.
-      final isInitialLink = _lastHandledUri == null;
-      if (!_isDuplicate(uri)) {
-        unawaited(onLink(uri, isInitialLink: isInitialLink));
-      }
-    }, onError: (_) {});
+    _subscription = _deepLinkSource.uriLinkStream.listen(
+      (uri) {
+        // Capture isInitialLink before _isDuplicate() updates _lastHandledUri.
+        final isInitialLink = _lastHandledUri == null;
+        if (!_isDuplicate(uri)) {
+          unawaited(onLink(uri, isInitialLink: isInitialLink));
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        // Don't crash the SDK on a transient platform stream error, but
+        // surface it through dart:developer so operators can diagnose why
+        // deep-link delivery stopped (NFH3).
+        developer.log(
+          'Attriax deep-link stream error',
+          name: 'attriax',
+          level: 900,
+          error: error,
+          stackTrace: stackTrace,
+        );
+      },
+    );
   }
 
   Future<void> stop() async {

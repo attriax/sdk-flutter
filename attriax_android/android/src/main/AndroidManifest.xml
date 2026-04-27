@@ -1,5 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.attriax.attriax_android">
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Required by the Google Play Install Referrer client. -->
+    <uses-permission android:name="com.android.vending.INSTALL_REFERRER" />
     <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
 </manifest>

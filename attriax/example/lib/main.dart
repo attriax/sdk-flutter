@@ -5,6 +5,16 @@ import 'package:attriax/attriax.dart';
 
 import 'example_attriax_sdk.dart';
 
+const String exampleAppToken = 'ax_your_app_token';
+
+void ensureExampleAppConfigured({required String appToken}) {
+  if (appToken.startsWith('ax_your_')) {
+    throw StateError(
+      'Replace the example Attriax app token before running this app.',
+    );
+  }
+}
+
 // ── SDK instance (application-level singleton) ────────────────────────────────
 //
 // Create the Attriax instance as a top-level variable. Calling init() here
@@ -13,7 +23,7 @@ import 'example_attriax_sdk.dart';
 
 final Attriax attriax = Attriax(
   config: const AttriaxConfig(
-    appToken: 'ax_your_app_token',
+    appToken: exampleAppToken,
     sdkMetadata: <String, Object?>{
       'surface': 'package_example',
       'purpose': 'docs_and_demo',
@@ -138,6 +148,7 @@ Route<void> _onGenerateExampleRoute(
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  ensureExampleAppConfigured(appToken: exampleAppToken);
 
   // Recommended: await initialization during startup so the SDK has restored
   // persisted state, collected context, and started listeners before the UI.

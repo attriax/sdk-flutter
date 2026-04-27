@@ -9,16 +9,23 @@ class AttriaxContextCollector {
     required AttriaxConfig config,
     AttriaxPlatform? platform,
     DeviceInfoPlugin? deviceInfoPlugin,
+    Duration installReferrerTimeout = _defaultInstallReferrerTimeout,
+    Duration installReferrerRetryDelay = _defaultInstallReferrerRetryDelay,
   }) : _config = config,
        _platform = platform ?? AttriaxPlatform.instance,
-       _deviceInfoPlugin = deviceInfoPlugin ?? DeviceInfoPlugin();
+       _deviceInfoPlugin = deviceInfoPlugin ?? DeviceInfoPlugin(),
+       _installReferrerTimeout = installReferrerTimeout,
+       _installReferrerRetryDelay = installReferrerRetryDelay;
 
   static const _installReferrerStorageKey = 'attriax.install_referrer';
-  static const _installReferrerTimeout = Duration(seconds: 10);
+  static const _defaultInstallReferrerTimeout = Duration(seconds: 10);
+  static const _defaultInstallReferrerRetryDelay = Duration(seconds: 2);
 
   final AttriaxConfig _config;
   final AttriaxPlatform _platform;
   final DeviceInfoPlugin _deviceInfoPlugin;
+  final Duration _installReferrerTimeout;
+  final Duration _installReferrerRetryDelay;
   String? _cachedInstallReferrer;
   bool _loadedInstallReferrerCache = false;
 
@@ -52,7 +59,7 @@ class AttriaxContextCollector {
       sdk: AttriaxSdkSnapshot(
         apiVersion: attriaxSdkApiVersion,
         packageVersion: attriaxSdkPackageVersion,
-        metadata: _config.sdkMetadata,
+        metadata: _collectSdkMetadata(),
       ),
       app: appSnapshot,
       device: deviceSnapshot,
@@ -78,6 +85,13 @@ class AttriaxContextCollector {
       case TargetPlatform.fuchsia:
         return AttriaxPlatformType.unknown;
     }
+  }
+
+  Map<String, Object?> _collectSdkMetadata() {
+    return <String, Object?>{
+      ..._config.sdkMetadata,
+      'clientRuntime': 'flutter',
+    };
   }
 
   Future<AttriaxAppSnapshot> _collectAppSnapshot() async {
@@ -114,14 +128,64 @@ class AttriaxContextCollector {
       );
     }
 
-    return _platform
-        .collectInstallReferrer()
-        .timeout(
-          _installReferrerTimeout,
-          onTimeout: () => const AttriaxInstallReferrerContext(
-            metadata: {'installReferrerStatus': 'timeout_flutter'},
-          ),
-        );
+    // First attempt.
+    final first = await _fetchInstallReferrerOnce(attempt: 1);
+    if (first.installReferrer != null && first.installReferrer!.isNotEmpty) {
+      return first;
+    }
+
+    // Single retry with a short delay. The Play Install Referrer API can
+    // briefly return empty on cold start before Play services finish binding.
+    await Future<void>.delayed(_installReferrerRetryDelay);
+    final second = await _fetchInstallReferrerOnce(attempt: 2);
+    if (second.installReferrer != null && second.installReferrer!.isNotEmpty) {
+      return second;
+    }
+
+    // Surface the degraded state to the backend so it knows attribution
+    // had to fall back instead of pretending we got a clean empty referrer.
+    final mergedMetadata = <String, dynamic>{
+      ...first.metadata,
+      ...second.metadata,
+      'installReferrerStatus':
+          (second.metadata['installReferrerStatus'] ??
+                  first.metadata['installReferrerStatus'] ??
+                  'empty')
+              .toString(),
+      'installReferrerAttempts': 2,
+    };
+    return AttriaxInstallReferrerContext(metadata: mergedMetadata);
+  }
+
+  @visibleForTesting
+  Future<AttriaxInstallReferrerContext> collectInstallReferrerContextForTest({
+    required AttriaxPlatformType platformType,
+  }) {
+    return _collectInstallReferrerContext(platformType);
+  }
+
+  Future<AttriaxInstallReferrerContext> _fetchInstallReferrerOnce({
+    required int attempt,
+  }) async {
+    try {
+      return await _platform.collectInstallReferrer().timeout(
+        _installReferrerTimeout,
+        onTimeout: () => AttriaxInstallReferrerContext(
+          metadata: {
+            'installReferrerStatus': 'timeout_flutter',
+            'installReferrerAttempt': attempt,
+          },
+        ),
+      );
+    } catch (error) {
+      return AttriaxInstallReferrerContext(
+        metadata: {
+          'installReferrerStatus': 'error_flutter',
+          'installReferrerAttempt': attempt,
+          'installReferrerError': error.toString(),
+        },
+      );
+    }
   }
 
   Future<String?> _readPersistedInstallReferrer() async {

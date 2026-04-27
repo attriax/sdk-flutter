@@ -45,6 +45,7 @@ public class AttriaxAndroidPlugin implements
     private MethodChannel channel;
     private EventChannel deepLinkEventChannel;
     private EventChannel.EventSink deepLinkEventSink;
+    private final Object deepLinkStateLock = new Object();
     private Context context;
     private ActivityPluginBinding activityBinding;
     private String initialLink;
@@ -71,7 +72,9 @@ public class AttriaxAndroidPlugin implements
         if (deepLinkEventChannel != null) {
             deepLinkEventChannel.setStreamHandler(null);
         }
-        deepLinkEventSink = null;
+        synchronized (deepLinkStateLock) {
+            deepLinkEventSink = null;
+        }
     }
 
     @Override
@@ -84,10 +87,14 @@ public class AttriaxAndroidPlugin implements
                 collectInstallReferrer(result);
                 break;
             case "getInitialLink":
-                result.success(initialLink);
+                synchronized (deepLinkStateLock) {
+                    result.success(initialLink);
+                }
                 break;
             case "getLatestLink":
-                result.success(latestLink);
+                synchronized (deepLinkStateLock) {
+                    result.success(latestLink);
+                }
                 break;
             default:
                 result.notImplemented();
@@ -121,17 +128,26 @@ public class AttriaxAndroidPlugin implements
 
     @Override
     public void onListen(Object arguments, EventChannel.EventSink events) {
-        deepLinkEventSink = events;
+        String initialLinkToEmit = null;
+        synchronized (deepLinkStateLock) {
+            deepLinkEventSink = events;
 
-        if (!initialLinkSent && initialLink != null) {
-            initialLinkSent = true;
-            events.success(initialLink);
+            if (!initialLinkSent && initialLink != null) {
+                initialLinkSent = true;
+                initialLinkToEmit = initialLink;
+            }
+        }
+
+        if (initialLinkToEmit != null) {
+            events.success(initialLinkToEmit);
         }
     }
 
     @Override
     public void onCancel(Object arguments) {
-        deepLinkEventSink = null;
+        synchronized (deepLinkStateLock) {
+            deepLinkEventSink = null;
+        }
     }
 
     @Override
@@ -143,10 +159,16 @@ public class AttriaxAndroidPlugin implements
         Map<String, Object> payload = new HashMap<>();
         Map<String, Object> metadata = new HashMap<>();
 
-        payload.put("androidId", Settings.Secure.getString(
+        // ANDROID_ID is shipped to the Attriax backend as an additional
+        // attribution signal. We hash it with the app's package name as a
+        // per-app salt so two different apps installed on the same device
+        // can't be correlated by the raw ANDROID_ID, and so the platform
+        // never receives the unsalted device-wide value.
+        String rawAndroidId = Settings.Secure.getString(
             context.getContentResolver(),
             Settings.Secure.ANDROID_ID
-        ));
+        );
+        payload.put("androidId", hashAndroidId(rawAndroidId, context.getPackageName()));
         metadata.put("source", "android_native");
         metadata.put("timezone", TimeZone.getDefault().getID());
         metadata.put("locale", Locale.getDefault().toLanguageTag());
@@ -278,6 +300,29 @@ public class AttriaxAndroidPlugin implements
                 builder.append(String.format(Locale.US, "%02X", hash[index]));
             }
 
+            return builder.toString();
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    /**
+     * Hash ANDROID_ID with the app's package name as a salt. The result is
+     * a stable per-app per-device identifier; two apps on the same device
+     * see different hashes, and the raw ANDROID_ID never leaves the device.
+     */
+    private String hashAndroidId(String rawAndroidId, String packageName) {
+        if (rawAndroidId == null || rawAndroidId.isEmpty()) {
+            return null;
+        }
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            String salted = (packageName == null ? "" : packageName) + ":" + rawAndroidId;
+            byte[] hash = digest.digest(salted.getBytes("UTF-8"));
+            StringBuilder builder = new StringBuilder(hash.length * 2);
+            for (int index = 0; index < hash.length; index++) {
+                builder.append(String.format(Locale.US, "%02x", hash[index]));
+            }
             return builder.toString();
         } catch (Exception exception) {
             return null;
@@ -430,15 +475,22 @@ public class AttriaxAndroidPlugin implements
             return false;
         }
 
-        if (initialLink == null) {
-            initialLink = link;
+        EventChannel.EventSink eventSink = null;
+        synchronized (deepLinkStateLock) {
+            if (initialLink == null) {
+                initialLink = link;
+            }
+
+            latestLink = link;
+
+            if (deepLinkEventSink != null) {
+                initialLinkSent = true;
+                eventSink = deepLinkEventSink;
+            }
         }
 
-        latestLink = link;
-
-        if (deepLinkEventSink != null) {
-            initialLinkSent = true;
-            deepLinkEventSink.success(link);
+        if (eventSink != null) {
+            eventSink.success(link);
         }
 
         return true;

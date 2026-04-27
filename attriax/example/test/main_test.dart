@@ -9,6 +9,17 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   late FakeExampleAttriaxSdk sdk;
 
+  test('rejects the placeholder example app token', () {
+    expect(
+      () => ensureExampleAppConfigured(appToken: 'ax_your_app_token'),
+      throwsA(isA<StateError>()),
+    );
+    expect(
+      () => ensureExampleAppConfigured(appToken: 'ax_live_demo_token'),
+      returnsNormally,
+    );
+  });
+
   setUp(() {
     sdk = FakeExampleAttriaxSdk();
   });

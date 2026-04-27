@@ -115,19 +115,27 @@ class AttriaxSynchronizer {
   /// Starts listening for connectivity changes. [onRestored] is called when
   /// the device comes back online while the synchronizer is active.
   void startConnectivitySubscription({required void Function() onRestored}) {
-    _connectivitySubscription ??= _connectivity.onConnectivityChanged.listen((
-      results,
-    ) {
-      if (results.every((r) => r == ConnectivityResult.none)) {
-        setState(AttriaxSynchronizationState.offline);
-        return;
-      }
-      if (_active) {
-        _logger.verbose('Connectivity restored; flushing request queue.');
-        setState(AttriaxSynchronizationState.synchronizing);
-        onRestored();
-      }
-    }, onError: (_) {});
+    _connectivitySubscription ??= _connectivity.onConnectivityChanged.listen(
+      (results) {
+        if (results.every((r) => r == ConnectivityResult.none)) {
+          setState(AttriaxSynchronizationState.offline);
+          return;
+        }
+        if (_active) {
+          _logger.verbose('Connectivity restored; flushing request queue.');
+          setState(AttriaxSynchronizationState.synchronizing);
+          onRestored();
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        // Surface the error rather than silently swallowing it (NFH3).
+        _logger.warning(
+          'Connectivity stream error',
+          error: error,
+          stackTrace: stackTrace,
+        );
+      },
+    );
   }
 
   Future<void> stopConnectivitySubscription() async {

@@ -71,6 +71,7 @@ class AttriaxRuntime {
   bool? _requestedEventsEnabledOverride;
   Future<void> _enabledTransition = Future<void>.value();
   Future<void> _eventsEnabledTransition = Future<void>.value();
+  Future<void>? _initializationFuture;
 
   // ---------- getters ------------------------------------------------------- //
 
@@ -100,6 +101,34 @@ class AttriaxRuntime {
     bool? enabled,
     bool? eventsEnabled,
     bool trackAppOpen = true,
+  }) {
+    if (_initialized) {
+      return Future<void>.value();
+    }
+
+    final inFlight = _initializationFuture;
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final initialization = _runInit(
+      enabled: enabled,
+      eventsEnabled: eventsEnabled,
+      trackAppOpen: trackAppOpen,
+    );
+    _initializationFuture = initialization;
+
+    return initialization.whenComplete(() {
+      if (identical(_initializationFuture, initialization)) {
+        _initializationFuture = null;
+      }
+    });
+  }
+
+  Future<void> _runInit({
+    required bool trackAppOpen,
+    bool? enabled,
+    bool? eventsEnabled,
   }) async {
     _logger.verbose('Initializing Attriax SDK.');
     _validateConfig();
