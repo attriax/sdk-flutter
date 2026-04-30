@@ -159,16 +159,28 @@ public class AttriaxAndroidPlugin implements
         Map<String, Object> payload = new HashMap<>();
         Map<String, Object> metadata = new HashMap<>();
 
-        // ANDROID_ID is shipped to the Attriax backend as an additional
-        // attribution signal. We hash it with the app's package name as a
-        // per-app salt so two different apps installed on the same device
-        // can't be correlated by the raw ANDROID_ID, and so the platform
-        // never receives the unsalted device-wide value.
+        // ANDROID_ID is shipped to the Attriax backend raw because the
+        // backend now performs deterministic matching against click-time
+        // values (which are also raw). Hashing here would defeat that
+        // matching path. The value is treated as PII server-side: it is
+        // never logged and never returned in analytics responses. See
+        // GDPR notes on `app_users.androidId`.
         String rawAndroidId = Settings.Secure.getString(
             context.getContentResolver(),
             Settings.Secure.ANDROID_ID
         );
-        payload.put("androidId", hashAndroidId(rawAndroidId, context.getPackageName()));
+        if (rawAndroidId != null && !rawAndroidId.isEmpty()
+                && !"9774d56d682e549c".equals(rawAndroidId)) {
+            // 9774d56d682e549c is a known buggy value historically returned by
+            // some Android 2.x devices and on factory-reset devices; treat
+            // it as missing rather than persisting it as a duplicate id.
+            payload.put("androidId", rawAndroidId);
+        }
+
+        String advertisingId = AdvertisingIdProvider.fetch(context);
+        if (advertisingId != null) {
+            payload.put("advertisingId", advertisingId);
+        }
         metadata.put("source", "android_native");
         metadata.put("timezone", TimeZone.getDefault().getID());
         metadata.put("locale", Locale.getDefault().toLanguageTag());
@@ -307,10 +319,13 @@ public class AttriaxAndroidPlugin implements
     }
 
     /**
-     * Hash ANDROID_ID with the app's package name as a salt. The result is
-     * a stable per-app per-device identifier; two apps on the same device
-     * see different hashes, and the raw ANDROID_ID never leaves the device.
+     * @deprecated Kept around to keep the existing unit test compiling
+     * while the new raw-id flow lands. Will be removed in a follow-up
+     * release once the backend rollout has soaked. New callers must
+     * use raw `Settings.Secure.ANDROID_ID` and let the backend handle
+     * matching directly.
      */
+    @Deprecated
     private String hashAndroidId(String rawAndroidId, String packageName) {
         if (rawAndroidId == null || rawAndroidId.isEmpty()) {
             return null;

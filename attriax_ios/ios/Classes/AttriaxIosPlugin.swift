@@ -1,6 +1,9 @@
 import Flutter
 import Security
 import UIKit
+#if canImport(AdSupport)
+import AdSupport
+#endif
 
 public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandler, FlutterSceneLifeCycleDelegate {
     private var eventSink: FlutterEventSink?
@@ -133,6 +136,23 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         let screen = UIScreen.main
         let screenBounds = screen.bounds
 
+        // Top-level payload picked up by the SDK init request. Keys here
+        // map 1:1 to columns the backend uses for multi-signal attribution
+        // matching, so any change must be coordinated with the API.
+        var payload: [String: Any] = [
+            "screenWidth": Int(screenBounds.width * screen.scale),
+            "screenHeight": Int(screenBounds.height * screen.scale),
+            "devicePixelRatio": screen.scale,
+        ]
+
+        // IDFA — the official advertising identifier on iOS. Apple returns
+        // the zero-UUID sentinel unless the user grants ATT permission;
+        // we drop that value so the backend never tries to deterministically
+        // match opted-out users against each other.
+        if let idfa = readAdvertisingIdentifier() {
+            payload["advertisingId"] = idfa
+        }
+
         var metadata: [String: Any] = [
             "source": "ios_native",
             "timezone": TimeZone.current.identifier,
@@ -192,7 +212,28 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         metadata["isSimulator"] = false
 #endif
 
-        return ["metadata": metadata]
+        payload["metadata"] = metadata
+        return payload
+    }
+
+    /**
+     * Read the IDFA via `ASIdentifierManager`. AdSupport is a system
+     * framework so no external dependency is needed. We do not trigger
+     * the App Tracking Transparency prompt — that is the host app's
+     * decision and out of scope for an attribution SDK. When ATT has
+     * not been granted, iOS returns the all-zero UUID; we drop that so
+     * the backend never persists an opted-out sentinel.
+     */
+    private func readAdvertisingIdentifier() -> String? {
+#if canImport(AdSupport)
+        let value = ASIdentifierManager.shared().advertisingIdentifier.uuidString
+        if value == "00000000-0000-0000-0000-000000000000" {
+            return nil
+        }
+        return value
+#else
+        return nil
+#endif
     }
 
     private func readEntitlementValue(key: String) -> Any? {

@@ -365,6 +365,10 @@ class AttriaxContextCollector {
         _nativeTimezone(nativeContext) ??
         _emptyToNull(DateTime.now().timeZoneName);
     final screenResolution = _screenResolution();
+    final screenDimensions = _screenDimensions();
+    final devicePixelRatio = _devicePixelRatio();
+    final screenWidth = screenDimensions?.width;
+    final screenHeight = screenDimensions?.height;
 
     try {
       final rawData = await _loadRawDeviceData(platformType);
@@ -397,6 +401,9 @@ class AttriaxContextCollector {
             language: locale,
             timezone: timezone,
             screenResolution: screenResolution,
+            screenWidth: screenWidth,
+            screenHeight: screenHeight,
+            devicePixelRatio: devicePixelRatio,
             advertisingId: nativeContext.advertisingId,
             androidId: nativeContext.androidId,
             isPhysicalDevice: _readBool(rawData, 'isPhysicalDevice'),
@@ -417,6 +424,9 @@ class AttriaxContextCollector {
             language: locale,
             timezone: timezone,
             screenResolution: screenResolution,
+            screenWidth: screenWidth,
+            screenHeight: screenHeight,
+            devicePixelRatio: devicePixelRatio,
             advertisingId: nativeContext.advertisingId,
             isPhysicalDevice: _readBool(rawData, 'isPhysicalDevice'),
             metadata: metadata,
@@ -432,6 +442,9 @@ class AttriaxContextCollector {
             language: locale,
             timezone: timezone,
             screenResolution: screenResolution,
+            screenWidth: screenWidth,
+            screenHeight: screenHeight,
+            devicePixelRatio: devicePixelRatio,
             isPhysicalDevice: true,
             metadata: metadata,
           );
@@ -448,6 +461,9 @@ class AttriaxContextCollector {
             language: locale,
             timezone: timezone,
             screenResolution: screenResolution,
+            screenWidth: screenWidth,
+            screenHeight: screenHeight,
+            devicePixelRatio: devicePixelRatio,
             isPhysicalDevice: true,
             metadata: metadata,
           );
@@ -470,6 +486,9 @@ class AttriaxContextCollector {
             language: locale,
             timezone: timezone,
             screenResolution: screenResolution,
+            screenWidth: screenWidth,
+            screenHeight: screenHeight,
+            devicePixelRatio: devicePixelRatio,
             isPhysicalDevice: true,
             metadata: metadata,
           );
@@ -486,6 +505,9 @@ class AttriaxContextCollector {
             language: locale,
             timezone: timezone,
             screenResolution: screenResolution,
+            screenWidth: screenWidth,
+            screenHeight: screenHeight,
+            devicePixelRatio: devicePixelRatio,
             metadata: metadata,
           );
         case AttriaxPlatformType.unknown:
@@ -493,6 +515,9 @@ class AttriaxContextCollector {
             language: locale,
             timezone: timezone,
             screenResolution: screenResolution,
+            screenWidth: screenWidth,
+            screenHeight: screenHeight,
+            devicePixelRatio: devicePixelRatio,
             metadata: {
               if (nativeContext.metadata.isNotEmpty)
                 'nativeContext': nativeContext.metadata,
@@ -504,6 +529,9 @@ class AttriaxContextCollector {
         language: locale,
         timezone: timezone,
         screenResolution: screenResolution,
+            screenWidth: screenWidth,
+            screenHeight: screenHeight,
+            devicePixelRatio: devicePixelRatio,
         advertisingId: nativeContext.advertisingId,
         androidId: nativeContext.androidId,
         metadata: {
@@ -645,6 +673,32 @@ class AttriaxContextCollector {
       return null;
     }
     return '${size.width.round()}x${size.height.round()}';
+  }
+
+  /// Pixel-aligned screen dimensions for attribution matching. Returns null
+  /// when no view is attached yet (e.g. very early in startup).
+  ({int width, int height})? _screenDimensions() {
+    final views = PlatformDispatcher.instance.views;
+    if (views.isEmpty) {
+      return null;
+    }
+    final size = views.first.physicalSize;
+    if (size.isEmpty) {
+      return null;
+    }
+    return (width: size.width.round(), height: size.height.round());
+  }
+
+  double? _devicePixelRatio() {
+    final views = PlatformDispatcher.instance.views;
+    if (views.isEmpty) {
+      return null;
+    }
+    final dpr = views.first.devicePixelRatio;
+    if (dpr <= 0 || dpr.isNaN || dpr.isInfinite) {
+      return null;
+    }
+    return dpr;
   }
 
   String? _nativeTimezone(AttriaxNativeContext nativeContext) {

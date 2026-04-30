@@ -135,6 +135,10 @@ class AttriaxDeviceSnapshot {
     this.language,
     this.timezone,
     this.screenResolution,
+    this.screenWidth,
+    this.screenHeight,
+    this.devicePixelRatio,
+    this.colorDepth,
     this.advertisingId,
     this.androidId,
     this.isPhysicalDevice,
@@ -151,6 +155,10 @@ class AttriaxDeviceSnapshot {
   final String? language;
   final String? timezone;
   final String? screenResolution;
+  final int? screenWidth;
+  final int? screenHeight;
+  final double? devicePixelRatio;
+  final int? colorDepth;
   final String? advertisingId;
   final String? androidId;
   final bool? isPhysicalDevice;
@@ -167,6 +175,10 @@ class AttriaxDeviceSnapshot {
     if (language != null) 'language': language,
     if (timezone != null) 'timezone': timezone,
     if (screenResolution != null) 'screenResolution': screenResolution,
+    if (screenWidth != null) 'screenWidth': screenWidth,
+    if (screenHeight != null) 'screenHeight': screenHeight,
+    if (devicePixelRatio != null) 'devicePixelRatio': devicePixelRatio,
+    if (colorDepth != null) 'colorDepth': colorDepth,
     if (advertisingId != null) 'advertisingId': advertisingId,
     if (androidId != null) 'androidId': androidId,
     if (isPhysicalDevice != null) 'isPhysicalDevice': isPhysicalDevice,
