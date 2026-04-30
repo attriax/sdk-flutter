@@ -19,6 +19,8 @@ class AttriaxConversionMapper {
       isFirstLaunch: result.isFirstLaunch,
       isDeferred: isDeferred,
       requestVersion: result.requestVersion,
+      acceptedAt: result.acceptedAt,
+      consumedAt: result.consumedAt,
       occurredAt: result.acceptedAt ?? DateTime.now().toUtc(),
     );
   }
@@ -30,6 +32,9 @@ class AttriaxConversionMapper {
     reason: result.reason ?? result.status.name,
     rawEvent: rawEvent,
     isFirstLaunch: result.isFirstLaunch,
+    status: result.status,
+    requestVersion: result.requestVersion,
+    acceptedAt: result.acceptedAt,
     occurredAt: result.acceptedAt ?? DateTime.now().toUtc(),
   );
 }

@@ -38,9 +38,29 @@ cd attriax\example && flutter run
 cd ..\flutter-internal-tester && flutter run
 ```
 
+### Regenerate the generated transport client
+
+Run these from the workspace root:
+
+```bash
+npm install
+npm run sdk:flutter:generate
+```
+
+```bash
+npm run sdk:flutter:generate:fast
+```
+
+```bash
+npm run sdk:flutter:validate
+```
+
+The supported regeneration flow is documented in [SDK_CLIENT_GENERATION.md](SDK_CLIENT_GENERATION.md).
+
 ### Development Checklist
 
 - [ ] Updated `pubspec.yaml` if adding dependencies
+- [ ] Regenerated `attriax_sdk_client` if the SDK API contract changed
 - [ ] Ran `dart analyze` — all issues resolved
 - [ ] Ran `dart format .` — code is formatted
 - [ ] Added/updated tests
@@ -103,6 +123,7 @@ When adding a new feature:
 - Use `flutter test` for Dart/Flutter testing
 - Use Android Studio or Xcode for native testing
 - The workspace root itself has no top-level test directory; run tests in the package folders that own them
+- Use `npm run sdk:flutter:validate` from the workspace root after regenerating the SDK client
 - Test on both simulator and real devices before PR
 
 ### Common Issues & Solutions

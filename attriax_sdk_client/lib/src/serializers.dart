@@ -1,0 +1,98 @@
+//
+// AUTO-GENERATED FILE, DO NOT MODIFY!
+//
+
+// ignore_for_file: unused_import
+
+import 'package:one_of_serializer/any_of_serializer.dart';
+import 'package:one_of_serializer/one_of_serializer.dart';
+import 'package:built_collection/built_collection.dart';
+import 'package:built_value/json_object.dart';
+import 'package:built_value/serializer.dart';
+import 'package:built_value/standard_json_plugin.dart';
+import 'package:built_value/iso_8601_date_time_serializer.dart';
+import 'package:attriax_sdk_client/src/date_serializer.dart';
+import 'package:attriax_sdk_client/src/model/date.dart';
+
+import 'package:attriax_sdk_client/src/model/app_version_context_dto.dart';
+import 'package:attriax_sdk_client/src/model/attribution_type.dart';
+import 'package:attriax_sdk_client/src/model/deep_link_resolution_status.dart';
+import 'package:attriax_sdk_client/src/model/device_context_dto.dart';
+import 'package:attriax_sdk_client/src/model/platform.dart';
+import 'package:attriax_sdk_client/src/model/sdk_acknowledge_response_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_acknowledge_response_envelope_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_create_dynamic_link_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_create_dynamic_link_response_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_create_dynamic_link_response_envelope_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_dynamic_link_record_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_event_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_identify_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_install_referrer_result_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_json_deep_link_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_latest_unity_release_response_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_latest_unity_release_response_envelope_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_release_platform.dart';
+import 'package:attriax_sdk_client/src/model/sdk_unity_editor_validate_app_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_unity_editor_validate_checks_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_unity_editor_validate_editor_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_unity_editor_validate_response_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_unity_editor_validate_response_envelope_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_unity_release_list_response_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_unity_release_list_response_envelope_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_v1_deep_link_resolve_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_v1_deep_link_resolve_response_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_v1_deep_link_resolve_response_envelope_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_v1_open_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_v1_open_response_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_v1_open_response_envelope_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_v1_unity_editor_validate_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_version_context_dto.dart';
+import 'package:attriax_sdk_client/src/model/unity_release_summary_dto.dart';
+
+part 'serializers.g.dart';
+
+@SerializersFor([
+  AppVersionContextDto,
+  AttributionType,
+  DeepLinkResolutionStatus,
+  DeviceContextDto,
+  Platform,
+  SdkAcknowledgeResponseDto,
+  SdkAcknowledgeResponseEnvelopeDto,
+  SdkCreateDynamicLinkDto,
+  SdkCreateDynamicLinkResponseDto,
+  SdkCreateDynamicLinkResponseEnvelopeDto,
+  SdkDynamicLinkRecordDto,
+  SdkEventDto,
+  SdkIdentifyDto,
+  SdkInstallReferrerResultDto,
+  SdkJsonDeepLinkDto,
+  SdkLatestUnityReleaseResponseDto,
+  SdkLatestUnityReleaseResponseEnvelopeDto,
+  SdkReleasePlatform,
+  SdkUnityEditorValidateAppDto,
+  SdkUnityEditorValidateChecksDto,
+  SdkUnityEditorValidateEditorDto,
+  SdkUnityEditorValidateResponseDto,
+  SdkUnityEditorValidateResponseEnvelopeDto,
+  SdkUnityReleaseListResponseDto,
+  SdkUnityReleaseListResponseEnvelopeDto,
+  SdkV1DeepLinkResolveDto,
+  SdkV1DeepLinkResolveResponseDto,
+  SdkV1DeepLinkResolveResponseEnvelopeDto,
+  SdkV1OpenDto,
+  SdkV1OpenResponseDto,
+  SdkV1OpenResponseEnvelopeDto,
+  SdkV1UnityEditorValidateDto,
+  SdkVersionContextDto,
+  UnityReleaseSummaryDto,
+])
+Serializers serializers = (_$serializers.toBuilder()
+      ..add(const OneOfSerializer())
+      ..add(const AnyOfSerializer())
+      ..add(const DateSerializer())
+      ..add(Iso8601DateTimeSerializer())
+    ).build();
+
+Serializers standardSerializers =
+    (serializers.toBuilder()..addPlugin(StandardJsonPlugin())).build();

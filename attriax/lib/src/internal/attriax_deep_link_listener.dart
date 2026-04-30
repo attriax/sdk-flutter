@@ -14,27 +14,27 @@ class AttriaxDeepLinkListener {
   StreamSubscription<Uri>? _subscription;
   Uri? _lastHandledUri;
   DateTime? _lastHandledAt;
+  bool _initialLinkProbeCompleted = false;
 
   bool get isListening => _subscription != null;
 
   Future<void> start(
-    Future<void> Function(Uri uri, {required bool isInitialLink}) onLink,
+    Future<void> Function(Uri uri, {required bool isInitialLink}) onLink, {
+    void Function()? onInitialLinkProbeCompleted,
+  }
   ) async {
     if (_subscription != null) {
       return;
     }
 
-    final initialLink = await _deepLinkSource.getInitialLink();
-    if (initialLink != null && !_isDuplicate(initialLink)) {
-      await onLink(initialLink, isInitialLink: true);
-    }
+    _initialLinkProbeCompleted = false;
 
     _subscription = _deepLinkSource.uriLinkStream.listen(
       (uri) {
-        // Capture isInitialLink before _isDuplicate() updates _lastHandledUri.
-        final isInitialLink = _lastHandledUri == null;
+        final isInitialLink =
+            !_initialLinkProbeCompleted && _lastHandledUri == null;
         if (!_isDuplicate(uri)) {
-          unawaited(onLink(uri, isInitialLink: isInitialLink));
+          _dispatchLink(onLink, uri, isInitialLink: isInitialLink);
         }
       },
       onError: (Object error, StackTrace stackTrace) {
@@ -49,6 +49,13 @@ class AttriaxDeepLinkListener {
           stackTrace: stackTrace,
         );
       },
+    );
+
+    unawaited(
+      _dispatchInitialLink(
+        onLink,
+        onInitialLinkProbeCompleted: onInitialLinkProbeCompleted,
+      ),
     );
   }
 
@@ -66,5 +73,42 @@ class AttriaxDeepLinkListener {
     return prevUri?.toString() == uri.toString() &&
         prevAt != null &&
         now.difference(prevAt) < const Duration(seconds: 2);
+  }
+
+  void _dispatchLink(
+    Future<void> Function(Uri uri, {required bool isInitialLink}) onLink,
+    Uri uri, {
+    required bool isInitialLink,
+  }) {
+    unawaited(
+      onLink(uri, isInitialLink: isInitialLink).catchError((
+        Object error,
+        StackTrace stackTrace,
+      ) {
+        developer.log(
+          'Attriax deep-link handling error',
+          name: 'attriax',
+          level: 900,
+          error: error,
+          stackTrace: stackTrace,
+        );
+      }),
+    );
+  }
+
+  Future<void> _dispatchInitialLink(
+    Future<void> Function(Uri uri, {required bool isInitialLink}) onLink, {
+    void Function()? onInitialLinkProbeCompleted,
+  }
+  ) async {
+    try {
+      final initialLink = await _deepLinkSource.getInitialLink();
+      if (initialLink != null && !_isDuplicate(initialLink)) {
+        _dispatchLink(onLink, initialLink, isInitialLink: true);
+      }
+    } finally {
+      _initialLinkProbeCompleted = true;
+      onInitialLinkProbeCompleted?.call();
+    }
   }
 }

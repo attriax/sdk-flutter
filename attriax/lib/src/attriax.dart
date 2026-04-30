@@ -14,16 +14,15 @@ import 'attriax_synchronization.dart';
 /// The public entry point for the Attriax mobile attribution SDK.
 ///
 /// Create one application-level instance and initialize it during startup.
-/// Awaiting [init] is the recommended path because it guarantees the SDK has
-/// collected context, restored persisted state, and started its listeners
-/// before your app continues. If your startup path must stay non-blocking, you
-/// can still call `unawaited(attriax.init())` intentionally.
+/// Awaiting [init] restores persisted state, captures the immediate runtime
+/// context, and starts listeners. Network-backed work such as app-open
+/// tracking and install-referrer enrichment continues asynchronously after
+/// [init] completes.
 ///
 /// ```dart
 /// final attriax = Attriax(
 ///   config: const AttriaxConfig(
 ///     appToken: 'ax_your_app_token',
-///     apiBaseUrl: 'https://api.attriax.com',
 ///   ),
 /// );
 ///
@@ -136,13 +135,34 @@ class Attriax {
   /// Latest collected device, app, platform, and SDK context snapshot.
   ///
   /// This is primarily useful for diagnostics, QA validation, and debugging
-  /// integration state after [init] completes.
+  /// integration state after [init] completes. The snapshot updates in the
+  /// background when a newer raw platform install referrer value is retrieved.
   AttriaxContextSnapshot? get contextSnapshot => _runtime.contextSnapshot;
+
+  /// Latest structured install-referrer details known for this installation.
+  ///
+  /// If a cached API result exists, this future resolves from local
+  /// preferences. Otherwise it resolves after the first app-open request
+  /// returns an install-referrer payload, or `null` when no such payload is
+  /// available. If [init] runs with `enabled: false`, the platform install
+  /// referrer is not checked and this future resolves to `null`; setting
+  /// [enabled] back to `true` later starts the app-open/referrer request once
+  /// for the current session and exposes that new result through this getter.
+  Future<AttriaxInstallReferrerDetails?> get installReferrer =>
+      _runtime.installReferrer;
 
   /// Most recent successful app-open tracking response.
   ///
   /// This stays `null` until the initial app-open request succeeds.
   AttriaxAppOpenResult? get lastAppOpenResult => _runtime.lastAppOpenResult;
+
+  /// Result for the launch deep link that opened the current app session.
+  ///
+  /// This resolves to the matched or failed backend resolution result for the
+  /// initial deep link, or `null` when the current launch was not initiated by
+  /// a deep link.
+  Future<AttriaxDeepLinkResult?> get initialDeepLink =>
+      _runtime.initialDeepLink;
 
   /// Broadcast deep-link stream with no buffering.
   ///
@@ -155,8 +175,8 @@ class Attriax {
   /// Initializes the SDK runtime.
   ///
   /// This restores persisted flags, generates or loads the SDK device ID,
-  /// collects the current context snapshot, starts deep-link listeners, and
-  /// optionally queues the initial app-open request.
+  /// captures the immediate context snapshot, starts deep-link listeners, and
+  /// optionally schedules the initial app-open request.
   ///
   /// Set [enabled] or [eventsEnabled] to override the persisted values for the
   /// current startup. Set [trackAppOpen] to `false` only when you explicitly

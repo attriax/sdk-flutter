@@ -1,11 +1,11 @@
 import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:http/http.dart' as http;
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'attriax_api_models.dart';
+import 'attriax_generated_transport.dart';
 import 'attriax_id_generator.dart';
 import 'attriax_logger.dart';
 import 'attriax_queue.dart';
@@ -15,15 +15,14 @@ import 'attriax_request_dispatcher.dart';
 /// state, and connectivity monitoring for the Attriax SDK.
 class AttriaxSynchronizer {
   AttriaxSynchronizer({
-    required String apiBaseUrl,
-    required http.Client client,
-    required Duration requestTimeout,
+    required AttriaxGeneratedTransport transport,
     required Connectivity connectivity,
     required SharedPreferences prefs,
     required int maxQueueSize,
     required AttriaxLogger logger,
-    void Function(String path, int statusCode)? onRequestDelivered,
-    void Function(String path, Object error)? onRequestFailed,
+    void Function(AttriaxApiRequest request, int statusCode)?
+    onRequestDelivered,
+    void Function(AttriaxApiRequest request, Object error)? onRequestFailed,
   }) : _connectivity = connectivity,
        _logger = logger {
     _queueManager = AttriaxQueueManager(
@@ -31,16 +30,14 @@ class AttriaxSynchronizer {
       maxQueueSize: maxQueueSize,
     );
     _dispatcher = AttriaxRequestDispatcher(
-      apiBaseUrl: apiBaseUrl,
-      client: client,
-      requestTimeout: requestTimeout,
+      transport: transport,
       connectivity: connectivity,
       queueManager: _queueManager,
       logger: logger,
       onDelivered: onRequestDelivered,
-      onFailed: (path, error) {
+      onFailed: (kind, error) {
         _lastFlushHadFailure = true;
-        onRequestFailed?.call(path, error);
+        onRequestFailed?.call(kind, error);
       },
     );
   }
@@ -75,9 +72,7 @@ class AttriaxSynchronizer {
   }) async {
     final queued = AttriaxQueuedRequest(
       id: attriaxGenerateId(),
-      kind: request.kind,
-      path: request.path,
-      body: request.toJson(),
+      request: request,
       createdAt: DateTime.now().toUtc(),
     );
     _dispatcher.registerHandlers(
@@ -87,7 +82,7 @@ class AttriaxSynchronizer {
     );
     await _queueManager.enqueue(queued);
     setState(AttriaxSynchronizationState.synchronizing);
-    _logger.verbose('Queued ${request.kind.name} request for ${request.path}.');
+    _logger.verbose('Queued ${attriaxApiRequestLabel(request)} request.');
     scheduleFlush();
   }
 
@@ -128,7 +123,6 @@ class AttriaxSynchronizer {
         }
       },
       onError: (Object error, StackTrace stackTrace) {
-        // Surface the error rather than silently swallowing it (NFH3).
         _logger.warning(
           'Connectivity stream error',
           error: error,

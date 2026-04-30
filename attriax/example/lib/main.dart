@@ -303,7 +303,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
         _appOpenResult = result;
         _status = result == null
             ? 'App open tracking was not scheduled.'
-            : 'App open tracked: ${result.attributionType.name}';
+        : 'App open tracked.';
       });
     } catch (error) {
       if (!mounted) return;
@@ -384,7 +384,6 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
     _openExampleDeepLink(
       AttriaxDeepLink(
         path: path,
-        name: 'Preview route',
         data: <String, Object?>{'preview': true, 'path': path},
       ),
       source: 'local_preview',
@@ -503,10 +502,6 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                       Text('Device ID: ${widget.sdk.deviceId ?? 'pending…'}'),
                       if (_appOpenResult != null) ...<Widget>[
                         const SizedBox(height: 8),
-                        Text(
-                          'Attribution type: '
-                          '${_appOpenResult!.attributionType.name}',
-                        ),
                         Text('New user: ${_appOpenResult!.isNewUser}'),
                         if (_appOpenResult!.deepLink != null)
                           Text(
@@ -708,8 +703,6 @@ class _ExampleDeepLinkDestinationPage extends StatelessWidget {
                   Text(
                     'Navigation source: ${args?.navigationSource ?? 'unknown'}',
                   ),
-                  Text('Link ID: ${deepLink?.linkId ?? 'n/a'}'),
-                  Text('Destination URL: ${deepLink?.destinationUrl ?? 'n/a'}'),
                   const SizedBox(height: 16),
                   Text('Metadata', style: theme.textTheme.titleMedium),
                   const SizedBox(height: 8),

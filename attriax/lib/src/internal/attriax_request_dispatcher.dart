@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
 
 import 'attriax_api_models.dart';
-import 'attriax_json_utils.dart';
+import 'attriax_generated_transport.dart';
 import 'attriax_logger.dart';
 import 'attriax_queue.dart';
 
@@ -13,43 +12,35 @@ typedef AttriaxSuccessHandler = void Function(AttriaxApiResponse response);
 typedef AttriaxErrorHandler =
     void Function(Object error, StackTrace? stackTrace);
 
-/// Dispatches queued requests to the Attriax backend over HTTP.
+/// Dispatches queued requests to the Attriax backend through the generated SDK client.
 ///
 /// Retries on transient errors (rate-limit, 5xx, network timeout) and
 /// permanently drops requests that fail with a non-retryable 4xx.
 class AttriaxRequestDispatcher {
   AttriaxRequestDispatcher({
-    required String apiBaseUrl,
-    required http.Client client,
-    required Duration requestTimeout,
+    required AttriaxGeneratedTransport transport,
     required Connectivity connectivity,
     required AttriaxQueueManager queueManager,
     required AttriaxLogger logger,
     this.onDelivered,
     this.onFailed,
-  }) : _apiBaseUrl = apiBaseUrl.endsWith('/')
-           ? apiBaseUrl.substring(0, apiBaseUrl.length - 1)
-           : apiBaseUrl,
-       _client = client,
-       _requestTimeout = requestTimeout,
+  }) : _transport = transport,
        _connectivity = connectivity,
        _queueManager = queueManager,
        _logger = logger;
 
-  final String _apiBaseUrl;
-  final http.Client _client;
-  final Duration _requestTimeout;
+  final AttriaxGeneratedTransport _transport;
   final Connectivity _connectivity;
   final AttriaxQueueManager _queueManager;
   final AttriaxLogger _logger;
 
   /// Called after a request is successfully delivered to the server.
-  /// Receives the endpoint path and the HTTP status code.
-  void Function(String path, int statusCode)? onDelivered;
+  /// Receives the request kind and the HTTP status code.
+  void Function(AttriaxApiRequest request, int statusCode)? onDelivered;
 
   /// Called after a request fails permanently (non-retryable error or 4xx).
-  /// Receives the endpoint path and the error.
-  void Function(String path, Object error)? onFailed;
+  /// Receives the request kind and the error.
+  void Function(AttriaxApiRequest request, Object error)? onFailed;
 
   bool _isFlushing = false;
   final Map<String, AttriaxSuccessHandler> _successHandlers = {};
@@ -94,98 +85,86 @@ class AttriaxRequestDispatcher {
       final remaining = <AttriaxQueuedRequest>[];
 
       for (var i = 0; i < queue.length; i++) {
-        final request = queue[i];
+        final queuedRequest = queue[i];
+        final request = queuedRequest.request;
+        final label = attriaxApiRequestLabel(request);
+
         try {
+          _logger.verbose('Sending $label request.');
+          final delivery = await _transport.send(request);
+
           _logger.verbose(
-            'Sending ${request.kind.name} request to ${request.path}.',
+            '$label request succeeded with HTTP ${delivery.statusCode}.',
           );
-          final response = await _client
-              .post(
-                Uri.parse('$_apiBaseUrl${request.path}'),
-                headers: const {'Content-Type': 'application/json'},
-                body: jsonEncode(request.body),
-              )
-              .timeout(_requestTimeout);
+          onDelivered?.call(request, delivery.statusCode);
+          _successHandlers.remove(queuedRequest.id)?.call(delivery.response);
+          _errorHandlers.remove(queuedRequest.id);
+          continue;
+        } on AttriaxTransportHttpException catch (error) {
+          onFailed?.call(request, error);
 
-          final payload = _decodePayload(response);
-          final statusCode = response.statusCode;
-
-          if (statusCode >= 200 && statusCode < 300) {
-            final parsedResponse = AttriaxApiResponseCodec.decode(
-              request.kind,
-              payload,
-            );
-            _logger.verbose(
-              'Request to ${request.path} succeeded with HTTP $statusCode.',
-            );
-            onDelivered?.call(request.path, statusCode);
-            _successHandlers.remove(request.id)?.call(parsedResponse);
-            _errorHandlers.remove(request.id);
-            continue;
-          }
-
-          final error = Exception(
-            'Attriax API error ($statusCode): ${response.body}',
-          );
-          onFailed?.call(request.path, error);
-
-          if (statusCode == 429 || statusCode >= 500) {
+          if (error.statusCode == 429 || error.statusCode >= 500) {
             _logger.warning(
-              'Request to ${request.path} failed with HTTP $statusCode and will be retried.',
+              '$label request failed with HTTP ${error.statusCode} and will be retried.',
               error: error,
             );
             remaining
-              ..add(request)
+              ..add(queuedRequest)
               ..addAll(queue.skip(i + 1));
             break;
           }
 
           _logger.error(
-            'Request to ${request.path} failed with non-retryable HTTP $statusCode and will be dropped.',
+            '$label request failed with non-retryable HTTP ${error.statusCode} and will be dropped.',
             error: error,
           );
-          _successHandlers.remove(request.id);
-          _errorHandlers.remove(request.id)?.call(error, null);
+          _successHandlers.remove(queuedRequest.id);
+          _errorHandlers
+              .remove(queuedRequest.id)
+              ?.call(error, error.source?.stackTrace);
         } on TimeoutException catch (error, stackTrace) {
-          onFailed?.call(request.path, error);
+          onFailed?.call(request, error);
           _logger.warning(
-            'Request to ${request.path} timed out and will be retried.',
+            '$label request timed out and will be retried.',
             error: error,
             stackTrace: stackTrace,
           );
           remaining
-            ..add(request)
+            ..add(queuedRequest)
             ..addAll(queue.skip(i + 1));
           break;
-        } on http.ClientException catch (error, stackTrace) {
-          onFailed?.call(request.path, error);
+        } on DioException catch (error, stackTrace) {
+          onFailed?.call(request, error);
           _logger.warning(
-            'Request to ${request.path} failed with a transport error and will be retried.',
+            '$label request failed with a transport error and will be retried.',
             error: error,
             stackTrace: stackTrace,
           );
           remaining
-            ..add(request)
+            ..add(queuedRequest)
             ..addAll(queue.skip(i + 1));
           break;
-        } on FormatException catch (error, stackTrace) {
-          onFailed?.call(request.path, error);
+        } on AttriaxTransportInvalidResponseException catch (
+          error,
+          stackTrace
+        ) {
+          onFailed?.call(request, error);
           _logger.error(
-            'Request to ${request.path} returned an invalid response and will be dropped.',
+            '$label request returned an invalid response and will be dropped.',
             error: error,
             stackTrace: stackTrace,
           );
-          _successHandlers.remove(request.id);
-          _errorHandlers.remove(request.id)?.call(error, stackTrace);
+          _successHandlers.remove(queuedRequest.id);
+          _errorHandlers.remove(queuedRequest.id)?.call(error, stackTrace);
         } catch (error, stackTrace) {
-          onFailed?.call(request.path, error);
+          onFailed?.call(request, error);
           _logger.error(
-            'Unexpected request failure for ${request.path}; dropping request.',
+            'Unexpected $label request failure; dropping request.',
             error: error,
             stackTrace: stackTrace,
           );
-          _successHandlers.remove(request.id);
-          _errorHandlers.remove(request.id)?.call(error, stackTrace);
+          _successHandlers.remove(queuedRequest.id);
+          _errorHandlers.remove(queuedRequest.id)?.call(error, stackTrace);
         }
       }
 
@@ -193,18 +172,5 @@ class AttriaxRequestDispatcher {
     } finally {
       _isFlushing = false;
     }
-  }
-
-  Map<String, Object?> _decodePayload(http.Response response) {
-    if (response.body.isEmpty) {
-      return const <String, Object?>{};
-    }
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map) {
-      return const <String, Object?>{};
-    }
-    final payload = attriaxObjectMapOrEmpty(decoded);
-    final data = attriaxObjectMap(payload['data']);
-    return data ?? payload;
   }
 }

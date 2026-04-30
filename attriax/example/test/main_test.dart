@@ -35,7 +35,6 @@ void main() {
       userId: 'user_123',
       isNewUser: true,
       isFirstLaunch: true,
-      attributionType: AttributionType.organic,
     );
 
     await tester.pumpWidget(AttriaxPackageExampleApp(sdk: sdk));
@@ -44,8 +43,7 @@ void main() {
     await tester.tap(find.text('Wait for app open tracking result'));
     await tester.pumpAndSettle();
 
-    expect(find.text('App open tracked: organic'), findsOneWidget);
-    expect(find.text('Attribution type: organic'), findsOneWidget);
+    expect(find.text('App open tracked.'), findsOneWidget);
     expect(find.text('New user: true'), findsOneWidget);
   });
 

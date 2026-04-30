@@ -19,18 +19,26 @@ class AttriaxEventHub {
         AttriaxRawDeepLinkEvent,
         Completer<AttriaxDeepLinkResult>
       >.identity();
+  final Completer<AttriaxDeepLinkResult?> _initialDeepLinkResult =
+      Completer<AttriaxDeepLinkResult?>();
+  bool _hasPendingInitialDeepLink = false;
 
   // ---------- streams ------------------------------------------------------- //
 
   Stream<AttriaxDeepLinkEvent> get deepLinks => _deepLinkController.stream;
   Stream<AttriaxSynchronizationState> get synchronizationStates =>
       _synchronizationStateController.stream;
+  Future<AttriaxDeepLinkResult?> get initialDeepLink =>
+      _initialDeepLinkResult.future;
 
   // ---------- emit ---------------------------------------------------------- //
 
   AttriaxDeepLinkEvent emitPendingDeepLink(AttriaxRawDeepLinkEvent rawEvent) {
     final completer = Completer<AttriaxDeepLinkResult>();
     _pendingDeepLinkResults[rawEvent] = completer;
+    if (rawEvent.isInitialLink) {
+      _hasPendingInitialDeepLink = true;
+    }
 
     final event = AttriaxDeepLinkEvent(
       rawEvent: rawEvent,
@@ -70,12 +78,22 @@ class AttriaxEventHub {
       conversion: conversion,
       failure: failure,
     );
+    if (rawEvent?.isInitialLink ?? false) {
+      _completeInitialDeepLink(result);
+    }
     _deepLinkController.add(
       AttriaxDeepLinkEvent(
         rawEvent: rawEvent,
         resultFuture: Future.value(result),
       ),
     );
+  }
+
+  void completeInitialDeepLinkIfAbsent() {
+    if (_hasPendingInitialDeepLink || _initialDeepLinkResult.isCompleted) {
+      return;
+    }
+    _initialDeepLinkResult.complete(null);
   }
 
   void emitSynchronizationState(AttriaxSynchronizationState state) {
@@ -103,6 +121,9 @@ class AttriaxEventHub {
       }
     }
     _pendingDeepLinkResults.clear();
+    if (!_initialDeepLinkResult.isCompleted) {
+      _initialDeepLinkResult.complete(null);
+    }
     await _deepLinkController.close();
     await _synchronizationStateController.close();
   }
@@ -118,5 +139,16 @@ class AttriaxEventHub {
     if (!completer.isCompleted) {
       completer.complete(result);
     }
+    if (rawEvent.isInitialLink) {
+      _hasPendingInitialDeepLink = false;
+      _completeInitialDeepLink(result);
+    }
+  }
+
+  void _completeInitialDeepLink(AttriaxDeepLinkResult result) {
+    if (_initialDeepLinkResult.isCompleted) {
+      return;
+    }
+    _initialDeepLinkResult.complete(result);
   }
 }

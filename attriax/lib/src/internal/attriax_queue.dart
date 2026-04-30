@@ -9,33 +9,29 @@ import 'attriax_json_utils.dart';
 class AttriaxQueuedRequest {
   const AttriaxQueuedRequest({
     required this.id,
-    required this.kind,
-    required this.path,
-    required this.body,
+    required this.request,
     required this.createdAt,
   });
 
   factory AttriaxQueuedRequest.fromJson(Map<String, Object?> json) =>
       AttriaxQueuedRequest(
         id: attriaxRequireString(json, 'id'),
-        kind: attriaxRequestKindFromName(attriaxRequireString(json, 'kind')),
-        path: attriaxRequireString(json, 'path'),
-        body: attriaxObjectMapOrEmpty(json['body']),
+        request: attriaxApiRequestFromJson(
+          attriaxRequireString(json, 'kind'),
+          attriaxObjectMapOrEmpty(json['body']),
+        ),
         createdAt:
             attriaxDateTimeValue(json['createdAt']) ?? DateTime.now().toUtc(),
       );
 
   final String id;
-  final AttriaxRequestKind kind;
-  final String path;
-  final Map<String, Object?> body;
+  final AttriaxApiRequest request;
   final DateTime createdAt;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,
-    'kind': kind.name,
-    'path': path,
-    'body': attriaxNormalizeJsonMap(body),
+    'kind': request.kindName,
+    'body': attriaxNormalizeJsonMap(request.toQueueBody()),
     'createdAt': createdAt.toIso8601String(),
   };
 }

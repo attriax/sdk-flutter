@@ -1,13 +1,7 @@
 const String attriaxSdkApiVersion = 'v1';
 const String attriaxSdkPackageVersion = '1.0.0';
 
-enum AttributionType {
-  referrer,
-  fingerprint,
-  external,
-  organic,
-  deferredDeepLink,
-}
+enum AttributionType { referrer, fingerprint, external, organic }
 
 enum AttriaxPlatformType { ios, android, web, windows, macos, linux, unknown }
 
@@ -189,41 +183,118 @@ class AttriaxContextSnapshot {
     required this.sdk,
     required this.app,
     required this.device,
-    this.installReferrer,
-  });
+    String? rawPlatformInstallReferrer,
+    @Deprecated('Use rawPlatformInstallReferrer instead.')
+    String? installReferrer,
+  }) : rawPlatformInstallReferrer =
+           rawPlatformInstallReferrer ?? installReferrer;
 
   final AttriaxPlatformType platform;
   final String deviceId;
   final bool isFirstLaunch;
-  final String? installReferrer;
+
+  /// Cached raw platform install referrer value.
+  ///
+  /// This is supported only on Android and reflects the latest raw platform
+  /// referrer value the SDK has cached locally. The SDK updates it when a new
+  /// platform referrer value is retrieved.
+  final String? rawPlatformInstallReferrer;
+
+  @Deprecated('Use rawPlatformInstallReferrer instead.')
+  String? get installReferrer => rawPlatformInstallReferrer;
+
   final AttriaxSdkSnapshot sdk;
   final AttriaxAppSnapshot app;
   final AttriaxDeviceSnapshot device;
 }
 
 class AttriaxDeepLink {
-  const AttriaxDeepLink({
-    required this.path,
-    this.linkId,
-    this.name,
-    this.destinationUrl,
-    this.data,
-  });
+  const AttriaxDeepLink({required this.path, this.data});
 
   factory AttriaxDeepLink.fromJson(Map<String, Object?> json) =>
       AttriaxDeepLink(
         path: _requireJsonString(json, 'path'),
-        linkId: _jsonString(json['linkId']),
-        name: _jsonString(json['name']),
-        destinationUrl: _jsonString(json['destinationUrl']),
         data: _jsonObject(json['data']),
       );
 
   final String path;
-  final String? linkId;
-  final String? name;
-  final String? destinationUrl;
   final Map<String, Object?>? data;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'path': path,
+    if (data != null && data!.isNotEmpty) 'data': _normalizeJsonMap(data!),
+  };
+}
+
+class AttriaxInstallReferrerDetails {
+  const AttriaxInstallReferrerDetails({
+    required this.attributionType,
+    required this.precision,
+    this.rawPlatformInstallReferrer,
+    this.source,
+    this.medium,
+    this.campaign,
+    this.term,
+    this.content,
+    this.adNetwork,
+    this.adClickId,
+    this.deepLinkData,
+  });
+
+  factory AttriaxInstallReferrerDetails.fromJson(Map<String, Object?> json) {
+    final deepLinkDataJson = _jsonObject(json['deepLinkData']);
+
+    return AttriaxInstallReferrerDetails(
+      rawPlatformInstallReferrer: _jsonString(
+        json['rawPlatformInstallReferrer'],
+      ),
+      source: _jsonString(json['source']),
+      medium: _jsonString(json['medium']),
+      campaign: _jsonString(json['campaign']),
+      term: _jsonString(json['term']),
+      content: _jsonString(json['content']),
+      adNetwork: _jsonString(json['adNetwork']),
+      adClickId: _jsonString(json['adClickId']),
+      attributionType: _parseAttributionType(
+        _jsonString(json['attributionType']),
+      ),
+      deepLinkData: deepLinkDataJson,
+      precision: _jsonDouble(json['precision']) ?? 0,
+    );
+  }
+
+  final String? rawPlatformInstallReferrer;
+  final String? source;
+  final String? medium;
+  final String? campaign;
+  final String? term;
+  final String? content;
+  final String? adNetwork;
+  final String? adClickId;
+  final AttributionType attributionType;
+  final Map<String, Object?>? deepLinkData;
+
+  /// Confidence score from `0.0` to `1.0` for the resolved install referrer.
+  ///
+  /// Higher values mean Attriax has stronger evidence for the returned
+  /// install-referrer interpretation.
+  final double precision;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    if (rawPlatformInstallReferrer != null)
+      'rawPlatformInstallReferrer': rawPlatformInstallReferrer,
+    if (source != null) 'source': source,
+    if (medium != null) 'medium': medium,
+    if (campaign != null) 'campaign': campaign,
+    if (term != null) 'term': term,
+    if (content != null) 'content': content,
+    if (adNetwork != null) 'adNetwork': adNetwork,
+    if (adClickId != null) 'adClickId': adClickId,
+    'attributionType': attributionType.name,
+    if (deepLinkData != null && deepLinkData!.isNotEmpty)
+      'deepLinkData': _normalizeJsonMap(deepLinkData!),
+    'precision': precision,
+  };
 }
 
 class AttriaxDynamicLinkRecord {
@@ -327,6 +398,8 @@ class AttriaxDeepLinkConversionEvent {
     required this.occurredAt,
     this.rawEvent,
     this.requestVersion,
+    this.acceptedAt,
+    this.consumedAt,
   });
 
   final AttriaxDeepLink deepLink;
@@ -334,6 +407,8 @@ class AttriaxDeepLinkConversionEvent {
   final bool isFirstLaunch;
   final bool isDeferred;
   final String? requestVersion;
+  final DateTime? acceptedAt;
+  final DateTime? consumedAt;
   final DateTime occurredAt;
 }
 
@@ -343,11 +418,17 @@ class AttriaxDeepLinkConversionFailure {
     required this.isFirstLaunch,
     required this.occurredAt,
     this.rawEvent,
+    this.status,
+    this.requestVersion,
+    this.acceptedAt,
   });
 
   final String reason;
   final AttriaxRawDeepLinkEvent? rawEvent;
   final bool isFirstLaunch;
+  final AttriaxDeepLinkResolutionStatus? status;
+  final String? requestVersion;
+  final DateTime? acceptedAt;
   final DateTime occurredAt;
 }
 
@@ -387,6 +468,7 @@ class AttriaxDeepLinkResolutionResult {
     this.deepLink,
     this.requestVersion,
     this.acceptedAt,
+    this.consumedAt,
   });
 
   factory AttriaxDeepLinkResolutionResult.fromJson(Map<String, Object?> json) {
@@ -402,6 +484,7 @@ class AttriaxDeepLinkResolutionResult {
           : null,
       requestVersion: _jsonString(json['requestVersion']),
       acceptedAt: _jsonDateTime(json['acceptedAt']),
+      consumedAt: _jsonDateTime(json['consumedAt']),
     );
   }
 
@@ -412,6 +495,7 @@ class AttriaxDeepLinkResolutionResult {
   final AttriaxDeepLink? deepLink;
   final String? requestVersion;
   final DateTime? acceptedAt;
+  final DateTime? consumedAt;
 }
 
 class AttriaxAppOpenResult {
@@ -419,28 +503,27 @@ class AttriaxAppOpenResult {
     required this.userId,
     required this.isNewUser,
     required this.isFirstLaunch,
-    required this.attributionType,
-    this.attributedLinkId,
     this.requestVersion,
     this.acceptedAt,
     this.deepLink,
+    this.installReferrer,
   });
 
   factory AttriaxAppOpenResult.fromJson(Map<String, Object?> json) {
     final deepLinkJson = _jsonObject(json['deepLink']);
+    final installReferrerJson = _jsonObject(json['installReferrer']);
 
     return AttriaxAppOpenResult(
       userId: _requireJsonString(json, 'userId'),
       isNewUser: _jsonBool(json['isNewUser']) ?? false,
       isFirstLaunch: _jsonBool(json['isFirstLaunch']) ?? false,
-      attributionType: _parseAttributionType(
-        _jsonString(json['attributionType']),
-      ),
-      attributedLinkId: _jsonString(json['attributedLinkId']),
       requestVersion: _jsonString(json['requestVersion']),
       acceptedAt: _jsonDateTime(json['acceptedAt']),
       deepLink: deepLinkJson != null
           ? AttriaxDeepLink.fromJson(deepLinkJson)
+          : null,
+      installReferrer: installReferrerJson != null
+          ? AttriaxInstallReferrerDetails.fromJson(installReferrerJson)
           : null,
     );
   }
@@ -448,11 +531,10 @@ class AttriaxAppOpenResult {
   final String userId;
   final bool isNewUser;
   final bool isFirstLaunch;
-  final AttributionType attributionType;
-  final String? attributedLinkId;
   final String? requestVersion;
   final DateTime? acceptedAt;
   final AttriaxDeepLink? deepLink;
+  final AttriaxInstallReferrerDetails? installReferrer;
 }
 
 typedef AttriaxInitResult = AttriaxAppOpenResult;
@@ -531,6 +613,8 @@ String _requireJsonString(Map<String, Object?> json, String key) {
 
 bool? _jsonBool(Object? value) => value is bool ? value : null;
 
+double? _jsonDouble(Object? value) => value is num ? value.toDouble() : null;
+
 DateTime? _jsonDateTime(Object? value) =>
     value is String ? DateTime.tryParse(value) : null;
 
@@ -542,8 +626,6 @@ AttributionType _parseAttributionType(String? value) {
       return AttributionType.fingerprint;
     case 'external':
       return AttributionType.external;
-    case 'deferred_deep_link':
-      return AttributionType.deferredDeepLink;
     case 'organic':
     default:
       return AttributionType.organic;

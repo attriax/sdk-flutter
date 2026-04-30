@@ -93,5 +93,38 @@ void main() {
       expect(result.conversion, same(conversion));
       expect(result.failure, isNull);
     });
+
+    test('exposes the resolved initial deep link result', () async {
+      final rawEvent = AttriaxRawDeepLinkEvent(
+        uri: Uri.parse('https://example.com/promo/launch'),
+        linkPath: 'promo/launch',
+        isFirstLaunch: true,
+        isInitialLink: true,
+        occurredAt: DateTime.utc(2026, 4, 29, 10),
+      );
+      final conversion = AttriaxDeepLinkConversionEvent(
+        deepLink: const AttriaxDeepLink(path: 'promo/launch'),
+        rawEvent: rawEvent,
+        isFirstLaunch: true,
+        isDeferred: false,
+        occurredAt: DateTime.utc(2026, 4, 29, 10, 0, 1),
+      );
+
+      hub.emitPendingDeepLink(rawEvent);
+      hub.resolvePendingDeepLink(rawEvent: rawEvent, conversion: conversion);
+
+      final result = await hub.initialDeepLink;
+      expect(result?.conversion, same(conversion));
+    });
+
+    test(
+      'completes initialDeepLink with null when no launch link exists',
+      () async {
+        hub.completeInitialDeepLinkIfAbsent();
+
+        final result = await hub.initialDeepLink;
+        expect(result, isNull);
+      },
+    );
   });
 }

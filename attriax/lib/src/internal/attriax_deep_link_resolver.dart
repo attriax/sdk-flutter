@@ -54,13 +54,13 @@ class AttriaxDeepLinkResolver {
     );
 
     await _synchronizer.enqueue(
-      AttriaxResolveDeepLinkRequest(
+      attriaxBuildResolveDeepLinkRequest(
         appToken: config.appToken,
         deviceId: deviceId,
         platform: context.platform,
-        rawUrl: uri.toString(),
         source: 'attriax_sdk',
         isFirstLaunch: isFirstLaunch,
+        rawUrl: uri.toString(),
         metadata: <String, Object?>{
           'isInitialLink': isInitialLink,
           'queryParameters': uri.queryParametersAll,
@@ -142,14 +142,14 @@ class AttriaxDeepLinkResolver {
     _eventHub.emitPendingDeepLink(rawEvent);
 
     await _synchronizer.enqueue(
-      AttriaxResolveDeepLinkRequest(
+      attriaxBuildResolveDeepLinkRequest(
         appToken: config.appToken,
         deviceId: deviceId,
         platform: context.platform,
-        rawUrl: uri?.toString(),
-        linkPath: normalizedLinkPath,
         source: source,
         isFirstLaunch: isFirstLaunch,
+        rawUrl: uri?.toString(),
+        linkPath: normalizedLinkPath,
         metadata: metadata,
       ),
       onSuccess: (response) {

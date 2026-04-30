@@ -22,8 +22,7 @@ class AttriaxAppOpenTracker {
   /// Queues the app-open request. Subsequent calls are silently ignored.
   Future<void> schedule({
     required AttriaxConfig config,
-    required AttriaxContextSnapshot context,
-    required bool isFirstLaunch,
+    required Future<AttriaxContextSnapshot> contextFuture,
     required AttriaxSynchronizer synchronizer,
     required AttriaxEventHub eventHub,
     required AttriaxLogger logger,
@@ -34,8 +33,23 @@ class AttriaxAppOpenTracker {
     _didSchedule = true;
     _completer = Completer<AttriaxAppOpenResult?>();
 
+    late final AttriaxContextSnapshot context;
+    try {
+      context = await contextFuture;
+    } catch (error, stackTrace) {
+      logger.error(
+        'App-open request could not start because context resolution failed.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (!_completer!.isCompleted) {
+        _completer!.completeError(error, stackTrace);
+      }
+      return;
+    }
+
     await synchronizer.enqueue(
-      AttriaxOpenRequest.fromContext(config: config, context: context),
+      attriaxBuildOpenRequest(config: config, context: context),
       onSuccess: (response) {
         if (response is! AttriaxOpenApiResponse) {
           final error = StateError('Unexpected response type for app open.');

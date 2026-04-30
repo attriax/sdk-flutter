@@ -1,0 +1,66 @@
+import 'package:test/test.dart';
+import 'package:attriax_sdk_client/attriax_sdk_client.dart';
+
+// tests for SdkCreateDynamicLinkDto
+void main() {
+  final instance = SdkCreateDynamicLinkDtoBuilder();
+  // TODO add properties to the builder and call build()
+
+  group(SdkCreateDynamicLinkDto, () {
+    // bool androidRedirect
+    test('to test the property `androidRedirect`', () async {
+      // TODO
+    });
+
+    // String appToken
+    test('to test the property `appToken`', () async {
+      // TODO
+    });
+
+    // BuiltMap<String, JsonObject> data
+    test('to test the property `data`', () async {
+      // TODO
+    });
+
+    // String destinationUrl
+    test('to test the property `destinationUrl`', () async {
+      // TODO
+    });
+
+    // String group
+    test('to test the property `group`', () async {
+      // TODO
+    });
+
+    // bool iosRedirect
+    test('to test the property `iosRedirect`', () async {
+      // TODO
+    });
+
+    // String name
+    test('to test the property `name`', () async {
+      // TODO
+    });
+
+    // String prefix
+    test('to test the property `prefix`', () async {
+      // TODO
+    });
+
+    // String previewDescription
+    test('to test the property `previewDescription`', () async {
+      // TODO
+    });
+
+    // String previewImagePath
+    test('to test the property `previewImagePath`', () async {
+      // TODO
+    });
+
+    // String previewTitle
+    test('to test the property `previewTitle`', () async {
+      // TODO
+    });
+
+  });
+}

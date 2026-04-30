@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AttriaxStoredPreferences {
@@ -22,6 +25,8 @@ class AttriaxPreferencesStore {
   static const String enabledStorageKey = 'attriax.enabled';
   static const String eventsEnabledStorageKey = 'attriax.events.enabled';
   static const String firstLaunchSeenStorageKey = 'attriax.first_launch_seen';
+  static const String installReferrerDetailsStorageKey =
+      'attriax.install_referrer.details';
 
   final SharedPreferences? _prefsOverride;
   SharedPreferences? _prefs;
@@ -68,6 +73,47 @@ class AttriaxPreferencesStore {
   Future<void> setEventsEnabled({required bool enabled}) async {
     final prefs = await preferences;
     await prefs.setBool(eventsEnabledStorageKey, enabled);
+  }
+
+  Future<void> setDeviceId({required String deviceId}) async {
+    final prefs = await preferences;
+    await prefs.setString(deviceIdStorageKey, deviceId);
+  }
+
+  Future<AttriaxInstallReferrerDetails?> readInstallReferrerDetails() async {
+    final prefs = await preferences;
+    final rawValue = prefs.getString(installReferrerDetailsStorageKey);
+    if (rawValue == null || rawValue.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(rawValue);
+      if (decoded is! Map) {
+        return null;
+      }
+
+      return AttriaxInstallReferrerDetails.fromJson(
+        decoded.map((key, value) => MapEntry(key.toString(), value as Object?)),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> setInstallReferrerDetails({
+    required AttriaxInstallReferrerDetails? details,
+  }) async {
+    final prefs = await preferences;
+    if (details == null) {
+      await prefs.remove(installReferrerDetailsStorageKey);
+      return;
+    }
+
+    await prefs.setString(
+      installReferrerDetailsStorageKey,
+      jsonEncode(details.toJson()),
+    );
   }
 
   Future<SharedPreferences> get preferences async {
