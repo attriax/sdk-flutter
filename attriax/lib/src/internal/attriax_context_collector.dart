@@ -529,9 +529,9 @@ class AttriaxContextCollector {
         language: locale,
         timezone: timezone,
         screenResolution: screenResolution,
-            screenWidth: screenWidth,
-            screenHeight: screenHeight,
-            devicePixelRatio: devicePixelRatio,
+        screenWidth: screenWidth,
+        screenHeight: screenHeight,
+        devicePixelRatio: devicePixelRatio,
         advertisingId: nativeContext.advertisingId,
         androidId: nativeContext.androidId,
         metadata: {
