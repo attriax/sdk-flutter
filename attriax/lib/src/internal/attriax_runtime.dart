@@ -64,6 +64,7 @@ class AttriaxRuntime {
   AttriaxGeneratedTransport? _transport;
 
   String? _deviceId;
+  String? _deviceIdSource;
   bool _initialized = false;
   bool _isEnabled = true;
   bool _eventsEnabled = true;
@@ -89,19 +90,23 @@ class AttriaxRuntime {
   bool get isEnabled => _isEnabled;
   bool get areEventsEnabled => _eventsEnabled;
   bool get isFirstLaunch => _isFirstLaunch;
+  String? get deviceId => _deviceId;
   bool get isSynchronized =>
       _synchronizer?.synchronizationState ==
       AttriaxSynchronizationState.synchronized;
-  String? get deviceId => _deviceId;
-  AttriaxContextSnapshot? get contextSnapshot => _context;
-  AttriaxAppOpenResult? get lastAppOpenResult => _appOpenTracker.lastResult;
+  AttriaxSdkSnapshot? get sdkSnapshot => _context?.sdk;
+  AttriaxAppOpen? get lastAppOpenResult =>
+      _toPublicAppOpen(_appOpenTracker.lastResult);
   Future<AttriaxInstallReferrerDetails?> get installReferrer =>
       _installReferrerCompleter?.future ??
       Future<AttriaxInstallReferrerDetails?>.error(
         StateError('Attriax SDK not initialized. Call init() first.'),
       );
-  Future<AttriaxDeepLinkResult?> get initialDeepLink =>
+  AttriaxDeepLinkResult? get initialDeepLink => _eventHub.initialDeepLinkValue;
+  bool get isInitialDeepLinkResolved => _eventHub.isInitialDeepLinkResolved;
+  Future<AttriaxDeepLinkResult?> get waitForInitialDeepLink =>
       _eventHub.initialDeepLink;
+  AttriaxDeepLinkResult? get latestDeepLink => _eventHub.latestDeepLink;
   AttriaxSynchronizationState get synchronizationState =>
       _synchronizer?.synchronizationState ??
       AttriaxSynchronizationState.initializing;
@@ -161,13 +166,34 @@ class AttriaxRuntime {
     final prefs = await _preferencesStore.preferences;
 
     _deviceId ??= storedPreferences.deviceId;
-    final resolvedDeviceId = await _contextCollector.resolvePreferredDeviceId(
-      fallbackDeviceId: _deviceId!,
-    );
+    _deviceIdSource ??= storedPreferences.deviceIdSource;
+
+    late final AttriaxResolvedDeviceId resolvedDeviceId;
+    if (_deviceIdSource != null) {
+      resolvedDeviceId = AttriaxResolvedDeviceId(
+        value: _deviceId!,
+        source: _deviceIdSource!,
+        isFallback:
+            _deviceIdSource == attriaxPersistentStorageDeviceIdSource,
+      );
+    } else if (storedPreferences.hasPersistedDeviceId) {
+      resolvedDeviceId = AttriaxResolvedDeviceId(
+        value: _deviceId!,
+        source: attriaxPersistentStorageDeviceIdSource,
+        isFallback: true,
+      );
+    } else {
+      resolvedDeviceId = await _contextCollector.resolvePreferredDeviceId(
+        fallbackDeviceId: _deviceId!,
+      );
+    }
+
     if (_deviceId != resolvedDeviceId.value) {
       _deviceId = resolvedDeviceId.value;
       await _preferencesStore.setDeviceId(deviceId: _deviceId!);
     }
+    _deviceIdSource = resolvedDeviceId.source;
+    await _preferencesStore.setDeviceIdSource(deviceIdSource: _deviceIdSource);
     _logger.verbose('Using device ID (${resolvedDeviceId.source}): $_deviceId');
     _isFirstLaunch = storedPreferences.isFirstLaunch;
     _isEnabled = storedPreferences.isEnabled;
@@ -214,6 +240,7 @@ class AttriaxRuntime {
     _resolver ??= AttriaxDeepLinkResolver(
       config: config,
       deviceId: _deviceId!,
+      deviceIdSource: _requireDeviceIdSource(),
       isFirstLaunch: _isFirstLaunch,
       context: _context!,
       synchronizer: _synchronizer!,
@@ -255,7 +282,6 @@ class AttriaxRuntime {
   Future<void> trackEvent(
     String eventName, {
     Map<String, Object?>? eventData,
-    String? linkId,
   }) async {
     _assertInitialized();
     if (!_isEnabled || !_eventsEnabled) {
@@ -269,9 +295,9 @@ class AttriaxRuntime {
       attriaxBuildTrackEventRequest(
         appToken: config.appToken,
         deviceId: _deviceId!,
+        deviceIdSource: _requireDeviceIdSource(),
         eventName: eventName,
         eventData: eventData,
-        linkId: linkId,
       ),
     );
   }
@@ -315,7 +341,7 @@ class AttriaxRuntime {
   }
 
   Future<void> identify(
-    String externalUserId, {
+    String? externalUserId, {
     String? externalUserName,
   }) async {
     _assertInitialized();
@@ -330,6 +356,7 @@ class AttriaxRuntime {
       attriaxBuildIdentifyRequest(
         appToken: config.appToken,
         deviceId: _deviceId!,
+        deviceIdSource: _requireDeviceIdSource(),
         externalUserId: externalUserId,
         externalUserName: externalUserName,
       ),
@@ -346,6 +373,11 @@ class AttriaxRuntime {
     String? previewTitle,
     String? previewDescription,
     String? previewImagePath,
+    String? utmSource,
+    String? utmMedium,
+    String? utmCampaign,
+    String? utmTerm,
+    String? utmContent,
     Map<String, Object?>? data,
   }) async {
     _assertInitialized();
@@ -361,13 +393,18 @@ class AttriaxRuntime {
       previewTitle: _trimOrNull(previewTitle),
       previewDescription: _trimOrNull(previewDescription),
       previewImagePath: _trimOrNull(previewImagePath),
+      utmSource: _trimOrNull(utmSource),
+      utmMedium: _trimOrNull(utmMedium),
+      utmCampaign: _trimOrNull(utmCampaign),
+      utmTerm: _trimOrNull(utmTerm),
+      utmContent: _trimOrNull(utmContent),
       data: data,
     );
 
     return _transport!.createDynamicLink(request);
   }
 
-  Future<AttriaxDeepLinkConversionEvent?> recordDeepLinkConversion({
+  Future<AttriaxDeepLinkResolution?> recordDeepLinkConversion({
     Uri? uri,
     String? linkPath,
     Map<String, Object?>? metadata,
@@ -434,8 +471,8 @@ class AttriaxRuntime {
 
   // ---------- app open ------------------------------------------------------ //
 
-  Future<AttriaxAppOpenResult?> waitForAppOpenTracking() =>
-      _appOpenTracker.waitForResult();
+    Future<AttriaxAppOpen?> waitForAppOpenTracking() async =>
+      _toPublicAppOpen(await _appOpenTracker.waitForResult());
 
   // ---------- dispose ------------------------------------------------------- //
 
@@ -453,6 +490,18 @@ class AttriaxRuntime {
   }
 
   // ---------- private ------------------------------------------------------- //
+
+  AttriaxAppOpen? _toPublicAppOpen(AttriaxAppOpenResult? result) {
+    if (result == null) {
+      return null;
+    }
+
+    return AttriaxAppOpen(
+      isNewUser: result.isNewUser,
+      isFirstLaunch: result.isFirstLaunch,
+      deepLink: result.deepLink,
+    );
+  }
 
   void _validateConfig() {
     if (config.appToken.trim().isEmpty) {
@@ -473,6 +522,15 @@ class AttriaxRuntime {
   String? _trimOrNull(String? value) {
     final trimmed = value?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  String _requireDeviceIdSource() {
+    final source = _deviceIdSource?.trim();
+    if (source == null || source.isEmpty) {
+      return attriaxPersistentStorageDeviceIdSource;
+    }
+
+    return source;
   }
 
   Future<void> _applyEnabledState(bool enabled) async {
@@ -603,6 +661,7 @@ class AttriaxRuntime {
       _appOpenTracker.schedule(
         config: config,
         contextFuture: _ensureResolvedContextForAppOpen(),
+        deviceIdSource: _requireDeviceIdSource(),
         synchronizer: _synchronizer!,
         eventHub: _eventHub,
         logger: _logger,

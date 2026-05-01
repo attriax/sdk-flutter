@@ -15,9 +15,9 @@ part 'sdk_event_dto.g.dart';
 /// Properties:
 /// * [appToken] 
 /// * [deviceId] 
+/// * [deviceIdSource] 
 /// * [eventData] 
 /// * [eventName] 
-/// * [linkId] 
 @BuiltValue()
 abstract class SdkEventDto implements Built<SdkEventDto, SdkEventDtoBuilder> {
   @BuiltValueField(wireName: r'appToken')
@@ -26,14 +26,14 @@ abstract class SdkEventDto implements Built<SdkEventDto, SdkEventDtoBuilder> {
   @BuiltValueField(wireName: r'deviceId')
   String get deviceId;
 
+  @BuiltValueField(wireName: r'deviceIdSource')
+  String? get deviceIdSource;
+
   @BuiltValueField(wireName: r'eventData')
   BuiltMap<String, JsonObject?>? get eventData;
 
   @BuiltValueField(wireName: r'eventName')
   String get eventName;
-
-  @BuiltValueField(wireName: r'linkId')
-  String? get linkId;
 
   SdkEventDto._();
 
@@ -68,6 +68,13 @@ class _$SdkEventDtoSerializer implements PrimitiveSerializer<SdkEventDto> {
       object.deviceId,
       specifiedType: const FullType(String),
     );
+    if (object.deviceIdSource != null) {
+      yield r'deviceIdSource';
+      yield serializers.serialize(
+        object.deviceIdSource,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.eventData != null) {
       yield r'eventData';
       yield serializers.serialize(
@@ -80,13 +87,6 @@ class _$SdkEventDtoSerializer implements PrimitiveSerializer<SdkEventDto> {
       object.eventName,
       specifiedType: const FullType(String),
     );
-    if (object.linkId != null) {
-      yield r'linkId';
-      yield serializers.serialize(
-        object.linkId,
-        specifiedType: const FullType(String),
-      );
-    }
   }
 
   @override
@@ -124,6 +124,13 @@ class _$SdkEventDtoSerializer implements PrimitiveSerializer<SdkEventDto> {
           ) as String;
           result.deviceId = valueDes;
           break;
+        case r'deviceIdSource':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.deviceIdSource = valueDes;
+          break;
         case r'eventData':
           final valueDes = serializers.deserialize(
             value,
@@ -137,13 +144,6 @@ class _$SdkEventDtoSerializer implements PrimitiveSerializer<SdkEventDto> {
             specifiedType: const FullType(String),
           ) as String;
           result.eventName = valueDes;
-          break;
-        case r'linkId':
-          final valueDes = serializers.deserialize(
-            value,
-            specifiedType: const FullType(String),
-          ) as String;
-          result.linkId = valueDes;
           break;
         default:
           unhandled.add(key);

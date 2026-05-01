@@ -12,7 +12,9 @@ class _$SdkIdentifyDto extends SdkIdentifyDto {
   @override
   final String deviceId;
   @override
-  final String externalUserId;
+  final String? deviceIdSource;
+  @override
+  final String? externalUserId;
   @override
   final String? externalUserName;
 
@@ -22,7 +24,8 @@ class _$SdkIdentifyDto extends SdkIdentifyDto {
   _$SdkIdentifyDto._({
     required this.appToken,
     required this.deviceId,
-    required this.externalUserId,
+    this.deviceIdSource,
+    this.externalUserId,
     this.externalUserName,
   }) : super._();
   @override
@@ -38,6 +41,7 @@ class _$SdkIdentifyDto extends SdkIdentifyDto {
     return other is SdkIdentifyDto &&
         appToken == other.appToken &&
         deviceId == other.deviceId &&
+        deviceIdSource == other.deviceIdSource &&
         externalUserId == other.externalUserId &&
         externalUserName == other.externalUserName;
   }
@@ -47,6 +51,7 @@ class _$SdkIdentifyDto extends SdkIdentifyDto {
     var _$hash = 0;
     _$hash = $jc(_$hash, appToken.hashCode);
     _$hash = $jc(_$hash, deviceId.hashCode);
+    _$hash = $jc(_$hash, deviceIdSource.hashCode);
     _$hash = $jc(_$hash, externalUserId.hashCode);
     _$hash = $jc(_$hash, externalUserName.hashCode);
     _$hash = $jf(_$hash);
@@ -58,6 +63,7 @@ class _$SdkIdentifyDto extends SdkIdentifyDto {
     return (newBuiltValueToStringHelper(r'SdkIdentifyDto')
           ..add('appToken', appToken)
           ..add('deviceId', deviceId)
+          ..add('deviceIdSource', deviceIdSource)
           ..add('externalUserId', externalUserId)
           ..add('externalUserName', externalUserName))
         .toString();
@@ -75,6 +81,11 @@ class SdkIdentifyDtoBuilder
   String? _deviceId;
   String? get deviceId => _$this._deviceId;
   set deviceId(String? deviceId) => _$this._deviceId = deviceId;
+
+  String? _deviceIdSource;
+  String? get deviceIdSource => _$this._deviceIdSource;
+  set deviceIdSource(String? deviceIdSource) =>
+      _$this._deviceIdSource = deviceIdSource;
 
   String? _externalUserId;
   String? get externalUserId => _$this._externalUserId;
@@ -95,6 +106,7 @@ class SdkIdentifyDtoBuilder
     if ($v != null) {
       _appToken = $v.appToken;
       _deviceId = $v.deviceId;
+      _deviceIdSource = $v.deviceIdSource;
       _externalUserId = $v.externalUserId;
       _externalUserName = $v.externalUserName;
       _$v = null;
@@ -129,11 +141,8 @@ class SdkIdentifyDtoBuilder
             r'SdkIdentifyDto',
             'deviceId',
           ),
-          externalUserId: BuiltValueNullFieldError.checkNotNull(
-            externalUserId,
-            r'SdkIdentifyDto',
-            'externalUserId',
-          ),
+          deviceIdSource: deviceIdSource,
+          externalUserId: externalUserId,
           externalUserName: externalUserName,
         );
     replace(_$result);

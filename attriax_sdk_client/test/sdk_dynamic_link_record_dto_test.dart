@@ -77,5 +77,30 @@ void main() {
       // TODO
     });
 
+    // String utmCampaign
+    test('to test the property `utmCampaign`', () async {
+      // TODO
+    });
+
+    // String utmContent
+    test('to test the property `utmContent`', () async {
+      // TODO
+    });
+
+    // String utmMedium
+    test('to test the property `utmMedium`', () async {
+      // TODO
+    });
+
+    // String utmSource
+    test('to test the property `utmSource`', () async {
+      // TODO
+    });
+
+    // String utmTerm
+    test('to test the property `utmTerm`', () async {
+      // TODO
+    });
+
   });
 }

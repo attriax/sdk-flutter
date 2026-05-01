@@ -16,6 +16,8 @@ part 'device_context_dto.g.dart';
 /// * [advertisingId] 
 /// * [androidId] 
 /// * [brand] 
+/// * [colorDepth] 
+/// * [devicePixelRatio] 
 /// * [hardware] 
 /// * [isPhysicalDevice] 
 /// * [language] 
@@ -24,7 +26,9 @@ part 'device_context_dto.g.dart';
 /// * [model] 
 /// * [name] 
 /// * [osVersion] 
+/// * [screenHeight] 
 /// * [screenResolution] 
+/// * [screenWidth] 
 /// * [supportedAbis] 
 /// * [timezone] 
 @BuiltValue()
@@ -37,6 +41,12 @@ abstract class DeviceContextDto implements Built<DeviceContextDto, DeviceContext
 
   @BuiltValueField(wireName: r'brand')
   String? get brand;
+
+  @BuiltValueField(wireName: r'colorDepth')
+  num? get colorDepth;
+
+  @BuiltValueField(wireName: r'devicePixelRatio')
+  num? get devicePixelRatio;
 
   @BuiltValueField(wireName: r'hardware')
   String? get hardware;
@@ -62,8 +72,14 @@ abstract class DeviceContextDto implements Built<DeviceContextDto, DeviceContext
   @BuiltValueField(wireName: r'osVersion')
   String? get osVersion;
 
+  @BuiltValueField(wireName: r'screenHeight')
+  num? get screenHeight;
+
   @BuiltValueField(wireName: r'screenResolution')
   String? get screenResolution;
+
+  @BuiltValueField(wireName: r'screenWidth')
+  num? get screenWidth;
 
   @BuiltValueField(wireName: r'supportedAbis')
   BuiltList<String>? get supportedAbis;
@@ -113,6 +129,20 @@ class _$DeviceContextDtoSerializer implements PrimitiveSerializer<DeviceContextD
       yield serializers.serialize(
         object.brand,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.colorDepth != null) {
+      yield r'colorDepth';
+      yield serializers.serialize(
+        object.colorDepth,
+        specifiedType: const FullType(num),
+      );
+    }
+    if (object.devicePixelRatio != null) {
+      yield r'devicePixelRatio';
+      yield serializers.serialize(
+        object.devicePixelRatio,
+        specifiedType: const FullType(num),
       );
     }
     if (object.hardware != null) {
@@ -171,11 +201,25 @@ class _$DeviceContextDtoSerializer implements PrimitiveSerializer<DeviceContextD
         specifiedType: const FullType(String),
       );
     }
+    if (object.screenHeight != null) {
+      yield r'screenHeight';
+      yield serializers.serialize(
+        object.screenHeight,
+        specifiedType: const FullType(num),
+      );
+    }
     if (object.screenResolution != null) {
       yield r'screenResolution';
       yield serializers.serialize(
         object.screenResolution,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.screenWidth != null) {
+      yield r'screenWidth';
+      yield serializers.serialize(
+        object.screenWidth,
+        specifiedType: const FullType(num),
       );
     }
     if (object.supportedAbis != null) {
@@ -236,6 +280,20 @@ class _$DeviceContextDtoSerializer implements PrimitiveSerializer<DeviceContextD
           ) as String;
           result.brand = valueDes;
           break;
+        case r'colorDepth':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(num),
+          ) as num;
+          result.colorDepth = valueDes;
+          break;
+        case r'devicePixelRatio':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(num),
+          ) as num;
+          result.devicePixelRatio = valueDes;
+          break;
         case r'hardware':
           final valueDes = serializers.deserialize(
             value,
@@ -292,12 +350,26 @@ class _$DeviceContextDtoSerializer implements PrimitiveSerializer<DeviceContextD
           ) as String;
           result.osVersion = valueDes;
           break;
+        case r'screenHeight':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(num),
+          ) as num;
+          result.screenHeight = valueDes;
+          break;
         case r'screenResolution':
           final valueDes = serializers.deserialize(
             value,
             specifiedType: const FullType(String),
           ) as String;
           result.screenResolution = valueDes;
+          break;
+        case r'screenWidth':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(num),
+          ) as num;
+          result.screenWidth = valueDes;
           break;
         case r'supportedAbis':
           final valueDes = serializers.deserialize(

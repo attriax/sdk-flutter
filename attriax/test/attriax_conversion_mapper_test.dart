@@ -6,7 +6,7 @@ void main() {
   group('AttriaxConversionMapper', () {
     const mapper = AttriaxConversionMapper();
 
-    test('preserves acceptedAt and requestVersion on matched conversions', () {
+    test('maps consumedAt and occurredAt on matched resolutions', () {
       final acceptedAt = DateTime.utc(2026, 4, 29, 12);
       final consumedAt = DateTime.utc(2026, 4, 29, 12, 0, 1);
       final result = AttriaxDeepLinkResolutionResult(
@@ -19,17 +19,15 @@ void main() {
         deepLink: const AttriaxDeepLink(path: 'promo/spring-launch'),
       );
 
-      final conversion = mapper.buildEvent(
+      final resolution = mapper.buildEvent(
         result,
         rawEvent: null,
         isDeferred: false,
       );
 
-      expect(conversion, isNotNull);
-      expect(conversion!.requestVersion, 'v1');
-      expect(conversion.acceptedAt, acceptedAt);
-      expect(conversion.consumedAt, consumedAt);
-      expect(conversion.occurredAt, acceptedAt);
+      expect(resolution, isNotNull);
+      expect(resolution!.consumedAt, consumedAt);
+      expect(resolution.occurredAt, acceptedAt);
     });
 
     test('preserves status, requestVersion, and acceptedAt on failures', () {

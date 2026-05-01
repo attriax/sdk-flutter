@@ -419,32 +419,6 @@ public class AttriaxAndroidPlugin implements
                     finishCollectInstallReferrer(
                         result,
                         referrerClient,
-                        completed,
-                        createInstallReferrerPayload(installReferrer, metadata)
-                    );
-                }
-            }
-
-            @Override
-            public void onInstallReferrerServiceDisconnected() {
-                Map<String, Object> metadata = createInstallReferrerMetadata();
-                metadata.put("installReferrerStatus", "service_disconnected");
-                finishCollectInstallReferrer(
-                    result,
-                    referrerClient,
-                    completed,
-                    createInstallReferrerPayload(null, metadata)
-                );
-            }
-        });
-    }
-
-    private Map<String, Object> createInstallReferrerMetadata() {
-        Map<String, Object> metadata = new HashMap<>();
-        metadata.put("source", "android_install_referrer");
-        return metadata;
-    }
-
     private Map<String, Object> createInstallReferrerPayload(
         String installReferrer,
         Map<String, Object> metadata

@@ -14,50 +14,66 @@ part 'sdk_install_referrer_result_dto.g.dart';
 /// SdkInstallReferrerResultDto
 ///
 /// Properties:
-/// * [adClickId] 
-/// * [adNetwork] 
-/// * [attributionType] 
-/// * [campaign] 
-/// * [content] 
-/// * [deepLinkData] 
-/// * [medium] 
-/// * [precision] 
-/// * [rawPlatformInstallReferrer] 
-/// * [source_] 
-/// * [term] 
+/// * [adClickId] - Detected ad click identifier such as gclid or fbclid.
+/// * [adNetwork] - Detected ad-network identifier inferred from the referrer.
+/// * [attributionType] - Attribution source classification for the install-referrer payload. Current platform install-referrer parsing reports `referrer`; `external` is reserved for future provider-based payloads.
+/// * [campaign] - Resolved UTM campaign extracted from the install referrer.
+/// * [content] - Resolved UTM content extracted from the install referrer.
+/// * [deepLinkData] - Resolved deep-link payload data associated with the install referrer.
+/// * [deepLinkUrl] - Full tracked short-link URL associated with the resolved deep link.
+/// * [medium] - Resolved UTM medium extracted from the install referrer.
+/// * [precision] - Confidence score from 0.0 to 1.0 for the returned interpretation.
+/// * [rawPlatformInstallReferrer] - Raw platform install-referrer string cached by the SDK.
+/// * [source_] - Resolved UTM source extracted from the install referrer.
+/// * [term] - Resolved UTM term extracted from the install referrer.
 @BuiltValue()
 abstract class SdkInstallReferrerResultDto implements Built<SdkInstallReferrerResultDto, SdkInstallReferrerResultDtoBuilder> {
+  /// Detected ad click identifier such as gclid or fbclid.
   @BuiltValueField(wireName: r'adClickId')
   String? get adClickId;
 
+  /// Detected ad-network identifier inferred from the referrer.
   @BuiltValueField(wireName: r'adNetwork')
   String? get adNetwork;
 
+  /// Attribution source classification for the install-referrer payload. Current platform install-referrer parsing reports `referrer`; `external` is reserved for future provider-based payloads.
   @BuiltValueField(wireName: r'attributionType')
   AttributionType get attributionType;
   // enum attributionTypeEnum {  referrer,  fingerprint,  external,  organic,  };
 
+  /// Resolved UTM campaign extracted from the install referrer.
   @BuiltValueField(wireName: r'campaign')
   String? get campaign;
 
+  /// Resolved UTM content extracted from the install referrer.
   @BuiltValueField(wireName: r'content')
   String? get content;
 
+  /// Resolved deep-link payload data associated with the install referrer.
   @BuiltValueField(wireName: r'deepLinkData')
   BuiltMap<String, JsonObject?>? get deepLinkData;
 
+  /// Full tracked short-link URL associated with the resolved deep link.
+  @BuiltValueField(wireName: r'deepLinkUrl')
+  String? get deepLinkUrl;
+
+  /// Resolved UTM medium extracted from the install referrer.
   @BuiltValueField(wireName: r'medium')
   String? get medium;
 
+  /// Confidence score from 0.0 to 1.0 for the returned interpretation.
   @BuiltValueField(wireName: r'precision')
   num get precision;
 
+  /// Raw platform install-referrer string cached by the SDK.
   @BuiltValueField(wireName: r'rawPlatformInstallReferrer')
   String? get rawPlatformInstallReferrer;
 
+  /// Resolved UTM source extracted from the install referrer.
   @BuiltValueField(wireName: r'source')
   String? get source_;
 
+  /// Resolved UTM term extracted from the install referrer.
   @BuiltValueField(wireName: r'term')
   String? get term;
 
@@ -122,6 +138,13 @@ class _$SdkInstallReferrerResultDtoSerializer implements PrimitiveSerializer<Sdk
       yield serializers.serialize(
         object.deepLinkData,
         specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
+      );
+    }
+    if (object.deepLinkUrl != null) {
+      yield r'deepLinkUrl';
+      yield serializers.serialize(
+        object.deepLinkUrl,
+        specifiedType: const FullType(String),
       );
     }
     if (object.medium != null) {
@@ -221,6 +244,13 @@ class _$SdkInstallReferrerResultDtoSerializer implements PrimitiveSerializer<Sdk
             specifiedType: const FullType(BuiltMap, [FullType(String), FullType.nullable(JsonObject)]),
           ) as BuiltMap<String, JsonObject?>;
           result.deepLinkData.replace(valueDes);
+          break;
+        case r'deepLinkUrl':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.deepLinkUrl = valueDes;
           break;
         case r'medium':
           final valueDes = serializers.deserialize(

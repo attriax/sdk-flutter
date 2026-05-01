@@ -21,6 +21,8 @@ class AttriaxEventHub {
       >.identity();
   final Completer<AttriaxDeepLinkResult?> _initialDeepLinkResult =
       Completer<AttriaxDeepLinkResult?>();
+  AttriaxDeepLinkResult? _initialDeepLinkValue;
+  AttriaxDeepLinkResult? _latestDeepLink;
   bool _hasPendingInitialDeepLink = false;
 
   // ---------- streams ------------------------------------------------------- //
@@ -30,6 +32,9 @@ class AttriaxEventHub {
       _synchronizationStateController.stream;
   Future<AttriaxDeepLinkResult?> get initialDeepLink =>
       _initialDeepLinkResult.future;
+  AttriaxDeepLinkResult? get initialDeepLinkValue => _initialDeepLinkValue;
+  bool get isInitialDeepLinkResolved => _initialDeepLinkResult.isCompleted;
+  AttriaxDeepLinkResult? get latestDeepLink => _latestDeepLink;
 
   // ---------- emit ---------------------------------------------------------- //
 
@@ -50,17 +55,17 @@ class AttriaxEventHub {
 
   void resolvePendingDeepLink({
     required AttriaxRawDeepLinkEvent rawEvent,
-    required AttriaxDeepLinkConversionEvent conversion,
+    required AttriaxDeepLinkResolution resolution,
   }) {
     _completePendingDeepLink(
       rawEvent: rawEvent,
-      result: AttriaxDeepLinkResult(rawEvent: rawEvent, conversion: conversion),
+      result: AttriaxDeepLinkResult(rawEvent: rawEvent, resolution: resolution),
     );
   }
 
   void failPendingDeepLink({
     required AttriaxRawDeepLinkEvent rawEvent,
-    required AttriaxDeepLinkConversionFailure failure,
+    required AttriaxDeepLinkResolutionFailure failure,
   }) {
     _completePendingDeepLink(
       rawEvent: rawEvent,
@@ -70,14 +75,15 @@ class AttriaxEventHub {
 
   void emitResolvedDeepLink({
     AttriaxRawDeepLinkEvent? rawEvent,
-    AttriaxDeepLinkConversionEvent? conversion,
-    AttriaxDeepLinkConversionFailure? failure,
+    AttriaxDeepLinkResolution? resolution,
+    AttriaxDeepLinkResolutionFailure? failure,
   }) {
     final result = AttriaxDeepLinkResult(
       rawEvent: rawEvent,
-      conversion: conversion,
+      resolution: resolution,
       failure: failure,
     );
+    _latestDeepLink = result;
     if (rawEvent?.isInitialLink ?? false) {
       _completeInitialDeepLink(result);
     }
@@ -106,18 +112,18 @@ class AttriaxEventHub {
       growable: false,
     )) {
       if (!entry.value.isCompleted) {
-        entry.value.complete(
-          AttriaxDeepLinkResult(
+        final result = AttriaxDeepLinkResult(
+          rawEvent: entry.key,
+          failure: AttriaxDeepLinkResolutionFailure(
+            reason:
+                'Attriax SDK disposed before deep-link resolution completed.',
             rawEvent: entry.key,
-            failure: AttriaxDeepLinkConversionFailure(
-              reason:
-                  'Attriax SDK disposed before deep-link resolution completed.',
-              rawEvent: entry.key,
-              isFirstLaunch: entry.key.isFirstLaunch,
-              occurredAt: now,
-            ),
+            isFirstLaunch: entry.key.isFirstLaunch,
+            occurredAt: now,
           ),
         );
+        _latestDeepLink = result;
+        entry.value.complete(result);
       }
     }
     _pendingDeepLinkResults.clear();
@@ -137,6 +143,7 @@ class AttriaxEventHub {
       return;
     }
     if (!completer.isCompleted) {
+      _latestDeepLink = result;
       completer.complete(result);
     }
     if (rawEvent.isInitialLink) {
@@ -146,6 +153,7 @@ class AttriaxEventHub {
   }
 
   void _completeInitialDeepLink(AttriaxDeepLinkResult result) {
+    _initialDeepLinkValue = result;
     if (_initialDeepLinkResult.isCompleted) {
       return;
     }

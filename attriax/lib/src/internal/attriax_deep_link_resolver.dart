@@ -9,12 +9,13 @@ import 'attriax_logger.dart';
 import 'attriax_synchronizer.dart';
 
 /// Handles incoming deep-link events from Attriax's platform bridge and manual
-/// deep-link conversion requests, delegating resolution to the Attriax backend
+/// deep-link resolution requests, delegating resolution to the Attriax backend
 /// and emitting results through the runtime event hub.
 class AttriaxDeepLinkResolver {
   AttriaxDeepLinkResolver({
     required this.config,
     required this.deviceId,
+    required this.deviceIdSource,
     required this.isFirstLaunch,
     required this.context,
     required AttriaxSynchronizer synchronizer,
@@ -28,6 +29,7 @@ class AttriaxDeepLinkResolver {
 
   final AttriaxConfig config;
   final String deviceId;
+  final String deviceIdSource;
   final bool isFirstLaunch;
   final AttriaxContextSnapshot context;
 
@@ -57,6 +59,7 @@ class AttriaxDeepLinkResolver {
       attriaxBuildResolveDeepLinkRequest(
         appToken: config.appToken,
         deviceId: deviceId,
+        deviceIdSource: deviceIdSource,
         platform: context.platform,
         source: 'attriax_sdk',
         isFirstLaunch: isFirstLaunch,
@@ -80,7 +83,7 @@ class AttriaxDeepLinkResolver {
         if (event != null) {
           _eventHub.resolvePendingDeepLink(
             rawEvent: rawEvent,
-            conversion: event,
+            resolution: event,
           );
           return;
         }
@@ -101,7 +104,7 @@ class AttriaxDeepLinkResolver {
         );
         _eventHub.failPendingDeepLink(
           rawEvent: rawEvent,
-          failure: AttriaxDeepLinkConversionFailure(
+          failure: AttriaxDeepLinkResolutionFailure(
             reason: error.toString(),
             rawEvent: rawEvent,
             isFirstLaunch: rawEvent.isFirstLaunch,
@@ -114,10 +117,10 @@ class AttriaxDeepLinkResolver {
 
   // ---------- manual -------------------------------------------------------- //
 
-  /// Records a deep-link conversion manually, emitting the same conversion
-  /// signals as automatic handling. Returns the event on success, `null` on
+  /// Records a deep-link resolution manually, emitting the same resolution
+  /// signals as automatic handling. Returns the resolution on success, `null` on
   /// failure.
-  Future<AttriaxDeepLinkConversionEvent?> recordManualConversion({
+  Future<AttriaxDeepLinkResolution?> recordManualConversion({
     Uri? uri,
     String? linkPath,
     Map<String, Object?>? metadata,
@@ -138,13 +141,14 @@ class AttriaxDeepLinkResolver {
       isInitialLink: false,
       occurredAt: DateTime.now().toUtc(),
     );
-    final completer = Completer<AttriaxDeepLinkConversionEvent?>();
+    final completer = Completer<AttriaxDeepLinkResolution?>();
     _eventHub.emitPendingDeepLink(rawEvent);
 
     await _synchronizer.enqueue(
       attriaxBuildResolveDeepLinkRequest(
         appToken: config.appToken,
         deviceId: deviceId,
+        deviceIdSource: deviceIdSource,
         platform: context.platform,
         source: source,
         isFirstLaunch: isFirstLaunch,
@@ -169,7 +173,7 @@ class AttriaxDeepLinkResolver {
         if (event != null) {
           _eventHub.resolvePendingDeepLink(
             rawEvent: rawEvent,
-            conversion: event,
+            resolution: event,
           );
           if (!completer.isCompleted) {
             completer.complete(event);
@@ -190,13 +194,13 @@ class AttriaxDeepLinkResolver {
       },
       onError: (error, stackTrace) {
         _logger.error(
-          'Manual deep-link conversion failed.',
+          'Manual deep-link resolution failed.',
           error: error,
           stackTrace: stackTrace,
         );
         _eventHub.failPendingDeepLink(
           rawEvent: rawEvent,
-          failure: AttriaxDeepLinkConversionFailure(
+          failure: AttriaxDeepLinkResolutionFailure(
             reason: error.toString(),
             rawEvent: rawEvent,
             isFirstLaunch: isFirstLaunch,

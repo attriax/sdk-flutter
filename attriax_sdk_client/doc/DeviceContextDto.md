@@ -11,6 +11,8 @@ Name | Type | Description | Notes
 **advertisingId** | **String** |  | [optional] 
 **androidId** | **String** |  | [optional] 
 **brand** | **String** |  | [optional] 
+**colorDepth** | **num** |  | [optional] 
+**devicePixelRatio** | **num** |  | [optional] 
 **hardware** | **String** |  | [optional] 
 **isPhysicalDevice** | **bool** |  | [optional] 
 **language** | **String** |  | [optional] 
@@ -19,7 +21,9 @@ Name | Type | Description | Notes
 **model** | **String** |  | [optional] 
 **name** | **String** |  | [optional] 
 **osVersion** | **String** |  | [optional] 
+**screenHeight** | **num** |  | [optional] 
 **screenResolution** | **String** |  | [optional] 
+**screenWidth** | **num** |  | [optional] 
 **supportedAbis** | **BuiltList&lt;String&gt;** |  | [optional] 
 **timezone** | **String** |  | [optional] 
 

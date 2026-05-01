@@ -22,6 +22,16 @@ void main() {
       // TODO
     });
 
+    // num colorDepth
+    test('to test the property `colorDepth`', () async {
+      // TODO
+    });
+
+    // num devicePixelRatio
+    test('to test the property `devicePixelRatio`', () async {
+      // TODO
+    });
+
     // String hardware
     test('to test the property `hardware`', () async {
       // TODO
@@ -62,8 +72,18 @@ void main() {
       // TODO
     });
 
+    // num screenHeight
+    test('to test the property `screenHeight`', () async {
+      // TODO
+    });
+
     // String screenResolution
     test('to test the property `screenResolution`', () async {
+      // TODO
+    });
+
+    // num screenWidth
+    test('to test the property `screenWidth`', () async {
       // TODO
     });
 

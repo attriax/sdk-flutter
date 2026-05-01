@@ -31,8 +31,7 @@ void main() {
   testWidgets('shows the app-open result after waiting for tracking', (
     tester,
   ) async {
-    sdk.appOpenResult = const AttriaxAppOpenResult(
-      userId: 'user_123',
+    sdk.appOpenResult = const AttriaxAppOpen(
       isNewUser: true,
       isFirstLaunch: true,
     );
@@ -59,7 +58,7 @@ void main() {
       isInitialLink: true,
       occurredAt: DateTime.utc(2026, 4, 27, 8),
     );
-    final conversion = AttriaxDeepLinkConversionEvent(
+    final resolution = AttriaxDeepLinkResolution(
       deepLink: const AttriaxDeepLink(
         path: 'promo/spring-launch',
         data: <String, Object?>{'campaign': 'spring-launch'},
@@ -74,7 +73,7 @@ void main() {
       AttriaxDeepLinkEvent(
         rawEvent: rawEvent,
         resultFuture: Future<AttriaxDeepLinkResult>.value(
-          AttriaxDeepLinkResult(rawEvent: rawEvent, conversion: conversion),
+          AttriaxDeepLinkResult(rawEvent: rawEvent, resolution: resolution),
         ),
       ),
     );
@@ -100,7 +99,8 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
   final AttriaxSynchronizationState _synchronizationState =
       AttriaxSynchronizationState.synchronized;
 
-  AttriaxAppOpenResult? appOpenResult;
+  AttriaxAppOpen? appOpenResult;
+  late final AttriaxDeepLinks deepLinks = _FakeAttriaxDeepLinks(this);
 
   @override
   bool get isInitialized => true;
@@ -139,24 +139,20 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
       _synchronizationController.stream;
 
   @override
-  Stream<AttriaxDeepLinkEvent> get deepLinks => _deepLinksController.stream;
-
-  @override
   Future<void> init() async {}
 
   @override
-  Future<AttriaxAppOpenResult?> waitForAppOpenTracking() async => appOpenResult;
+  Future<AttriaxAppOpen?> waitForAppOpenTracking() async => appOpenResult;
 
   @override
   Future<void> trackEvent(
     String eventName, {
     Map<String, Object?>? eventData,
-    String? linkId,
   }) async {}
 
   @override
   Future<void> identify(
-    String externalUserId, {
+    String? externalUserId, {
     String? externalUserName,
   }) async {}
 
@@ -181,7 +177,7 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
   );
 
   @override
-  Future<AttriaxDeepLinkConversionEvent?> recordDeepLinkConversion({
+  Future<AttriaxDeepLinkResolution?> recordDeepLinkConversion({
     Uri? uri,
     String? linkPath,
     Map<String, Object?>? metadata,
@@ -200,4 +196,26 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
     await _deepLinksController.close();
     await _synchronizationController.close();
   }
+}
+
+class _FakeAttriaxDeepLinks implements AttriaxDeepLinks {
+  _FakeAttriaxDeepLinks(this._sdk);
+
+  final FakeExampleAttriaxSdk _sdk;
+
+  @override
+  AttriaxDeepLinkResult? get initialDeepLink => null;
+
+  @override
+  bool get initialDeepLinkResolved => true;
+
+  @override
+  AttriaxDeepLinkResult? get latestDeepLink => null;
+
+  @override
+  Stream<AttriaxDeepLinkEvent> get stream => _sdk._deepLinksController.stream;
+
+  @override
+  Future<AttriaxDeepLinkResult?> get waitForInitialDeepLink =>
+      Future<AttriaxDeepLinkResult?>.value(null);
 }

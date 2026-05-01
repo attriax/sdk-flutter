@@ -29,6 +29,16 @@ class _$SdkCreateDynamicLinkDto extends SdkCreateDynamicLinkDto {
   final String? previewImagePath;
   @override
   final String? previewTitle;
+  @override
+  final String? utmCampaign;
+  @override
+  final String? utmContent;
+  @override
+  final String? utmMedium;
+  @override
+  final String? utmSource;
+  @override
+  final String? utmTerm;
 
   factory _$SdkCreateDynamicLinkDto([
     void Function(SdkCreateDynamicLinkDtoBuilder)? updates,
@@ -46,6 +56,11 @@ class _$SdkCreateDynamicLinkDto extends SdkCreateDynamicLinkDto {
     this.previewDescription,
     this.previewImagePath,
     this.previewTitle,
+    this.utmCampaign,
+    this.utmContent,
+    this.utmMedium,
+    this.utmSource,
+    this.utmTerm,
   }) : super._();
   @override
   SdkCreateDynamicLinkDto rebuild(
@@ -70,7 +85,12 @@ class _$SdkCreateDynamicLinkDto extends SdkCreateDynamicLinkDto {
         prefix == other.prefix &&
         previewDescription == other.previewDescription &&
         previewImagePath == other.previewImagePath &&
-        previewTitle == other.previewTitle;
+        previewTitle == other.previewTitle &&
+        utmCampaign == other.utmCampaign &&
+        utmContent == other.utmContent &&
+        utmMedium == other.utmMedium &&
+        utmSource == other.utmSource &&
+        utmTerm == other.utmTerm;
   }
 
   @override
@@ -87,6 +107,11 @@ class _$SdkCreateDynamicLinkDto extends SdkCreateDynamicLinkDto {
     _$hash = $jc(_$hash, previewDescription.hashCode);
     _$hash = $jc(_$hash, previewImagePath.hashCode);
     _$hash = $jc(_$hash, previewTitle.hashCode);
+    _$hash = $jc(_$hash, utmCampaign.hashCode);
+    _$hash = $jc(_$hash, utmContent.hashCode);
+    _$hash = $jc(_$hash, utmMedium.hashCode);
+    _$hash = $jc(_$hash, utmSource.hashCode);
+    _$hash = $jc(_$hash, utmTerm.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -104,7 +129,12 @@ class _$SdkCreateDynamicLinkDto extends SdkCreateDynamicLinkDto {
           ..add('prefix', prefix)
           ..add('previewDescription', previewDescription)
           ..add('previewImagePath', previewImagePath)
-          ..add('previewTitle', previewTitle))
+          ..add('previewTitle', previewTitle)
+          ..add('utmCampaign', utmCampaign)
+          ..add('utmContent', utmContent)
+          ..add('utmMedium', utmMedium)
+          ..add('utmSource', utmSource)
+          ..add('utmTerm', utmTerm))
         .toString();
   }
 }
@@ -163,6 +193,26 @@ class SdkCreateDynamicLinkDtoBuilder
   String? get previewTitle => _$this._previewTitle;
   set previewTitle(String? previewTitle) => _$this._previewTitle = previewTitle;
 
+  String? _utmCampaign;
+  String? get utmCampaign => _$this._utmCampaign;
+  set utmCampaign(String? utmCampaign) => _$this._utmCampaign = utmCampaign;
+
+  String? _utmContent;
+  String? get utmContent => _$this._utmContent;
+  set utmContent(String? utmContent) => _$this._utmContent = utmContent;
+
+  String? _utmMedium;
+  String? get utmMedium => _$this._utmMedium;
+  set utmMedium(String? utmMedium) => _$this._utmMedium = utmMedium;
+
+  String? _utmSource;
+  String? get utmSource => _$this._utmSource;
+  set utmSource(String? utmSource) => _$this._utmSource = utmSource;
+
+  String? _utmTerm;
+  String? get utmTerm => _$this._utmTerm;
+  set utmTerm(String? utmTerm) => _$this._utmTerm = utmTerm;
+
   SdkCreateDynamicLinkDtoBuilder() {
     SdkCreateDynamicLinkDto._defaults(this);
   }
@@ -181,6 +231,11 @@ class SdkCreateDynamicLinkDtoBuilder
       _previewDescription = $v.previewDescription;
       _previewImagePath = $v.previewImagePath;
       _previewTitle = $v.previewTitle;
+      _utmCampaign = $v.utmCampaign;
+      _utmContent = $v.utmContent;
+      _utmMedium = $v.utmMedium;
+      _utmSource = $v.utmSource;
+      _utmTerm = $v.utmTerm;
       _$v = null;
     }
     return this;
@@ -220,6 +275,11 @@ class SdkCreateDynamicLinkDtoBuilder
             previewDescription: previewDescription,
             previewImagePath: previewImagePath,
             previewTitle: previewTitle,
+            utmCampaign: utmCampaign,
+            utmContent: utmContent,
+            utmMedium: utmMedium,
+            utmSource: utmSource,
+            utmTerm: utmTerm,
           );
     } catch (_) {
       late String _$failedField;

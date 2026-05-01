@@ -3,7 +3,7 @@ import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 class AttriaxConversionMapper {
   const AttriaxConversionMapper();
 
-  AttriaxDeepLinkConversionEvent? buildEvent(
+  AttriaxDeepLinkResolution? buildEvent(
     AttriaxDeepLinkResolutionResult result, {
     required AttriaxRawDeepLinkEvent? rawEvent,
     required bool isDeferred,
@@ -13,22 +13,20 @@ class AttriaxConversionMapper {
       return null;
     }
 
-    return AttriaxDeepLinkConversionEvent(
+    return AttriaxDeepLinkResolution(
       deepLink: deepLink,
       rawEvent: rawEvent,
       isFirstLaunch: result.isFirstLaunch,
       isDeferred: isDeferred,
-      requestVersion: result.requestVersion,
-      acceptedAt: result.acceptedAt,
       consumedAt: result.consumedAt,
       occurredAt: result.acceptedAt ?? DateTime.now().toUtc(),
     );
   }
 
-  AttriaxDeepLinkConversionFailure buildFailure(
+  AttriaxDeepLinkResolutionFailure buildFailure(
     AttriaxDeepLinkResolutionResult result, {
     required AttriaxRawDeepLinkEvent? rawEvent,
-  }) => AttriaxDeepLinkConversionFailure(
+  }) => AttriaxDeepLinkResolutionFailure(
     reason: result.reason ?? result.status.name,
     rawEvent: rawEvent,
     isFirstLaunch: result.isFirstLaunch,

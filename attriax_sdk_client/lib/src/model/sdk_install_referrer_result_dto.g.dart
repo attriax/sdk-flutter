@@ -20,6 +20,8 @@ class _$SdkInstallReferrerResultDto extends SdkInstallReferrerResultDto {
   @override
   final BuiltMap<String, JsonObject?>? deepLinkData;
   @override
+  final String? deepLinkUrl;
+  @override
   final String? medium;
   @override
   final num precision;
@@ -41,6 +43,7 @@ class _$SdkInstallReferrerResultDto extends SdkInstallReferrerResultDto {
     this.campaign,
     this.content,
     this.deepLinkData,
+    this.deepLinkUrl,
     this.medium,
     required this.precision,
     this.rawPlatformInstallReferrer,
@@ -66,6 +69,7 @@ class _$SdkInstallReferrerResultDto extends SdkInstallReferrerResultDto {
         campaign == other.campaign &&
         content == other.content &&
         deepLinkData == other.deepLinkData &&
+        deepLinkUrl == other.deepLinkUrl &&
         medium == other.medium &&
         precision == other.precision &&
         rawPlatformInstallReferrer == other.rawPlatformInstallReferrer &&
@@ -82,6 +86,7 @@ class _$SdkInstallReferrerResultDto extends SdkInstallReferrerResultDto {
     _$hash = $jc(_$hash, campaign.hashCode);
     _$hash = $jc(_$hash, content.hashCode);
     _$hash = $jc(_$hash, deepLinkData.hashCode);
+    _$hash = $jc(_$hash, deepLinkUrl.hashCode);
     _$hash = $jc(_$hash, medium.hashCode);
     _$hash = $jc(_$hash, precision.hashCode);
     _$hash = $jc(_$hash, rawPlatformInstallReferrer.hashCode);
@@ -100,6 +105,7 @@ class _$SdkInstallReferrerResultDto extends SdkInstallReferrerResultDto {
           ..add('campaign', campaign)
           ..add('content', content)
           ..add('deepLinkData', deepLinkData)
+          ..add('deepLinkUrl', deepLinkUrl)
           ..add('medium', medium)
           ..add('precision', precision)
           ..add('rawPlatformInstallReferrer', rawPlatformInstallReferrer)
@@ -144,6 +150,10 @@ class SdkInstallReferrerResultDtoBuilder
   set deepLinkData(MapBuilder<String, JsonObject?>? deepLinkData) =>
       _$this._deepLinkData = deepLinkData;
 
+  String? _deepLinkUrl;
+  String? get deepLinkUrl => _$this._deepLinkUrl;
+  set deepLinkUrl(String? deepLinkUrl) => _$this._deepLinkUrl = deepLinkUrl;
+
   String? _medium;
   String? get medium => _$this._medium;
   set medium(String? medium) => _$this._medium = medium;
@@ -178,6 +188,7 @@ class SdkInstallReferrerResultDtoBuilder
       _campaign = $v.campaign;
       _content = $v.content;
       _deepLinkData = $v.deepLinkData?.toBuilder();
+      _deepLinkUrl = $v.deepLinkUrl;
       _medium = $v.medium;
       _precision = $v.precision;
       _rawPlatformInstallReferrer = $v.rawPlatformInstallReferrer;
@@ -217,6 +228,7 @@ class SdkInstallReferrerResultDtoBuilder
             campaign: campaign,
             content: content,
             deepLinkData: _deepLinkData?.build(),
+            deepLinkUrl: deepLinkUrl,
             medium: medium,
             precision: BuiltValueNullFieldError.checkNotNull(
               precision,

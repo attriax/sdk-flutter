@@ -19,6 +19,7 @@ part 'sdk_v1_open_dto.g.dart';
 /// * [appToken] 
 /// * [device] 
 /// * [deviceId] 
+/// * [deviceIdSource] 
 /// * [installReferrer] 
 /// * [isFirstLaunch] 
 /// * [platform] 
@@ -36,6 +37,9 @@ abstract class SdkV1OpenDto implements Built<SdkV1OpenDto, SdkV1OpenDtoBuilder> 
 
   @BuiltValueField(wireName: r'deviceId')
   String get deviceId;
+
+  @BuiltValueField(wireName: r'deviceIdSource')
+  String? get deviceIdSource;
 
   @BuiltValueField(wireName: r'installReferrer')
   String? get installReferrer;
@@ -93,6 +97,13 @@ class _$SdkV1OpenDtoSerializer implements PrimitiveSerializer<SdkV1OpenDto> {
       object.deviceId,
       specifiedType: const FullType(String),
     );
+    if (object.deviceIdSource != null) {
+      yield r'deviceIdSource';
+      yield serializers.serialize(
+        object.deviceIdSource,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.installReferrer != null) {
       yield r'installReferrer';
       yield serializers.serialize(
@@ -167,6 +178,13 @@ class _$SdkV1OpenDtoSerializer implements PrimitiveSerializer<SdkV1OpenDto> {
             specifiedType: const FullType(String),
           ) as String;
           result.deviceId = valueDes;
+          break;
+        case r'deviceIdSource':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.deviceIdSource = valueDes;
           break;
         case r'installReferrer':
           final valueDes = serializers.deserialize(

@@ -16,6 +16,7 @@ part 'sdk_v1_deep_link_resolve_dto.g.dart';
 /// Properties:
 /// * [appToken] 
 /// * [deviceId] 
+/// * [deviceIdSource] 
 /// * [isFirstLaunch] 
 /// * [linkPath] 
 /// * [metadata] 
@@ -29,6 +30,9 @@ abstract class SdkV1DeepLinkResolveDto implements Built<SdkV1DeepLinkResolveDto,
 
   @BuiltValueField(wireName: r'deviceId')
   String get deviceId;
+
+  @BuiltValueField(wireName: r'deviceIdSource')
+  String? get deviceIdSource;
 
   @BuiltValueField(wireName: r'isFirstLaunch')
   bool? get isFirstLaunch;
@@ -82,6 +86,13 @@ class _$SdkV1DeepLinkResolveDtoSerializer implements PrimitiveSerializer<SdkV1De
       object.deviceId,
       specifiedType: const FullType(String),
     );
+    if (object.deviceIdSource != null) {
+      yield r'deviceIdSource';
+      yield serializers.serialize(
+        object.deviceIdSource,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.isFirstLaunch != null) {
       yield r'isFirstLaunch';
       yield serializers.serialize(
@@ -158,6 +169,13 @@ class _$SdkV1DeepLinkResolveDtoSerializer implements PrimitiveSerializer<SdkV1De
             specifiedType: const FullType(String),
           ) as String;
           result.deviceId = valueDes;
+          break;
+        case r'deviceIdSource':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.deviceIdSource = valueDes;
           break;
         case r'isFirstLaunch':
           final valueDes = serializers.deserialize(

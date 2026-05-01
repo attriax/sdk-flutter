@@ -24,6 +24,11 @@ part 'sdk_create_dynamic_link_dto.g.dart';
 /// * [previewDescription] 
 /// * [previewImagePath] 
 /// * [previewTitle] 
+/// * [utmCampaign] 
+/// * [utmContent] 
+/// * [utmMedium] 
+/// * [utmSource] 
+/// * [utmTerm] 
 @BuiltValue()
 abstract class SdkCreateDynamicLinkDto implements Built<SdkCreateDynamicLinkDto, SdkCreateDynamicLinkDtoBuilder> {
   @BuiltValueField(wireName: r'androidRedirect')
@@ -58,6 +63,21 @@ abstract class SdkCreateDynamicLinkDto implements Built<SdkCreateDynamicLinkDto,
 
   @BuiltValueField(wireName: r'previewTitle')
   String? get previewTitle;
+
+  @BuiltValueField(wireName: r'utmCampaign')
+  String? get utmCampaign;
+
+  @BuiltValueField(wireName: r'utmContent')
+  String? get utmContent;
+
+  @BuiltValueField(wireName: r'utmMedium')
+  String? get utmMedium;
+
+  @BuiltValueField(wireName: r'utmSource')
+  String? get utmSource;
+
+  @BuiltValueField(wireName: r'utmTerm')
+  String? get utmTerm;
 
   SdkCreateDynamicLinkDto._();
 
@@ -154,6 +174,41 @@ class _$SdkCreateDynamicLinkDtoSerializer implements PrimitiveSerializer<SdkCrea
       yield r'previewTitle';
       yield serializers.serialize(
         object.previewTitle,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.utmCampaign != null) {
+      yield r'utmCampaign';
+      yield serializers.serialize(
+        object.utmCampaign,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.utmContent != null) {
+      yield r'utmContent';
+      yield serializers.serialize(
+        object.utmContent,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.utmMedium != null) {
+      yield r'utmMedium';
+      yield serializers.serialize(
+        object.utmMedium,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.utmSource != null) {
+      yield r'utmSource';
+      yield serializers.serialize(
+        object.utmSource,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.utmTerm != null) {
+      yield r'utmTerm';
+      yield serializers.serialize(
+        object.utmTerm,
         specifiedType: const FullType(String),
       );
     }
@@ -256,6 +311,41 @@ class _$SdkCreateDynamicLinkDtoSerializer implements PrimitiveSerializer<SdkCrea
             specifiedType: const FullType(String),
           ) as String;
           result.previewTitle = valueDes;
+          break;
+        case r'utmCampaign':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.utmCampaign = valueDes;
+          break;
+        case r'utmContent':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.utmContent = valueDes;
+          break;
+        case r'utmMedium':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.utmMedium = valueDes;
+          break;
+        case r'utmSource':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.utmSource = valueDes;
+          break;
+        case r'utmTerm':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.utmTerm = valueDes;
           break;
         default:
           unhandled.add(key);

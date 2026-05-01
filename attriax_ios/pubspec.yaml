@@ -1,5 +1,5 @@
 name: attriax_ios
-description: iOS implementation of the Attriax plugin.
+description: iOS and macOS implementation of the Attriax plugin.
 version: 0.0.1
 homepage: https://attriax.com
 repository: https://github.com/attriax/flutter-plugin
@@ -20,6 +20,8 @@ flutter:
     implements: attriax
     platforms:
       ios:
+        pluginClass: AttriaxIosPlugin
+      macos:
         pluginClass: AttriaxIosPlugin
 
 dependencies:

@@ -14,6 +14,10 @@ class _$DeviceContextDto extends DeviceContextDto {
   @override
   final String? brand;
   @override
+  final num? colorDepth;
+  @override
+  final num? devicePixelRatio;
+  @override
   final String? hardware;
   @override
   final bool? isPhysicalDevice;
@@ -30,7 +34,11 @@ class _$DeviceContextDto extends DeviceContextDto {
   @override
   final String? osVersion;
   @override
+  final num? screenHeight;
+  @override
   final String? screenResolution;
+  @override
+  final num? screenWidth;
   @override
   final BuiltList<String>? supportedAbis;
   @override
@@ -44,6 +52,8 @@ class _$DeviceContextDto extends DeviceContextDto {
     this.advertisingId,
     this.androidId,
     this.brand,
+    this.colorDepth,
+    this.devicePixelRatio,
     this.hardware,
     this.isPhysicalDevice,
     this.language,
@@ -52,7 +62,9 @@ class _$DeviceContextDto extends DeviceContextDto {
     this.model,
     this.name,
     this.osVersion,
+    this.screenHeight,
     this.screenResolution,
+    this.screenWidth,
     this.supportedAbis,
     this.timezone,
   }) : super._();
@@ -71,6 +83,8 @@ class _$DeviceContextDto extends DeviceContextDto {
         advertisingId == other.advertisingId &&
         androidId == other.androidId &&
         brand == other.brand &&
+        colorDepth == other.colorDepth &&
+        devicePixelRatio == other.devicePixelRatio &&
         hardware == other.hardware &&
         isPhysicalDevice == other.isPhysicalDevice &&
         language == other.language &&
@@ -79,7 +93,9 @@ class _$DeviceContextDto extends DeviceContextDto {
         model == other.model &&
         name == other.name &&
         osVersion == other.osVersion &&
+        screenHeight == other.screenHeight &&
         screenResolution == other.screenResolution &&
+        screenWidth == other.screenWidth &&
         supportedAbis == other.supportedAbis &&
         timezone == other.timezone;
   }
@@ -90,6 +106,8 @@ class _$DeviceContextDto extends DeviceContextDto {
     _$hash = $jc(_$hash, advertisingId.hashCode);
     _$hash = $jc(_$hash, androidId.hashCode);
     _$hash = $jc(_$hash, brand.hashCode);
+    _$hash = $jc(_$hash, colorDepth.hashCode);
+    _$hash = $jc(_$hash, devicePixelRatio.hashCode);
     _$hash = $jc(_$hash, hardware.hashCode);
     _$hash = $jc(_$hash, isPhysicalDevice.hashCode);
     _$hash = $jc(_$hash, language.hashCode);
@@ -98,7 +116,9 @@ class _$DeviceContextDto extends DeviceContextDto {
     _$hash = $jc(_$hash, model.hashCode);
     _$hash = $jc(_$hash, name.hashCode);
     _$hash = $jc(_$hash, osVersion.hashCode);
+    _$hash = $jc(_$hash, screenHeight.hashCode);
     _$hash = $jc(_$hash, screenResolution.hashCode);
+    _$hash = $jc(_$hash, screenWidth.hashCode);
     _$hash = $jc(_$hash, supportedAbis.hashCode);
     _$hash = $jc(_$hash, timezone.hashCode);
     _$hash = $jf(_$hash);
@@ -111,6 +131,8 @@ class _$DeviceContextDto extends DeviceContextDto {
           ..add('advertisingId', advertisingId)
           ..add('androidId', androidId)
           ..add('brand', brand)
+          ..add('colorDepth', colorDepth)
+          ..add('devicePixelRatio', devicePixelRatio)
           ..add('hardware', hardware)
           ..add('isPhysicalDevice', isPhysicalDevice)
           ..add('language', language)
@@ -119,7 +141,9 @@ class _$DeviceContextDto extends DeviceContextDto {
           ..add('model', model)
           ..add('name', name)
           ..add('osVersion', osVersion)
+          ..add('screenHeight', screenHeight)
           ..add('screenResolution', screenResolution)
+          ..add('screenWidth', screenWidth)
           ..add('supportedAbis', supportedAbis)
           ..add('timezone', timezone))
         .toString();
@@ -142,6 +166,15 @@ class DeviceContextDtoBuilder
   String? _brand;
   String? get brand => _$this._brand;
   set brand(String? brand) => _$this._brand = brand;
+
+  num? _colorDepth;
+  num? get colorDepth => _$this._colorDepth;
+  set colorDepth(num? colorDepth) => _$this._colorDepth = colorDepth;
+
+  num? _devicePixelRatio;
+  num? get devicePixelRatio => _$this._devicePixelRatio;
+  set devicePixelRatio(num? devicePixelRatio) =>
+      _$this._devicePixelRatio = devicePixelRatio;
 
   String? _hardware;
   String? get hardware => _$this._hardware;
@@ -178,10 +211,18 @@ class DeviceContextDtoBuilder
   String? get osVersion => _$this._osVersion;
   set osVersion(String? osVersion) => _$this._osVersion = osVersion;
 
+  num? _screenHeight;
+  num? get screenHeight => _$this._screenHeight;
+  set screenHeight(num? screenHeight) => _$this._screenHeight = screenHeight;
+
   String? _screenResolution;
   String? get screenResolution => _$this._screenResolution;
   set screenResolution(String? screenResolution) =>
       _$this._screenResolution = screenResolution;
+
+  num? _screenWidth;
+  num? get screenWidth => _$this._screenWidth;
+  set screenWidth(num? screenWidth) => _$this._screenWidth = screenWidth;
 
   ListBuilder<String>? _supportedAbis;
   ListBuilder<String> get supportedAbis =>
@@ -203,6 +244,8 @@ class DeviceContextDtoBuilder
       _advertisingId = $v.advertisingId;
       _androidId = $v.androidId;
       _brand = $v.brand;
+      _colorDepth = $v.colorDepth;
+      _devicePixelRatio = $v.devicePixelRatio;
       _hardware = $v.hardware;
       _isPhysicalDevice = $v.isPhysicalDevice;
       _language = $v.language;
@@ -211,7 +254,9 @@ class DeviceContextDtoBuilder
       _model = $v.model;
       _name = $v.name;
       _osVersion = $v.osVersion;
+      _screenHeight = $v.screenHeight;
       _screenResolution = $v.screenResolution;
+      _screenWidth = $v.screenWidth;
       _supportedAbis = $v.supportedAbis?.toBuilder();
       _timezone = $v.timezone;
       _$v = null;
@@ -241,6 +286,8 @@ class DeviceContextDtoBuilder
             advertisingId: advertisingId,
             androidId: androidId,
             brand: brand,
+            colorDepth: colorDepth,
+            devicePixelRatio: devicePixelRatio,
             hardware: hardware,
             isPhysicalDevice: isPhysicalDevice,
             language: language,
@@ -249,7 +296,9 @@ class DeviceContextDtoBuilder
             model: model,
             name: name,
             osVersion: osVersion,
+            screenHeight: screenHeight,
             screenResolution: screenResolution,
+            screenWidth: screenWidth,
             supportedAbis: _supportedAbis?.build(),
             timezone: timezone,
           );

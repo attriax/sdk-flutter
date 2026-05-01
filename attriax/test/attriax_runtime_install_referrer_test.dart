@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:attriax/attriax.dart';
+import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:attriax/src/internal/attriax_context_collector.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';

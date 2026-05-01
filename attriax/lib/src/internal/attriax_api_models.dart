@@ -130,6 +130,7 @@ AttriaxApiRequest attriaxApiRequestFromJson(
 AttriaxOpenRequest attriaxBuildOpenRequest({
   required AttriaxConfig config,
   required AttriaxContextSnapshot context,
+  required String deviceIdSource,
 }) {
   final requestDto = sdk.SdkV1OpenDto(
     (builder) => builder
@@ -137,6 +138,7 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
       ..appToken = config.appToken
       ..device.replace(_generatedDeviceContext(context.device))
       ..deviceId = context.deviceId
+      ..deviceIdSource = deviceIdSource
       ..installReferrer = attriaxStringValue(context.rawPlatformInstallReferrer)
       ..isFirstLaunch = context.isFirstLaunch
       ..platform = _generatedPlatform(context.platform)
@@ -149,16 +151,16 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
 AttriaxTrackEventRequest attriaxBuildTrackEventRequest({
   required String appToken,
   required String deviceId,
+  required String deviceIdSource,
   required String eventName,
   Map<String, Object?>? eventData,
-  String? linkId,
 }) {
   final requestDto = sdk.SdkEventDto(
     (builder) => builder
       ..appToken = appToken
       ..deviceId = deviceId
+      ..deviceIdSource = deviceIdSource
       ..eventName = eventName
-      ..linkId = attriaxStringValue(linkId)
       ..eventData = _generatedJsonObjectMap(eventData)?.toBuilder(),
   );
 
@@ -168,14 +170,16 @@ AttriaxTrackEventRequest attriaxBuildTrackEventRequest({
 AttriaxIdentifyRequest attriaxBuildIdentifyRequest({
   required String appToken,
   required String deviceId,
-  required String externalUserId,
+  required String deviceIdSource,
+  required String? externalUserId,
   String? externalUserName,
 }) {
   final requestDto = sdk.SdkIdentifyDto(
     (builder) => builder
       ..appToken = appToken
       ..deviceId = deviceId
-      ..externalUserId = externalUserId
+      ..deviceIdSource = deviceIdSource
+      ..externalUserId = attriaxStringValue(externalUserId)
       ..externalUserName = attriaxStringValue(externalUserName),
   );
 
@@ -185,6 +189,7 @@ AttriaxIdentifyRequest attriaxBuildIdentifyRequest({
 AttriaxResolveDeepLinkRequest attriaxBuildResolveDeepLinkRequest({
   required String appToken,
   required String deviceId,
+  required String deviceIdSource,
   required AttriaxPlatformType platform,
   required String source,
   required bool isFirstLaunch,
@@ -196,6 +201,7 @@ AttriaxResolveDeepLinkRequest attriaxBuildResolveDeepLinkRequest({
     (builder) => builder
       ..appToken = appToken
       ..deviceId = deviceId
+      ..deviceIdSource = deviceIdSource
       ..isFirstLaunch = isFirstLaunch
       ..linkPath = attriaxStringValue(linkPath)
       ..metadata = _generatedJsonObjectMap(metadata)?.toBuilder()
@@ -218,6 +224,11 @@ AttriaxCreateDynamicLinkRequest attriaxBuildCreateDynamicLinkRequest({
   String? previewTitle,
   String? previewDescription,
   String? previewImagePath,
+  String? utmSource,
+  String? utmMedium,
+  String? utmCampaign,
+  String? utmTerm,
+  String? utmContent,
   Map<String, Object?>? data,
 }) {
   final requestDto = sdk.SdkCreateDynamicLinkDto(
@@ -232,7 +243,12 @@ AttriaxCreateDynamicLinkRequest attriaxBuildCreateDynamicLinkRequest({
       ..prefix = attriaxStringValue(prefix)
       ..previewDescription = attriaxStringValue(previewDescription)
       ..previewImagePath = attriaxStringValue(previewImagePath)
-      ..previewTitle = attriaxStringValue(previewTitle),
+        ..previewTitle = attriaxStringValue(previewTitle)
+        ..utmCampaign = attriaxStringValue(utmCampaign)
+        ..utmContent = attriaxStringValue(utmContent)
+        ..utmMedium = attriaxStringValue(utmMedium)
+        ..utmSource = attriaxStringValue(utmSource)
+        ..utmTerm = attriaxStringValue(utmTerm),
   );
 
   return AttriaxCreateDynamicLinkRequest(requestDto);
@@ -410,6 +426,11 @@ AttriaxDynamicLinkRecord _mapDynamicLinkRecord(
   previewImagePath: link.previewImagePath,
   iosRedirect: link.iosRedirect,
   androidRedirect: link.androidRedirect,
+  utmSource: link.utmSource,
+  utmMedium: link.utmMedium,
+  utmCampaign: link.utmCampaign,
+  utmTerm: link.utmTerm,
+  utmContent: link.utmContent,
   createdAt: link.createdAt,
 );
 

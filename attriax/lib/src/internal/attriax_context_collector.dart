@@ -1,10 +1,10 @@
-import 'dart:convert';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+const attriaxPersistentStorageDeviceIdSource = 'persistent_storage';
 
 class AttriaxPreparedContext {
   const AttriaxPreparedContext({
@@ -110,12 +110,10 @@ class AttriaxContextCollector {
       final platformType = _currentPlatform();
       final nativeContext = await _platform.collectNativeContext();
       final rawData = await _loadRawDeviceData(platformType);
-      final appSnapshot = await _collectAppSnapshot();
       final resolved = _resolvePreferredDeviceIdFromSignals(
         platformType: platformType,
         nativeContext: nativeContext,
         rawData: rawData,
-        appSnapshot: appSnapshot,
       );
 
       if (resolved != null) {
@@ -127,7 +125,7 @@ class AttriaxContextCollector {
 
     return AttriaxResolvedDeviceId(
       value: fallbackDeviceId,
-      source: 'sdk_storage',
+      source: attriaxPersistentStorageDeviceIdSource,
       isFallback: true,
     );
   }
@@ -572,80 +570,85 @@ class AttriaxContextCollector {
     required AttriaxPlatformType platformType,
     required AttriaxNativeContext nativeContext,
     required Map<String, Object?> rawData,
-    required AttriaxAppSnapshot appSnapshot,
   }) {
     switch (platformType) {
       case AttriaxPlatformType.android:
         final androidId = _emptyToNull(nativeContext.androidId);
-        if (androidId == null) {
-          return null;
+        if (androidId != null) {
+          return AttriaxResolvedDeviceId(
+            value: androidId,
+            source: 'android_ssaid',
+          );
         }
-        return AttriaxResolvedDeviceId(
-          value: androidId,
-          source: 'android_id_hash',
-        );
+
+        final advertisingId = _emptyToNull(nativeContext.advertisingId);
+        if (advertisingId != null) {
+          return AttriaxResolvedDeviceId(
+            value: advertisingId,
+            source: 'android_gaid',
+          );
+        }
+
+        return null;
       case AttriaxPlatformType.ios:
-        return _buildHashedDeviceId(
-          rawValue: _readString(nativeContext.metadata, 'vendorIdentifier'),
-          salt: _deviceIdSalt(
-            platformType: platformType,
-            appSnapshot: appSnapshot,
-            nativeContext: nativeContext,
+        return _resolveFirstAvailable(<({String? value, String source})>[
+          (
+            value: _readString(nativeContext.metadata, 'keychainDeviceId'),
+            source: 'ios_keychain',
           ),
-          source: 'ios_vendor_identifier_hash',
-        );
+          (
+            value: _readString(nativeContext.metadata, 'vendorIdentifier'),
+            source: 'ios_idfv',
+          ),
+        ]);
       case AttriaxPlatformType.windows:
-        return _buildHashedDeviceId(
-          rawValue: _readString(rawData, 'deviceId'),
-          salt: _deviceIdSalt(
-            platformType: platformType,
-            appSnapshot: appSnapshot,
-            nativeContext: nativeContext,
+        return _resolveFirstAvailable(<({String? value, String source})>[
+          (
+            value: _readString(rawData, 'deviceId'),
+            source: 'windows_machine_guid',
           ),
-          source: 'windows_device_id_hash',
-        );
+        ]);
       case AttriaxPlatformType.linux:
-        return _buildHashedDeviceId(
-          rawValue: _readString(rawData, 'machineId'),
-          salt: _deviceIdSalt(
-            platformType: platformType,
-            appSnapshot: appSnapshot,
-            nativeContext: nativeContext,
+        return _resolveFirstAvailable(<({String? value, String source})>[
+          (
+            value: _readString(rawData, 'machineId'),
+            source: 'linux_machine_id',
           ),
-          source: 'linux_machine_id_hash',
-        );
+        ]);
       case AttriaxPlatformType.macos:
+        return _resolveFirstAvailable(<({String? value, String source})>[
+          (
+            value: _readString(rawData, 'systemGUID'),
+            source: 'macos_platform_uuid',
+          ),
+          (
+            value: _readString(nativeContext.metadata, 'keychainDeviceId'),
+            source: 'macos_keychain',
+          ),
+        ]);
       case AttriaxPlatformType.web:
       case AttriaxPlatformType.unknown:
         return null;
     }
   }
 
-  AttriaxResolvedDeviceId? _buildHashedDeviceId({
-    required String? rawValue,
-    required String salt,
-    required String source,
-  }) {
-    final candidate = _emptyToNull(rawValue);
-    if (candidate == null) {
-      return null;
+  AttriaxResolvedDeviceId? _resolveFirstAvailable(
+    Iterable<({String? value, String source})> candidates,
+  ) {
+    for (final candidate in candidates) {
+      final normalizedValue = _emptyToNull(candidate.value);
+      if (normalizedValue == null) {
+        continue;
+      }
+
+      return AttriaxResolvedDeviceId(
+        value: normalizedValue,
+        source: candidate.source,
+      );
     }
 
-    return AttriaxResolvedDeviceId(
-      value: sha256.convert(utf8.encode('$salt:$candidate')).toString(),
-      source: source,
-    );
+    return null;
   }
-
-  String _deviceIdSalt({
-    required AttriaxPlatformType platformType,
-    required AttriaxAppSnapshot appSnapshot,
-    required AttriaxNativeContext nativeContext,
-  }) =>
-      _emptyToNull(appSnapshot.packageName) ??
-      _readString(nativeContext.metadata, 'bundleIdentifier') ??
-      _readString(nativeContext.metadata, 'applicationIdentifier') ??
-      '${_config.appToken}:${platformType.name}';
 
   Object? _sanitizeValue(Object? value) {
     if (value == null || value is String || value is num || value is bool) {

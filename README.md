@@ -94,7 +94,7 @@ flutter run --dart-define=ATTRIAX_APP_TOKEN=... --dart-define=ATTRIAX_API_BASE_U
 - Use `flutter pub get` at the workspace root unless you intentionally need isolated package resolution.
 - Keep package-level `analysis_options.yaml` files in sync with the workspace root so dry-run publish checks and standalone package CI see the same lint configuration.
 - Keep the public example simple and package-focused.
-- Use the internal tester for richer QA scenarios such as app-open tracking, manual deep-link conversion checks, event submission, and identification flows.
+- Use the internal tester for richer QA scenarios such as app-open tracking, manual deep-link resolution checks, install-referrer inspection, event submission, and identification flows.
 
 ## Release Workflow
 

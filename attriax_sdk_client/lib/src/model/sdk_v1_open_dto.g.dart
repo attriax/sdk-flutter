@@ -16,6 +16,8 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
   @override
   final String deviceId;
   @override
+  final String? deviceIdSource;
+  @override
   final String? installReferrer;
   @override
   final bool? isFirstLaunch;
@@ -32,6 +34,7 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
     required this.appToken,
     required this.device,
     required this.deviceId,
+    this.deviceIdSource,
     this.installReferrer,
     this.isFirstLaunch,
     required this.platform,
@@ -52,6 +55,7 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
         appToken == other.appToken &&
         device == other.device &&
         deviceId == other.deviceId &&
+        deviceIdSource == other.deviceIdSource &&
         installReferrer == other.installReferrer &&
         isFirstLaunch == other.isFirstLaunch &&
         platform == other.platform &&
@@ -65,6 +69,7 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
     _$hash = $jc(_$hash, appToken.hashCode);
     _$hash = $jc(_$hash, device.hashCode);
     _$hash = $jc(_$hash, deviceId.hashCode);
+    _$hash = $jc(_$hash, deviceIdSource.hashCode);
     _$hash = $jc(_$hash, installReferrer.hashCode);
     _$hash = $jc(_$hash, isFirstLaunch.hashCode);
     _$hash = $jc(_$hash, platform.hashCode);
@@ -80,6 +85,7 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
           ..add('appToken', appToken)
           ..add('device', device)
           ..add('deviceId', deviceId)
+          ..add('deviceIdSource', deviceIdSource)
           ..add('installReferrer', installReferrer)
           ..add('isFirstLaunch', isFirstLaunch)
           ..add('platform', platform)
@@ -109,6 +115,11 @@ class SdkV1OpenDtoBuilder
   String? _deviceId;
   String? get deviceId => _$this._deviceId;
   set deviceId(String? deviceId) => _$this._deviceId = deviceId;
+
+  String? _deviceIdSource;
+  String? get deviceIdSource => _$this._deviceIdSource;
+  set deviceIdSource(String? deviceIdSource) =>
+      _$this._deviceIdSource = deviceIdSource;
 
   String? _installReferrer;
   String? get installReferrer => _$this._installReferrer;
@@ -140,6 +151,7 @@ class SdkV1OpenDtoBuilder
       _appToken = $v.appToken;
       _device = $v.device.toBuilder();
       _deviceId = $v.deviceId;
+      _deviceIdSource = $v.deviceIdSource;
       _installReferrer = $v.installReferrer;
       _isFirstLaunch = $v.isFirstLaunch;
       _platform = $v.platform;
@@ -180,6 +192,7 @@ class SdkV1OpenDtoBuilder
               r'SdkV1OpenDto',
               'deviceId',
             ),
+            deviceIdSource: deviceIdSource,
             installReferrer: installReferrer,
             isFirstLaunch: isFirstLaunch,
             platform: BuiltValueNullFieldError.checkNotNull(

@@ -27,6 +27,11 @@ void main() {
       // TODO
     });
 
+    // String deviceIdSource
+    test('to test the property `deviceIdSource`', () async {
+      // TODO
+    });
+
     // String installReferrer
     test('to test the property `installReferrer`', () async {
       // TODO

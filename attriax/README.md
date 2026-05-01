@@ -65,16 +65,16 @@ final createdDynamicLink = await attriax.createDynamicLink(
 
 debugPrint('Share this short URL: ${createdDynamicLink.link.shortUrl}');
 
-attriax.deepLinks.listen((event) async {
-  final result = await event.waitForConversionResult();
-  final conversion = result.conversion;
-  if (conversion == null) {
+attriax.deepLinks.stream.listen((event) async {
+  final result = await event.resolve();
+  final resolution = result.resolution;
+  if (resolution == null) {
     return;
   }
 
   navigatorKey.currentState?.pushNamed(
     '/deep-link',
-    arguments: conversion.deepLink,
+    arguments: resolution.deepLink,
   );
 });
 
@@ -162,9 +162,11 @@ Because Android install referrer is the strongest attribution input for mobile i
 
 ## Deep Links
 
-- Read `attriax.deepLinks` as a broadcast stream with no buffering.
+- Read `attriax.deepLinks.stream` as a broadcast stream with no buffering.
+- Use `attriax.deepLinks.initialDeepLink`, `initialDeepLinkResolved`, and `waitForInitialDeepLink` when you need synchronous initial-link state plus an awaitable completion handle.
+- Read `attriax.deepLinks.latestDeepLink` when you need the most recent handled deep-link result, including deferred deep links.
 - Each `AttriaxDeepLinkEvent` exposes raw link data immediately.
-- Call `waitForConversionResult()` on the event when you need the matched or failed backend resolution result for that specific link.
+- Call `resolve()` on the event when you need the matched or failed backend resolution result for that specific link.
 
 ## Typed Payloads
 

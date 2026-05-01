@@ -22,6 +22,11 @@ Name | Type | Description | Notes
 **previewImagePath** | **String** |  | [optional] 
 **previewTitle** | **String** |  | [optional] 
 **shortUrl** | **String** |  | 
+**utmCampaign** | **String** |  | [optional] 
+**utmContent** | **String** |  | [optional] 
+**utmMedium** | **String** |  | [optional] 
+**utmSource** | **String** |  | [optional] 
+**utmTerm** | **String** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

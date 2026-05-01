@@ -10,7 +10,8 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **appToken** | **String** |  | 
 **deviceId** | **String** |  | 
-**externalUserId** | **String** |  | 
+**deviceIdSource** | **String** |  | [optional] 
+**externalUserId** | **String** |  | [optional] 
 **externalUserName** | **String** |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)

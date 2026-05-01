@@ -14,7 +14,7 @@ void main() {
       await hub.dispose();
     });
 
-    test('resolves a pending deep link with a matched conversion', () async {
+    test('resolves a pending deep link with a matched resolution', () async {
       final rawEvent = AttriaxRawDeepLinkEvent(
         uri: Uri.parse('https://example.com/promo/spring-launch'),
         linkPath: 'promo/spring-launch',
@@ -22,7 +22,7 @@ void main() {
         isInitialLink: true,
         occurredAt: DateTime.utc(2026, 4, 24),
       );
-      final conversion = AttriaxDeepLinkConversionEvent(
+      final resolution = AttriaxDeepLinkResolution(
         deepLink: const AttriaxDeepLink(path: 'promo/spring-launch'),
         rawEvent: rawEvent,
         isFirstLaunch: true,
@@ -34,13 +34,13 @@ void main() {
       hub.emitPendingDeepLink(rawEvent);
 
       final emittedEvent = await emittedEventFuture;
-      hub.resolvePendingDeepLink(rawEvent: rawEvent, conversion: conversion);
+      hub.resolvePendingDeepLink(rawEvent: rawEvent, resolution: resolution);
 
-      final result = await emittedEvent.waitForConversionResult();
+      final result = await emittedEvent.resolve();
       expect(result.isMatched, isTrue);
       expect(result.isFailure, isFalse);
       expect(result.rawEvent, same(rawEvent));
-      expect(result.conversion, same(conversion));
+      expect(result.resolution, same(resolution));
       expect(result.failure, isNull);
     });
 
@@ -52,7 +52,7 @@ void main() {
         isInitialLink: false,
         occurredAt: DateTime.utc(2026, 4, 24),
       );
-      final failure = AttriaxDeepLinkConversionFailure(
+      final failure = AttriaxDeepLinkResolutionFailure(
         reason: 'unmatched',
         rawEvent: rawEvent,
         isFirstLaunch: false,
@@ -65,16 +65,16 @@ void main() {
       final emittedEvent = await emittedEventFuture;
       hub.failPendingDeepLink(rawEvent: rawEvent, failure: failure);
 
-      final result = await emittedEvent.waitForConversionResult();
+      final result = await emittedEvent.resolve();
       expect(result.isMatched, isFalse);
       expect(result.isFailure, isTrue);
       expect(result.rawEvent, same(rawEvent));
-      expect(result.conversion, isNull);
+      expect(result.resolution, isNull);
       expect(result.failure, same(failure));
     });
 
     test('emits an already resolved deep link immediately', () async {
-      final conversion = AttriaxDeepLinkConversionEvent(
+      final resolution = AttriaxDeepLinkResolution(
         deepLink: const AttriaxDeepLink(path: 'promo/deferred'),
         isFirstLaunch: true,
         isDeferred: true,
@@ -82,15 +82,15 @@ void main() {
       );
 
       final emittedEventFuture = hub.deepLinks.first;
-      hub.emitResolvedDeepLink(conversion: conversion);
+      hub.emitResolvedDeepLink(resolution: resolution);
 
       final emittedEvent = await emittedEventFuture;
-      final result = await emittedEvent.waitForConversionResult();
+      final result = await emittedEvent.resolve();
 
       expect(emittedEvent.rawEvent, isNull);
       expect(result.isMatched, isTrue);
       expect(result.isFailure, isFalse);
-      expect(result.conversion, same(conversion));
+      expect(result.resolution, same(resolution));
       expect(result.failure, isNull);
     });
 
@@ -102,7 +102,7 @@ void main() {
         isInitialLink: true,
         occurredAt: DateTime.utc(2026, 4, 29, 10),
       );
-      final conversion = AttriaxDeepLinkConversionEvent(
+      final resolution = AttriaxDeepLinkResolution(
         deepLink: const AttriaxDeepLink(path: 'promo/launch'),
         rawEvent: rawEvent,
         isFirstLaunch: true,
@@ -111,10 +111,10 @@ void main() {
       );
 
       hub.emitPendingDeepLink(rawEvent);
-      hub.resolvePendingDeepLink(rawEvent: rawEvent, conversion: conversion);
+      hub.resolvePendingDeepLink(rawEvent: rawEvent, resolution: resolution);
 
       final result = await hub.initialDeepLink;
-      expect(result?.conversion, same(conversion));
+      expect(result?.resolution, same(resolution));
     });
 
     test(

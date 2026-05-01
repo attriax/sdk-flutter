@@ -12,6 +12,7 @@ Name | Type | Description | Notes
 **appToken** | **String** |  | 
 **device** | [**DeviceContextDto**](DeviceContextDto.md) |  | 
 **deviceId** | **String** |  | 
+**deviceIdSource** | **String** |  | [optional] 
 **installReferrer** | **String** |  | [optional] 
 **isFirstLaunch** | **bool** |  | [optional] 
 **platform** | [**Platform**](Platform.md) |  | 

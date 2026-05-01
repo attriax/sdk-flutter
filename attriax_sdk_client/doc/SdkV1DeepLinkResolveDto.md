@@ -10,6 +10,7 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **appToken** | **String** |  | 
 **deviceId** | **String** |  | 
+**deviceIdSource** | **String** |  | [optional] 
 **isFirstLaunch** | **bool** |  | [optional] 
 **linkPath** | **String** |  | [optional] 
 **metadata** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional] 

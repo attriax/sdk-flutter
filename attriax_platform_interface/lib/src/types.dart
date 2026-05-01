@@ -1,7 +1,20 @@
 const String attriaxSdkApiVersion = 'v1';
 const String attriaxSdkPackageVersion = '1.0.0';
 
-enum AttributionType { referrer, fingerprint, external, organic }
+/// Attribution classification returned by Attriax.
+enum AttributionType {
+  /// Attribution derived from platform install-referrer data.
+  referrer,
+
+  /// Attribution derived from probabilistic fingerprint matching.
+  fingerprint,
+
+  /// Attribution derived from external provider resolutions.
+  external,
+
+  /// Attribution assigned when no attributable source was found.
+  organic,
+}
 
 enum AttriaxPlatformType { ios, android, web, windows, macos, linux, unknown }
 
@@ -92,6 +105,7 @@ class AttriaxInstallReferrerContext {
   };
 }
 
+/// SDK version and metadata snapshot captured during initialization.
 class AttriaxSdkSnapshot {
   const AttriaxSdkSnapshot({
     required this.apiVersion,
@@ -195,11 +209,8 @@ class AttriaxContextSnapshot {
     required this.sdk,
     required this.app,
     required this.device,
-    String? rawPlatformInstallReferrer,
-    @Deprecated('Use rawPlatformInstallReferrer instead.')
-    String? installReferrer,
-  }) : rawPlatformInstallReferrer =
-           rawPlatformInstallReferrer ?? installReferrer;
+    this.rawPlatformInstallReferrer,
+  });
 
   final AttriaxPlatformType platform;
   final String deviceId;
@@ -211,9 +222,6 @@ class AttriaxContextSnapshot {
   /// referrer value the SDK has cached locally. The SDK updates it when a new
   /// platform referrer value is retrieved.
   final String? rawPlatformInstallReferrer;
-
-  @Deprecated('Use rawPlatformInstallReferrer instead.')
-  String? get installReferrer => rawPlatformInstallReferrer;
 
   final AttriaxSdkSnapshot sdk;
   final AttriaxAppSnapshot app;
@@ -238,6 +246,7 @@ class AttriaxDeepLink {
   };
 }
 
+/// Structured install-referrer details resolved by Attriax.
 class AttriaxInstallReferrerDetails {
   const AttriaxInstallReferrerDetails({
     required this.attributionType,
@@ -250,6 +259,7 @@ class AttriaxInstallReferrerDetails {
     this.content,
     this.adNetwork,
     this.adClickId,
+    this.deepLinkUrl,
     this.deepLinkData,
   });
 
@@ -270,20 +280,47 @@ class AttriaxInstallReferrerDetails {
       attributionType: _parseAttributionType(
         _jsonString(json['attributionType']),
       ),
+      deepLinkUrl: _jsonString(json['deepLinkUrl']),
       deepLinkData: deepLinkDataJson,
       precision: _jsonDouble(json['precision']) ?? 0,
     );
   }
 
+  /// Raw platform install-referrer string cached by the SDK.
   final String? rawPlatformInstallReferrer;
+
+  /// Resolved UTM source extracted from the install referrer.
   final String? source;
+
+  /// Resolved UTM medium extracted from the install referrer.
   final String? medium;
+
+  /// Resolved UTM campaign extracted from the install referrer.
   final String? campaign;
+
+  /// Resolved UTM term extracted from the install referrer.
   final String? term;
+
+  /// Resolved UTM content extracted from the install referrer.
   final String? content;
+
+  /// Detected ad-network identifier inferred from the referrer.
   final String? adNetwork;
+
+  /// Detected ad click identifier such as `gclid` or `fbclid`.
   final String? adClickId;
+
+  /// Attribution classification for the install-referrer payload.
+  ///
+  /// Current platform install-referrer parsing reports
+  /// [AttributionType.referrer]. [AttributionType.external] is reserved for
+  /// future provider-based payloads.
   final AttributionType attributionType;
+
+  /// Full tracked short-link URL associated with the resolved deep link.
+  final String? deepLinkUrl;
+
+  /// Resolved deep-link payload data associated with the install referrer.
   final Map<String, Object?>? deepLinkData;
 
   /// Confidence score from `0.0` to `1.0` for the resolved install referrer.
@@ -303,6 +340,7 @@ class AttriaxInstallReferrerDetails {
     if (adNetwork != null) 'adNetwork': adNetwork,
     if (adClickId != null) 'adClickId': adClickId,
     'attributionType': attributionType.name,
+    if (deepLinkUrl != null) 'deepLinkUrl': deepLinkUrl,
     if (deepLinkData != null && deepLinkData!.isNotEmpty)
       'deepLinkData': _normalizeJsonMap(deepLinkData!),
     'precision': precision,
@@ -324,6 +362,11 @@ class AttriaxDynamicLinkRecord {
     this.previewImagePath,
     this.iosRedirect,
     this.androidRedirect,
+    this.utmSource,
+    this.utmMedium,
+    this.utmCampaign,
+    this.utmTerm,
+    this.utmContent,
     this.createdAt,
   });
 
@@ -342,6 +385,11 @@ class AttriaxDynamicLinkRecord {
         previewImagePath: _jsonString(json['previewImagePath']),
         iosRedirect: _jsonBool(json['iosRedirect']),
         androidRedirect: _jsonBool(json['androidRedirect']),
+        utmSource: _jsonString(json['utmSource']),
+        utmMedium: _jsonString(json['utmMedium']),
+        utmCampaign: _jsonString(json['utmCampaign']),
+        utmTerm: _jsonString(json['utmTerm']),
+        utmContent: _jsonString(json['utmContent']),
         createdAt: _jsonDateTime(json['createdAt']),
       );
 
@@ -358,6 +406,11 @@ class AttriaxDynamicLinkRecord {
   final String? previewImagePath;
   final bool? iosRedirect;
   final bool? androidRedirect;
+  final String? utmSource;
+  final String? utmMedium;
+  final String? utmCampaign;
+  final String? utmTerm;
+  final String? utmContent;
   final DateTime? createdAt;
 }
 
@@ -386,6 +439,7 @@ class AttriaxCreateDynamicLinkResult {
   final DateTime? acceptedAt;
 }
 
+/// Raw deep-link activation captured by the SDK before backend resolution.
 class AttriaxRawDeepLinkEvent {
   const AttriaxRawDeepLinkEvent({
     required this.uri,
@@ -395,37 +449,55 @@ class AttriaxRawDeepLinkEvent {
     this.linkPath,
   });
 
+  /// Full incoming URI observed by the SDK.
   final Uri uri;
+
+  /// Normalized Attriax link path extracted from [uri], when available.
   final String? linkPath;
+
+  /// Whether this deep link belongs to the installation's first launch.
   final bool isFirstLaunch;
+
+  /// Whether this deep link was captured during [Attriax.init].
   final bool isInitialLink;
+
+  /// Local timestamp when the SDK captured the incoming deep link.
   final DateTime occurredAt;
 }
 
-class AttriaxDeepLinkConversionEvent {
-  const AttriaxDeepLinkConversionEvent({
+/// Successful deep-link resolution emitted by the SDK.
+class AttriaxDeepLinkResolution {
+  const AttriaxDeepLinkResolution({
     required this.deepLink,
     required this.isFirstLaunch,
     required this.isDeferred,
     required this.occurredAt,
     this.rawEvent,
-    this.requestVersion,
-    this.acceptedAt,
     this.consumedAt,
   });
 
+  /// Deep-link payload matched by Attriax.
   final AttriaxDeepLink deepLink;
+
+  /// Original raw event that led to this resolution, when available.
   final AttriaxRawDeepLinkEvent? rawEvent;
+
+  /// Whether this resolution belongs to the installation's first launch.
   final bool isFirstLaunch;
+
+  /// Whether the resolution came from deferred app-open processing.
   final bool isDeferred;
-  final String? requestVersion;
-  final DateTime? acceptedAt;
+
+  /// Timestamp when the deep link was marked as consumed by the backend.
   final DateTime? consumedAt;
+
+  /// Timestamp when this resolution became visible to the SDK caller.
   final DateTime occurredAt;
 }
 
-class AttriaxDeepLinkConversionFailure {
-  const AttriaxDeepLinkConversionFailure({
+/// Failed deep-link resolution emitted by the SDK.
+class AttriaxDeepLinkResolutionFailure {
+  const AttriaxDeepLinkResolutionFailure({
     required this.reason,
     required this.isFirstLaunch,
     required this.occurredAt,
@@ -435,15 +507,29 @@ class AttriaxDeepLinkConversionFailure {
     this.acceptedAt,
   });
 
+  /// Machine-readable failure reason returned by Attriax or generated locally.
   final String reason;
+
+  /// Original raw event that led to this failure, when available.
   final AttriaxRawDeepLinkEvent? rawEvent;
+
+  /// Whether this failure belongs to the installation's first launch.
   final bool isFirstLaunch;
+
+  /// Optional backend resolution status for the failed request.
   final AttriaxDeepLinkResolutionStatus? status;
+
+  /// Backend API version that handled the failed resolution, when returned.
   final String? requestVersion;
+
+  /// Backend acceptance timestamp for the failed resolution, when returned.
   final DateTime? acceptedAt;
+
+  /// Timestamp when this failure became visible to the SDK caller.
   final DateTime occurredAt;
 }
 
+/// Deferred or in-flight deep-link event emitted to subscribers.
 class AttriaxDeepLinkEvent {
   const AttriaxDeepLinkEvent({required this.resultFuture, this.rawEvent});
 
@@ -452,23 +538,25 @@ class AttriaxDeepLinkEvent {
 
   bool get hasRawEvent => rawEvent != null;
 
-  Future<AttriaxDeepLinkResult> waitForConversionResult() => resultFuture;
+  /// Waits for the backend resolution corresponding to this deep link.
+  Future<AttriaxDeepLinkResult> resolve() => resultFuture;
 }
 
+/// Final deep-link result produced for one incoming or recorded link.
 class AttriaxDeepLinkResult {
-  const AttriaxDeepLinkResult({this.rawEvent, this.conversion, this.failure})
+  const AttriaxDeepLinkResult({this.rawEvent, this.resolution, this.failure})
     : assert(
-        conversion != null || failure != null,
-        'Either conversion or failure must be provided.',
+        resolution != null || failure != null,
+        'Either resolution or failure must be provided.',
       );
 
   final AttriaxRawDeepLinkEvent? rawEvent;
-  final AttriaxDeepLinkConversionEvent? conversion;
-  final AttriaxDeepLinkConversionFailure? failure;
+  final AttriaxDeepLinkResolution? resolution;
+  final AttriaxDeepLinkResolutionFailure? failure;
 
-  bool get isMatched => conversion != null;
+  bool get isMatched => resolution != null;
   bool get isFailure => failure != null;
-  bool get isDeferred => conversion?.isDeferred ?? false;
+  bool get isDeferred => resolution?.isDeferred ?? false;
 }
 
 class AttriaxDeepLinkResolutionResult {
@@ -510,6 +598,7 @@ class AttriaxDeepLinkResolutionResult {
   final DateTime? consumedAt;
 }
 
+/// Internal runtime result for the initial app-open tracking request.
 class AttriaxAppOpenResult {
   const AttriaxAppOpenResult({
     required this.userId,
@@ -549,9 +638,29 @@ class AttriaxAppOpenResult {
   final AttriaxInstallReferrerDetails? installReferrer;
 }
 
-typedef AttriaxInitResult = AttriaxAppOpenResult;
+/// Public app-open summary exposed after app-open tracking completes.
+class AttriaxAppOpen {
+  const AttriaxAppOpen({
+    required this.isNewUser,
+    required this.isFirstLaunch,
+    this.deepLink,
+  });
 
+  /// Whether Attriax created a new backend user for this app open.
+  final bool isNewUser;
+
+  /// Whether this app open belongs to the installation's first launch.
+  final bool isFirstLaunch;
+
+  /// Deferred deep link matched during the app-open flow, when available.
+  final AttriaxDeepLink? deepLink;
+}
+
+typedef AttriaxInitResult = AttriaxAppOpen;
+
+/// Immutable configuration used to construct an Attriax SDK instance.
 class AttriaxConfig {
+  /// Creates an SDK configuration with optional app/build metadata.
   const AttriaxConfig({
     required this.appToken,
     this.apiBaseUrl = 'https://api.attriax.com',
@@ -564,14 +673,37 @@ class AttriaxConfig {
     this.maxQueueSize = 200,
   });
 
+  /// Application token issued by Attriax for the current app.
   final String appToken;
+
+  /// Base URL for the Attriax API.
+  ///
+  /// Leave this at the production default unless you are targeting a local,
+  /// staging, or self-hosted Attriax environment.
   final String apiBaseUrl;
+
+  /// Optional app version string attached to SDK requests.
   final String? appVersion;
+
+  /// Optional app build number attached to SDK requests.
   final String? appBuildNumber;
+
+  /// Optional application package identifier attached to SDK requests.
   final String? appPackageName;
+
+  /// Extra SDK metadata sent with requests as a normalized JSON object.
   final Map<String, Object?> sdkMetadata;
+
+  /// Overrides whether verbose SDK logs are emitted.
+  ///
+  /// When `null`, the SDK defaults to debug logging in debug builds and a more
+  /// restrictive log level in release builds.
   final bool? enableDebugLogs;
+
+  /// Per-request timeout applied to outbound Attriax API calls.
   final Duration requestTimeout;
+
+  /// Maximum number of queued requests persisted locally for retry.
   final int maxQueueSize;
 }
 

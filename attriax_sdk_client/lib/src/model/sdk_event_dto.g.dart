@@ -12,11 +12,11 @@ class _$SdkEventDto extends SdkEventDto {
   @override
   final String deviceId;
   @override
+  final String? deviceIdSource;
+  @override
   final BuiltMap<String, JsonObject?>? eventData;
   @override
   final String eventName;
-  @override
-  final String? linkId;
 
   factory _$SdkEventDto([void Function(SdkEventDtoBuilder)? updates]) =>
       (SdkEventDtoBuilder()..update(updates))._build();
@@ -24,9 +24,9 @@ class _$SdkEventDto extends SdkEventDto {
   _$SdkEventDto._({
     required this.appToken,
     required this.deviceId,
+    this.deviceIdSource,
     this.eventData,
     required this.eventName,
-    this.linkId,
   }) : super._();
   @override
   SdkEventDto rebuild(void Function(SdkEventDtoBuilder) updates) =>
@@ -41,9 +41,9 @@ class _$SdkEventDto extends SdkEventDto {
     return other is SdkEventDto &&
         appToken == other.appToken &&
         deviceId == other.deviceId &&
+        deviceIdSource == other.deviceIdSource &&
         eventData == other.eventData &&
-        eventName == other.eventName &&
-        linkId == other.linkId;
+        eventName == other.eventName;
   }
 
   @override
@@ -51,9 +51,9 @@ class _$SdkEventDto extends SdkEventDto {
     var _$hash = 0;
     _$hash = $jc(_$hash, appToken.hashCode);
     _$hash = $jc(_$hash, deviceId.hashCode);
+    _$hash = $jc(_$hash, deviceIdSource.hashCode);
     _$hash = $jc(_$hash, eventData.hashCode);
     _$hash = $jc(_$hash, eventName.hashCode);
-    _$hash = $jc(_$hash, linkId.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -63,9 +63,9 @@ class _$SdkEventDto extends SdkEventDto {
     return (newBuiltValueToStringHelper(r'SdkEventDto')
           ..add('appToken', appToken)
           ..add('deviceId', deviceId)
+          ..add('deviceIdSource', deviceIdSource)
           ..add('eventData', eventData)
-          ..add('eventName', eventName)
-          ..add('linkId', linkId))
+          ..add('eventName', eventName))
         .toString();
   }
 }
@@ -81,6 +81,11 @@ class SdkEventDtoBuilder implements Builder<SdkEventDto, SdkEventDtoBuilder> {
   String? get deviceId => _$this._deviceId;
   set deviceId(String? deviceId) => _$this._deviceId = deviceId;
 
+  String? _deviceIdSource;
+  String? get deviceIdSource => _$this._deviceIdSource;
+  set deviceIdSource(String? deviceIdSource) =>
+      _$this._deviceIdSource = deviceIdSource;
+
   MapBuilder<String, JsonObject?>? _eventData;
   MapBuilder<String, JsonObject?> get eventData =>
       _$this._eventData ??= MapBuilder<String, JsonObject?>();
@@ -91,10 +96,6 @@ class SdkEventDtoBuilder implements Builder<SdkEventDto, SdkEventDtoBuilder> {
   String? get eventName => _$this._eventName;
   set eventName(String? eventName) => _$this._eventName = eventName;
 
-  String? _linkId;
-  String? get linkId => _$this._linkId;
-  set linkId(String? linkId) => _$this._linkId = linkId;
-
   SdkEventDtoBuilder() {
     SdkEventDto._defaults(this);
   }
@@ -104,9 +105,9 @@ class SdkEventDtoBuilder implements Builder<SdkEventDto, SdkEventDtoBuilder> {
     if ($v != null) {
       _appToken = $v.appToken;
       _deviceId = $v.deviceId;
+      _deviceIdSource = $v.deviceIdSource;
       _eventData = $v.eventData?.toBuilder();
       _eventName = $v.eventName;
-      _linkId = $v.linkId;
       _$v = null;
     }
     return this;
@@ -141,13 +142,13 @@ class SdkEventDtoBuilder implements Builder<SdkEventDto, SdkEventDtoBuilder> {
               r'SdkEventDto',
               'deviceId',
             ),
+            deviceIdSource: deviceIdSource,
             eventData: _eventData?.build(),
             eventName: BuiltValueNullFieldError.checkNotNull(
               eventName,
               r'SdkEventDto',
               'eventName',
             ),
-            linkId: linkId,
           );
     } catch (_) {
       late String _$failedField;

@@ -17,6 +17,11 @@ void main() {
       // TODO
     });
 
+    // String deviceIdSource
+    test('to test the property `deviceIdSource`', () async {
+      // TODO
+    });
+
     // BuiltMap<String, JsonObject> eventData
     test('to test the property `eventData`', () async {
       // TODO
@@ -24,11 +29,6 @@ void main() {
 
     // String eventName
     test('to test the property `eventName`', () async {
-      // TODO
-    });
-
-    // String linkId
-    test('to test the property `linkId`', () async {
       // TODO
     });
 

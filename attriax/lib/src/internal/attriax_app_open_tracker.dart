@@ -23,6 +23,7 @@ class AttriaxAppOpenTracker {
   Future<void> schedule({
     required AttriaxConfig config,
     required Future<AttriaxContextSnapshot> contextFuture,
+    required String deviceIdSource,
     required AttriaxSynchronizer synchronizer,
     required AttriaxEventHub eventHub,
     required AttriaxLogger logger,
@@ -49,7 +50,11 @@ class AttriaxAppOpenTracker {
     }
 
     await synchronizer.enqueue(
-      attriaxBuildOpenRequest(config: config, context: context),
+      attriaxBuildOpenRequest(
+        config: config,
+        context: context,
+        deviceIdSource: deviceIdSource,
+      ),
       onSuccess: (response) {
         if (response is! AttriaxOpenApiResponse) {
           final error = StateError('Unexpected response type for app open.');
@@ -68,11 +73,10 @@ class AttriaxAppOpenTracker {
 
         if (result.deepLink != null) {
           eventHub.emitResolvedDeepLink(
-            conversion: AttriaxDeepLinkConversionEvent(
+            resolution: AttriaxDeepLinkResolution(
               deepLink: result.deepLink!,
               isFirstLaunch: result.isFirstLaunch,
               isDeferred: true,
-              requestVersion: result.requestVersion,
               occurredAt: result.acceptedAt ?? DateTime.now().toUtc(),
             ),
           );

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:attriax/attriax.dart';
+import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:attriax/src/internal/attriax_context_collector.dart';
 import 'package:attriax/src/internal/attriax_preferences_store.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -70,38 +71,76 @@ void main() {
       expect(deepLinkSource.getInitialLinkCalls, 1);
     });
 
-    test('prefers a platform-derived device id over the stored fallback', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{
-        AttriaxPreferencesStore.deviceIdStorageKey: 'sdk_fallback_device',
-      });
-      prefs = await SharedPreferences.getInstance();
-      contextCollector = CountingContextCollector()
-        ..resolvedDeviceId = const AttriaxResolvedDeviceId(
-          value: 'android_hashed_device_id',
-          source: 'android_id_hash',
+    test(
+      'treats a legacy stored device id as persistent storage and does not re-resolve',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          AttriaxPreferencesStore.deviceIdStorageKey: 'sdk_fallback_device',
+        });
+        prefs = await SharedPreferences.getInstance();
+        contextCollector = CountingContextCollector();
+        sdk = Attriax.test(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
         );
-      sdk = Attriax.test(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
-        client: client,
-        deepLinkSource: deepLinkSource,
-        connectivity: connectivity,
-        contextCollector: contextCollector,
-        prefs: prefs,
-        enableDebugLogs: false,
-      );
 
-      await sdk.init(trackAppOpen: false);
+        await sdk.init(trackAppOpen: false);
 
-      expect(sdk.deviceId, 'android_hashed_device_id');
-      expect(
-        prefs.getString(AttriaxPreferencesStore.deviceIdStorageKey),
-        'android_hashed_device_id',
-      );
-      expect(
-        contextCollector.prepareDeviceIds,
-        <String>['android_hashed_device_id'],
-      );
-    });
+        expect(sdk.sdkSnapshot, isNotNull);
+        expect(
+          prefs.getString(AttriaxPreferencesStore.deviceIdStorageKey),
+          'sdk_fallback_device',
+        );
+        expect(
+          prefs.getString(AttriaxPreferencesStore.deviceIdSourceStorageKey),
+          attriaxPersistentStorageDeviceIdSource,
+        );
+        expect(contextCollector.resolvePreferredDeviceIdCalls, 0);
+        expect(contextCollector.prepareDeviceIds, <String>[
+          'sdk_fallback_device',
+        ]);
+      },
+    );
+
+    test(
+      'persists the resolved platform-derived device id and source',
+      () async {
+        contextCollector = CountingContextCollector()
+          ..resolvedDeviceId = const AttriaxResolvedDeviceId(
+            value: 'android_ssaid_device',
+            source: 'android_ssaid',
+          );
+        sdk = Attriax.test(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init(trackAppOpen: false);
+
+        expect(
+          prefs.getString(AttriaxPreferencesStore.deviceIdStorageKey),
+          'android_ssaid_device',
+        );
+        expect(
+          prefs.getString(AttriaxPreferencesStore.deviceIdSourceStorageKey),
+          'android_ssaid',
+        );
+        expect(contextCollector.resolvePreferredDeviceIdCalls, 1);
+        expect(contextCollector.prepareDeviceIds, <String>[
+          'android_ssaid_device',
+        ]);
+      },
+    );
 
     test('does not await background context resolution during init', () async {
       final blockingContextCollector = BlockingContextCollector();
@@ -162,19 +201,22 @@ class CountingContextCollector extends AttriaxContextCollector {
     : super(config: const AttriaxConfig(appToken: 'ax_test_token'));
 
   int prepareCalls = 0;
+  int resolvePreferredDeviceIdCalls = 0;
   final List<String> prepareDeviceIds = <String>[];
   AttriaxResolvedDeviceId? resolvedDeviceId;
 
   @override
   Future<AttriaxResolvedDeviceId> resolvePreferredDeviceId({
     required String fallbackDeviceId,
-  }) async =>
-      resolvedDeviceId ??
-      AttriaxResolvedDeviceId(
-        value: fallbackDeviceId,
-        source: 'sdk_storage',
-        isFallback: true,
-      );
+  }) async {
+    resolvePreferredDeviceIdCalls += 1;
+    return resolvedDeviceId ??
+        AttriaxResolvedDeviceId(
+          value: fallbackDeviceId,
+          source: attriaxPersistentStorageDeviceIdSource,
+          isFallback: true,
+        );
+  }
 
   @override
   Future<AttriaxPreparedContext> prepare({

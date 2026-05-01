@@ -35,6 +35,16 @@ class _$SdkDynamicLinkRecordDto extends SdkDynamicLinkRecordDto {
   final String? previewTitle;
   @override
   final String shortUrl;
+  @override
+  final String? utmCampaign;
+  @override
+  final String? utmContent;
+  @override
+  final String? utmMedium;
+  @override
+  final String? utmSource;
+  @override
+  final String? utmTerm;
 
   factory _$SdkDynamicLinkRecordDto([
     void Function(SdkDynamicLinkRecordDtoBuilder)? updates,
@@ -55,6 +65,11 @@ class _$SdkDynamicLinkRecordDto extends SdkDynamicLinkRecordDto {
     this.previewImagePath,
     this.previewTitle,
     required this.shortUrl,
+    this.utmCampaign,
+    this.utmContent,
+    this.utmMedium,
+    this.utmSource,
+    this.utmTerm,
   }) : super._();
   @override
   SdkDynamicLinkRecordDto rebuild(
@@ -82,7 +97,12 @@ class _$SdkDynamicLinkRecordDto extends SdkDynamicLinkRecordDto {
         previewDescription == other.previewDescription &&
         previewImagePath == other.previewImagePath &&
         previewTitle == other.previewTitle &&
-        shortUrl == other.shortUrl;
+        shortUrl == other.shortUrl &&
+        utmCampaign == other.utmCampaign &&
+        utmContent == other.utmContent &&
+        utmMedium == other.utmMedium &&
+        utmSource == other.utmSource &&
+        utmTerm == other.utmTerm;
   }
 
   @override
@@ -102,6 +122,11 @@ class _$SdkDynamicLinkRecordDto extends SdkDynamicLinkRecordDto {
     _$hash = $jc(_$hash, previewImagePath.hashCode);
     _$hash = $jc(_$hash, previewTitle.hashCode);
     _$hash = $jc(_$hash, shortUrl.hashCode);
+    _$hash = $jc(_$hash, utmCampaign.hashCode);
+    _$hash = $jc(_$hash, utmContent.hashCode);
+    _$hash = $jc(_$hash, utmMedium.hashCode);
+    _$hash = $jc(_$hash, utmSource.hashCode);
+    _$hash = $jc(_$hash, utmTerm.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -122,7 +147,12 @@ class _$SdkDynamicLinkRecordDto extends SdkDynamicLinkRecordDto {
           ..add('previewDescription', previewDescription)
           ..add('previewImagePath', previewImagePath)
           ..add('previewTitle', previewTitle)
-          ..add('shortUrl', shortUrl))
+          ..add('shortUrl', shortUrl)
+          ..add('utmCampaign', utmCampaign)
+          ..add('utmContent', utmContent)
+          ..add('utmMedium', utmMedium)
+          ..add('utmSource', utmSource)
+          ..add('utmTerm', utmTerm))
         .toString();
   }
 }
@@ -193,6 +223,26 @@ class SdkDynamicLinkRecordDtoBuilder
   String? get shortUrl => _$this._shortUrl;
   set shortUrl(String? shortUrl) => _$this._shortUrl = shortUrl;
 
+  String? _utmCampaign;
+  String? get utmCampaign => _$this._utmCampaign;
+  set utmCampaign(String? utmCampaign) => _$this._utmCampaign = utmCampaign;
+
+  String? _utmContent;
+  String? get utmContent => _$this._utmContent;
+  set utmContent(String? utmContent) => _$this._utmContent = utmContent;
+
+  String? _utmMedium;
+  String? get utmMedium => _$this._utmMedium;
+  set utmMedium(String? utmMedium) => _$this._utmMedium = utmMedium;
+
+  String? _utmSource;
+  String? get utmSource => _$this._utmSource;
+  set utmSource(String? utmSource) => _$this._utmSource = utmSource;
+
+  String? _utmTerm;
+  String? get utmTerm => _$this._utmTerm;
+  set utmTerm(String? utmTerm) => _$this._utmTerm = utmTerm;
+
   SdkDynamicLinkRecordDtoBuilder() {
     SdkDynamicLinkRecordDto._defaults(this);
   }
@@ -214,6 +264,11 @@ class SdkDynamicLinkRecordDtoBuilder
       _previewImagePath = $v.previewImagePath;
       _previewTitle = $v.previewTitle;
       _shortUrl = $v.shortUrl;
+      _utmCampaign = $v.utmCampaign;
+      _utmContent = $v.utmContent;
+      _utmMedium = $v.utmMedium;
+      _utmSource = $v.utmSource;
+      _utmTerm = $v.utmTerm;
       _$v = null;
     }
     return this;
@@ -268,6 +323,11 @@ class SdkDynamicLinkRecordDtoBuilder
               r'SdkDynamicLinkRecordDto',
               'shortUrl',
             ),
+            utmCampaign: utmCampaign,
+            utmContent: utmContent,
+            utmMedium: utmMedium,
+            utmSource: utmSource,
+            utmTerm: utmTerm,
           );
     } catch (_) {
       late String _$failedField;

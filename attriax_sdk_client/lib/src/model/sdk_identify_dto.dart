@@ -13,6 +13,7 @@ part 'sdk_identify_dto.g.dart';
 /// Properties:
 /// * [appToken] 
 /// * [deviceId] 
+/// * [deviceIdSource] 
 /// * [externalUserId] 
 /// * [externalUserName] 
 @BuiltValue()
@@ -23,8 +24,11 @@ abstract class SdkIdentifyDto implements Built<SdkIdentifyDto, SdkIdentifyDtoBui
   @BuiltValueField(wireName: r'deviceId')
   String get deviceId;
 
+  @BuiltValueField(wireName: r'deviceIdSource')
+  String? get deviceIdSource;
+
   @BuiltValueField(wireName: r'externalUserId')
-  String get externalUserId;
+  String? get externalUserId;
 
   @BuiltValueField(wireName: r'externalUserName')
   String? get externalUserName;
@@ -62,11 +66,20 @@ class _$SdkIdentifyDtoSerializer implements PrimitiveSerializer<SdkIdentifyDto> 
       object.deviceId,
       specifiedType: const FullType(String),
     );
-    yield r'externalUserId';
-    yield serializers.serialize(
-      object.externalUserId,
-      specifiedType: const FullType(String),
-    );
+    if (object.deviceIdSource != null) {
+      yield r'deviceIdSource';
+      yield serializers.serialize(
+        object.deviceIdSource,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.externalUserId != null) {
+      yield r'externalUserId';
+      yield serializers.serialize(
+        object.externalUserId,
+        specifiedType: const FullType(String),
+      );
+    }
     if (object.externalUserName != null) {
       yield r'externalUserName';
       yield serializers.serialize(
@@ -110,6 +123,13 @@ class _$SdkIdentifyDtoSerializer implements PrimitiveSerializer<SdkIdentifyDto> 
             specifiedType: const FullType(String),
           ) as String;
           result.deviceId = valueDes;
+          break;
+        case r'deviceIdSource':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.deviceIdSource = valueDes;
           break;
         case r'externalUserId':
           final valueDes = serializers.deserialize(

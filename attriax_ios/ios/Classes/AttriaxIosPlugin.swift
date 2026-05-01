@@ -159,6 +159,7 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             "locale": Locale.current.identifier,
             "regionCode": Locale.current.regionCode as Any,
             "preferredLanguages": Locale.preferredLanguages,
+            "keychainDeviceId": readKeychainDeviceId() as Any,
             "vendorIdentifier": device.identifierForVendor?.uuidString as Any,
             "deviceModel": device.model,
             "bundleIdentifier": Bundle.main.bundleIdentifier as Any,
@@ -258,6 +259,31 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         }
 
         return []
+    }
+
+    private func readKeychainDeviceId() -> String? {
+        let service = Bundle.main.bundleIdentifier ?? "com.attriax.sdk"
+        let account = "attriax.device_id"
+        let query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account,
+            kSecReturnData: true,
+            kSecMatchLimit: kSecMatchLimitOne,
+        ]
+
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess, let data = result as? Data else {
+            return nil
+        }
+
+        guard let value = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 
     private func handleLink(url: URL) {

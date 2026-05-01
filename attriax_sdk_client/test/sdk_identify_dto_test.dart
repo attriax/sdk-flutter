@@ -17,6 +17,11 @@ void main() {
       // TODO
     });
 
+    // String deviceIdSource
+    test('to test the property `deviceIdSource`', () async {
+      // TODO
+    });
+
     // String externalUserId
     test('to test the property `externalUserId`', () async {
       // TODO

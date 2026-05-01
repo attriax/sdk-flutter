@@ -17,6 +17,11 @@ void main() {
       // TODO
     });
 
+    // String deviceIdSource
+    test('to test the property `deviceIdSource`', () async {
+      // TODO
+    });
+
     // bool isFirstLaunch
     test('to test the property `isFirstLaunch`', () async {
       // TODO

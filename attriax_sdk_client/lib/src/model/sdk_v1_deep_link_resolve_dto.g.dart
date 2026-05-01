@@ -12,6 +12,8 @@ class _$SdkV1DeepLinkResolveDto extends SdkV1DeepLinkResolveDto {
   @override
   final String deviceId;
   @override
+  final String? deviceIdSource;
+  @override
   final bool? isFirstLaunch;
   @override
   final String? linkPath;
@@ -31,6 +33,7 @@ class _$SdkV1DeepLinkResolveDto extends SdkV1DeepLinkResolveDto {
   _$SdkV1DeepLinkResolveDto._({
     required this.appToken,
     required this.deviceId,
+    this.deviceIdSource,
     this.isFirstLaunch,
     this.linkPath,
     this.metadata,
@@ -53,6 +56,7 @@ class _$SdkV1DeepLinkResolveDto extends SdkV1DeepLinkResolveDto {
     return other is SdkV1DeepLinkResolveDto &&
         appToken == other.appToken &&
         deviceId == other.deviceId &&
+        deviceIdSource == other.deviceIdSource &&
         isFirstLaunch == other.isFirstLaunch &&
         linkPath == other.linkPath &&
         metadata == other.metadata &&
@@ -66,6 +70,7 @@ class _$SdkV1DeepLinkResolveDto extends SdkV1DeepLinkResolveDto {
     var _$hash = 0;
     _$hash = $jc(_$hash, appToken.hashCode);
     _$hash = $jc(_$hash, deviceId.hashCode);
+    _$hash = $jc(_$hash, deviceIdSource.hashCode);
     _$hash = $jc(_$hash, isFirstLaunch.hashCode);
     _$hash = $jc(_$hash, linkPath.hashCode);
     _$hash = $jc(_$hash, metadata.hashCode);
@@ -81,6 +86,7 @@ class _$SdkV1DeepLinkResolveDto extends SdkV1DeepLinkResolveDto {
     return (newBuiltValueToStringHelper(r'SdkV1DeepLinkResolveDto')
           ..add('appToken', appToken)
           ..add('deviceId', deviceId)
+          ..add('deviceIdSource', deviceIdSource)
           ..add('isFirstLaunch', isFirstLaunch)
           ..add('linkPath', linkPath)
           ..add('metadata', metadata)
@@ -103,6 +109,11 @@ class SdkV1DeepLinkResolveDtoBuilder
   String? _deviceId;
   String? get deviceId => _$this._deviceId;
   set deviceId(String? deviceId) => _$this._deviceId = deviceId;
+
+  String? _deviceIdSource;
+  String? get deviceIdSource => _$this._deviceIdSource;
+  set deviceIdSource(String? deviceIdSource) =>
+      _$this._deviceIdSource = deviceIdSource;
 
   bool? _isFirstLaunch;
   bool? get isFirstLaunch => _$this._isFirstLaunch;
@@ -140,6 +151,7 @@ class SdkV1DeepLinkResolveDtoBuilder
     if ($v != null) {
       _appToken = $v.appToken;
       _deviceId = $v.deviceId;
+      _deviceIdSource = $v.deviceIdSource;
       _isFirstLaunch = $v.isFirstLaunch;
       _linkPath = $v.linkPath;
       _metadata = $v.metadata?.toBuilder();
@@ -180,6 +192,7 @@ class SdkV1DeepLinkResolveDtoBuilder
               r'SdkV1DeepLinkResolveDto',
               'deviceId',
             ),
+            deviceIdSource: deviceIdSource,
             isFirstLaunch: isFirstLaunch,
             linkPath: linkPath,
             metadata: _metadata?.build(),

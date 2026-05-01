@@ -203,17 +203,19 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   bool _sdkEnabled = true;
   bool _eventsEnabled = true;
   String _status = 'SDK initialized.';
-  AttriaxAppOpenResult? _appOpenResult;
+  AttriaxAppOpen? _appOpenResult;
   AttriaxDynamicLinkRecord? _lastCreatedDynamicLink;
   AttriaxRawDeepLinkEvent? _lastRawDeepLink;
-  AttriaxDeepLinkConversionEvent? _lastConversion;
-  AttriaxDeepLinkConversionFailure? _lastFailure;
+  AttriaxDeepLinkResolution? _lastResolution;
+  AttriaxDeepLinkResolutionFailure? _lastFailure;
 
   @override
   void initState() {
     super.initState();
 
-    _deepLinkSubscription = widget.sdk.deepLinks.listen(_handleDeepLinkEvent);
+    _deepLinkSubscription = widget.sdk.deepLinks.stream.listen(
+      _handleDeepLinkEvent,
+    );
     _synchronizationSubscription = widget.sdk.synchronizationStates.listen((_) {
       if (!mounted) {
         return;
@@ -255,22 +257,22 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
     }
 
     try {
-      final result = await event.waitForConversionResult();
+      final result = await event.resolve();
       if (!mounted) {
         return;
       }
 
-      final conversion = result.conversion;
-      if (conversion != null) {
+      final resolution = result.resolution;
+      if (resolution != null) {
         setState(() {
-          _lastConversion = conversion;
+          _lastResolution = resolution;
           _lastFailure = null;
-          _status = 'Matched deep link: ${conversion.deepLink.path}';
+          _status = 'Matched deep link: ${resolution.deepLink.path}';
         });
 
         _openExampleDeepLink(
-          conversion.deepLink,
-          source: conversion.isDeferred
+          resolution.deepLink,
+          source: resolution.isDeferred
               ? 'deferred_app_open'
               : 'matched_conversion',
         );
@@ -281,7 +283,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
       if (failure != null) {
         setState(() {
           _lastFailure = failure;
-          _status = 'Deep link conversion failed: ${failure.reason}';
+          _status = 'Deep link resolution failed: ${failure.reason}';
         });
       }
     } catch (error) {
@@ -303,7 +305,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
         _appOpenResult = result;
         _status = result == null
             ? 'App open tracking was not scheduled.'
-        : 'App open tracked.';
+            : 'App open tracked.';
       });
     } catch (error) {
       if (!mounted) return;
@@ -363,8 +365,8 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
     if (!mounted) return;
     setState(() {
       _status = event == null
-          ? 'Manual conversion sent. No immediate match.'
-          : 'Manual conversion matched ${event.deepLink.path}.';
+          ? 'Manual deep-link resolution sent. No immediate match.'
+          : 'Manual deep-link resolution matched ${event.deepLink.path}.';
     });
   }
 
@@ -652,7 +654,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                         'Last raw link: ${_lastRawDeepLink?.linkPath ?? _lastRawDeepLink?.uri.toString() ?? 'none'}',
                       ),
                       Text(
-                        'Last conversion: ${_lastConversion?.deepLink.path ?? 'none'}',
+                        'Last resolution: ${_lastResolution?.deepLink.path ?? 'none'}',
                       ),
                       Text(
                         'Last created short URL: ${_lastCreatedDynamicLink?.shortUrl ?? 'none'}',

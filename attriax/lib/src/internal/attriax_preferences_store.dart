@@ -6,15 +6,29 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AttriaxStoredPreferences {
   const AttriaxStoredPreferences({
     required this.deviceId,
+    required this.hasPersistedDeviceId,
     required this.isEnabled,
     required this.areEventsEnabled,
     required this.isFirstLaunch,
+    this.deviceIdSource,
   });
 
   final String deviceId;
+  final bool hasPersistedDeviceId;
   final bool isEnabled;
   final bool areEventsEnabled;
   final bool isFirstLaunch;
+  final String? deviceIdSource;
+}
+
+class _StoredDeviceIdState {
+  const _StoredDeviceIdState({
+    required this.value,
+    required this.hasPersistedValue,
+  });
+
+  final String value;
+  final bool hasPersistedValue;
 }
 
 class AttriaxPreferencesStore {
@@ -22,6 +36,7 @@ class AttriaxPreferencesStore {
     : _prefsOverride = prefsOverride;
 
   static const String deviceIdStorageKey = 'attriax.device_id';
+  static const String deviceIdSourceStorageKey = 'attriax.device_id_source';
   static const String enabledStorageKey = 'attriax.enabled';
   static const String eventsEnabledStorageKey = 'attriax.events.enabled';
   static const String firstLaunchSeenStorageKey = 'attriax.first_launch_seen';
@@ -37,9 +52,12 @@ class AttriaxPreferencesStore {
     bool? eventsEnabledOverride,
   }) async {
     final prefs = await preferences;
-    final deviceId = await _loadOrCreateDeviceId(
+    final storedDeviceId = await _loadOrCreateDeviceId(
       prefs,
       deviceIdFactory: deviceIdFactory,
+    );
+    final deviceIdSource = _sanitizeString(
+      prefs.getString(deviceIdSourceStorageKey),
     );
 
     final hasSeenFirstLaunch =
@@ -58,10 +76,12 @@ class AttriaxPreferencesStore {
     await prefs.setBool(eventsEnabledStorageKey, areEventsEnabled);
 
     return AttriaxStoredPreferences(
-      deviceId: deviceId,
+      deviceId: storedDeviceId.value,
+      hasPersistedDeviceId: storedDeviceId.hasPersistedValue,
       isEnabled: isEnabled,
       areEventsEnabled: areEventsEnabled,
       isFirstLaunch: isFirstLaunch,
+      deviceIdSource: deviceIdSource,
     );
   }
 
@@ -78,6 +98,17 @@ class AttriaxPreferencesStore {
   Future<void> setDeviceId({required String deviceId}) async {
     final prefs = await preferences;
     await prefs.setString(deviceIdStorageKey, deviceId);
+  }
+
+  Future<void> setDeviceIdSource({required String? deviceIdSource}) async {
+    final prefs = await preferences;
+    final normalized = _sanitizeString(deviceIdSource);
+    if (normalized == null) {
+      await prefs.remove(deviceIdSourceStorageKey);
+      return;
+    }
+
+    await prefs.setString(deviceIdSourceStorageKey, normalized);
   }
 
   Future<AttriaxInstallReferrerDetails?> readInstallReferrerDetails() async {
@@ -121,17 +152,25 @@ class AttriaxPreferencesStore {
     return _prefs!;
   }
 
-  Future<String> _loadOrCreateDeviceId(
+  Future<_StoredDeviceIdState> _loadOrCreateDeviceId(
     SharedPreferences prefs, {
     required String Function() deviceIdFactory,
   }) async {
-    final existing = prefs.getString(deviceIdStorageKey);
-    if (existing != null && existing.isNotEmpty) {
-      return existing;
+    final existing = _sanitizeString(prefs.getString(deviceIdStorageKey));
+    if (existing != null) {
+      return _StoredDeviceIdState(value: existing, hasPersistedValue: true);
     }
 
     final generated = deviceIdFactory();
     await prefs.setString(deviceIdStorageKey, generated);
-    return generated;
+    return _StoredDeviceIdState(value: generated, hasPersistedValue: false);
+  }
+
+  String? _sanitizeString(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return null;
+    }
+
+    return value;
   }
 }

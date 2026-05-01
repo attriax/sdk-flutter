@@ -7,9 +7,10 @@ Minimal public example app for the Attriax Flutter SDK.
 - constructing `Attriax` with a `AttriaxConfig`
 - awaited `init()` as the recommended startup path, plus optional `waitForAppOpenTracking()`
 - synchronization state with a clear ready / not-ready signal via `attriax.synchronization`
-- listening to the unified `deepLinks` stream and routing matched conversions into app screens
+- listening to the unified `deepLinks` stream and routing matched resolutions into app screens
+- reading `deepLinks.initialDeepLink`, `deepLinks.initialDeepLinkResolved`, and `deepLinks.latestDeepLink`
 - runtime SDK enable and custom-event enable toggles
-- manual deep-link conversion reporting
+- manual deep-link resolution reporting
 
 ## Run It
 
