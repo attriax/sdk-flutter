@@ -1,65 +1,31 @@
-import 'dart:developer' as developer;
-
-import 'package:flutter/services.dart';
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
+import 'package:flutter/services.dart';
 
 /// Android implementation of [AttriaxPlatform].
-class AttriaxAndroid extends AttriaxPlatform {
-  static const _channel = MethodChannel('attriax');
+class AttriaxAndroid extends MethodChannelAttriax {
+  AttriaxAndroid() : super(logName: 'attriax.android');
 
   static void registerWith() {
     AttriaxPlatform.instance = AttriaxAndroid();
   }
 
   @override
-  Future<AttriaxNativeContext> collectNativeContext() async {
-    try {
-      final result = await _channel.invokeMethod<Object?>(
-        'collectNativeContext',
-      );
-      return AttriaxNativeContext.fromPayload(result);
-    } on MissingPluginException catch (error, stackTrace) {
-      _logException('collectNativeContext', error, stackTrace);
-      return const AttriaxNativeContext();
-    } on PlatformException catch (error, stackTrace) {
-      _logException('collectNativeContext', error, stackTrace);
-      return const AttriaxNativeContext();
-    }
-  }
+  AttriaxInstallReferrerContext missingPluginInstallReferrerContext(
+    MissingPluginException error,
+  ) => AttriaxInstallReferrerContext(
+    metadata: {
+      'installReferrerStatus': 'missing_plugin',
+      'installReferrerError': error.message ?? error.toString(),
+    },
+  );
 
   @override
-  Future<AttriaxInstallReferrerContext> collectInstallReferrer() async {
-    try {
-      final result = await _channel.invokeMethod<Object?>(
-        'collectInstallReferrer',
-      );
-      return AttriaxInstallReferrerContext.fromPayload(result);
-    } on MissingPluginException catch (error, stackTrace) {
-      _logException('collectInstallReferrer', error, stackTrace);
-      return AttriaxInstallReferrerContext(
-        metadata: {
-          'installReferrerStatus': 'missing_plugin',
-          'installReferrerError': error.message ?? error.toString(),
-        },
-      );
-    } on PlatformException catch (error, stackTrace) {
-      _logException('collectInstallReferrer', error, stackTrace);
-      return AttriaxInstallReferrerContext(
-        metadata: {
-          'installReferrerStatus': 'platform_exception',
-          'installReferrerError':
-              error.message ?? error.code,
-        },
-      );
-    }
-  }
-
-  void _logException(String method, Object error, StackTrace stackTrace) {
-    developer.log(
-      'AttriaxAndroid.$method failed: ${error.runtimeType}',
-      name: 'attriax.android',
-      error: error,
-      stackTrace: stackTrace,
-    );
-  }
+  AttriaxInstallReferrerContext platformExceptionInstallReferrerContext(
+    PlatformException error,
+  ) => AttriaxInstallReferrerContext(
+    metadata: {
+      'installReferrerStatus': 'platform_exception',
+      'installReferrerError': error.message ?? error.code,
+    },
+  );
 }

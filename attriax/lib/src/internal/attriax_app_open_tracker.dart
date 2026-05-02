@@ -43,9 +43,7 @@ class AttriaxAppOpenTracker {
         error: error,
         stackTrace: stackTrace,
       );
-      if (!_completer!.isCompleted) {
-        _completer!.completeError(error, stackTrace);
-      }
+      _completeError(error, stackTrace: stackTrace);
       return;
     }
 
@@ -57,30 +55,14 @@ class AttriaxAppOpenTracker {
       ),
       onSuccess: (response) {
         if (response is! AttriaxOpenApiResponse) {
-          final error = StateError('Unexpected response type for app open.');
-          if (!_completer!.isCompleted) {
-            _completer!.completeError(error);
-          }
+          _completeError(StateError('Unexpected response type for app open.'));
           logger.error('Unexpected response type for app-open request.');
           return;
         }
 
         final result = response.result;
-        _lastResult = result;
-        if (!_completer!.isCompleted) {
-          _completer!.complete(result);
-        }
-
-        if (result.deepLink != null) {
-          eventHub.emitResolvedDeepLink(
-            resolution: AttriaxDeepLinkResolution(
-              deepLink: result.deepLink!,
-              isFirstLaunch: result.isFirstLaunch,
-              isDeferred: true,
-              occurredAt: result.acceptedAt ?? DateTime.now().toUtc(),
-            ),
-          );
-        }
+        _completeSuccess(result);
+        _emitDeferredDeepLink(result, eventHub: eventHub);
       },
       onError: (error, stackTrace) {
         logger.error(
@@ -88,9 +70,7 @@ class AttriaxAppOpenTracker {
           error: error,
           stackTrace: stackTrace,
         );
-        if (!_completer!.isCompleted) {
-          _completer!.completeError(error, stackTrace);
-        }
+        _completeError(error, stackTrace: stackTrace);
       },
     );
   }
@@ -113,5 +93,36 @@ class AttriaxAppOpenTracker {
     if (_completer != null && !_completer!.isCompleted) {
       _completer!.complete(null);
     }
+  }
+
+  void _completeSuccess(AttriaxAppOpenResult result) {
+    _lastResult = result;
+    if (!_completer!.isCompleted) {
+      _completer!.complete(result);
+    }
+  }
+
+  void _completeError(Object error, {StackTrace? stackTrace}) {
+    if (!_completer!.isCompleted) {
+      _completer!.completeError(error, stackTrace);
+    }
+  }
+
+  void _emitDeferredDeepLink(
+    AttriaxAppOpenResult result, {
+    required AttriaxEventHub eventHub,
+  }) {
+    if (result.deepLink == null) {
+      return;
+    }
+
+    eventHub.emitResolvedDeepLink(
+      resolution: AttriaxDeepLinkResolution(
+        deepLink: result.deepLink!,
+        isFirstLaunch: result.isFirstLaunch,
+        isDeferred: true,
+        occurredAt: result.acceptedAt ?? DateTime.now().toUtc(),
+      ),
+    );
   }
 }

@@ -72,8 +72,10 @@ class AttriaxPreferencesStore {
     final areEventsEnabled =
         eventsEnabledOverride ?? prefs.getBool(eventsEnabledStorageKey) ?? true;
 
-    await prefs.setBool(enabledStorageKey, isEnabled);
-    await prefs.setBool(eventsEnabledStorageKey, areEventsEnabled);
+    await setRuntimeFlags(
+      enabled: isEnabled,
+      eventsEnabled: areEventsEnabled,
+    );
 
     return AttriaxStoredPreferences(
       deviceId: storedDeviceId.value,
@@ -100,6 +102,21 @@ class AttriaxPreferencesStore {
     await prefs.setString(deviceIdStorageKey, deviceId);
   }
 
+  Future<void> setResolvedDeviceIdentity({
+    required String deviceId,
+    required String? deviceIdSource,
+  }) async {
+    final prefs = await preferences;
+    await prefs.setString(deviceIdStorageKey, deviceId);
+    final normalized = _sanitizeString(deviceIdSource);
+    if (normalized == null) {
+      await prefs.remove(deviceIdSourceStorageKey);
+      return;
+    }
+
+    await prefs.setString(deviceIdSourceStorageKey, normalized);
+  }
+
   Future<void> setDeviceIdSource({required String? deviceIdSource}) async {
     final prefs = await preferences;
     final normalized = _sanitizeString(deviceIdSource);
@@ -109,6 +126,15 @@ class AttriaxPreferencesStore {
     }
 
     await prefs.setString(deviceIdSourceStorageKey, normalized);
+  }
+
+  Future<void> setRuntimeFlags({
+    required bool enabled,
+    required bool eventsEnabled,
+  }) async {
+    final prefs = await preferences;
+    await prefs.setBool(enabledStorageKey, enabled);
+    await prefs.setBool(eventsEnabledStorageKey, eventsEnabled);
   }
 
   Future<AttriaxInstallReferrerDetails?> readInstallReferrerDetails() async {

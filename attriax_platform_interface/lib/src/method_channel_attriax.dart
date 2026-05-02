@@ -6,7 +6,14 @@ import 'types.dart';
 
 /// An implementation of [AttriaxPlatform] that uses method channels.
 class MethodChannelAttriax extends AttriaxPlatform {
-  final MethodChannel _channel = const MethodChannel('attriax');
+  MethodChannelAttriax({
+    MethodChannel? channel,
+    String logName = 'attriax.platform_interface',
+  }) : _channel = channel ?? const MethodChannel('attriax'),
+       _logName = logName;
+
+  final MethodChannel _channel;
+  final String _logName;
 
   @override
   Future<AttriaxNativeContext> collectNativeContext() async {
@@ -33,17 +40,25 @@ class MethodChannelAttriax extends AttriaxPlatform {
       return AttriaxInstallReferrerContext.fromPayload(result);
     } on MissingPluginException catch (error, stackTrace) {
       _logException('collectInstallReferrer', error, stackTrace);
-      return const AttriaxInstallReferrerContext();
+      return missingPluginInstallReferrerContext(error);
     } on PlatformException catch (error, stackTrace) {
       _logException('collectInstallReferrer', error, stackTrace);
-      return const AttriaxInstallReferrerContext();
+      return platformExceptionInstallReferrerContext(error);
     }
   }
 
+  AttriaxInstallReferrerContext missingPluginInstallReferrerContext(
+    MissingPluginException error,
+  ) => const AttriaxInstallReferrerContext();
+
+  AttriaxInstallReferrerContext platformExceptionInstallReferrerContext(
+    PlatformException error,
+  ) => const AttriaxInstallReferrerContext();
+
   void _logException(String method, Object error, StackTrace stackTrace) {
     developer.log(
-      'MethodChannelAttriax.$method failed: ${error.runtimeType}',
-      name: 'attriax.platform_interface',
+      '${runtimeType}.$method failed: ${error.runtimeType}',
+      name: _logName,
       error: error,
       stackTrace: stackTrace,
     );

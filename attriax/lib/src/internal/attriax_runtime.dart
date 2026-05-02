@@ -8,15 +8,16 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'attriax_api_models.dart';
 import 'attriax_api_base_url.dart';
 import 'attriax_app_open_tracker.dart';
-import 'attriax_conversion_mapper.dart';
 import 'attriax_context_collector.dart';
 import 'attriax_deep_link_listener.dart';
 import 'attriax_deep_link_resolver.dart';
 import 'attriax_event_hub.dart';
 import 'attriax_generated_transport.dart';
 import 'attriax_id_generator.dart';
+import 'attriax_install_referrer_state.dart';
 import 'attriax_logger.dart';
 import 'attriax_preferences_store.dart';
+import 'attriax_runtime_settings_state.dart';
 import 'attriax_synchronizer.dart';
 
 /// Coordinates the Attriax SDK subsystems.
@@ -44,7 +45,6 @@ class AttriaxRuntime {
        _preferencesStore = AttriaxPreferencesStore(
          prefsOverride: prefsOverride,
        ),
-       _conversionMapper = const AttriaxConversionMapper(),
        _eventHub = AttriaxEventHub(),
        _appOpenTracker = AttriaxAppOpenTracker();
 
@@ -55,7 +55,6 @@ class AttriaxRuntime {
   final http.Client _client;
   final AttriaxLogger _logger;
   final AttriaxPreferencesStore _preferencesStore;
-  final AttriaxConversionMapper _conversionMapper;
   final AttriaxEventHub _eventHub;
   final AttriaxAppOpenTracker _appOpenTracker;
 
@@ -66,29 +65,26 @@ class AttriaxRuntime {
   String? _deviceId;
   String? _deviceIdSource;
   bool _initialized = false;
-  bool _isEnabled = true;
-  bool _eventsEnabled = true;
   bool _isFirstLaunch = false;
   AttriaxContextSnapshot? _context;
   Future<AttriaxContextSnapshot>? _resolvedContextFuture;
   bool _resolvedContextIncludesInstallReferrer = false;
-  Completer<AttriaxInstallReferrerDetails?>? _installReferrerCompleter;
-  AttriaxInstallReferrerDetails? _cachedInstallReferrerDetails;
-  bool _installReferrerCompletedForDisabled = false;
-  bool _installReferrerResolutionStarted = false;
+  final AttriaxInstallReferrerState _installReferrerState =
+      AttriaxInstallReferrerState();
+  late final AttriaxRuntimeSettingsState _settingsState =
+      AttriaxRuntimeSettingsState(
+        preferencesStore: _preferencesStore,
+        logger: _logger,
+      );
   bool _trackAppOpen = true;
-  bool? _requestedEnabledOverride;
-  bool? _requestedEventsEnabledOverride;
-  Future<void> _enabledTransition = Future<void>.value();
-  Future<void> _eventsEnabledTransition = Future<void>.value();
   Future<void>? _initializationFuture;
   AttriaxNormalizedApiBaseUrl? _normalizedApiBaseUrl;
 
   // ---------- getters ------------------------------------------------------- //
 
   bool get isInitialized => _initialized;
-  bool get isEnabled => _isEnabled;
-  bool get areEventsEnabled => _eventsEnabled;
+  bool get isEnabled => _settingsState.isEnabled;
+  bool get areEventsEnabled => _settingsState.areEventsEnabled;
   bool get isFirstLaunch => _isFirstLaunch;
   String? get deviceId => _deviceId;
   bool get isSynchronized =>
@@ -98,10 +94,7 @@ class AttriaxRuntime {
   AttriaxAppOpen? get lastAppOpenResult =>
       _toPublicAppOpen(_appOpenTracker.lastResult);
   Future<AttriaxInstallReferrerDetails?> get installReferrer =>
-      _installReferrerCompleter?.future ??
-      Future<AttriaxInstallReferrerDetails?>.error(
-        StateError('Attriax SDK not initialized. Call init() first.'),
-      );
+      _installReferrerState.future;
   AttriaxDeepLinkResult? get initialDeepLink => _eventHub.initialDeepLinkValue;
   bool get isInitialDeepLinkResolved => _eventHub.isInitialDeepLinkResolved;
   Future<AttriaxDeepLinkResult?> get waitForInitialDeepLink =>
@@ -160,8 +153,9 @@ class AttriaxRuntime {
 
     final storedPreferences = await _preferencesStore.restore(
       deviceIdFactory: attriaxGenerateId,
-      enabledOverride: enabled ?? _requestedEnabledOverride,
-      eventsEnabledOverride: eventsEnabled ?? _requestedEventsEnabledOverride,
+      enabledOverride: enabled ?? _settingsState.requestedEnabledOverride,
+      eventsEnabledOverride:
+          eventsEnabled ?? _settingsState.requestedEventsEnabledOverride,
     );
     final prefs = await _preferencesStore.preferences;
 
@@ -190,36 +184,35 @@ class AttriaxRuntime {
 
     if (_deviceId != resolvedDeviceId.value) {
       _deviceId = resolvedDeviceId.value;
-      await _preferencesStore.setDeviceId(deviceId: _deviceId!);
     }
     _deviceIdSource = resolvedDeviceId.source;
-    await _preferencesStore.setDeviceIdSource(deviceIdSource: _deviceIdSource);
+    await _preferencesStore.setResolvedDeviceIdentity(
+      deviceId: _deviceId!,
+      deviceIdSource: _deviceIdSource,
+    );
     _logger.verbose('Using device ID (${resolvedDeviceId.source}): $_deviceId');
     _isFirstLaunch = storedPreferences.isFirstLaunch;
-    _isEnabled = storedPreferences.isEnabled;
-    _eventsEnabled = storedPreferences.areEventsEnabled;
-    _requestedEnabledOverride = _isEnabled;
-    _requestedEventsEnabledOverride = _eventsEnabled;
+    _settingsState.restore(
+      enabled: storedPreferences.isEnabled,
+      eventsEnabled: storedPreferences.areEventsEnabled,
+    );
     _trackAppOpen = trackAppOpen;
-    _installReferrerCompleter ??= Completer<AttriaxInstallReferrerDetails?>();
+    _installReferrerState.ensureCompleter();
 
-    _cachedInstallReferrerDetails = await _preferencesStore
-        .readInstallReferrerDetails();
-    if (_isEnabled &&
-        _cachedInstallReferrerDetails != null &&
-        !_installReferrerCompleter!.isCompleted) {
-      _completeInstallReferrer(_cachedInstallReferrerDetails);
-    }
+    _installReferrerState.loadCached(
+      await _preferencesStore.readInstallReferrerDetails(),
+    );
+    _installReferrerState.completeCachedIfEnabled(enabled: isEnabled);
 
     final preparedContext = await _contextCollector.prepare(
       deviceId: _deviceId!,
       isFirstLaunch: _isFirstLaunch,
-      resolveInstallReferrer: _isEnabled && trackAppOpen,
+      resolveInstallReferrer: isEnabled && trackAppOpen,
     );
     _context = preparedContext.initialSnapshot;
     _setResolvedContextFuture(
       preparedContext.resolvedSnapshot,
-      includesInstallReferrer: _isEnabled && trackAppOpen,
+      includesInstallReferrer: isEnabled && trackAppOpen,
     );
 
     _transport ??= AttriaxGeneratedTransport(
@@ -245,13 +238,12 @@ class AttriaxRuntime {
       context: _context!,
       synchronizer: _synchronizer!,
       eventHub: _eventHub,
-      conversionMapper: _conversionMapper,
       logger: _logger,
     );
 
     _initialized = true;
 
-    if (!_isEnabled) {
+    if (!isEnabled) {
       _completeInstallReferrer(null, disabledResult: true);
       _eventHub.completeInitialDeepLinkIfAbsent();
       _synchronizer!.setState(AttriaxSynchronizationState.disabled);
@@ -269,7 +261,7 @@ class AttriaxRuntime {
 
     if (trackAppOpen) {
       _scheduleAppOpenIfNeeded();
-    } else if (!_installReferrerCompleter!.isCompleted) {
+    } else if (_installReferrerState.hasPendingCompletion) {
       _completeInstallReferrer(null);
     }
 
@@ -284,7 +276,7 @@ class AttriaxRuntime {
     Map<String, Object?>? eventData,
   }) async {
     _assertInitialized();
-    if (!_isEnabled || !_eventsEnabled) {
+    if (!isEnabled || !areEventsEnabled) {
       _logger.verbose(
         'Ignoring trackEvent("$eventName") because SDK or events are disabled.',
       );
@@ -345,7 +337,7 @@ class AttriaxRuntime {
     String? externalUserName,
   }) async {
     _assertInitialized();
-    if (!_isEnabled) {
+    if (!isEnabled) {
       _logger.verbose(
         'Ignoring identify("$externalUserId") because SDK is disabled.',
       );
@@ -411,7 +403,7 @@ class AttriaxRuntime {
     String source = 'manual',
   }) async {
     _assertInitialized();
-    if (!_isEnabled) {
+    if (!isEnabled) {
       _logger.verbose(
         'Ignoring recordDeepLinkConversion because SDK is disabled.',
       );
@@ -428,46 +420,17 @@ class AttriaxRuntime {
 
   // ---------- enable / disable ---------------------------------------------- //
 
-  void setEnabled({required bool enabled}) {
-    _requestedEnabledOverride = enabled;
-    if (_isEnabled == enabled && _initialized) {
-      _enabledTransition = _enabledTransition.then(
-        (_) => _persistEnabledPreference(enabled),
-      );
-      return;
-    }
-    _isEnabled = enabled;
-    if (enabled) {
-      _prepareInstallReferrerCompleterForReenable();
-    }
+  void setEnabled({required bool enabled}) => _settingsState.setEnabled(
+    enabled: enabled,
+    initialized: _initialized,
+    applyState: _applyEnabledState,
+    onPreparingToEnable: enabled
+        ? _prepareInstallReferrerCompleterForReenable
+        : null,
+  );
 
-    _enabledTransition = _enabledTransition
-        .then((_) => _applyEnabledState(enabled))
-        .catchError((Object error, StackTrace stackTrace) {
-          _logger.error(
-            'Failed to update Attriax enabled state.',
-            error: error,
-            stackTrace: stackTrace,
-          );
-        });
-  }
-
-  void setEventsEnabled({required bool enabled}) {
-    _requestedEventsEnabledOverride = enabled;
-    _eventsEnabled = enabled;
-    _logger.verbose(
-      'Attriax custom events ${enabled ? 'enabled' : 'disabled'}.',
-    );
-    _eventsEnabledTransition = _eventsEnabledTransition
-        .then((_) => _persistEventsEnabledPreference(enabled))
-        .catchError((Object error, StackTrace stackTrace) {
-          _logger.error(
-            'Failed to update Attriax event preference state.',
-            error: error,
-            stackTrace: stackTrace,
-          );
-        });
-  }
+  void setEventsEnabled({required bool enabled}) =>
+      _settingsState.setEventsEnabled(enabled: enabled);
 
   // ---------- app open ------------------------------------------------------ //
 
@@ -478,8 +441,7 @@ class AttriaxRuntime {
 
   Future<void> dispose() async {
     _logger.verbose('Disposing Attriax SDK runtime.');
-    if (_installReferrerCompleter != null &&
-        !_installReferrerCompleter!.isCompleted) {
+    if (_installReferrerState.hasPendingCompletion) {
       _completeInstallReferrer(null);
     }
     await _deepLinkListener.stop();
@@ -534,8 +496,6 @@ class AttriaxRuntime {
   }
 
   Future<void> _applyEnabledState(bool enabled) async {
-    await _persistEnabledPreference(enabled);
-
     if (!enabled) {
       _synchronizer?.deactivate();
       _synchronizer?.setState(AttriaxSynchronizationState.disabled);
@@ -613,44 +573,19 @@ class AttriaxRuntime {
   }
 
   Future<void> _prepareInstallReferrerFutureForEnabledState() async {
-    _cachedInstallReferrerDetails ??= await _preferencesStore
-        .readInstallReferrerDetails();
-
-    if (_cachedInstallReferrerDetails != null) {
-      if (_installReferrerCompleter == null ||
-          (_installReferrerCompleter!.isCompleted &&
-              _installReferrerCompletedForDisabled)) {
-        _installReferrerCompleter = Completer<AttriaxInstallReferrerDetails?>();
-      }
-      _completeInstallReferrer(_cachedInstallReferrerDetails);
-      return;
-    }
-
-    if (_installReferrerCompleter == null ||
-        (_installReferrerCompleter!.isCompleted &&
-            _installReferrerCompletedForDisabled)) {
-      _installReferrerCompleter = Completer<AttriaxInstallReferrerDetails?>();
-      _installReferrerCompletedForDisabled = false;
-    }
+    _installReferrerState.loadCached(
+      await _preferencesStore.readInstallReferrerDetails(),
+    );
+    _installReferrerState.prepareForEnabledState();
   }
 
   void _prepareInstallReferrerCompleterForReenable() {
-    if (_installReferrerCompleter == null) {
-      _installReferrerCompleter = Completer<AttriaxInstallReferrerDetails?>();
-      _installReferrerCompletedForDisabled = false;
-      return;
-    }
-
-    if (_installReferrerCompleter!.isCompleted &&
-        _installReferrerCompletedForDisabled) {
-      _installReferrerCompleter = Completer<AttriaxInstallReferrerDetails?>();
-      _installReferrerCompletedForDisabled = false;
-    }
+    _installReferrerState.prepareForReenable();
   }
 
   void _scheduleAppOpenIfNeeded() {
     if (!_initialized ||
-        !_isEnabled ||
+        !isEnabled ||
         !_trackAppOpen ||
         _synchronizer == null ||
         _appOpenTracker.didSchedule) {
@@ -668,33 +603,8 @@ class AttriaxRuntime {
       ),
     );
 
-    if (!_installReferrerResolutionStarted) {
-      _installReferrerResolutionStarted = true;
+    if (_installReferrerState.markResolutionStarted()) {
       unawaited(_resolveInstallReferrerFromAppOpenTracking());
-    }
-  }
-
-  Future<void> _persistEnabledPreference(bool enabled) async {
-    try {
-      await _preferencesStore.setSdkEnabled(enabled: enabled);
-    } catch (error, stackTrace) {
-      _logger.warning(
-        'Failed to persist the Attriax enabled preference.',
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-  }
-
-  Future<void> _persistEventsEnabledPreference(bool enabled) async {
-    try {
-      await _preferencesStore.setEventsEnabled(enabled: enabled);
-    } catch (error, stackTrace) {
-      _logger.warning(
-        'Failed to persist the Attriax event preference.',
-        error: error,
-        stackTrace: stackTrace,
-      );
     }
   }
 
@@ -706,7 +616,7 @@ class AttriaxRuntime {
         await _preferencesStore.setInstallReferrerDetails(
           details: installReferrerDetails,
         );
-        _cachedInstallReferrerDetails = installReferrerDetails;
+        _installReferrerState.cache(installReferrerDetails);
       }
       _completeInstallReferrer(installReferrerDetails);
     } catch (error, stackTrace) {
@@ -722,16 +632,8 @@ class AttriaxRuntime {
   void _completeInstallReferrer(
     AttriaxInstallReferrerDetails? details, {
     bool disabledResult = false,
-  }) {
-    if (_installReferrerCompleter == null ||
-        _installReferrerCompleter!.isCompleted) {
-      return;
-    }
-
-    if (details != null) {
-      _cachedInstallReferrerDetails = details;
-    }
-    _installReferrerCompletedForDisabled = disabledResult;
-    _installReferrerCompleter!.complete(details);
-  }
+  }) => _installReferrerState.complete(
+    details,
+    disabledResult: disabledResult,
+  );
 }

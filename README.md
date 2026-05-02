@@ -2,6 +2,9 @@
 
 `flutter-plugin/` is the federated Flutter SDK workspace for Attriax.
 
+This workspace is the primary SDK implementation and the behavioral reference
+for the secondary `npm-web/` and `unity-plugin/` runtimes.
+
 It contains the publishable packages plus a public example app. The richer QA app lives in the sibling repository [../flutter-internal-tester](../flutter-internal-tester).
 
 ## Workspace Contents
@@ -91,6 +94,7 @@ flutter run --dart-define=ATTRIAX_APP_TOKEN=... --dart-define=ATTRIAX_API_BASE_U
 ## Development Notes
 
 - Prefer `await attriax.init()` as the default startup path.
+- Keep `npm-web/` and `unity-plugin/` behaviorally aligned with this Flutter implementation unless a platform-specific divergence is explicitly documented.
 - Use `flutter pub get` at the workspace root unless you intentionally need isolated package resolution.
 - Keep package-level `analysis_options.yaml` files in sync with the workspace root so dry-run publish checks and standalone package CI see the same lint configuration.
 - Keep the public example simple and package-focused.

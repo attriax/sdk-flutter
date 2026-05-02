@@ -12,6 +12,8 @@ typedef AttriaxSuccessHandler = void Function(AttriaxApiResponse response);
 typedef AttriaxErrorHandler =
     void Function(Object error, StackTrace? stackTrace);
 
+enum _DispatchFailureAction { retry, drop }
+
 /// Dispatches queued requests to the Attriax backend through the generated SDK client.
 ///
 /// Retries on transient errors (rate-limit, 5xx, network timeout) and
@@ -100,71 +102,20 @@ class AttriaxRequestDispatcher {
           _successHandlers.remove(queuedRequest.id)?.call(delivery.response);
           _errorHandlers.remove(queuedRequest.id);
           continue;
-        } on AttriaxTransportHttpException catch (error) {
-          onFailed?.call(request, error);
-
-          if (error.statusCode == 429 || error.statusCode >= 500) {
-            _logger.warning(
-              '$label request failed with HTTP ${error.statusCode} and will be retried.',
-              error: error,
-            );
+        } catch (error, stackTrace) {
+          final action = _handleFailure(
+            request: request,
+            requestId: queuedRequest.id,
+            label: label,
+            error: error,
+            stackTrace: stackTrace,
+          );
+          if (action == _DispatchFailureAction.retry) {
             remaining
               ..add(queuedRequest)
               ..addAll(queue.skip(i + 1));
             break;
           }
-
-          _logger.error(
-            '$label request failed with non-retryable HTTP ${error.statusCode} and will be dropped.',
-            error: error,
-          );
-          _successHandlers.remove(queuedRequest.id);
-          _errorHandlers
-              .remove(queuedRequest.id)
-              ?.call(error, error.source?.stackTrace);
-        } on TimeoutException catch (error, stackTrace) {
-          onFailed?.call(request, error);
-          _logger.warning(
-            '$label request timed out and will be retried.',
-            error: error,
-            stackTrace: stackTrace,
-          );
-          remaining
-            ..add(queuedRequest)
-            ..addAll(queue.skip(i + 1));
-          break;
-        } on DioException catch (error, stackTrace) {
-          onFailed?.call(request, error);
-          _logger.warning(
-            '$label request failed with a transport error and will be retried.',
-            error: error,
-            stackTrace: stackTrace,
-          );
-          remaining
-            ..add(queuedRequest)
-            ..addAll(queue.skip(i + 1));
-          break;
-        } on AttriaxTransportInvalidResponseException catch (
-          error,
-          stackTrace
-        ) {
-          onFailed?.call(request, error);
-          _logger.error(
-            '$label request returned an invalid response and will be dropped.',
-            error: error,
-            stackTrace: stackTrace,
-          );
-          _successHandlers.remove(queuedRequest.id);
-          _errorHandlers.remove(queuedRequest.id)?.call(error, stackTrace);
-        } catch (error, stackTrace) {
-          onFailed?.call(request, error);
-          _logger.error(
-            'Unexpected $label request failure; dropping request.',
-            error: error,
-            stackTrace: stackTrace,
-          );
-          _successHandlers.remove(queuedRequest.id);
-          _errorHandlers.remove(queuedRequest.id)?.call(error, stackTrace);
         }
       }
 
@@ -172,5 +123,76 @@ class AttriaxRequestDispatcher {
     } finally {
       _isFlushing = false;
     }
+  }
+
+  _DispatchFailureAction _handleFailure({
+    required AttriaxApiRequest request,
+    required String requestId,
+    required String label,
+    required Object error,
+    required StackTrace stackTrace,
+  }) {
+    onFailed?.call(request, error);
+
+    switch (error) {
+      case AttriaxTransportHttpException(statusCode: final statusCode):
+        if (statusCode == 429 || statusCode >= 500) {
+          _logger.warning(
+            '$label request failed with HTTP $statusCode and will be retried.',
+            error: error,
+          );
+          return _DispatchFailureAction.retry;
+        }
+
+        _logger.error(
+          '$label request failed with non-retryable HTTP $statusCode and will be dropped.',
+          error: error,
+        );
+        _clearHandlers(
+          requestId,
+          error: error,
+          stackTrace: error.source?.stackTrace,
+        );
+        return _DispatchFailureAction.drop;
+      case TimeoutException():
+        _logger.warning(
+          '$label request timed out and will be retried.',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        return _DispatchFailureAction.retry;
+      case DioException():
+        _logger.warning(
+          '$label request failed with a transport error and will be retried.',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        return _DispatchFailureAction.retry;
+      case AttriaxTransportInvalidResponseException():
+        _logger.error(
+          '$label request returned an invalid response and will be dropped.',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        _clearHandlers(requestId, error: error, stackTrace: stackTrace);
+        return _DispatchFailureAction.drop;
+      default:
+        _logger.error(
+          'Unexpected $label request failure; dropping request.',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        _clearHandlers(requestId, error: error, stackTrace: stackTrace);
+        return _DispatchFailureAction.drop;
+    }
+  }
+
+  void _clearHandlers(
+    String requestId, {
+    required Object error,
+    required StackTrace? stackTrace,
+  }) {
+    _successHandlers.remove(requestId);
+    _errorHandlers.remove(requestId)?.call(error, stackTrace);
   }
 }

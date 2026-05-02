@@ -4,9 +4,10 @@
 
 ### Project Structure
 - **attriax/** — Main plugin (public API)
+- **attriax_sdk_client/** — Generated transport client from the SDK contract
 - **attriax_platform_interface/** — Platform interface definitions
 - **attriax_android/** — Android implementation (Dart wrapper + Java plugin)
-- **attriax_ios/** — iOS implementation (Swift)
+- **attriax_ios/** — iOS/macOS implementation (Swift)
 - **attriax/example/** — Simple public example app
 - **../flutter-internal-tester/** — Internal testing app
 
@@ -91,13 +92,12 @@ When adding a new feature:
 
 2. **Implement Android** in `attriax_android/lib/src/`:
    ```dart
-   class AttriaxAndroid extends AttriaxPlatform {
-     static const _channel = MethodChannel('attriax');
-
-     @override
-     Future<void> newFeature() => _channel.invokeMethod<void>('newFeature');
+    class AttriaxAndroid extends MethodChannelAttriax {
+       AttriaxAndroid() : super(logName: 'attriax.android');
    }
    ```
+
+    When the platform behavior matches the shared method-channel flow, prefer extending `MethodChannelAttriax` from `attriax_platform_interface/` instead of duplicating channel/error-handling code in each federated package.
 
 3. **Handle the method natively** in the platform plugin classes:
    - Android: `attriax_android/android/src/main/java/.../AttriaxAndroidPlugin.java`

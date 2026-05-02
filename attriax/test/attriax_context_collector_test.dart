@@ -14,6 +14,30 @@ void main() {
       SharedPreferences.setMockInitialValues(<String, Object>{});
     });
 
+    test('uses a persisted install referrer before calling the platform', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        'attriax.install_referrer': 'utm_source=cached_play_store',
+      });
+
+      final platform = FakeAttriaxPlatform(
+        const <AttriaxInstallReferrerContext>[],
+      );
+
+      final collector = AttriaxContextCollector(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        platform: platform,
+        installReferrerRetryDelay: Duration.zero,
+      );
+
+      final context = await collector.collectInstallReferrerContextForTest(
+        platformType: AttriaxPlatformType.android,
+      );
+
+      expect(platform.installReferrerCalls, 0);
+      expect(context.installReferrer, 'utm_source=cached_play_store');
+      expect(context.metadata['source'], 'flutter_cached_install_referrer');
+    });
+
     test('retries once and returns the successful referrer payload', () async {
       final platform = FakeAttriaxPlatform(<AttriaxInstallReferrerContext>[
         const AttriaxInstallReferrerContext(
@@ -90,10 +114,11 @@ void main() {
         platform: FakeAttriaxPlatform(const <AttriaxInstallReferrerContext>[]),
       );
 
-      final context = await collector.collect(
+      final preparedContext = await collector.prepare(
         deviceId: 'device_test_1',
         isFirstLaunch: true,
       );
+      final context = await preparedContext.resolvedSnapshot;
 
       expect(context.sdk.metadata['clientRuntime'], 'flutter');
       expect(context.sdk.metadata['customField'], 'kept');

@@ -32,6 +32,27 @@ void main() {
   );
 
   test(
+    'collectInstallReferrer returns structured metadata when the platform call fails',
+    () async {
+      messenger.setMockMethodCallHandler(channel, (methodCall) async {
+        throw PlatformException(
+          code: 'unavailable',
+          message: 'referrer lookup failed',
+        );
+      });
+
+      final context = await AttriaxAndroid().collectInstallReferrer();
+
+      expect(context.installReferrer, isNull);
+      expect(context.metadata['installReferrerStatus'], 'platform_exception');
+      expect(
+        context.metadata['installReferrerError'],
+        'referrer lookup failed',
+      );
+    },
+  );
+
+  test(
     'collectNativeContext returns an empty payload when the platform call fails',
     () async {
       messenger.setMockMethodCallHandler(channel, (methodCall) async {

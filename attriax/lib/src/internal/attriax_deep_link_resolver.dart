@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 
 import 'attriax_api_models.dart';
-import 'attriax_conversion_mapper.dart';
 import 'attriax_event_hub.dart';
 import 'attriax_logger.dart';
 import 'attriax_synchronizer.dart';
@@ -20,11 +19,9 @@ class AttriaxDeepLinkResolver {
     required this.context,
     required AttriaxSynchronizer synchronizer,
     required AttriaxEventHub eventHub,
-    required AttriaxConversionMapper conversionMapper,
     required AttriaxLogger logger,
   }) : _synchronizer = synchronizer,
        _eventHub = eventHub,
-       _conversionMapper = conversionMapper,
        _logger = logger;
 
   final AttriaxConfig config;
@@ -35,7 +32,6 @@ class AttriaxDeepLinkResolver {
 
   final AttriaxSynchronizer _synchronizer;
   final AttriaxEventHub _eventHub;
-  final AttriaxConversionMapper _conversionMapper;
   final AttriaxLogger _logger;
 
   // ---------- incoming ------------------------------------------------------ //
@@ -75,7 +71,7 @@ class AttriaxDeepLinkResolver {
           return;
         }
 
-        final event = _conversionMapper.buildEvent(
+        final event = _buildResolution(
           response.result,
           rawEvent: rawEvent,
           isDeferred: false,
@@ -90,10 +86,7 @@ class AttriaxDeepLinkResolver {
 
         _eventHub.failPendingDeepLink(
           rawEvent: rawEvent,
-          failure: _conversionMapper.buildFailure(
-            response.result,
-            rawEvent: rawEvent,
-          ),
+          failure: _buildFailure(response.result, rawEvent: rawEvent),
         );
       },
       onError: (error, stackTrace) {
@@ -165,7 +158,7 @@ class AttriaxDeepLinkResolver {
           return;
         }
 
-        final event = _conversionMapper.buildEvent(
+        final event = _buildResolution(
           response.result,
           rawEvent: rawEvent,
           isDeferred: false,
@@ -183,10 +176,7 @@ class AttriaxDeepLinkResolver {
 
         _eventHub.failPendingDeepLink(
           rawEvent: rawEvent,
-          failure: _conversionMapper.buildFailure(
-            response.result,
-            rawEvent: rawEvent,
-          ),
+          failure: _buildFailure(response.result, rawEvent: rawEvent),
         );
         if (!completer.isCompleted) {
           completer.complete(null);
@@ -233,6 +223,39 @@ class AttriaxDeepLinkResolver {
         .replaceFirst(RegExp(r'/+$'), '');
     return normalized.isEmpty ? null : normalized;
   }
+
+  AttriaxDeepLinkResolution? _buildResolution(
+    AttriaxDeepLinkResolutionResult result, {
+    required AttriaxRawDeepLinkEvent? rawEvent,
+    required bool isDeferred,
+  }) {
+    final deepLink = result.deepLink;
+    if (!result.matched || deepLink == null) {
+      return null;
+    }
+
+    return AttriaxDeepLinkResolution(
+      deepLink: deepLink,
+      rawEvent: rawEvent,
+      isFirstLaunch: result.isFirstLaunch,
+      isDeferred: isDeferred,
+      consumedAt: result.consumedAt,
+      occurredAt: result.acceptedAt ?? DateTime.now().toUtc(),
+    );
+  }
+
+  AttriaxDeepLinkResolutionFailure _buildFailure(
+    AttriaxDeepLinkResolutionResult result, {
+    required AttriaxRawDeepLinkEvent? rawEvent,
+  }) => AttriaxDeepLinkResolutionFailure(
+    reason: result.reason ?? result.status.name,
+    rawEvent: rawEvent,
+    isFirstLaunch: result.isFirstLaunch,
+    status: result.status,
+    requestVersion: result.requestVersion,
+    acceptedAt: result.acceptedAt,
+    occurredAt: result.acceptedAt ?? DateTime.now().toUtc(),
+  );
 
   String? _extractLinkPathFromUri(Uri uri) {
     final candidate = uri.path.isNotEmpty && uri.path != '/'

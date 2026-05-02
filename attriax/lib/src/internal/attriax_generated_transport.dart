@@ -70,19 +70,48 @@ class AttriaxGeneratedTransport {
 
     try {
       return switch (request) {
-        AttriaxOpenRequest(:final payload) => await _sendOpen(payload, label),
-        AttriaxTrackEventRequest(:final payload) => await _sendTrackEvent(
-          payload,
-          label,
+        AttriaxOpenRequest(:final payload) => await _sendGeneratedRequest(
+          label: label,
+          invoke: () => _sdkApi.sdkControllerOpenV1(
+            sdkV1OpenDto: payload,
+            validateStatus: _allowAnyStatus,
+          ),
+          mapper: attriaxOpenResponseFromGenerated,
         ),
-        AttriaxIdentifyRequest(:final payload) => await _sendIdentify(
-          payload,
-          label,
+        AttriaxTrackEventRequest(:final payload) => await _sendGeneratedRequest(
+          label: label,
+          invoke: () => _sdkApi.sdkControllerTrackEventV1(
+            sdkEventDto: payload,
+            validateStatus: _allowAnyStatus,
+          ),
+          mapper: attriaxAckResponseFromGenerated,
+        ),
+        AttriaxIdentifyRequest(:final payload) => await _sendGeneratedRequest(
+          label: label,
+          invoke: () => _sdkApi.sdkControllerIdentifyV1(
+            sdkIdentifyDto: payload,
+            validateStatus: _allowAnyStatus,
+          ),
+          mapper: attriaxAckResponseFromGenerated,
         ),
         AttriaxResolveDeepLinkRequest(:final payload) =>
-          await _sendResolveDeepLink(payload, label),
+          await _sendGeneratedRequest(
+            label: label,
+            invoke: () => _sdkApi.sdkControllerResolveDeepLinkV1(
+              sdkV1DeepLinkResolveDto: payload,
+              validateStatus: _allowAnyStatus,
+            ),
+            mapper: attriaxResolveDeepLinkResponseFromGenerated,
+          ),
         AttriaxCreateDynamicLinkRequest(:final payload) =>
-          await _sendCreateDynamicLink(payload, label),
+          await _sendGeneratedRequest(
+            label: label,
+            invoke: () => _sdkApi.sdkControllerCreateDynamicLinkV1(
+              sdkCreateDynamicLinkDto: payload,
+              validateStatus: _allowAnyStatus,
+            ),
+            mapper: attriaxCreateDynamicLinkResponseFromGenerated,
+          ),
       };
     } on DioException catch (error) {
       _rethrowDioException(label, error);
@@ -102,84 +131,13 @@ class AttriaxGeneratedTransport {
     return response.result;
   }
 
-  Future<AttriaxTransportSuccess> _sendOpen(
-    sdk.SdkV1OpenDto payload,
-    String label,
-  ) async {
-    final response = await _sdkApi.sdkControllerOpenV1(
-      sdkV1OpenDto: payload,
-      validateStatus: _allowAnyStatus,
-    );
-
-    return _unwrapResponse(
-      label: label,
-      response: response,
-      mapper: attriaxOpenResponseFromGenerated,
-    );
-  }
-
-  Future<AttriaxTransportSuccess> _sendTrackEvent(
-    sdk.SdkEventDto payload,
-    String label,
-  ) async {
-    final response = await _sdkApi.sdkControllerTrackEventV1(
-      sdkEventDto: payload,
-      validateStatus: _allowAnyStatus,
-    );
-
-    return _unwrapResponse(
-      label: label,
-      response: response,
-      mapper: attriaxAckResponseFromGenerated,
-    );
-  }
-
-  Future<AttriaxTransportSuccess> _sendIdentify(
-    sdk.SdkIdentifyDto payload,
-    String label,
-  ) async {
-    final response = await _sdkApi.sdkControllerIdentifyV1(
-      sdkIdentifyDto: payload,
-      validateStatus: _allowAnyStatus,
-    );
-
-    return _unwrapResponse(
-      label: label,
-      response: response,
-      mapper: attriaxAckResponseFromGenerated,
-    );
-  }
-
-  Future<AttriaxTransportSuccess> _sendResolveDeepLink(
-    sdk.SdkV1DeepLinkResolveDto payload,
-    String label,
-  ) async {
-    final response = await _sdkApi.sdkControllerResolveDeepLinkV1(
-      sdkV1DeepLinkResolveDto: payload,
-      validateStatus: _allowAnyStatus,
-    );
-
-    return _unwrapResponse(
-      label: label,
-      response: response,
-      mapper: attriaxResolveDeepLinkResponseFromGenerated,
-    );
-  }
-
-  Future<AttriaxTransportSuccess> _sendCreateDynamicLink(
-    sdk.SdkCreateDynamicLinkDto payload,
-    String label,
-  ) async {
-    final response = await _sdkApi.sdkControllerCreateDynamicLinkV1(
-      sdkCreateDynamicLinkDto: payload,
-      validateStatus: _allowAnyStatus,
-    );
-
-    return _unwrapResponse(
-      label: label,
-      response: response,
-      mapper: attriaxCreateDynamicLinkResponseFromGenerated,
-    );
+  Future<AttriaxTransportSuccess> _sendGeneratedRequest<T>({
+    required String label,
+    required Future<Response<T>> Function() invoke,
+    required AttriaxApiResponse Function(T envelope) mapper,
+  }) async {
+    final response = await invoke();
+    return _unwrapResponse(label: label, response: response, mapper: mapper);
   }
 
   AttriaxTransportSuccess _unwrapResponse<T>({
