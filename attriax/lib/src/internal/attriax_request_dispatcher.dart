@@ -14,6 +14,24 @@ typedef AttriaxErrorHandler =
 
 enum _DispatchFailureAction { retry, drop }
 
+class _BatchDispatchResult {
+  const _BatchDispatchResult({
+    required this.remaining,
+    required this.shouldStop,
+  });
+
+  const _BatchDispatchResult.success()
+    : remaining = const <AttriaxQueuedRequest>[],
+      shouldStop = false;
+
+  const _BatchDispatchResult.retry(List<AttriaxQueuedRequest> requests)
+    : remaining = requests,
+      shouldStop = true;
+
+  final List<AttriaxQueuedRequest> remaining;
+  final bool shouldStop;
+}
+
 /// Dispatches queued requests to the Attriax backend through the generated SDK client.
 ///
 /// Retries on transient errors (rate-limit, 5xx, network timeout) and
@@ -86,9 +104,35 @@ class AttriaxRequestDispatcher {
 
       final remaining = <AttriaxQueuedRequest>[];
 
-      for (var i = 0; i < queue.length; i++) {
+      for (var i = 0; i < queue.length;) {
         final queuedRequest = queue[i];
         final request = queuedRequest.request;
+
+        if (attriaxCanBatchRequest(request)) {
+          final batch = <AttriaxQueuedRequest>[queuedRequest];
+          var batchEnd = i + 1;
+          while (batchEnd < queue.length &&
+              attriaxCanBatchRequest(queue[batchEnd].request) &&
+              attriaxCanShareBatchRequest(
+                queuedRequest.request,
+                queue[batchEnd].request,
+              )) {
+            batch.add(queue[batchEnd]);
+            batchEnd += 1;
+          }
+
+          final batchResult = await _flushBatchRequests(batch);
+          if (batchResult.shouldStop) {
+            remaining
+              ..addAll(batchResult.remaining)
+              ..addAll(queue.skip(batchEnd));
+            break;
+          }
+
+          i = batchEnd;
+          continue;
+        }
+
         final label = attriaxApiRequestLabel(request);
 
         try {
@@ -101,6 +145,7 @@ class AttriaxRequestDispatcher {
           onDelivered?.call(request, delivery.statusCode);
           _successHandlers.remove(queuedRequest.id)?.call(delivery.response);
           _errorHandlers.remove(queuedRequest.id);
+          i += 1;
           continue;
         } catch (error, stackTrace) {
           final action = _handleFailure(
@@ -117,6 +162,8 @@ class AttriaxRequestDispatcher {
             break;
           }
         }
+
+        i += 1;
       }
 
       await _queueManager.writeAll(remaining);
@@ -185,6 +232,85 @@ class AttriaxRequestDispatcher {
         _clearHandlers(requestId, error: error, stackTrace: stackTrace);
         return _DispatchFailureAction.drop;
     }
+  }
+
+  Future<_BatchDispatchResult> _flushBatchRequests(
+    List<AttriaxQueuedRequest> requests,
+  ) async {
+    try {
+      _logger.verbose(
+        'Sending batch request with ${requests.length} queued Attriax request(s).',
+      );
+      final delivery = await _transport.sendBatch(requests);
+      _logger.verbose(
+        'Batch request succeeded with HTTP ${delivery.statusCode} for ${requests.length} request(s).',
+      );
+
+      for (final queuedRequest in requests) {
+        onDelivered?.call(queuedRequest.request, delivery.statusCode);
+        _successHandlers.remove(queuedRequest.id)?.call(delivery.response);
+        _errorHandlers.remove(queuedRequest.id);
+      }
+
+      return const _BatchDispatchResult.success();
+    } catch (error, stackTrace) {
+      if (_isRetryableBatchError(error)) {
+        _logger.warning(
+          'Batch request failed and will be retried.',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        return _BatchDispatchResult.retry(requests);
+      }
+
+      if (requests.length > 1) {
+        final splitIndex = requests.length ~/ 2;
+        _logger.warning(
+          'Batch request failed and will be split into smaller requests.',
+          error: error,
+          stackTrace: stackTrace,
+        );
+
+        final firstHalf = await _flushBatchRequests(
+          requests.sublist(0, splitIndex),
+        );
+        if (firstHalf.shouldStop) {
+          return _BatchDispatchResult(
+            remaining: <AttriaxQueuedRequest>[
+              ...firstHalf.remaining,
+              ...requests.sublist(splitIndex),
+            ],
+            shouldStop: true,
+          );
+        }
+
+        return _flushBatchRequests(requests.sublist(splitIndex));
+      }
+
+      final singleRequest = requests.single;
+      final action = _handleFailure(
+        request: singleRequest.request,
+        requestId: singleRequest.id,
+        label: attriaxApiRequestLabel(singleRequest.request),
+        error: error,
+        stackTrace: stackTrace,
+      );
+      if (action == _DispatchFailureAction.retry) {
+        return _BatchDispatchResult.retry(requests);
+      }
+
+      return const _BatchDispatchResult.success();
+    }
+  }
+
+  bool _isRetryableBatchError(Object error) {
+    return switch (error) {
+      AttriaxTransportHttpException(statusCode: final statusCode) =>
+        statusCode == 429 || statusCode >= 500,
+      TimeoutException() => true,
+      DioException() => true,
+      _ => false,
+    };
   }
 
   void _clearHandlers(

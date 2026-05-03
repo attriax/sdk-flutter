@@ -16,32 +16,30 @@ void main() {
       store = AttriaxPreferencesStore(prefsOverride: prefs);
     });
 
-    test(
-      'restore creates the first-launch marker and persists runtime flags',
-      () async {
-        final restored = await store.restore(
-          deviceIdFactory: () => 'generated_device',
-          enabledOverride: false,
-          eventsEnabledOverride: true,
-        );
+    test('restores runtime preferences and device data separately', () async {
+      final restoredRuntime = await store.restoreRuntimePreferences(
+        enabledOverride: false,
+        eventsEnabledOverride: true,
+      );
+      final restoredDevice = await store.restoreDeviceData(
+        deviceIdFactory: () => 'generated_device',
+      );
 
-        expect(restored.deviceId, 'generated_device');
-        expect(restored.hasPersistedDeviceId, isFalse);
-        expect(restored.isFirstLaunch, isTrue);
-        expect(
-          prefs.getBool(AttriaxPreferencesStore.firstLaunchSeenStorageKey),
-          isTrue,
-        );
-        expect(
-          prefs.getBool(AttriaxPreferencesStore.enabledStorageKey),
-          isFalse,
-        );
-        expect(
-          prefs.getBool(AttriaxPreferencesStore.eventsEnabledStorageKey),
-          isTrue,
-        );
-      },
-    );
+      expect(restoredRuntime.isEnabled, isFalse);
+      expect(restoredRuntime.areEventsEnabled, isTrue);
+      expect(restoredDevice.deviceId, 'generated_device');
+      expect(restoredDevice.hasPersistedDeviceId, isFalse);
+      expect(restoredDevice.isFirstLaunch, isTrue);
+      expect(
+        prefs.getBool(AttriaxPreferencesStore.firstLaunchSeenStorageKey),
+        isTrue,
+      );
+      expect(prefs.getBool(AttriaxPreferencesStore.enabledStorageKey), isFalse);
+      expect(
+        prefs.getBool(AttriaxPreferencesStore.eventsEnabledStorageKey),
+        isTrue,
+      );
+    });
 
     test(
       'setResolvedDeviceIdentity persists both device id and source',
@@ -100,5 +98,60 @@ void main() {
       expect(restored?.campaign, 'spring');
       expect(restored?.precision, 1);
     });
+
+    test(
+      'tracks loaded state for a null structured install referrer',
+      () async {
+        await store.setStoredInstallReferrerDetails(
+          isLoaded: true,
+          details: null,
+        );
+
+        final restored = await store.readStoredInstallReferrerDetails();
+
+        expect(restored.isLoaded, isTrue);
+        expect(restored.value, isNull);
+      },
+    );
+
+    test('tracks loaded state for a null platform install referrer', () async {
+      await store.setStoredPlatformInstallReferrer(isLoaded: true, value: null);
+
+      final restored = await store.readStoredPlatformInstallReferrer();
+
+      expect(restored.isLoaded, isTrue);
+      expect(restored.value, isNull);
+    });
+
+    test(
+      'falls back to in-memory values when preferences loading fails',
+      () async {
+        final failingStore = AttriaxPreferencesStore(
+          preferencesLoader: () async => throw StateError('prefs unavailable'),
+        );
+
+        final restoredRuntime = await failingStore.restoreRuntimePreferences(
+          enabledOverride: false,
+          eventsEnabledOverride: true,
+        );
+        final restoredDevice = await failingStore.restoreDeviceData(
+          deviceIdFactory: () => 'generated_memory_device',
+        );
+
+        expect(restoredRuntime.isEnabled, isFalse);
+        expect(restoredRuntime.areEventsEnabled, isTrue);
+        expect(restoredDevice.deviceId, 'generated_memory_device');
+        expect(restoredDevice.isFirstLaunch, isTrue);
+
+        await failingStore.setStoredPlatformInstallReferrer(
+          isLoaded: true,
+          value: 'utm_source=memory',
+        );
+        final storedReferrer = await failingStore
+            .readStoredPlatformInstallReferrer();
+        expect(storedReferrer.isLoaded, isTrue);
+        expect(storedReferrer.value, 'utm_source=memory');
+      },
+    );
   });
 }

@@ -1,18 +1,22 @@
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'attriax_preferences_store.dart';
 
 class AttriaxContextInstallReferrer {
   AttriaxContextInstallReferrer({
     required AttriaxPlatform platform,
+    AttriaxPreferencesStore? preferencesStore,
     required Duration installReferrerTimeout,
     required Duration installReferrerRetryDelay,
   }) : _platform = platform,
+       _preferencesStore = preferencesStore ?? AttriaxPreferencesStore(),
        _installReferrerTimeout = installReferrerTimeout,
        _installReferrerRetryDelay = installReferrerRetryDelay;
 
   static const installReferrerStorageKey = 'attriax.install_referrer';
 
   final AttriaxPlatform _platform;
+  final AttriaxPreferencesStore _preferencesStore;
   final Duration _installReferrerTimeout;
   final Duration _installReferrerRetryDelay;
   String? _cachedInstallReferrer;
@@ -74,13 +78,10 @@ class AttriaxContextInstallReferrer {
 
     _cachedInstallReferrer = installReferrer;
     _loadedInstallReferrerCache = true;
-
-    try {
-      final preferences = await SharedPreferences.getInstance();
-      await preferences.setString(installReferrerStorageKey, installReferrer);
-    } catch (_) {
-      // Ignore persistence failures and continue with in-memory cache.
-    }
+    await _preferencesStore.setStoredPlatformInstallReferrer(
+      isLoaded: true,
+      value: installReferrer,
+    );
   }
 
   Future<AttriaxInstallReferrerContext> _fetchOnce({
@@ -113,15 +114,9 @@ class AttriaxContextInstallReferrer {
     }
 
     _loadedInstallReferrerCache = true;
-    try {
-      final preferences = await SharedPreferences.getInstance();
-      _cachedInstallReferrer = _emptyToNull(
-        preferences.getString(installReferrerStorageKey),
-      );
-      return _cachedInstallReferrer;
-    } catch (_) {
-      return null;
-    }
+    final stored = await _preferencesStore.readStoredPlatformInstallReferrer();
+    _cachedInstallReferrer = _emptyToNull(stored.value);
+    return _cachedInstallReferrer;
   }
 
   AttriaxInstallReferrerContext? _cachedContext(String? cachedReferrer) {

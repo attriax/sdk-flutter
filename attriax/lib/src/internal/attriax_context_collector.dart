@@ -3,19 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import 'attriax_context_install_referrer.dart';
+import 'attriax_logger.dart';
+import 'attriax_platform_install_referrer_manager.dart';
+import 'attriax_preferences_store.dart';
 
 const attriaxPersistentStorageDeviceIdSource = 'persistent_storage';
-
-class AttriaxPreparedContext {
-  const AttriaxPreparedContext({
-    required this.initialSnapshot,
-    required this.resolvedSnapshot,
-  });
-
-  final AttriaxContextSnapshot initialSnapshot;
-  final Future<AttriaxContextSnapshot> resolvedSnapshot;
-}
 
 class AttriaxResolvedDeviceId {
   const AttriaxResolvedDeviceId({
@@ -32,66 +24,56 @@ class AttriaxResolvedDeviceId {
 class AttriaxContextCollector {
   AttriaxContextCollector({
     required AttriaxConfig config,
+    AttriaxLogger? logger,
     AttriaxPlatform? platform,
     DeviceInfoPlugin? deviceInfoPlugin,
+    AttriaxPlatformInstallReferrerManager? platformInstallReferrerManager,
+    AttriaxPreferencesStore? preferencesStore,
     Duration installReferrerTimeout = _defaultInstallReferrerTimeout,
     Duration installReferrerRetryDelay = _defaultInstallReferrerRetryDelay,
   }) : _config = config,
        _platform = platform ?? AttriaxPlatform.instance,
+       _platformType = _resolveCurrentPlatformType(),
        _deviceInfoPlugin = deviceInfoPlugin ?? DeviceInfoPlugin(),
-      _installReferrerSupport = AttriaxContextInstallReferrer(
-        platform: platform ?? AttriaxPlatform.instance,
-        installReferrerTimeout: installReferrerTimeout,
-        installReferrerRetryDelay: installReferrerRetryDelay,
-      );
+       _platformInstallReferrerManager =
+           platformInstallReferrerManager ??
+           AttriaxPlatformInstallReferrerManager(
+             platformType: _resolveCurrentPlatformType(),
+             platform: platform ?? AttriaxPlatform.instance,
+             logger: logger ?? AttriaxLogger(enableDebugLogs: false),
+             preferencesStore: preferencesStore ?? AttriaxPreferencesStore(),
+             installReferrerTimeout: installReferrerTimeout,
+             installReferrerRetryDelay: installReferrerRetryDelay,
+           );
 
   static const _defaultInstallReferrerTimeout = Duration(seconds: 10);
   static const _defaultInstallReferrerRetryDelay = Duration(seconds: 2);
 
   final AttriaxConfig _config;
   final AttriaxPlatform _platform;
+  final AttriaxPlatformType _platformType;
   final DeviceInfoPlugin _deviceInfoPlugin;
-    final AttriaxContextInstallReferrer _installReferrerSupport;
+  final AttriaxPlatformInstallReferrerManager _platformInstallReferrerManager;
 
-  Future<AttriaxPreparedContext> prepare({
+  AttriaxPlatformInstallReferrerManager get platformInstallReferrerManager =>
+      _platformInstallReferrerManager;
+
+  Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
-    bool resolveInstallReferrer = true,
   }) async {
-    final platformType = _currentPlatform();
     final nativeContext = await _platform.collectNativeContext();
-    final initialInstallReferrerContext =
-        await _buildInitialInstallReferrerContext(platformType);
     final appSnapshot = await _collectAppSnapshot();
-    final initialDeviceSnapshot = await _collectDeviceSnapshot(
-      platformType,
+    final deviceSnapshot = await _collectDeviceSnapshot(
+      _platformType,
       nativeContext,
-      initialInstallReferrerContext,
     );
-    final initialSnapshot = _buildContextSnapshot(
-      platformType: platformType,
+    return _buildContextSnapshot(
+      platformType: _platformType,
       deviceId: deviceId,
       isFirstLaunch: isFirstLaunch,
-      rawPlatformInstallReferrer:
-          _emptyToNull(initialInstallReferrerContext.installReferrer) ??
-          _emptyToNull(nativeContext.installReferrer),
       appSnapshot: appSnapshot,
-      deviceSnapshot: initialDeviceSnapshot,
-    );
-
-    final resolvedSnapshot = resolveInstallReferrer
-        ? _buildResolvedContextSnapshot(
-            platformType: platformType,
-            deviceId: deviceId,
-            isFirstLaunch: isFirstLaunch,
-            nativeContext: nativeContext,
-            appSnapshot: appSnapshot,
-          )
-        : Future<AttriaxContextSnapshot>.value(initialSnapshot);
-
-    return AttriaxPreparedContext(
-      initialSnapshot: initialSnapshot,
-      resolvedSnapshot: resolvedSnapshot,
+      deviceSnapshot: deviceSnapshot,
     );
   }
 
@@ -99,11 +81,10 @@ class AttriaxContextCollector {
     required String fallbackDeviceId,
   }) async {
     try {
-      final platformType = _currentPlatform();
       final nativeContext = await _platform.collectNativeContext();
-      final rawData = await _loadRawDeviceData(platformType);
+      final rawData = await _loadRawDeviceData(_platformType);
       final resolved = _resolvePreferredDeviceIdFromSignals(
-        platformType: platformType,
+        platformType: _platformType,
         nativeContext: nativeContext,
         rawData: rawData,
       );
@@ -122,7 +103,7 @@ class AttriaxContextCollector {
     );
   }
 
-  AttriaxPlatformType _currentPlatform() {
+  static AttriaxPlatformType _resolveCurrentPlatformType() {
     if (kIsWeb) {
       return AttriaxPlatformType.web;
     }
@@ -167,57 +148,16 @@ class AttriaxContextCollector {
     }
   }
 
-  Future<AttriaxInstallReferrerContext> _buildInitialInstallReferrerContext(
-    AttriaxPlatformType platformType,
-  ) => _installReferrerSupport.buildInitialContext(platformType);
-
-  Future<AttriaxContextSnapshot> _buildResolvedContextSnapshot({
-    required AttriaxPlatformType platformType,
-    required String deviceId,
-    required bool isFirstLaunch,
-    required AttriaxNativeContext nativeContext,
-    required AttriaxAppSnapshot appSnapshot,
-  }) async {
-    final installReferrerContext = await _collectInstallReferrerContext(
-      platformType,
-    );
-    final rawPlatformInstallReferrer =
-        _emptyToNull(installReferrerContext.installReferrer) ??
-        _emptyToNull(nativeContext.installReferrer);
-    if (rawPlatformInstallReferrer != null) {
-      await _installReferrerSupport.persistResolvedReferrer(
-        rawPlatformInstallReferrer,
-      );
-    }
-
-    final deviceSnapshot = await _collectDeviceSnapshot(
-      platformType,
-      nativeContext,
-      installReferrerContext,
-    );
-
-    return _buildContextSnapshot(
-      platformType: platformType,
-      deviceId: deviceId,
-      isFirstLaunch: isFirstLaunch,
-      rawPlatformInstallReferrer: rawPlatformInstallReferrer,
-      appSnapshot: appSnapshot,
-      deviceSnapshot: deviceSnapshot,
-    );
-  }
-
   AttriaxContextSnapshot _buildContextSnapshot({
     required AttriaxPlatformType platformType,
     required String deviceId,
     required bool isFirstLaunch,
-    required String? rawPlatformInstallReferrer,
     required AttriaxAppSnapshot appSnapshot,
     required AttriaxDeviceSnapshot deviceSnapshot,
   }) => AttriaxContextSnapshot(
     platform: platformType,
     deviceId: deviceId,
     isFirstLaunch: isFirstLaunch,
-    rawPlatformInstallReferrer: rawPlatformInstallReferrer,
     sdk: AttriaxSdkSnapshot(
       apiVersion: attriaxSdkApiVersion,
       packageVersion: attriaxSdkPackageVersion,
@@ -227,19 +167,9 @@ class AttriaxContextCollector {
     device: deviceSnapshot,
   );
 
-  Future<AttriaxInstallReferrerContext> _collectInstallReferrerContext(
-    AttriaxPlatformType platformType,
-  ) => _installReferrerSupport.collectContext(platformType);
-
-  @visibleForTesting
-  Future<AttriaxInstallReferrerContext> collectInstallReferrerContextForTest({
-    required AttriaxPlatformType platformType,
-  }) => _collectInstallReferrerContext(platformType);
-
   Future<AttriaxDeviceSnapshot> _collectDeviceSnapshot(
     AttriaxPlatformType platformType,
     AttriaxNativeContext nativeContext,
-    AttriaxInstallReferrerContext installReferrerContext,
   ) async {
     final locale = PlatformDispatcher.instance.locale.toLanguageTag();
     final timezone =
@@ -257,8 +187,6 @@ class AttriaxContextCollector {
         ...rawData,
         if (nativeContext.metadata.isNotEmpty)
           'nativeContext': nativeContext.metadata,
-        if (installReferrerContext.metadata.isNotEmpty)
-          'installReferrerContext': installReferrerContext.metadata,
       };
 
       switch (platformType) {

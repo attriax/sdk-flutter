@@ -14,14 +14,20 @@ part 'sdk_event_dto.g.dart';
 ///
 /// Properties:
 /// * [appToken] 
+/// * [clientOccurredAt] 
 /// * [deviceId] 
 /// * [deviceIdSource] 
 /// * [eventData] 
 /// * [eventName] 
+/// * [sessionId] 
+/// * [sessionRelativeTimeMs] - Milliseconds since the session started.
 @BuiltValue()
 abstract class SdkEventDto implements Built<SdkEventDto, SdkEventDtoBuilder> {
   @BuiltValueField(wireName: r'appToken')
   String get appToken;
+
+  @BuiltValueField(wireName: r'clientOccurredAt')
+  DateTime? get clientOccurredAt;
 
   @BuiltValueField(wireName: r'deviceId')
   String get deviceId;
@@ -34,6 +40,13 @@ abstract class SdkEventDto implements Built<SdkEventDto, SdkEventDtoBuilder> {
 
   @BuiltValueField(wireName: r'eventName')
   String get eventName;
+
+  @BuiltValueField(wireName: r'sessionId')
+  String? get sessionId;
+
+  /// Milliseconds since the session started.
+  @BuiltValueField(wireName: r'sessionRelativeTimeMs')
+  num? get sessionRelativeTimeMs;
 
   SdkEventDto._();
 
@@ -63,6 +76,13 @@ class _$SdkEventDtoSerializer implements PrimitiveSerializer<SdkEventDto> {
       object.appToken,
       specifiedType: const FullType(String),
     );
+    if (object.clientOccurredAt != null) {
+      yield r'clientOccurredAt';
+      yield serializers.serialize(
+        object.clientOccurredAt,
+        specifiedType: const FullType(DateTime),
+      );
+    }
     yield r'deviceId';
     yield serializers.serialize(
       object.deviceId,
@@ -87,6 +107,20 @@ class _$SdkEventDtoSerializer implements PrimitiveSerializer<SdkEventDto> {
       object.eventName,
       specifiedType: const FullType(String),
     );
+    if (object.sessionId != null) {
+      yield r'sessionId';
+      yield serializers.serialize(
+        object.sessionId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.sessionRelativeTimeMs != null) {
+      yield r'sessionRelativeTimeMs';
+      yield serializers.serialize(
+        object.sessionRelativeTimeMs,
+        specifiedType: const FullType(num),
+      );
+    }
   }
 
   @override
@@ -117,6 +151,13 @@ class _$SdkEventDtoSerializer implements PrimitiveSerializer<SdkEventDto> {
           ) as String;
           result.appToken = valueDes;
           break;
+        case r'clientOccurredAt':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(DateTime),
+          ) as DateTime;
+          result.clientOccurredAt = valueDes;
+          break;
         case r'deviceId':
           final valueDes = serializers.deserialize(
             value,
@@ -144,6 +185,20 @@ class _$SdkEventDtoSerializer implements PrimitiveSerializer<SdkEventDto> {
             specifiedType: const FullType(String),
           ) as String;
           result.eventName = valueDes;
+          break;
+        case r'sessionId':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.sessionId = valueDes;
+          break;
+        case r'sessionRelativeTimeMs':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(num),
+          ) as num;
+          result.sessionRelativeTimeMs = valueDes;
           break;
         default:
           unhandled.add(key);

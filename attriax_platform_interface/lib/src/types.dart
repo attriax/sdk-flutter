@@ -209,19 +209,11 @@ class AttriaxContextSnapshot {
     required this.sdk,
     required this.app,
     required this.device,
-    this.rawPlatformInstallReferrer,
   });
 
   final AttriaxPlatformType platform;
   final String deviceId;
   final bool isFirstLaunch;
-
-  /// Cached raw platform install referrer value.
-  ///
-  /// This is supported only on Android and reflects the latest raw platform
-  /// referrer value the SDK has cached locally. The SDK updates it when a new
-  /// platform referrer value is retrieved.
-  final String? rawPlatformInstallReferrer;
 
   final AttriaxSdkSnapshot sdk;
   final AttriaxAppSnapshot app;
@@ -412,6 +404,41 @@ class AttriaxDynamicLinkRecord {
   final String? utmTerm;
   final String? utmContent;
   final DateTime? createdAt;
+}
+
+class AttriaxDynamicLinkSocialPreview {
+  const AttriaxDynamicLinkSocialPreview({
+    this.title,
+    this.description,
+    this.imagePath,
+  });
+
+  final String? title;
+  final String? description;
+  final String? imagePath;
+}
+
+class AttriaxDynamicLinkRedirects {
+  const AttriaxDynamicLinkRedirects({this.ios, this.android});
+
+  final bool? ios;
+  final bool? android;
+}
+
+class AttriaxDynamicLinkUtms {
+  const AttriaxDynamicLinkUtms({
+    this.source,
+    this.medium,
+    this.campaign,
+    this.term,
+    this.content,
+  });
+
+  final String? source;
+  final String? medium;
+  final String? campaign;
+  final String? term;
+  final String? content;
 }
 
 class AttriaxCreateDynamicLinkResult {
@@ -658,6 +685,119 @@ class AttriaxAppOpen {
 
 typedef AttriaxInitResult = AttriaxAppOpen;
 
+abstract interface class AttriaxClock {
+  DateTime now();
+}
+
+final class AttriaxSystemClock implements AttriaxClock {
+  const AttriaxSystemClock();
+
+  @override
+  DateTime now() => DateTime.now().toUtc();
+}
+
+final class AttriaxMutableClock implements AttriaxClock {
+  AttriaxMutableClock(this.currentTime);
+
+  DateTime currentTime;
+
+  @override
+  DateTime now() => currentTime;
+}
+
+/// Snapshot of the current SDK session tracked locally by Attriax.
+class AttriaxSessionSnapshot {
+  const AttriaxSessionSnapshot({
+    required this.id,
+    required this.deviceId,
+    required this.platform,
+    required this.isFirstLaunch,
+    required this.startedAt,
+    required this.lastActivityAt,
+    required this.heartbeatInterval,
+    this.locale,
+    this.appVersion,
+    this.appBuildNumber,
+    this.appPackageName,
+    this.sdkPackageVersion,
+  });
+
+  factory AttriaxSessionSnapshot.fromJson(Map<String, Object?> json) {
+    final heartbeatIntervalMs = _requireJsonInt(json, 'heartbeatIntervalMs');
+
+    return AttriaxSessionSnapshot(
+      id: _requireJsonString(json, 'id'),
+      deviceId: _requireJsonString(json, 'deviceId'),
+      platform: _parsePlatformType(_jsonString(json['platform'])),
+      locale: _jsonString(json['locale']),
+      isFirstLaunch: _jsonBool(json['isFirstLaunch']) ?? false,
+      startedAt: _requireJsonDateTime(json, 'startedAt').toUtc(),
+      lastActivityAt: _requireJsonDateTime(json, 'lastActivityAt').toUtc(),
+      heartbeatInterval: Duration(milliseconds: heartbeatIntervalMs),
+      appVersion: _jsonString(json['appVersion']),
+      appBuildNumber: _jsonString(json['appBuildNumber']),
+      appPackageName: _jsonString(json['appPackageName']),
+      sdkPackageVersion: _jsonString(json['sdkPackageVersion']),
+    );
+  }
+
+  final String id;
+  final String deviceId;
+  final AttriaxPlatformType platform;
+  final String? locale;
+  final bool isFirstLaunch;
+  final DateTime startedAt;
+  final DateTime lastActivityAt;
+  final Duration heartbeatInterval;
+  final String? appVersion;
+  final String? appBuildNumber;
+  final String? appPackageName;
+  final String? sdkPackageVersion;
+
+  AttriaxSessionSnapshot copyWith({
+    String? id,
+    String? deviceId,
+    AttriaxPlatformType? platform,
+    String? locale,
+    bool? isFirstLaunch,
+    DateTime? startedAt,
+    DateTime? lastActivityAt,
+    Duration? heartbeatInterval,
+    String? appVersion,
+    String? appBuildNumber,
+    String? appPackageName,
+    String? sdkPackageVersion,
+  }) => AttriaxSessionSnapshot(
+    id: id ?? this.id,
+    deviceId: deviceId ?? this.deviceId,
+    platform: platform ?? this.platform,
+    locale: locale ?? this.locale,
+    isFirstLaunch: isFirstLaunch ?? this.isFirstLaunch,
+    startedAt: startedAt ?? this.startedAt,
+    lastActivityAt: lastActivityAt ?? this.lastActivityAt,
+    heartbeatInterval: heartbeatInterval ?? this.heartbeatInterval,
+    appVersion: appVersion ?? this.appVersion,
+    appBuildNumber: appBuildNumber ?? this.appBuildNumber,
+    appPackageName: appPackageName ?? this.appPackageName,
+    sdkPackageVersion: sdkPackageVersion ?? this.sdkPackageVersion,
+  );
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'id': id,
+    'deviceId': deviceId,
+    'platform': platform.name,
+    if (locale != null) 'locale': locale,
+    'isFirstLaunch': isFirstLaunch,
+    'startedAt': startedAt.toUtc().toIso8601String(),
+    'lastActivityAt': lastActivityAt.toUtc().toIso8601String(),
+    'heartbeatIntervalMs': heartbeatInterval.inMilliseconds,
+    if (appVersion != null) 'appVersion': appVersion,
+    if (appBuildNumber != null) 'appBuildNumber': appBuildNumber,
+    if (appPackageName != null) 'appPackageName': appPackageName,
+    if (sdkPackageVersion != null) 'sdkPackageVersion': sdkPackageVersion,
+  };
+}
+
 /// Immutable configuration used to construct an Attriax SDK instance.
 class AttriaxConfig {
   /// Creates an SDK configuration with optional app/build metadata.
@@ -668,9 +808,13 @@ class AttriaxConfig {
     this.appBuildNumber,
     this.appPackageName,
     this.sdkMetadata = const <String, Object?>{},
+    this.clock,
     this.enableDebugLogs,
     this.requestTimeout = const Duration(seconds: 12),
     this.maxQueueSize = 200,
+    this.sessionTrackingEnabled = true,
+    this.sessionHeartbeatInterval = const Duration(seconds: 30),
+    this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 5),
   });
 
   /// Application token issued by Attriax for the current app.
@@ -694,6 +838,9 @@ class AttriaxConfig {
   /// Extra SDK metadata sent with requests as a normalized JSON object.
   final Map<String, Object?> sdkMetadata;
 
+  /// Optional clock implementation used by the SDK for time-sensitive behavior.
+  final AttriaxClock? clock;
+
   /// Overrides whether verbose SDK logs are emitted.
   ///
   /// When `null`, the SDK defaults to debug logging in debug builds and a more
@@ -705,6 +852,15 @@ class AttriaxConfig {
 
   /// Maximum number of queued requests persisted locally for retry.
   final int maxQueueSize;
+
+  /// Enables automatic session lifecycle tracking and session enrichment.
+  final bool sessionTrackingEnabled;
+
+  /// Heartbeat interval used for established sessions after first launch.
+  final Duration sessionHeartbeatInterval;
+
+  /// Heartbeat interval used during the installation's first launch session.
+  final Duration firstLaunchSessionHeartbeatInterval;
 }
 
 Map<String, Object?> _jsonObjectOrEmpty(Object? value) =>
@@ -757,10 +913,28 @@ String _requireJsonString(Map<String, Object?> json, String key) {
 
 bool? _jsonBool(Object? value) => value is bool ? value : null;
 
+int? _jsonInt(Object? value) => value is num ? value.toInt() : null;
+
 double? _jsonDouble(Object? value) => value is num ? value.toDouble() : null;
 
 DateTime? _jsonDateTime(Object? value) =>
     value is String ? DateTime.tryParse(value) : null;
+
+DateTime _requireJsonDateTime(Map<String, Object?> json, String key) {
+  final value = _jsonDateTime(json[key]);
+  if (value == null) {
+    throw FormatException('Missing or invalid "$key".');
+  }
+  return value;
+}
+
+int _requireJsonInt(Map<String, Object?> json, String key) {
+  final value = _jsonInt(json[key]);
+  if (value == null) {
+    throw FormatException('Missing or invalid "$key".');
+  }
+  return value;
+}
 
 AttributionType _parseAttributionType(String? value) {
   switch (value) {
@@ -785,5 +959,25 @@ AttriaxDeepLinkResolutionStatus _parseResolutionStatus(String? value) {
     case 'invalid':
     default:
       return AttriaxDeepLinkResolutionStatus.invalid;
+  }
+}
+
+AttriaxPlatformType _parsePlatformType(String? value) {
+  switch (value) {
+    case 'ios':
+      return AttriaxPlatformType.ios;
+    case 'android':
+      return AttriaxPlatformType.android;
+    case 'web':
+      return AttriaxPlatformType.web;
+    case 'windows':
+      return AttriaxPlatformType.windows;
+    case 'macos':
+      return AttriaxPlatformType.macos;
+    case 'linux':
+      return AttriaxPlatformType.linux;
+    case 'unknown':
+    default:
+      return AttriaxPlatformType.unknown;
   }
 }

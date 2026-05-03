@@ -47,6 +47,106 @@ final class AttriaxTrackEventRequest extends AttriaxApiRequest {
       _serializeGenerated(sdk.SdkEventDto.serializer, payload);
 }
 
+enum AttriaxSessionLifecycleKind { start, heartbeat, pause, resume, end }
+
+final class AttriaxSessionLifecyclePayload {
+  const AttriaxSessionLifecyclePayload({
+    required this.appToken,
+    required this.deviceId,
+    required this.kind,
+    required this.sessionId,
+    required this.clientOccurredAt,
+    required this.platform,
+    required this.isFirstLaunch,
+    this.deviceIdSource,
+    this.sessionRelativeTimeMs,
+    this.locale,
+    this.appVersion,
+    this.appBuildNumber,
+    this.appPackageName,
+    this.sdkApiVersion,
+    this.sdkPackageVersion,
+    this.metadata,
+  });
+
+  factory AttriaxSessionLifecyclePayload.fromJson(Map<String, Object?> json) =>
+      AttriaxSessionLifecyclePayload(
+        appToken: attriaxRequireString(json, 'appToken'),
+        deviceId: attriaxRequireString(json, 'deviceId'),
+        deviceIdSource: attriaxStringValue(json['deviceIdSource']),
+        kind: _parseSessionLifecycleKind(attriaxRequireString(json, 'kind')),
+        sessionId: attriaxRequireString(json, 'sessionId'),
+        sessionRelativeTimeMs: _attriaxIntValue(json['sessionRelativeTimeMs']),
+        clientOccurredAt:
+            attriaxDateTimeValue(json['clientOccurredAt'])?.toUtc() ??
+            DateTime.now().toUtc(),
+        platform: _parseAttriaxPlatformType(
+          attriaxStringValue(json['platform']) ?? 'unknown',
+        ),
+        locale: attriaxStringValue(json['locale']),
+        isFirstLaunch: attriaxBoolValue(json['isFirstLaunch']) ?? false,
+        appVersion: attriaxStringValue(json['appVersion']),
+        appBuildNumber: attriaxStringValue(json['appBuildNumber']),
+        appPackageName: attriaxStringValue(json['appPackageName']),
+        sdkApiVersion: attriaxStringValue(json['sdkApiVersion']),
+        sdkPackageVersion: attriaxStringValue(json['sdkPackageVersion']),
+        metadata: attriaxObjectMap(json['metadata']),
+      );
+
+  final String appToken;
+  final String deviceId;
+  final String? deviceIdSource;
+  final AttriaxSessionLifecycleKind kind;
+  final String sessionId;
+  final int? sessionRelativeTimeMs;
+  final DateTime clientOccurredAt;
+  final AttriaxPlatformType platform;
+  final String? locale;
+  final bool isFirstLaunch;
+  final String? appVersion;
+  final String? appBuildNumber;
+  final String? appPackageName;
+  final String? sdkApiVersion;
+  final String? sdkPackageVersion;
+  final Map<String, Object?>? metadata;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'appToken': appToken,
+    'deviceId': deviceId,
+    if (deviceIdSource != null) 'deviceIdSource': deviceIdSource,
+    'kind': kind.name,
+    'sessionId': sessionId,
+    if (sessionRelativeTimeMs != null)
+      'sessionRelativeTimeMs': sessionRelativeTimeMs,
+    'clientOccurredAt': clientOccurredAt.toUtc().toIso8601String(),
+    'platform': platform.name,
+    if (locale != null) 'locale': locale,
+    'isFirstLaunch': isFirstLaunch,
+    if (appVersion != null) 'appVersion': appVersion,
+    if (appBuildNumber != null) 'appBuildNumber': appBuildNumber,
+    if (appPackageName != null) 'appPackageName': appPackageName,
+    if (sdkApiVersion != null) 'sdkApiVersion': sdkApiVersion,
+    if (sdkPackageVersion != null) 'sdkPackageVersion': sdkPackageVersion,
+    if (metadata != null && metadata!.isNotEmpty)
+      'metadata': attriaxNormalizeJsonMap(metadata!),
+  };
+}
+
+final class AttriaxTrackSessionRequest extends AttriaxApiRequest {
+  const AttriaxTrackSessionRequest(this.payload);
+
+  final AttriaxSessionLifecyclePayload payload;
+
+  @override
+  String get kindName => 'trackSession';
+
+  @override
+  String get label => 'session ${payload.kind.name}';
+
+  @override
+  Map<String, Object?> toQueueBody() => payload.toJson();
+}
+
 final class AttriaxIdentifyRequest extends AttriaxApiRequest {
   const AttriaxIdentifyRequest(this.payload);
 
@@ -97,6 +197,95 @@ final class AttriaxCreateDynamicLinkRequest extends AttriaxApiRequest {
 
 String attriaxApiRequestLabel(AttriaxApiRequest request) => request.label;
 
+bool attriaxCanBatchRequest(AttriaxApiRequest request) => switch (request) {
+  AttriaxTrackEventRequest() => true,
+  AttriaxTrackSessionRequest() => true,
+  AttriaxIdentifyRequest() => true,
+  _ => false,
+};
+
+final class AttriaxBatchRequestIdentity {
+  const AttriaxBatchRequestIdentity({
+    required this.appToken,
+    required this.deviceId,
+    this.deviceIdSource,
+  });
+
+  final String appToken;
+  final String deviceId;
+  final String? deviceIdSource;
+}
+
+AttriaxBatchRequestIdentity attriaxBatchRequestIdentity(
+  AttriaxApiRequest request,
+) {
+  switch (request) {
+    case AttriaxTrackEventRequest(:final payload):
+      return AttriaxBatchRequestIdentity(
+        appToken: payload.appToken,
+        deviceId: payload.deviceId,
+        deviceIdSource: attriaxStringValue(payload.deviceIdSource),
+      );
+    case AttriaxTrackSessionRequest(:final payload):
+      return AttriaxBatchRequestIdentity(
+        appToken: payload.appToken,
+        deviceId: payload.deviceId,
+        deviceIdSource: attriaxStringValue(payload.deviceIdSource),
+      );
+    case AttriaxIdentifyRequest(:final payload):
+      return AttriaxBatchRequestIdentity(
+        appToken: payload.appToken,
+        deviceId: payload.deviceId,
+        deviceIdSource: attriaxStringValue(payload.deviceIdSource),
+      );
+    default:
+      throw ArgumentError(
+        'Unsupported Attriax batch request kind: ${request.kindName}',
+      );
+  }
+}
+
+bool attriaxCanShareBatchRequest(
+  AttriaxApiRequest left,
+  AttriaxApiRequest right,
+) {
+  if (!attriaxCanBatchRequest(left) || !attriaxCanBatchRequest(right)) {
+    return false;
+  }
+
+  final leftIdentity = attriaxBatchRequestIdentity(left);
+  final rightIdentity = attriaxBatchRequestIdentity(right);
+  return leftIdentity.appToken == rightIdentity.appToken &&
+      leftIdentity.deviceId == rightIdentity.deviceId &&
+      leftIdentity.deviceIdSource == rightIdentity.deviceIdSource;
+}
+
+Map<String, Object?> attriaxBatchBody(AttriaxApiRequest request) {
+  if (!attriaxCanBatchRequest(request)) {
+    throw ArgumentError(
+      'Unsupported Attriax batch request kind: ${request.kindName}',
+    );
+  }
+
+  final body = Map<String, Object?>.from(request.toQueueBody());
+  body.remove('appToken');
+  body.remove('deviceId');
+  body.remove('deviceIdSource');
+  return body;
+}
+
+String attriaxBatchRequestId(String queuedRequestId) =>
+    'batch_$queuedRequestId';
+
+String attriaxBatchKindName(AttriaxApiRequest request) => switch (request) {
+  AttriaxTrackEventRequest() => 'event',
+  AttriaxTrackSessionRequest() => 'session',
+  AttriaxIdentifyRequest() => 'identify',
+  _ => throw ArgumentError(
+    'Unsupported Attriax batch request kind: ${request.kindName}',
+  ),
+};
+
 AttriaxApiRequest attriaxApiRequestFromJson(
   String kindName,
   Map<String, Object?> body,
@@ -109,6 +298,10 @@ AttriaxApiRequest attriaxApiRequestFromJson(
     case 'trackEvent':
       return AttriaxTrackEventRequest(
         _deserializeGenerated(sdk.SdkEventDto.serializer, body),
+      );
+    case 'trackSession':
+      return AttriaxTrackSessionRequest(
+        AttriaxSessionLifecyclePayload.fromJson(body),
       );
     case 'identify':
       return AttriaxIdentifyRequest(
@@ -131,6 +324,9 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
   required AttriaxConfig config,
   required AttriaxContextSnapshot context,
   required String deviceIdSource,
+  String? rawPlatformInstallReferrer,
+  String? sessionId,
+  DateTime? sessionStartedAt,
 }) {
   final requestDto = sdk.SdkV1OpenDto(
     (builder) => builder
@@ -139,9 +335,11 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
       ..device.replace(_generatedDeviceContext(context.device))
       ..deviceId = context.deviceId
       ..deviceIdSource = deviceIdSource
-      ..installReferrer = attriaxStringValue(context.rawPlatformInstallReferrer)
+      ..installReferrer = attriaxStringValue(rawPlatformInstallReferrer)
       ..isFirstLaunch = context.isFirstLaunch
       ..platform = _generatedPlatform(context.platform)
+      ..sessionId = attriaxStringValue(sessionId)
+      ..sessionStartedAt = sessionStartedAt?.toUtc()
       ..sdk.replace(_generatedSdkVersionContext(context.sdk)),
   );
 
@@ -154,33 +352,115 @@ AttriaxTrackEventRequest attriaxBuildTrackEventRequest({
   required String deviceIdSource,
   required String eventName,
   Map<String, Object?>? eventData,
+  String? sessionId,
+  int? sessionRelativeTimeMs,
+  DateTime? clientOccurredAt,
 }) {
   final requestDto = sdk.SdkEventDto(
     (builder) => builder
       ..appToken = appToken
+      ..clientOccurredAt = clientOccurredAt?.toUtc()
       ..deviceId = deviceId
       ..deviceIdSource = deviceIdSource
       ..eventName = eventName
-      ..eventData = _generatedJsonObjectMap(eventData)?.toBuilder(),
+      ..eventData = _generatedJsonObjectMap(eventData)?.toBuilder()
+      ..sessionId = attriaxStringValue(sessionId)
+      ..sessionRelativeTimeMs = sessionRelativeTimeMs,
   );
 
   return AttriaxTrackEventRequest(requestDto);
 }
 
+AttriaxTrackSessionRequest attriaxBuildTrackSessionRequest({
+  required String appToken,
+  required String deviceIdSource,
+  required AttriaxSessionSnapshot session,
+  required AttriaxSessionLifecycleKind kind,
+  DateTime? occurredAt,
+  Map<String, Object?>? metadata,
+}) {
+  final clientOccurredAt = (occurredAt ?? session.lastActivityAt).toUtc();
+  final sessionRelativeTimeMs = clientOccurredAt
+      .difference(session.startedAt)
+      .inMilliseconds
+      .clamp(0, 0x7fffffff);
+
+  return AttriaxTrackSessionRequest(
+    AttriaxSessionLifecyclePayload(
+      appToken: appToken,
+      deviceId: session.deviceId,
+      deviceIdSource: deviceIdSource,
+      kind: kind,
+      sessionId: session.id,
+      sessionRelativeTimeMs: sessionRelativeTimeMs,
+      clientOccurredAt: clientOccurredAt,
+      platform: session.platform,
+      locale: session.locale,
+      isFirstLaunch: session.isFirstLaunch,
+      appVersion: session.appVersion,
+      appBuildNumber: session.appBuildNumber,
+      appPackageName: session.appPackageName,
+      sdkApiVersion: attriaxSdkApiVersion,
+      sdkPackageVersion: session.sdkPackageVersion,
+      metadata: metadata,
+    ),
+  );
+}
+
+sdk.SdkSessionDto attriaxGeneratedTrackSessionDto(
+  AttriaxSessionLifecyclePayload payload,
+) {
+  return sdk.SdkSessionDto(
+    (builder) => builder
+      ..appToken = payload.appToken
+      ..deviceId = payload.deviceId
+      ..deviceIdSource = attriaxStringValue(payload.deviceIdSource)
+      ..kind = _generatedSessionLifecycleKind(payload.kind)
+      ..sessionId = payload.sessionId
+      ..sessionRelativeTimeMs = payload.sessionRelativeTimeMs
+      ..clientOccurredAt = payload.clientOccurredAt.toUtc()
+      ..platform = _generatedPlatform(payload.platform)
+      ..locale = attriaxStringValue(payload.locale)
+      ..isFirstLaunch = payload.isFirstLaunch
+      ..appVersion = attriaxStringValue(payload.appVersion)
+      ..appBuildNumber = attriaxStringValue(payload.appBuildNumber)
+      ..appPackageName = attriaxStringValue(payload.appPackageName)
+      ..sdkApiVersion = attriaxStringValue(payload.sdkApiVersion)
+      ..sdkPackageVersion = attriaxStringValue(payload.sdkPackageVersion)
+      ..metadata = _generatedJsonObjectMap(payload.metadata)?.toBuilder(),
+  );
+}
+
+sdk.SdkBatchItemKind attriaxGeneratedBatchItemKind(AttriaxApiRequest request) =>
+    switch (request) {
+      AttriaxTrackEventRequest() => sdk.SdkBatchItemKind.event,
+      AttriaxTrackSessionRequest() => sdk.SdkBatchItemKind.session,
+      AttriaxIdentifyRequest() => sdk.SdkBatchItemKind.identify,
+      _ => throw ArgumentError(
+        'Unsupported Attriax batch request kind: ${request.kindName}',
+      ),
+    };
+
+BuiltMap<String, JsonObject?> attriaxGeneratedJsonObjectMap(
+  Map<String, Object?> value,
+) =>
+    _generatedJsonObjectMap(value) ??
+    BuiltMap<String, JsonObject?>(const <String, JsonObject?>{});
+
 AttriaxIdentifyRequest attriaxBuildIdentifyRequest({
   required String appToken,
   required String deviceId,
   required String deviceIdSource,
-  required String? externalUserId,
-  String? externalUserName,
+  required String? userId,
+  String? userName,
 }) {
   final requestDto = sdk.SdkIdentifyDto(
     (builder) => builder
       ..appToken = appToken
       ..deviceId = deviceId
       ..deviceIdSource = deviceIdSource
-      ..externalUserId = attriaxStringValue(externalUserId)
-      ..externalUserName = attriaxStringValue(externalUserName),
+      ..externalUserId = attriaxStringValue(userId)
+      ..externalUserName = attriaxStringValue(userName),
   );
 
   return AttriaxIdentifyRequest(requestDto);
@@ -219,36 +499,29 @@ AttriaxCreateDynamicLinkRequest attriaxBuildCreateDynamicLinkRequest({
   String? destinationUrl,
   String? group,
   String? prefix,
-  bool? iosRedirect,
-  bool? androidRedirect,
-  String? previewTitle,
-  String? previewDescription,
-  String? previewImagePath,
-  String? utmSource,
-  String? utmMedium,
-  String? utmCampaign,
-  String? utmTerm,
-  String? utmContent,
+  AttriaxDynamicLinkRedirects? redirects,
+  AttriaxDynamicLinkSocialPreview? socialPreview,
+  AttriaxDynamicLinkUtms? utms,
   Map<String, Object?>? data,
 }) {
   final requestDto = sdk.SdkCreateDynamicLinkDto(
     (builder) => builder
-      ..androidRedirect = androidRedirect
+      ..androidRedirect = redirects?.android
       ..appToken = appToken
       ..data = _generatedJsonObjectMap(data)?.toBuilder()
       ..destinationUrl = attriaxStringValue(destinationUrl)
       ..group = attriaxStringValue(group)
-      ..iosRedirect = iosRedirect
+      ..iosRedirect = redirects?.ios
       ..name = attriaxStringValue(name)
       ..prefix = attriaxStringValue(prefix)
-      ..previewDescription = attriaxStringValue(previewDescription)
-      ..previewImagePath = attriaxStringValue(previewImagePath)
-        ..previewTitle = attriaxStringValue(previewTitle)
-        ..utmCampaign = attriaxStringValue(utmCampaign)
-        ..utmContent = attriaxStringValue(utmContent)
-        ..utmMedium = attriaxStringValue(utmMedium)
-        ..utmSource = attriaxStringValue(utmSource)
-        ..utmTerm = attriaxStringValue(utmTerm),
+      ..previewDescription = attriaxStringValue(socialPreview?.description)
+      ..previewImagePath = attriaxStringValue(socialPreview?.imagePath)
+      ..previewTitle = attriaxStringValue(socialPreview?.title)
+      ..utmCampaign = attriaxStringValue(utms?.campaign)
+      ..utmContent = attriaxStringValue(utms?.content)
+      ..utmMedium = attriaxStringValue(utms?.medium)
+      ..utmSource = attriaxStringValue(utms?.source)
+      ..utmTerm = attriaxStringValue(utms?.term),
   );
 
   return AttriaxCreateDynamicLinkRequest(requestDto);
@@ -286,6 +559,18 @@ AttriaxAckResponse attriaxAckResponseFromGenerated(
   sdk.SdkAcknowledgeResponseEnvelopeDto envelope,
 ) => AttriaxAckResponse(success: envelope.data.success);
 
+AttriaxAckResponse attriaxAckResponseFromJsonEnvelope(
+  Map<String, Object?> envelope,
+) {
+  final data = attriaxObjectMap(envelope['data']);
+  return AttriaxAckResponse(
+    success:
+        attriaxBoolValue(data?['success']) ??
+        attriaxBoolValue(envelope['success']) ??
+        false,
+  );
+}
+
 AttriaxOpenApiResponse attriaxOpenResponseFromGenerated(
   sdk.SdkV1OpenResponseEnvelopeDto envelope,
 ) => AttriaxOpenApiResponse(result: _mapOpenResult(envelope.data));
@@ -313,6 +598,43 @@ sdk.Platform _generatedPlatform(AttriaxPlatformType platform) =>
       AttriaxPlatformType.macos => sdk.Platform.macos,
       AttriaxPlatformType.linux => sdk.Platform.linux,
     };
+
+sdk.SdkSessionLifecycleKind _generatedSessionLifecycleKind(
+  AttriaxSessionLifecycleKind kind,
+) => switch (kind) {
+  AttriaxSessionLifecycleKind.start => sdk.SdkSessionLifecycleKind.start,
+  AttriaxSessionLifecycleKind.heartbeat =>
+    sdk.SdkSessionLifecycleKind.heartbeat,
+  AttriaxSessionLifecycleKind.pause => sdk.SdkSessionLifecycleKind.pause,
+  AttriaxSessionLifecycleKind.resume => sdk.SdkSessionLifecycleKind.resume,
+  AttriaxSessionLifecycleKind.end => sdk.SdkSessionLifecycleKind.end,
+};
+
+AttriaxPlatformType _parseAttriaxPlatformType(String value) {
+  return AttriaxPlatformType.values.firstWhere(
+    (platform) => platform.name == value,
+    orElse: () => AttriaxPlatformType.unknown,
+  );
+}
+
+AttriaxSessionLifecycleKind _parseSessionLifecycleKind(String value) {
+  return AttriaxSessionLifecycleKind.values.firstWhere(
+    (kind) => kind.name == value,
+    orElse: () => throw FormatException(
+      'Unsupported Attriax session lifecycle kind: $value',
+    ),
+  );
+}
+
+int? _attriaxIntValue(Object? value) {
+  if (value is int) {
+    return value;
+  }
+  if (value is num) {
+    return value.toInt();
+  }
+  return null;
+}
 
 sdk.AppVersionContextDto _generatedAppVersionContext(AttriaxAppSnapshot app) =>
     sdk.AppVersionContextDto(

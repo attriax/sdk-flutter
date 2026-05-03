@@ -9,6 +9,7 @@ All URIs are relative to *http://localhost*
 
 Method | HTTP request | Description
 ------------- | ------------- | -------------
+[**sdkControllerBatchV1**](SdkApi.md#sdkcontrollerbatchv1) | **POST** /api/sdk/v1/batch | 
 [**sdkControllerCreateDynamicLinkV1**](SdkApi.md#sdkcontrollercreatedynamiclinkv1) | **POST** /api/sdk/v1/dynamic-links | 
 [**sdkControllerGetLatestUnityReleaseV1**](SdkApi.md#sdkcontrollergetlatestunityreleasev1) | **GET** /api/sdk/v1/releases/unity/latest | 
 [**sdkControllerIdentifyV1**](SdkApi.md#sdkcontrolleridentifyv1) | **POST** /api/sdk/v1/identify | 
@@ -16,8 +17,50 @@ Method | HTTP request | Description
 [**sdkControllerOpenV1**](SdkApi.md#sdkcontrolleropenv1) | **POST** /api/sdk/v1/open | 
 [**sdkControllerResolveDeepLinkV1**](SdkApi.md#sdkcontrollerresolvedeeplinkv1) | **POST** /api/sdk/v1/deep-links/resolve | 
 [**sdkControllerTrackEventV1**](SdkApi.md#sdkcontrollertrackeventv1) | **POST** /api/sdk/v1/events | 
+[**sdkControllerTrackSessionV1**](SdkApi.md#sdkcontrollertracksessionv1) | **POST** /api/sdk/v1/sessions | 
 [**sdkControllerValidateUnityEditorV1**](SdkApi.md#sdkcontrollervalidateunityeditorv1) | **POST** /api/sdk/v1/unity-editor/validate | 
 
+
+# **sdkControllerBatchV1**
+> SdkV1BatchResponseEnvelopeDto sdkControllerBatchV1(sdkV1BatchDto)
+
+
+
+### Example
+```dart
+import 'package:attriax_sdk_client/api.dart';
+
+final api = AttriaxSdkClient().getSdkApi();
+final SdkV1BatchDto sdkV1BatchDto = ; // SdkV1BatchDto | 
+
+try {
+    final response = api.sdkControllerBatchV1(sdkV1BatchDto);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling SdkApi->sdkControllerBatchV1: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **sdkV1BatchDto** | [**SdkV1BatchDto**](SdkV1BatchDto.md)|  | 
+
+### Return type
+
+[**SdkV1BatchResponseEnvelopeDto**](SdkV1BatchResponseEnvelopeDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 
 # **sdkControllerCreateDynamicLinkV1**
 > SdkCreateDynamicLinkResponseEnvelopeDto sdkControllerCreateDynamicLinkV1(sdkCreateDynamicLinkDto)
@@ -282,6 +325,47 @@ try {
 Name | Type | Description  | Notes
 ------------- | ------------- | ------------- | -------------
  **sdkEventDto** | [**SdkEventDto**](SdkEventDto.md)|  | 
+
+### Return type
+
+[**SdkAcknowledgeResponseEnvelopeDto**](SdkAcknowledgeResponseEnvelopeDto.md)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: application/json
+ - **Accept**: application/json
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **sdkControllerTrackSessionV1**
+> SdkAcknowledgeResponseEnvelopeDto sdkControllerTrackSessionV1(sdkSessionDto)
+
+
+
+### Example
+```dart
+import 'package:attriax_sdk_client/api.dart';
+
+final api = AttriaxSdkClient().getSdkApi();
+final SdkSessionDto sdkSessionDto = ; // SdkSessionDto | 
+
+try {
+    final response = api.sdkControllerTrackSessionV1(sdkSessionDto);
+    print(response);
+} on DioException catch (e) {
+    print('Exception when calling SdkApi->sdkControllerTrackSessionV1: $e\n');
+}
+```
+
+### Parameters
+
+Name | Type | Description  | Notes
+------------- | ------------- | ------------- | -------------
+ **sdkSessionDto** | [**SdkSessionDto**](SdkSessionDto.md)|  | 
 
 ### Return type
 

@@ -25,6 +25,10 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
   final Platform platform;
   @override
   final SdkVersionContextDto sdk;
+  @override
+  final String? sessionId;
+  @override
+  final DateTime? sessionStartedAt;
 
   factory _$SdkV1OpenDto([void Function(SdkV1OpenDtoBuilder)? updates]) =>
       (SdkV1OpenDtoBuilder()..update(updates))._build();
@@ -39,6 +43,8 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
     this.isFirstLaunch,
     required this.platform,
     required this.sdk,
+    this.sessionId,
+    this.sessionStartedAt,
   }) : super._();
   @override
   SdkV1OpenDto rebuild(void Function(SdkV1OpenDtoBuilder) updates) =>
@@ -59,7 +65,9 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
         installReferrer == other.installReferrer &&
         isFirstLaunch == other.isFirstLaunch &&
         platform == other.platform &&
-        sdk == other.sdk;
+        sdk == other.sdk &&
+        sessionId == other.sessionId &&
+        sessionStartedAt == other.sessionStartedAt;
   }
 
   @override
@@ -74,6 +82,8 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
     _$hash = $jc(_$hash, isFirstLaunch.hashCode);
     _$hash = $jc(_$hash, platform.hashCode);
     _$hash = $jc(_$hash, sdk.hashCode);
+    _$hash = $jc(_$hash, sessionId.hashCode);
+    _$hash = $jc(_$hash, sessionStartedAt.hashCode);
     _$hash = $jf(_$hash);
     return _$hash;
   }
@@ -89,7 +99,9 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
           ..add('installReferrer', installReferrer)
           ..add('isFirstLaunch', isFirstLaunch)
           ..add('platform', platform)
-          ..add('sdk', sdk))
+          ..add('sdk', sdk)
+          ..add('sessionId', sessionId)
+          ..add('sessionStartedAt', sessionStartedAt))
         .toString();
   }
 }
@@ -140,6 +152,15 @@ class SdkV1OpenDtoBuilder
       _$this._sdk ??= SdkVersionContextDtoBuilder();
   set sdk(SdkVersionContextDtoBuilder? sdk) => _$this._sdk = sdk;
 
+  String? _sessionId;
+  String? get sessionId => _$this._sessionId;
+  set sessionId(String? sessionId) => _$this._sessionId = sessionId;
+
+  DateTime? _sessionStartedAt;
+  DateTime? get sessionStartedAt => _$this._sessionStartedAt;
+  set sessionStartedAt(DateTime? sessionStartedAt) =>
+      _$this._sessionStartedAt = sessionStartedAt;
+
   SdkV1OpenDtoBuilder() {
     SdkV1OpenDto._defaults(this);
   }
@@ -156,6 +177,8 @@ class SdkV1OpenDtoBuilder
       _isFirstLaunch = $v.isFirstLaunch;
       _platform = $v.platform;
       _sdk = $v.sdk.toBuilder();
+      _sessionId = $v.sessionId;
+      _sessionStartedAt = $v.sessionStartedAt;
       _$v = null;
     }
     return this;
@@ -201,6 +224,8 @@ class SdkV1OpenDtoBuilder
               'platform',
             ),
             sdk: sdk.build(),
+            sessionId: sessionId,
+            sessionStartedAt: sessionStartedAt,
           );
     } catch (_) {
       late String _$failedField;

@@ -2,12 +2,12 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'attriax_api_models.dart';
 import 'attriax_generated_transport.dart';
 import 'attriax_id_generator.dart';
 import 'attriax_logger.dart';
+import 'attriax_preferences_store.dart';
 import 'attriax_queue.dart';
 import 'attriax_request_dispatcher.dart';
 
@@ -17,7 +17,7 @@ class AttriaxSynchronizer {
   AttriaxSynchronizer({
     required AttriaxGeneratedTransport transport,
     required Connectivity connectivity,
-    required SharedPreferences prefs,
+    required AttriaxPreferencesStore preferencesStore,
     required int maxQueueSize,
     required AttriaxLogger logger,
     void Function(AttriaxApiRequest request, int statusCode)?
@@ -26,7 +26,7 @@ class AttriaxSynchronizer {
   }) : _connectivity = connectivity,
        _logger = logger {
     _queueManager = AttriaxQueueManager(
-      prefs: prefs,
+      preferencesStore: preferencesStore,
       maxQueueSize: maxQueueSize,
     );
     _dispatcher = AttriaxRequestDispatcher(

@@ -40,18 +40,29 @@ class Attriax {
   /// warning or error output in non-debug builds unless [AttriaxConfig.enableDebugLogs]
   /// overrides that behavior.
   Attriax({required AttriaxConfig config})
-    : _runtime = AttriaxRuntime(
+    : this._withLogger(
         config: config,
-        deepLinkListener: AttriaxDeepLinkListener(
-          deepLinkSource: createDefaultAttriaxDeepLinkSource(),
-        ),
-        contextCollector: AttriaxContextCollector(config: config),
-        connectivity: Connectivity(),
-        client: http.Client(),
         logger: AttriaxLogger(
           enableDebugLogs: config.enableDebugLogs ?? kDebugMode,
         ),
       );
+
+  Attriax._withLogger({
+    required AttriaxConfig config,
+    required AttriaxLogger logger,
+  }) : _runtime = AttriaxRuntime(
+         config: config,
+         deepLinkListener: AttriaxDeepLinkListener(
+           deepLinkSource: createDefaultAttriaxDeepLinkSource(),
+         ),
+         contextCollector: AttriaxContextCollector(
+           config: config,
+           logger: logger,
+         ),
+         connectivity: Connectivity(),
+         client: http.Client(),
+         logger: logger,
+       );
 
   /// Creates a test-friendly SDK instance with injected dependencies.
   ///
@@ -114,7 +125,7 @@ class Attriax {
 
   /// Whether custom event tracking is currently enabled.
   ///
-  /// This setting only affects calls to [trackEvent]. App-open tracking and
+  /// This setting only affects calls to [recordEvent]. App-open tracking and
   /// identification continue to work while the SDK itself is enabled.
   bool get eventsEnabled => _runtime.areEventsEnabled;
 
@@ -153,11 +164,6 @@ class Attriax {
   Future<AttriaxInstallReferrerDetails?> get installReferrer =>
       _runtime.installReferrer;
 
-  /// Most recent successful app-open tracking response.
-  ///
-  /// This stays `null` until [waitForAppOpenTracking] completes successfully.
-  AttriaxAppOpen? get lastAppOpenResult => _runtime.lastAppOpenResult;
-
   /// Initializes the SDK runtime.
   ///
   /// This restores persisted flags, generates or loads the SDK device ID,
@@ -167,8 +173,8 @@ class Attriax {
   /// Set [enabled] or [eventsEnabled] to override the persisted values for the
   /// current startup. Set [trackAppOpen] to `false` only when you explicitly
   /// want to skip automatic app-open tracking; doing so also prevents deferred
-  /// deep-link delivery from the app-open response, leaves [lastAppOpenResult]
-  /// unset, and causes [installReferrer] to resolve to `null` for that startup.
+  /// deep-link delivery from the app-open response and causes [installReferrer]
+  /// to resolve to `null` for that startup.
   Future<void> init({
     bool? enabled,
     bool? eventsEnabled,
@@ -185,22 +191,24 @@ class Attriax {
   /// `Map<String, Object?>` with nested maps, lists, strings, numbers, booleans,
   /// or `null`. The request is queued locally and flushed immediately when the
   /// device is online.
-  Future<void> trackEvent(String eventName, {Map<String, Object?>? eventData}) =>
-      _runtime.trackEvent(eventName, eventData: eventData);
+  Future<void> recordEvent(
+    String eventName, {
+    Map<String, Object?>? eventData,
+  }) => _runtime.recordEvent(eventName, eventData: eventData);
 
   /// Queues a first-class page view event for screen analytics and funnels.
   ///
-  /// This is a convenience wrapper over [trackEvent] that standardizes the
+  /// This is a convenience wrapper over [recordEvent] that standardizes the
   /// payload under the `page_view` event name so the dashboard can aggregate
   /// top pages and conversion funnels consistently.
-  Future<void> trackPageView(
+  Future<void> recordPageView(
     String pageName, {
     String? pageClass,
     String? pageTitle,
     String? previousPageName,
     Map<String, Object?>? parameters,
     String source = 'manual',
-  }) => _runtime.trackPageView(
+  }) => _runtime.recordPageView(
     pageName,
     pageClass: pageClass,
     pageTitle: pageTitle,
@@ -214,8 +222,8 @@ class Attriax {
   /// Call this after your app signs a user in or when you need to attach Attriax
   /// attribution data to an existing account identifier in your backend. Pass
   /// `null` to clear the currently associated external user id.
-  Future<void> identify(String? externalUserId, {String? externalUserName}) =>
-      _runtime.identify(externalUserId, externalUserName: externalUserName);
+  Future<void> setUser(String? userId, {String? userName}) =>
+      _runtime.setUser(userId, userName: userName);
 
   /// Creates a short dynamic link that can carry optional routing data.
   ///
@@ -227,62 +235,38 @@ class Attriax {
     String? destinationUrl,
     String? group,
     String? prefix,
-    bool? iosRedirect,
-    bool? androidRedirect,
-    String? previewTitle,
-    String? previewDescription,
-    String? previewImagePath,
-    String? utmSource,
-    String? utmMedium,
-    String? utmCampaign,
-    String? utmTerm,
-    String? utmContent,
+    AttriaxDynamicLinkSocialPreview? socialPreview,
+    AttriaxDynamicLinkUtms? utms,
+    AttriaxDynamicLinkRedirects? redirects,
     Map<String, Object?>? data,
   }) => _runtime.createDynamicLink(
     name: name,
     destinationUrl: destinationUrl,
     group: group,
     prefix: prefix,
-    iosRedirect: iosRedirect,
-    androidRedirect: androidRedirect,
-    previewTitle: previewTitle,
-    previewDescription: previewDescription,
-    previewImagePath: previewImagePath,
-    utmSource: utmSource,
-    utmMedium: utmMedium,
-    utmCampaign: utmCampaign,
-    utmTerm: utmTerm,
-    utmContent: utmContent,
+    socialPreview: socialPreview,
+    utms: utms,
+    redirects: redirects,
     data: data,
   );
 
-  /// Resolves a deep link manually and emits the same resolution signals as automatic handling.
+  /// Records a deep link manually without emitting it through the deep-link stream.
   ///
   /// Provide either [uri] or [linkPath]. [metadata] accepts regular
   /// JSON-compatible Dart values and is sent with the resolution request.
   /// Returns the successful resolution when the backend matches a deep link,
-  /// otherwise returns `null` and emits a resolution failure signal.
-  Future<AttriaxDeepLinkResolution?> recordDeepLinkConversion({
+  /// otherwise returns `null`.
+  Future<AttriaxDeepLinkResolution?> recordDeepLink({
     Uri? uri,
     String? linkPath,
     Map<String, Object?>? metadata,
     String source = 'manual',
-  }) => _runtime.recordDeepLinkConversion(
+  }) => _runtime.recordDeepLink(
     uri: uri,
     linkPath: linkPath,
     metadata: metadata,
     source: source,
   );
-
-  /// Waits for the first app-open tracking request to finish.
-  ///
-  /// Returns the reduced public app-open summary once the scheduled first
-  /// app-open request finishes successfully. Returns `null` when no app-open
-  /// request was scheduled, including when [init] ran with `trackAppOpen: false`
-  /// or the SDK was disabled during initialization. Propagates request failures
-  /// and context-resolution failures to the caller.
-  Future<AttriaxAppOpen?> waitForAppOpenTracking() =>
-      _runtime.waitForAppOpenTracking();
 
   /// Releases listeners, closes streams, and disposes runtime resources.
   Future<void> dispose() => _runtime.dispose();
@@ -311,8 +295,8 @@ class AttriaxDeepLinks {
   ///
   /// This resolves to the matched or failed backend result for the launch deep
   /// link, or `null` when no initial deep link was present.
-  Future<AttriaxDeepLinkResult?> get waitForInitialDeepLink =>
-      _runtime.waitForInitialDeepLink;
+  Future<AttriaxDeepLinkResult?> waitForInitialDeepLink() =>
+      _runtime.waitForInitialDeepLink();
 
   /// Broadcast stream of handled deep-link events.
   ///

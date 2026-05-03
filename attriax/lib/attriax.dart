@@ -1,4 +1,5 @@
 export 'src/attriax.dart';
+export 'src/attriax_clock.dart';
 export 'src/attriax_deep_link_source.dart';
 export 'src/attriax_navigation_observer.dart';
 export 'src/attriax_synchronization.dart';

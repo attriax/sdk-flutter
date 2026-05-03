@@ -203,7 +203,8 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   bool _sdkEnabled = true;
   bool _eventsEnabled = true;
   String _status = 'SDK initialized.';
-  AttriaxAppOpen? _appOpenResult;
+  AttriaxInstallReferrerDetails? _startupInstallReferrer;
+  AttriaxDeepLinkResult? _startupInitialDeepLink;
   AttriaxDynamicLinkRecord? _lastCreatedDynamicLink;
   AttriaxRawDeepLinkEvent? _lastRawDeepLink;
   AttriaxDeepLinkResolution? _lastResolution;
@@ -241,7 +242,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
       _sdkEnabled = widget.sdk.enabled;
       _eventsEnabled = widget.sdk.eventsEnabled;
       _status = widget.sdk.enabled
-          ? 'Initialized. App open tracking is running.'
+          ? 'Initialized. Startup attribution is available via installReferrer and deepLinks.'
           : 'Initialized in disabled mode.';
     });
   }
@@ -296,25 +297,31 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
     }
   }
 
-  Future<void> _waitForAppOpenTracking() async {
-    setState(() => _status = 'Waiting for app open tracking...');
+  Future<void> _loadStartupAttribution() async {
+    setState(() => _status = 'Loading startup attribution...');
     try {
-      final result = await widget.sdk.waitForAppOpenTracking();
+      final initialDeepLink = await widget.sdk.deepLinks
+          .waitForInitialDeepLink();
+      final installReferrer = await widget.sdk.installReferrer;
       if (!mounted) return;
       setState(() {
-        _appOpenResult = result;
-        _status = result == null
-            ? 'App open tracking was not scheduled.'
-            : 'App open tracked.';
+        _startupInstallReferrer = installReferrer;
+        _startupInitialDeepLink = initialDeepLink;
+        _lastRawDeepLink = initialDeepLink?.rawEvent ?? _lastRawDeepLink;
+        _lastResolution = initialDeepLink?.resolution ?? _lastResolution;
+        _lastFailure = initialDeepLink?.failure;
+        _status = installReferrer == null && initialDeepLink == null
+            ? 'Startup attribution loaded. No install referrer or initial deep link found.'
+            : 'Startup attribution loaded.';
       });
     } catch (error) {
       if (!mounted) return;
-      setState(() => _status = 'App open tracking failed: $error');
+      setState(() => _status = 'Startup attribution failed: $error');
     }
   }
 
-  Future<void> _trackSampleEvent() async {
-    await widget.sdk.trackEvent(
+  Future<void> _recordSampleEvent() async {
+    await widget.sdk.recordEvent(
       'purchase_completed',
       eventData: const <String, Object?>{
         'value': 99,
@@ -326,13 +333,10 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
     setState(() => _status = 'Queued purchase_completed event.');
   }
 
-  Future<void> _identifySampleUser() async {
-    await widget.sdk.identify(
-      'demo-user-123',
-      externalUserName: 'Package Example User',
-    );
+  Future<void> _setSampleUser() async {
+    await widget.sdk.setUser('demo-user-123', userName: 'Package Example User');
     if (!mounted) return;
-    setState(() => _status = 'Queued identify for demo-user-123.');
+    setState(() => _status = 'Queued setUser for demo-user-123.');
   }
 
   Future<void> _createSampleDynamicLink() async {
@@ -340,9 +344,11 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
       name: 'Package example dynamic link',
       destinationUrl: 'https://attriax.com/invite',
       group: 'package-example',
-      previewTitle: 'Open the Attriax example app',
-      previewDescription:
-          'Example-generated dynamic link with an attached campaign payload.',
+      socialPreview: const AttriaxDynamicLinkSocialPreview(
+        title: 'Open the Attriax example app',
+        description:
+            'Example-generated dynamic link with an attached campaign payload.',
+      ),
       data: const <String, Object?>{
         'source': 'flutter_package_example',
         'campaign': 'dynamic-link-demo',
@@ -356,14 +362,19 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
     });
   }
 
-  Future<void> _reportManualConversion() async {
-    final event = await widget.sdk.recordDeepLinkConversion(
+  Future<void> _recordManualDeepLink() async {
+    final event = await widget.sdk.recordDeepLink(
       linkPath: _manualPathController.text,
       source: 'package_example_manual',
       metadata: const <String, Object?>{'acceptedBy': 'example_button'},
     );
     if (!mounted) return;
     setState(() {
+      _lastRawDeepLink = event?.rawEvent ?? _lastRawDeepLink;
+      _lastResolution = event ?? _lastResolution;
+      if (event != null) {
+        _lastFailure = null;
+      }
       _status = event == null
           ? 'Manual deep-link resolution sent. No immediate match.'
           : 'Manual deep-link resolution matched ${event.deepLink.path}.';
@@ -502,15 +513,13 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                       Text('Events enabled: ${widget.sdk.eventsEnabled}'),
                       Text('First launch: ${widget.sdk.isFirstLaunch}'),
                       Text('Device ID: ${widget.sdk.deviceId ?? 'pending…'}'),
-                      if (_appOpenResult != null) ...<Widget>[
-                        const SizedBox(height: 8),
-                        Text('New user: ${_appOpenResult!.isNewUser}'),
-                        if (_appOpenResult!.deepLink != null)
-                          Text(
-                            'Deferred deep link: '
-                            '${_appOpenResult!.deepLink!.path}',
-                          ),
-                      ],
+                      const SizedBox(height: 8),
+                      Text(
+                        'Install referrer campaign: ${_startupInstallReferrer?.campaign ?? 'none'}',
+                      ),
+                      Text(
+                        'Initial deep link: ${_startupInitialDeepLink?.resolution?.deepLink.path ?? _startupInitialDeepLink?.rawEvent?.linkPath ?? _startupInitialDeepLink?.rawEvent?.uri.toString() ?? 'none'}',
+                      ),
                     ],
                   ),
                 ),
@@ -580,9 +589,9 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                       const SizedBox(height: 8),
                       OutlinedButton(
                         onPressed: widget.sdk.isInitialized
-                            ? _waitForAppOpenTracking
+                            ? _loadStartupAttribution
                             : null,
-                        child: const Text('Wait for app open tracking result'),
+                        child: const Text('Load startup attribution result'),
                       ),
                     ],
                   ),
@@ -599,16 +608,16 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                       const SizedBox(height: 12),
                       FilledButton.tonal(
                         onPressed: widget.sdk.isInitialized
-                            ? _trackSampleEvent
+                            ? _recordSampleEvent
                             : null,
                         child: const Text('Queue purchase_completed event'),
                       ),
                       const SizedBox(height: 8),
                       FilledButton.tonal(
                         onPressed: widget.sdk.isInitialized
-                            ? _identifySampleUser
+                            ? _setSampleUser
                             : null,
-                        child: const Text('Queue identify (demo-user-123)'),
+                        child: const Text('Queue setUser (demo-user-123)'),
                       ),
                       const SizedBox(height: 8),
                       FilledButton.tonal(
@@ -630,9 +639,9 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                       const SizedBox(height: 8),
                       FilledButton.tonal(
                         onPressed: widget.sdk.isInitialized
-                            ? _reportManualConversion
+                            ? _recordManualDeepLink
                             : null,
-                        child: const Text('Report manual deep-link conversion'),
+                        child: const Text('Report manual deep link'),
                       ),
                     ],
                   ),

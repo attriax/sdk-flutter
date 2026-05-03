@@ -9,97 +9,6 @@ import 'package:device_info_plus/device_info_plus.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('AttriaxContextCollector install referrer retry', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues(<String, Object>{});
-    });
-
-    test('uses a persisted install referrer before calling the platform', () async {
-      SharedPreferences.setMockInitialValues(<String, Object>{
-        'attriax.install_referrer': 'utm_source=cached_play_store',
-      });
-
-      final platform = FakeAttriaxPlatform(
-        const <AttriaxInstallReferrerContext>[],
-      );
-
-      final collector = AttriaxContextCollector(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
-        platform: platform,
-        installReferrerRetryDelay: Duration.zero,
-      );
-
-      final context = await collector.collectInstallReferrerContextForTest(
-        platformType: AttriaxPlatformType.android,
-      );
-
-      expect(platform.installReferrerCalls, 0);
-      expect(context.installReferrer, 'utm_source=cached_play_store');
-      expect(context.metadata['source'], 'flutter_cached_install_referrer');
-    });
-
-    test('retries once and returns the successful referrer payload', () async {
-      final platform = FakeAttriaxPlatform(<AttriaxInstallReferrerContext>[
-        const AttriaxInstallReferrerContext(
-          metadata: <String, Object?>{
-            'installReferrerStatus': 'service_unavailable',
-          },
-        ),
-        const AttriaxInstallReferrerContext(
-          installReferrer: 'utm_source=play_store',
-          metadata: <String, Object?>{'installReferrerStatus': 'ok'},
-        ),
-      ]);
-
-      final collector = AttriaxContextCollector(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
-        platform: platform,
-        installReferrerRetryDelay: Duration.zero,
-      );
-
-      final context = await collector.collectInstallReferrerContextForTest(
-        platformType: AttriaxPlatformType.android,
-      );
-
-      expect(platform.installReferrerCalls, 2);
-      expect(context.installReferrer, 'utm_source=play_store');
-      expect(context.metadata['installReferrerStatus'], 'ok');
-    });
-
-    test(
-      'emits degraded metadata after both install referrer attempts fail',
-      () async {
-        final platform = FakeAttriaxPlatform(<AttriaxInstallReferrerContext>[
-          const AttriaxInstallReferrerContext(
-            metadata: <String, Object?>{
-              'installReferrerStatus': 'service_unavailable',
-            },
-          ),
-          const AttriaxInstallReferrerContext(
-            metadata: <String, Object?>{
-              'installReferrerStatus': 'timeout_flutter',
-            },
-          ),
-        ]);
-
-        final collector = AttriaxContextCollector(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
-          platform: platform,
-          installReferrerRetryDelay: Duration.zero,
-        );
-
-        final context = await collector.collectInstallReferrerContextForTest(
-          platformType: AttriaxPlatformType.android,
-        );
-
-        expect(platform.installReferrerCalls, 2);
-        expect(context.installReferrer, isNull);
-        expect(context.metadata['installReferrerStatus'], 'timeout_flutter');
-        expect(context.metadata['installReferrerAttempts'], 2);
-      },
-    );
-  });
-
   test(
     'overrides sdk metadata with the Flutter client runtime marker',
     () async {
@@ -114,11 +23,10 @@ void main() {
         platform: FakeAttriaxPlatform(const <AttriaxInstallReferrerContext>[]),
       );
 
-      final preparedContext = await collector.prepare(
+      final context = await collector.collectContextSnapshot(
         deviceId: 'device_test_1',
         isFirstLaunch: true,
       );
-      final context = await preparedContext.resolvedSnapshot;
 
       expect(context.sdk.metadata['clientRuntime'], 'flutter');
       expect(context.sdk.metadata['customField'], 'kept');

@@ -7,6 +7,11 @@ void main() {
   final instance = AttriaxSdkClient().getSdkApi();
 
   group(SdkApi, () {
+    //Future<SdkV1BatchResponseEnvelopeDto> sdkControllerBatchV1(SdkV1BatchDto sdkV1BatchDto) async
+    test('test sdkControllerBatchV1', () async {
+      // TODO
+    });
+
     //Future<SdkCreateDynamicLinkResponseEnvelopeDto> sdkControllerCreateDynamicLinkV1(SdkCreateDynamicLinkDto sdkCreateDynamicLinkDto) async
     test('test sdkControllerCreateDynamicLinkV1', () async {
       // TODO
@@ -39,6 +44,11 @@ void main() {
 
     //Future<SdkAcknowledgeResponseEnvelopeDto> sdkControllerTrackEventV1(SdkEventDto sdkEventDto) async
     test('test sdkControllerTrackEventV1', () async {
+      // TODO
+    });
+
+    //Future<SdkAcknowledgeResponseEnvelopeDto> sdkControllerTrackSessionV1(SdkSessionDto sdkSessionDto) async
+    test('test sdkControllerTrackSessionV1', () async {
       // TODO
     });
 

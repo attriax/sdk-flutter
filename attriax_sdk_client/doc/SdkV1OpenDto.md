@@ -17,6 +17,8 @@ Name | Type | Description | Notes
 **isFirstLaunch** | **bool** |  | [optional] 
 **platform** | [**Platform**](Platform.md) |  | 
 **sdk** | [**SdkVersionContextDto**](SdkVersionContextDto.md) |  | 
+**sessionId** | **String** |  | [optional] 
+**sessionStartedAt** | [**DateTime**](DateTime.md) |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

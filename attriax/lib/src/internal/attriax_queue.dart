@@ -1,9 +1,8 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
 import 'attriax_api_models.dart';
 import 'attriax_json_utils.dart';
+import 'attriax_preferences_store.dart';
 
 /// A single SDK request waiting to be delivered to the Attriax backend.
 class AttriaxQueuedRequest {
@@ -39,14 +38,12 @@ class AttriaxQueuedRequest {
 /// Persists the outbound request queue to [SharedPreferences].
 class AttriaxQueueManager {
   AttriaxQueueManager({
-    required SharedPreferences prefs,
+    required AttriaxPreferencesStore preferencesStore,
     required int maxQueueSize,
-  }) : _prefs = prefs,
+  }) : _preferencesStore = preferencesStore,
        _maxQueueSize = maxQueueSize;
 
-  static const String _storageKey = 'attriax.queue.v1';
-
-  final SharedPreferences _prefs;
+  final AttriaxPreferencesStore _preferencesStore;
   final int _maxQueueSize;
 
   Future<void> enqueue(AttriaxQueuedRequest request) async {
@@ -59,7 +56,7 @@ class AttriaxQueueManager {
   }
 
   Future<List<AttriaxQueuedRequest>> readAll() async {
-    final raw = _prefs.getString(_storageKey);
+    final raw = await _preferencesStore.readQueuePayload();
     if (raw == null || raw.isEmpty) {
       return <AttriaxQueuedRequest>[];
     }
@@ -85,8 +82,7 @@ class AttriaxQueueManager {
   }
 
   Future<void> writeAll(List<AttriaxQueuedRequest> queue) async {
-    await _prefs.setString(
-      _storageKey,
+    await _preferencesStore.writeQueuePayload(
       jsonEncode(queue.map((r) => r.toJson()).toList(growable: false)),
     );
   }

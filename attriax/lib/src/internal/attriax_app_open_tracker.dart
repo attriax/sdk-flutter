@@ -3,9 +3,8 @@ import 'dart:async';
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 
 import 'attriax_api_models.dart';
-import 'attriax_event_hub.dart';
 import 'attriax_logger.dart';
-import 'attriax_synchronizer.dart';
+import 'attriax_request_manager.dart';
 
 /// Schedules and tracks the one-time app-open request for the current session.
 ///
@@ -22,10 +21,11 @@ class AttriaxAppOpenTracker {
   /// Queues the app-open request. Subsequent calls are silently ignored.
   Future<void> schedule({
     required AttriaxConfig config,
-    required Future<AttriaxContextSnapshot> contextFuture,
+    required AttriaxContextSnapshot context,
+    required String? rawPlatformInstallReferrer,
     required String deviceIdSource,
-    required AttriaxSynchronizer synchronizer,
-    required AttriaxEventHub eventHub,
+    required AttriaxSessionSnapshot? session,
+    required AttriaxRequestManager requestManager,
     required AttriaxLogger logger,
   }) async {
     if (_didSchedule) {
@@ -34,24 +34,14 @@ class AttriaxAppOpenTracker {
     _didSchedule = true;
     _completer = Completer<AttriaxAppOpenResult?>();
 
-    late final AttriaxContextSnapshot context;
-    try {
-      context = await contextFuture;
-    } catch (error, stackTrace) {
-      logger.error(
-        'App-open request could not start because context resolution failed.',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      _completeError(error, stackTrace: stackTrace);
-      return;
-    }
-
-    await synchronizer.enqueue(
+    await requestManager.enqueue(
       attriaxBuildOpenRequest(
         config: config,
         context: context,
         deviceIdSource: deviceIdSource,
+        rawPlatformInstallReferrer: rawPlatformInstallReferrer,
+        sessionId: session?.id,
+        sessionStartedAt: session?.startedAt,
       ),
       onSuccess: (response) {
         if (response is! AttriaxOpenApiResponse) {
@@ -62,7 +52,6 @@ class AttriaxAppOpenTracker {
 
         final result = response.result;
         _completeSuccess(result);
-        _emitDeferredDeepLink(result, eventHub: eventHub);
       },
       onError: (error, stackTrace) {
         logger.error(
@@ -106,23 +95,5 @@ class AttriaxAppOpenTracker {
     if (!_completer!.isCompleted) {
       _completer!.completeError(error, stackTrace);
     }
-  }
-
-  void _emitDeferredDeepLink(
-    AttriaxAppOpenResult result, {
-    required AttriaxEventHub eventHub,
-  }) {
-    if (result.deepLink == null) {
-      return;
-    }
-
-    eventHub.emitResolvedDeepLink(
-      resolution: AttriaxDeepLinkResolution(
-        deepLink: result.deepLink!,
-        isFirstLaunch: result.isFirstLaunch,
-        isDeferred: true,
-        occurredAt: result.acceptedAt ?? DateTime.now().toUtc(),
-      ),
-    );
   }
 }

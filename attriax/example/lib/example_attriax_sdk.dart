@@ -13,24 +13,22 @@ abstract class ExampleAttriaxSdk {
   bool get isSynchronized;
   Stream<AttriaxSynchronizationState> get synchronizationStates;
   AttriaxDeepLinks get deepLinks;
+  Future<AttriaxInstallReferrerDetails?> get installReferrer;
 
   Future<void> init();
-  Future<AttriaxAppOpen?> waitForAppOpenTracking();
-  Future<void> trackEvent(String eventName, {Map<String, Object?>? eventData});
-  Future<void> identify(String? externalUserId, {String? externalUserName});
+  Future<void> recordEvent(String eventName, {Map<String, Object?>? eventData});
+  Future<void> setUser(String? userId, {String? userName});
   Future<AttriaxCreateDynamicLinkResult> createDynamicLink({
     String? name,
     String? destinationUrl,
     String? group,
     String? prefix,
-    bool? iosRedirect,
-    bool? androidRedirect,
-    String? previewTitle,
-    String? previewDescription,
-    String? previewImagePath,
+    AttriaxDynamicLinkRedirects? redirects,
+    AttriaxDynamicLinkSocialPreview? socialPreview,
+    AttriaxDynamicLinkUtms? utms,
     Map<String, Object?>? data,
   });
-  Future<AttriaxDeepLinkResolution?> recordDeepLinkConversion({
+  Future<AttriaxDeepLinkResolution?> recordDeepLink({
     Uri? uri,
     String? linkPath,
     Map<String, Object?>? metadata,
@@ -80,21 +78,21 @@ class LiveExampleAttriaxSdk implements ExampleAttriaxSdk {
   AttriaxDeepLinks get deepLinks => _sdk.deepLinks;
 
   @override
+  Future<AttriaxInstallReferrerDetails?> get installReferrer =>
+      _sdk.installReferrer;
+
+  @override
   Future<void> init() => _sdk.init();
 
   @override
-  Future<AttriaxAppOpen?> waitForAppOpenTracking() =>
-      _sdk.waitForAppOpenTracking();
-
-  @override
-  Future<void> trackEvent(
+  Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
-  }) => _sdk.trackEvent(eventName, eventData: eventData);
+  }) => _sdk.recordEvent(eventName, eventData: eventData);
 
   @override
-  Future<void> identify(String? externalUserId, {String? externalUserName}) =>
-      _sdk.identify(externalUserId, externalUserName: externalUserName);
+  Future<void> setUser(String? userId, {String? userName}) =>
+      _sdk.setUser(userId, userName: userName);
 
   @override
   Future<AttriaxCreateDynamicLinkResult> createDynamicLink({
@@ -102,32 +100,28 @@ class LiveExampleAttriaxSdk implements ExampleAttriaxSdk {
     String? destinationUrl,
     String? group,
     String? prefix,
-    bool? iosRedirect,
-    bool? androidRedirect,
-    String? previewTitle,
-    String? previewDescription,
-    String? previewImagePath,
+    AttriaxDynamicLinkRedirects? redirects,
+    AttriaxDynamicLinkSocialPreview? socialPreview,
+    AttriaxDynamicLinkUtms? utms,
     Map<String, Object?>? data,
   }) => _sdk.createDynamicLink(
     name: name,
     destinationUrl: destinationUrl,
     group: group,
     prefix: prefix,
-    iosRedirect: iosRedirect,
-    androidRedirect: androidRedirect,
-    previewTitle: previewTitle,
-    previewDescription: previewDescription,
-    previewImagePath: previewImagePath,
+    redirects: redirects,
+    socialPreview: socialPreview,
+    utms: utms,
     data: data,
   );
 
   @override
-  Future<AttriaxDeepLinkResolution?> recordDeepLinkConversion({
+  Future<AttriaxDeepLinkResolution?> recordDeepLink({
     Uri? uri,
     String? linkPath,
     Map<String, Object?>? metadata,
     String source = 'manual',
-  }) => _sdk.recordDeepLinkConversion(
+  }) => _sdk.recordDeepLink(
     uri: uri,
     linkPath: linkPath,
     metadata: metadata,

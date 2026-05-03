@@ -28,23 +28,28 @@ void main() {
     await sdk.dispose();
   });
 
-  testWidgets('shows the app-open result after waiting for tracking', (
-    tester,
-  ) async {
-    sdk.appOpenResult = const AttriaxAppOpen(
-      isNewUser: true,
-      isFirstLaunch: true,
-    );
+  testWidgets(
+    'shows install-referrer state after loading startup attribution',
+    (tester) async {
+      sdk.installReferrerResult = const AttriaxInstallReferrerDetails(
+        attributionType: AttributionType.referrer,
+        precision: 1,
+        campaign: 'spring-launch',
+      );
 
-    await tester.pumpWidget(AttriaxPackageExampleApp(sdk: sdk));
-    await tester.ensureVisible(find.text('Wait for app open tracking result'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Wait for app open tracking result'));
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(AttriaxPackageExampleApp(sdk: sdk));
+      await tester.ensureVisible(find.text('Load startup attribution result'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Load startup attribution result'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('App open tracked.'), findsOneWidget);
-    expect(find.text('New user: true'), findsOneWidget);
-  });
+      expect(find.text('Startup attribution loaded.'), findsOneWidget);
+      expect(
+        find.text('Install referrer campaign: spring-launch'),
+        findsOneWidget,
+      );
+    },
+  );
 
   testWidgets('navigates to the promo route when a deep link match arrives', (
     tester,
@@ -99,7 +104,8 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
   final AttriaxSynchronizationState _synchronizationState =
       AttriaxSynchronizationState.synchronized;
 
-  AttriaxAppOpen? appOpenResult;
+  AttriaxInstallReferrerDetails? installReferrerResult;
+  AttriaxDeepLinkResult? initialDeepLinkResult;
   late final AttriaxDeepLinks deepLinks = _FakeAttriaxDeepLinks(this);
 
   @override
@@ -139,22 +145,20 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
       _synchronizationController.stream;
 
   @override
+  Future<AttriaxInstallReferrerDetails?> get installReferrer async =>
+      installReferrerResult;
+
+  @override
   Future<void> init() async {}
 
   @override
-  Future<AttriaxAppOpen?> waitForAppOpenTracking() async => appOpenResult;
-
-  @override
-  Future<void> trackEvent(
+  Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
   }) async {}
 
   @override
-  Future<void> identify(
-    String? externalUserId, {
-    String? externalUserName,
-  }) async {}
+  Future<void> setUser(String? userId, {String? userName}) async {}
 
   @override
   Future<AttriaxCreateDynamicLinkResult> createDynamicLink({
@@ -162,11 +166,9 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
     String? destinationUrl,
     String? group,
     String? prefix,
-    bool? iosRedirect,
-    bool? androidRedirect,
-    String? previewTitle,
-    String? previewDescription,
-    String? previewImagePath,
+    AttriaxDynamicLinkRedirects? redirects,
+    AttriaxDynamicLinkSocialPreview? socialPreview,
+    AttriaxDynamicLinkUtms? utms,
     Map<String, Object?>? data,
   }) async => const AttriaxCreateDynamicLinkResult(
     link: AttriaxDynamicLinkRecord(
@@ -177,7 +179,7 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
   );
 
   @override
-  Future<AttriaxDeepLinkResolution?> recordDeepLinkConversion({
+  Future<AttriaxDeepLinkResolution?> recordDeepLink({
     Uri? uri,
     String? linkPath,
     Map<String, Object?>? metadata,
@@ -204,7 +206,7 @@ class _FakeAttriaxDeepLinks implements AttriaxDeepLinks {
   final FakeExampleAttriaxSdk _sdk;
 
   @override
-  AttriaxDeepLinkResult? get initialDeepLink => null;
+  AttriaxDeepLinkResult? get initialDeepLink => _sdk.initialDeepLinkResult;
 
   @override
   bool get initialDeepLinkResolved => true;
@@ -216,6 +218,6 @@ class _FakeAttriaxDeepLinks implements AttriaxDeepLinks {
   Stream<AttriaxDeepLinkEvent> get stream => _sdk._deepLinksController.stream;
 
   @override
-  Future<AttriaxDeepLinkResult?> get waitForInitialDeepLink =>
-      Future<AttriaxDeepLinkResult?>.value(null);
+  Future<AttriaxDeepLinkResult?> waitForInitialDeepLink() =>
+      Future<AttriaxDeepLinkResult?>.value(_sdk.initialDeepLinkResult);
 }

@@ -24,6 +24,8 @@ part 'sdk_v1_open_dto.g.dart';
 /// * [isFirstLaunch] 
 /// * [platform] 
 /// * [sdk] 
+/// * [sessionId] 
+/// * [sessionStartedAt] 
 @BuiltValue()
 abstract class SdkV1OpenDto implements Built<SdkV1OpenDto, SdkV1OpenDtoBuilder> {
   @BuiltValueField(wireName: r'app')
@@ -53,6 +55,12 @@ abstract class SdkV1OpenDto implements Built<SdkV1OpenDto, SdkV1OpenDtoBuilder> 
 
   @BuiltValueField(wireName: r'sdk')
   SdkVersionContextDto get sdk;
+
+  @BuiltValueField(wireName: r'sessionId')
+  String? get sessionId;
+
+  @BuiltValueField(wireName: r'sessionStartedAt')
+  DateTime? get sessionStartedAt;
 
   SdkV1OpenDto._();
 
@@ -128,6 +136,20 @@ class _$SdkV1OpenDtoSerializer implements PrimitiveSerializer<SdkV1OpenDto> {
       object.sdk,
       specifiedType: const FullType(SdkVersionContextDto),
     );
+    if (object.sessionId != null) {
+      yield r'sessionId';
+      yield serializers.serialize(
+        object.sessionId,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.sessionStartedAt != null) {
+      yield r'sessionStartedAt';
+      yield serializers.serialize(
+        object.sessionStartedAt,
+        specifiedType: const FullType(DateTime),
+      );
+    }
   }
 
   @override
@@ -213,6 +235,20 @@ class _$SdkV1OpenDtoSerializer implements PrimitiveSerializer<SdkV1OpenDto> {
             specifiedType: const FullType(SdkVersionContextDto),
           ) as SdkVersionContextDto;
           result.sdk.replace(valueDes);
+          break;
+        case r'sessionId':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(String),
+          ) as String;
+          result.sessionId = valueDes;
+          break;
+        case r'sessionStartedAt':
+          final valueDes = serializers.deserialize(
+            value,
+            specifiedType: const FullType(DateTime),
+          ) as DateTime;
+          result.sessionStartedAt = valueDes;
           break;
         default:
           unhandled.add(key);

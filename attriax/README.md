@@ -20,6 +20,7 @@ For local workspace development inside this repository, keep using the existing 
 ## Usage
 
 ```dart
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:attriax/attriax.dart';
 
@@ -36,15 +37,25 @@ final attriax = Attriax(
 // Recommended: await startup initialization.
 await attriax.init();
 
-// Optionally wait for the app-open response when you need it.
-final appOpen = await attriax.waitForAppOpenTracking();
+// Process install-referrer and startup deep-link results in the background.
+unawaited(processAttriaxStartup(attriax));
 
-await attriax.trackEvent(
+Future<void> processAttriaxStartup(Attriax attriax) async {
+  final initialDeepLink = await attriax.deepLinks.waitForInitialDeepLink();
+  final installReferrer = await attriax.installReferrer;
+
+  debugPrint('Install referrer: ${installReferrer?.campaign}');
+  debugPrint(
+    'Initial deep link: ${initialDeepLink?.resolution?.deepLink.path ?? initialDeepLink?.rawEvent?.linkPath ?? 'none'}',
+  );
+}
+
+await attriax.recordEvent(
   'purchase_completed',
   eventData: const <String, Object?>{'value': 99, 'currency': 'USD'},
 );
 
-await attriax.trackPageView(
+await attriax.recordPageView(
   '/checkout',
   pageClass: 'CheckoutPage',
   previousPageName: '/cart',
@@ -55,8 +66,10 @@ final createdDynamicLink = await attriax.createDynamicLink(
   name: 'Referral share link',
   destinationUrl: 'https://attriax.com/invite',
   group: 'referrals',
-  previewTitle: 'Join me on Attriax',
-  previewDescription: 'Open the app with my referral attached.',
+  socialPreview: const AttriaxDynamicLinkSocialPreview(
+    title: 'Join me on Attriax',
+    description: 'Open the app with my referral attached.',
+  ),
   data: const <String, Object?>{
     'inviterId': 'user_123',
     'campaign': 'spring_referral',
@@ -87,12 +100,16 @@ MaterialApp(
 );
 ```
 
-If you need a fire-and-forget startup path, you can still intentionally call `unawaited(attriax.init())`, but awaiting `init()` should be the default integration guidance.
+`await attriax.init()` only waits for local SDK startup work such as restoring persisted state, registering listeners, and starting the queue. It does not wait for the network-backed app-open request to finish.
+
+Do not block your splash screen, router construction, `runApp()`, or other first-frame startup work on `installReferrer` or `deepLinks.waitForInitialDeepLink()`. Those results may wait on cached or network-backed attribution work and should normally be handled in background tasks after `init()` resolves.
+
+If you truly need a fire-and-forget local startup path, you can still intentionally call `unawaited(attriax.init())`, but that is separate from deferred deep-link and install-referrer handling. The recommended baseline is still: await `init()`, then process startup attribution asynchronously.
 
 The `appVersion`, `appBuildNumber`, and `appPackageName` fields let you override what the SDK reports to the API. That is useful for staged rollouts, white-label apps, and internal testing.
 
 If your app consumes the incoming URL before Attriax sees it, forward the accepted
-route manually with `recordDeepLinkConversion(uri: incomingUri, source: 'custom_router')`.
+route manually with `recordDeepLink(uri: incomingUri, source: 'custom_router')`.
 
 ## Dynamic Link Creation
 
@@ -105,8 +122,10 @@ including the final short URL.
 final result = await attriax.createDynamicLink(
   destinationUrl: 'https://attriax.com/invite',
   group: 'creator-program',
-  previewTitle: 'Creator invite',
-  previewDescription: 'Open the app with the creator campaign attached.',
+  socialPreview: const AttriaxDynamicLinkSocialPreview(
+    title: 'Creator invite',
+    description: 'Open the app with the creator campaign attached.',
+  ),
   data: const <String, Object?>{
     'creatorId': 'alex',
     'source': 'flutter_demo',
@@ -124,7 +143,7 @@ Notes:
 
 ## Page Tracking
 
-Use `trackPageView()` when you want page-level analytics and funnels without
+Use `recordPageView()` when you want page-level analytics and funnels without
 manually naming a raw custom event. Attriax stores these under the standardized
 `page_view` event name and surfaces them separately in the dashboard.
 
@@ -140,8 +159,8 @@ host app still owns the platform registration files and most runner hooks.
 
 - Android: add the intent filter to your launcher activity and keep your SHA-256 fingerprints current. The `attriax_android` plugin already injects `flutter_deeplinking_enabled=false` so Flutter's built-in handler does not compete with Attriax.
 - iOS: add `<key>FlutterDeepLinkingEnabled</key><false/>` to `ios/Runner/Info.plist`, add the Associated Domains entitlement, and test on a physical device after reinstalling. This plist change still belongs to the consuming app.
-- Web: the SDK reads the initial URL automatically. If your router consumes the incoming URL first, forward it with `recordDeepLinkConversion(uri: Uri.base, source: 'web_router')`.
-- macOS, Linux, Windows: automatic deep-link capture is not bundled yet. Accept the URI in your runner or activation handler and forward it with `recordDeepLinkConversion(uri: incomingUri, source: 'desktop_router')`.
+- Web: the SDK reads the initial URL automatically. If your router consumes the incoming URL first, forward it with `recordDeepLink(uri: Uri.base, source: 'web_router')`.
+- macOS, Linux, Windows: automatic deep-link capture is not bundled yet. Accept the URI in your runner or activation handler and forward it with `recordDeepLink(uri: incomingUri, source: 'desktop_router')`.
 
 The example runner files shipped with this package include the Android and iOS
 host-side setup. Desktop examples stay intentionally minimal and expect manual
@@ -163,7 +182,7 @@ Because Android install referrer is the strongest attribution input for mobile i
 ## Deep Links
 
 - Read `attriax.deepLinks.stream` as a broadcast stream with no buffering.
-- Use `attriax.deepLinks.initialDeepLink`, `initialDeepLinkResolved`, and `waitForInitialDeepLink` when you need synchronous initial-link state plus an awaitable completion handle.
+- Use `attriax.deepLinks.initialDeepLink`, `initialDeepLinkResolved`, and `waitForInitialDeepLink()` when you need synchronous initial-link state plus an awaitable completion handle.
 - Read `attriax.deepLinks.latestDeepLink` when you need the most recent handled deep-link result, including deferred deep links.
 - Each `AttriaxDeepLinkEvent` exposes raw link data immediately.
 - Call `resolve()` on the event when you need the matched or failed backend resolution result for that specific link.

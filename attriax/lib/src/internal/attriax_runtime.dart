@@ -5,20 +5,25 @@ import 'package:http/http.dart' as http;
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../attriax_clock.dart';
 import 'attriax_api_models.dart';
 import 'attriax_api_base_url.dart';
-import 'attriax_app_open_tracker.dart';
+import 'attriax_app_open_manager.dart';
 import 'attriax_context_collector.dart';
+import 'attriax_context_manager.dart';
+import 'attriax_deep_link_manager.dart';
 import 'attriax_deep_link_listener.dart';
-import 'attriax_deep_link_resolver.dart';
 import 'attriax_event_hub.dart';
 import 'attriax_generated_transport.dart';
-import 'attriax_id_generator.dart';
-import 'attriax_install_referrer_state.dart';
+import 'attriax_install_referrer_manager.dart';
 import 'attriax_logger.dart';
+import 'attriax_platform_install_referrer_manager.dart';
 import 'attriax_preferences_store.dart';
+import 'attriax_request_manager.dart';
 import 'attriax_runtime_settings_state.dart';
+import 'attriax_session_manager.dart';
 import 'attriax_synchronizer.dart';
+import 'attriax_tracking_manager.dart';
 
 /// Coordinates the Attriax SDK subsystems.
 ///
@@ -26,8 +31,10 @@ import 'attriax_synchronizer.dart';
 /// collaborator:
 /// - [AttriaxEventHub]          — streams and user callbacks
 /// - [AttriaxSynchronizer]      — request queue, flush loop, sync state
-/// - [AttriaxDeepLinkResolver]  — incoming and manual deep-link resolution
-/// - [AttriaxAppOpenTracker]    — app-open request lifecycle
+/// - [AttriaxDeepLinkManager]   — deep-link listener and resolution flow
+/// - [AttriaxAppOpenManager]    — app-open request lifecycle
+/// - [AttriaxTrackingManager]   — analytics and user association APIs
+/// - [AttriaxSessionManager]    — session state and lifecycle ownership
 class AttriaxRuntime {
   AttriaxRuntime({
     required this.config,
@@ -37,40 +44,86 @@ class AttriaxRuntime {
     required http.Client client,
     required AttriaxLogger logger,
     SharedPreferences? prefsOverride,
-  }) : _deepLinkListener = deepLinkListener,
-       _contextCollector = contextCollector,
-       _connectivity = connectivity,
+  }) : _connectivity = connectivity,
        _client = client,
        _logger = logger,
+       _clock = config.clock ?? const AttriaxSystemClock(),
        _preferencesStore = AttriaxPreferencesStore(
          prefsOverride: prefsOverride,
        ),
        _eventHub = AttriaxEventHub(),
-       _appOpenTracker = AttriaxAppOpenTracker();
+       _requestManager = AttriaxRequestManager() {
+    _platformInstallReferrerManager =
+        contextCollector.platformInstallReferrerManager;
+    _contextManager = AttriaxContextManager(
+      contextCollector: contextCollector,
+      preferencesStore: _preferencesStore,
+      logger: _logger,
+    );
+    _sessionManager = AttriaxSessionManager(
+      config: config,
+      contextManager: _contextManager,
+      preferencesStore: _preferencesStore,
+      logger: _logger,
+      isEnabled: () => isEnabled,
+      requestManager: _requestManager,
+      clock: _clock,
+    );
+    _deepLinkManager = AttriaxDeepLinkManager(
+      config: config,
+      contextManager: _contextManager,
+      listener: deepLinkListener,
+      eventHub: _eventHub,
+      requestManager: _requestManager,
+      logger: _logger,
+      clock: _clock,
+    );
+    _appOpenManager = AttriaxAppOpenManager(
+      config: config,
+      contextManager: _contextManager,
+      platformInstallReferrerManager: _platformInstallReferrerManager,
+      sessionManager: _sessionManager,
+      requestManager: _requestManager,
+      logger: _logger,
+    );
+    _installReferrerManager = AttriaxInstallReferrerManager(
+      preferencesStore: _preferencesStore,
+      appOpenManager: _appOpenManager,
+    );
+    _trackingManager = AttriaxTrackingManager(
+      config: config,
+      logger: _logger,
+      clock: _clock,
+      deviceIdProvider: () => _contextManager.requiredDeviceId,
+      deviceIdSourceProvider: _requireDeviceIdSource,
+      isEnabled: () => isEnabled,
+      areEventsEnabled: () => areEventsEnabled,
+      requestManager: _requestManager,
+      prepareSession: _sessionManager.prepareTrackedSessionAt,
+    );
+  }
 
   final AttriaxConfig config;
-  final AttriaxDeepLinkListener _deepLinkListener;
-  final AttriaxContextCollector _contextCollector;
   final Connectivity _connectivity;
   final http.Client _client;
   final AttriaxLogger _logger;
+  final AttriaxClock _clock;
   final AttriaxPreferencesStore _preferencesStore;
   final AttriaxEventHub _eventHub;
-  final AttriaxAppOpenTracker _appOpenTracker;
+  final AttriaxRequestManager _requestManager;
+  late final AttriaxPlatformInstallReferrerManager
+  _platformInstallReferrerManager;
+  late final AttriaxContextManager _contextManager;
+  late final AttriaxDeepLinkManager _deepLinkManager;
+  late final AttriaxAppOpenManager _appOpenManager;
+  late final AttriaxInstallReferrerManager _installReferrerManager;
+  late final AttriaxTrackingManager _trackingManager;
+  late final AttriaxSessionManager _sessionManager;
 
   AttriaxSynchronizer? _synchronizer;
-  AttriaxDeepLinkResolver? _resolver;
   AttriaxGeneratedTransport? _transport;
 
-  String? _deviceId;
-  String? _deviceIdSource;
   bool _initialized = false;
-  bool _isFirstLaunch = false;
-  AttriaxContextSnapshot? _context;
-  Future<AttriaxContextSnapshot>? _resolvedContextFuture;
-  bool _resolvedContextIncludesInstallReferrer = false;
-  final AttriaxInstallReferrerState _installReferrerState =
-      AttriaxInstallReferrerState();
   late final AttriaxRuntimeSettingsState _settingsState =
       AttriaxRuntimeSettingsState(
         preferencesStore: _preferencesStore,
@@ -79,27 +132,27 @@ class AttriaxRuntime {
   bool _trackAppOpen = true;
   Future<void>? _initializationFuture;
   AttriaxNormalizedApiBaseUrl? _normalizedApiBaseUrl;
+  bool _isSchedulingAppOpen = false;
 
   // ---------- getters ------------------------------------------------------- //
 
   bool get isInitialized => _initialized;
   bool get isEnabled => _settingsState.isEnabled;
   bool get areEventsEnabled => _settingsState.areEventsEnabled;
-  bool get isFirstLaunch => _isFirstLaunch;
-  String? get deviceId => _deviceId;
+  bool get isFirstLaunch => _contextManager.isFirstLaunch;
+  String? get deviceId => _contextManager.deviceId;
+  AttriaxSessionSnapshot? get currentSession => _sessionManager.currentSession;
   bool get isSynchronized =>
       _synchronizer?.synchronizationState ==
       AttriaxSynchronizationState.synchronized;
-  AttriaxSdkSnapshot? get sdkSnapshot => _context?.sdk;
-  AttriaxAppOpen? get lastAppOpenResult =>
-      _toPublicAppOpen(_appOpenTracker.lastResult);
+  AttriaxSdkSnapshot? get sdkSnapshot => _contextManager.sdkSnapshot;
   Future<AttriaxInstallReferrerDetails?> get installReferrer =>
-      _installReferrerState.future;
-  AttriaxDeepLinkResult? get initialDeepLink => _eventHub.initialDeepLinkValue;
-  bool get isInitialDeepLinkResolved => _eventHub.isInitialDeepLinkResolved;
-  Future<AttriaxDeepLinkResult?> get waitForInitialDeepLink =>
-      _eventHub.initialDeepLink;
-  AttriaxDeepLinkResult? get latestDeepLink => _eventHub.latestDeepLink;
+      _installReferrerManager.future;
+  AttriaxDeepLinkResult? get initialDeepLink =>
+      _deepLinkManager.initialDeepLink;
+  bool get isInitialDeepLinkResolved =>
+      _deepLinkManager.isInitialDeepLinkResolved;
+  AttriaxDeepLinkResult? get latestDeepLink => _deepLinkManager.latestDeepLink;
   AttriaxSynchronizationState get synchronizationState =>
       _synchronizer?.synchronizationState ??
       AttriaxSynchronizationState.initializing;
@@ -107,9 +160,11 @@ class AttriaxRuntime {
   AttriaxNormalizedApiBaseUrl get _apiBaseUrlConfig =>
       _normalizedApiBaseUrl ??= normalizeAttriaxApiBaseUrl(config.apiBaseUrl);
 
+  bool get _sessionTrackingEnabled => config.sessionTrackingEnabled;
+
   // ---------- streams (delegated to hub) ------------------------------------ //
 
-  Stream<AttriaxDeepLinkEvent> get deepLinks => _eventHub.deepLinks;
+  Stream<AttriaxDeepLinkEvent> get deepLinks => _deepLinkManager.stream;
   Stream<AttriaxSynchronizationState> get synchronizationStates =>
       _eventHub.synchronizationStates;
 
@@ -151,68 +206,25 @@ class AttriaxRuntime {
     _logger.verbose('Initializing Attriax SDK.');
     _validateConfig();
 
-    final storedPreferences = await _preferencesStore.restore(
-      deviceIdFactory: attriaxGenerateId,
-      enabledOverride: enabled ?? _settingsState.requestedEnabledOverride,
-      eventsEnabledOverride:
-          eventsEnabled ?? _settingsState.requestedEventsEnabledOverride,
-    );
-    final prefs = await _preferencesStore.preferences;
-
-    _deviceId ??= storedPreferences.deviceId;
-    _deviceIdSource ??= storedPreferences.deviceIdSource;
-
-    late final AttriaxResolvedDeviceId resolvedDeviceId;
-    if (_deviceIdSource != null) {
-      resolvedDeviceId = AttriaxResolvedDeviceId(
-        value: _deviceId!,
-        source: _deviceIdSource!,
-        isFallback:
-            _deviceIdSource == attriaxPersistentStorageDeviceIdSource,
-      );
-    } else if (storedPreferences.hasPersistedDeviceId) {
-      resolvedDeviceId = AttriaxResolvedDeviceId(
-        value: _deviceId!,
-        source: attriaxPersistentStorageDeviceIdSource,
-        isFallback: true,
-      );
-    } else {
-      resolvedDeviceId = await _contextCollector.resolvePreferredDeviceId(
-        fallbackDeviceId: _deviceId!,
-      );
-    }
-
-    if (_deviceId != resolvedDeviceId.value) {
-      _deviceId = resolvedDeviceId.value;
-    }
-    _deviceIdSource = resolvedDeviceId.source;
-    await _preferencesStore.setResolvedDeviceIdentity(
-      deviceId: _deviceId!,
-      deviceIdSource: _deviceIdSource,
-    );
-    _logger.verbose('Using device ID (${resolvedDeviceId.source}): $_deviceId');
-    _isFirstLaunch = storedPreferences.isFirstLaunch;
+    final storedRuntimePreferences = await _preferencesStore
+        .restoreRuntimePreferences(
+          enabledOverride: enabled ?? _settingsState.requestedEnabledOverride,
+          eventsEnabledOverride:
+              eventsEnabled ?? _settingsState.requestedEventsEnabledOverride,
+        );
     _settingsState.restore(
-      enabled: storedPreferences.isEnabled,
-      eventsEnabled: storedPreferences.areEventsEnabled,
+      enabled: storedRuntimePreferences.isEnabled,
+      eventsEnabled: storedRuntimePreferences.areEventsEnabled,
     );
     _trackAppOpen = trackAppOpen;
-    _installReferrerState.ensureCompleter();
-
-    _installReferrerState.loadCached(
-      await _preferencesStore.readInstallReferrerDetails(),
+    await _installReferrerManager.init(
+      enabled: isEnabled,
+      waitForAppOpen: trackAppOpen,
     );
-    _installReferrerState.completeCachedIfEnabled(enabled: isEnabled);
 
-    final preparedContext = await _contextCollector.prepare(
-      deviceId: _deviceId!,
-      isFirstLaunch: _isFirstLaunch,
-      resolveInstallReferrer: isEnabled && trackAppOpen,
-    );
-    _context = preparedContext.initialSnapshot;
-    _setResolvedContextFuture(
-      preparedContext.resolvedSnapshot,
-      includesInstallReferrer: isEnabled && trackAppOpen,
+    await _contextManager.init();
+    final sessionRestore = await _sessionManager.init(
+      enabled: _sessionTrackingEnabled,
     );
 
     _transport ??= AttriaxGeneratedTransport(
@@ -224,77 +236,50 @@ class AttriaxRuntime {
     _synchronizer ??= AttriaxSynchronizer(
       transport: _transport!,
       connectivity: _connectivity,
-      prefs: prefs,
+      preferencesStore: _preferencesStore,
       maxQueueSize: config.maxQueueSize,
       logger: _logger,
     );
+    _requestManager.bindSynchronizer(_synchronizer!);
     _synchronizer!.onStateChanged = _eventHub.emitSynchronizationState;
-
-    _resolver ??= AttriaxDeepLinkResolver(
-      config: config,
-      deviceId: _deviceId!,
-      deviceIdSource: _requireDeviceIdSource(),
-      isFirstLaunch: _isFirstLaunch,
-      context: _context!,
-      synchronizer: _synchronizer!,
-      eventHub: _eventHub,
-      logger: _logger,
-    );
 
     _initialized = true;
 
     if (!isEnabled) {
-      _completeInstallReferrer(null, disabledResult: true);
-      _eventHub.completeInitialDeepLinkIfAbsent();
+      _installReferrerManager.completeDisabled();
+      _deepLinkManager.completeInitialLinkIfAbsent();
       _synchronizer!.setState(AttriaxSynchronizationState.disabled);
       _logger.warning('Attriax SDK initialized in disabled mode.');
       return;
     }
 
+    _sessionManager.seedRecoveredSessionEnd(sessionRestore?.replacedSession);
+
     _synchronizer!.startConnectivitySubscription(
       onRestored: _synchronizer!.scheduleFlush,
     );
-    await _deepLinkListener.start(
-      _resolver!.handleIncoming,
-      onInitialLinkProbeCompleted: _eventHub.completeInitialDeepLinkIfAbsent,
-    );
+    await _deepLinkManager.start();
 
     if (trackAppOpen) {
       _scheduleAppOpenIfNeeded();
-    } else if (_installReferrerState.hasPendingCompletion) {
-      _completeInstallReferrer(null);
     }
 
+    _sessionManager.activate();
     _synchronizer!.scheduleFlush();
     _logger.verbose('Attriax SDK initialized.');
   }
 
   // ---------- tracking ------------------------------------------------------ //
 
-  Future<void> trackEvent(
+  Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
   }) async {
     _assertInitialized();
-    if (!isEnabled || !areEventsEnabled) {
-      _logger.verbose(
-        'Ignoring trackEvent("$eventName") because SDK or events are disabled.',
-      );
-      return;
-    }
-
-    await _synchronizer!.enqueue(
-      attriaxBuildTrackEventRequest(
-        appToken: config.appToken,
-        deviceId: _deviceId!,
-        deviceIdSource: _requireDeviceIdSource(),
-        eventName: eventName,
-        eventData: eventData,
-      ),
-    );
+    await _trackingManager.recordEvent(eventName, eventData: eventData);
   }
 
-  Future<void> trackPageView(
+  Future<void> recordPageView(
     String pageName, {
     String? pageClass,
     String? pageTitle,
@@ -302,57 +287,20 @@ class AttriaxRuntime {
     Map<String, Object?>? parameters,
     String source = 'manual',
   }) async {
-    final normalizedPageName = pageName.trim();
-    if (normalizedPageName.isEmpty) {
-      throw ArgumentError.value(
-        pageName,
-        'pageName',
-        'pageName must not be empty.',
-      );
-    }
-
-    final normalizedPageClass = pageClass?.trim();
-    final normalizedPageTitle = pageTitle?.trim();
-    final normalizedPreviousPageName = previousPageName?.trim();
-
-    await trackEvent(
-      'page_view',
-      eventData: <String, Object?>{
-        ...?parameters,
-        'pageName': normalizedPageName,
-        if (normalizedPageClass != null && normalizedPageClass.isNotEmpty)
-          'pageClass': normalizedPageClass,
-        if (normalizedPageTitle != null && normalizedPageTitle.isNotEmpty)
-          'pageTitle': normalizedPageTitle,
-        if (normalizedPreviousPageName != null &&
-            normalizedPreviousPageName.isNotEmpty)
-          'previousPageName': normalizedPreviousPageName,
-        'source': source,
-      },
+    _assertInitialized();
+    await _trackingManager.recordPageView(
+      pageName,
+      pageClass: pageClass,
+      pageTitle: pageTitle,
+      previousPageName: previousPageName,
+      parameters: parameters,
+      source: source,
     );
   }
 
-  Future<void> identify(
-    String? externalUserId, {
-    String? externalUserName,
-  }) async {
+  Future<void> setUser(String? userId, {String? userName}) async {
     _assertInitialized();
-    if (!isEnabled) {
-      _logger.verbose(
-        'Ignoring identify("$externalUserId") because SDK is disabled.',
-      );
-      return;
-    }
-
-    await _synchronizer!.enqueue(
-      attriaxBuildIdentifyRequest(
-        appToken: config.appToken,
-        deviceId: _deviceId!,
-        deviceIdSource: _requireDeviceIdSource(),
-        externalUserId: externalUserId,
-        externalUserName: externalUserName,
-      ),
-    );
+    await _trackingManager.setUser(userId, userName: userName);
   }
 
   Future<AttriaxCreateDynamicLinkResult> createDynamicLink({
@@ -360,16 +308,9 @@ class AttriaxRuntime {
     String? destinationUrl,
     String? group,
     String? prefix,
-    bool? iosRedirect,
-    bool? androidRedirect,
-    String? previewTitle,
-    String? previewDescription,
-    String? previewImagePath,
-    String? utmSource,
-    String? utmMedium,
-    String? utmCampaign,
-    String? utmTerm,
-    String? utmContent,
+    AttriaxDynamicLinkSocialPreview? socialPreview,
+    AttriaxDynamicLinkUtms? utms,
+    AttriaxDynamicLinkRedirects? redirects,
     Map<String, Object?>? data,
   }) async {
     _assertInitialized();
@@ -380,23 +321,35 @@ class AttriaxRuntime {
       destinationUrl: _trimOrNull(destinationUrl),
       group: _trimOrNull(group),
       prefix: _trimOrNull(prefix),
-      iosRedirect: iosRedirect,
-      androidRedirect: androidRedirect,
-      previewTitle: _trimOrNull(previewTitle),
-      previewDescription: _trimOrNull(previewDescription),
-      previewImagePath: _trimOrNull(previewImagePath),
-      utmSource: _trimOrNull(utmSource),
-      utmMedium: _trimOrNull(utmMedium),
-      utmCampaign: _trimOrNull(utmCampaign),
-      utmTerm: _trimOrNull(utmTerm),
-      utmContent: _trimOrNull(utmContent),
+      redirects: redirects == null
+          ? null
+          : AttriaxDynamicLinkRedirects(
+              ios: redirects.ios,
+              android: redirects.android,
+            ),
+      socialPreview: socialPreview == null
+          ? null
+          : AttriaxDynamicLinkSocialPreview(
+              title: _trimOrNull(socialPreview.title),
+              description: _trimOrNull(socialPreview.description),
+              imagePath: _trimOrNull(socialPreview.imagePath),
+            ),
+      utms: utms == null
+          ? null
+          : AttriaxDynamicLinkUtms(
+              source: _trimOrNull(utms.source),
+              medium: _trimOrNull(utms.medium),
+              campaign: _trimOrNull(utms.campaign),
+              term: _trimOrNull(utms.term),
+              content: _trimOrNull(utms.content),
+            ),
       data: data,
     );
 
     return _transport!.createDynamicLink(request);
   }
 
-  Future<AttriaxDeepLinkResolution?> recordDeepLinkConversion({
+  Future<AttriaxDeepLinkResolution?> recordDeepLink({
     Uri? uri,
     String? linkPath,
     Map<String, Object?>? metadata,
@@ -404,19 +357,24 @@ class AttriaxRuntime {
   }) async {
     _assertInitialized();
     if (!isEnabled) {
-      _logger.verbose(
-        'Ignoring recordDeepLinkConversion because SDK is disabled.',
-      );
+      _logger.verbose('Ignoring recordDeepLink because SDK is disabled.');
       return null;
     }
 
-    return _resolver!.recordManualConversion(
+    if (_sessionTrackingEnabled) {
+      await _sessionManager.prepareTrackedSessionAt(_clock.now());
+    }
+
+    return _deepLinkManager.recordManualConversion(
       uri: uri,
       linkPath: linkPath,
       metadata: metadata,
       source: source,
     );
   }
+
+  Future<AttriaxDeepLinkResult?> waitForInitialDeepLink() =>
+      _deepLinkManager.waitForInitialDeepLink();
 
   // ---------- enable / disable ---------------------------------------------- //
 
@@ -434,36 +392,20 @@ class AttriaxRuntime {
 
   // ---------- app open ------------------------------------------------------ //
 
-    Future<AttriaxAppOpen?> waitForAppOpenTracking() async =>
-      _toPublicAppOpen(await _appOpenTracker.waitForResult());
-
   // ---------- dispose ------------------------------------------------------- //
 
   Future<void> dispose() async {
     _logger.verbose('Disposing Attriax SDK runtime.');
-    if (_installReferrerState.hasPendingCompletion) {
-      _completeInstallReferrer(null);
-    }
-    await _deepLinkListener.stop();
+    _sessionManager.dispose();
+    _installReferrerManager.dispose();
+    await _deepLinkManager.stop();
     await _synchronizer?.dispose();
-    await _appOpenTracker.dispose();
+    await _appOpenManager.dispose();
     await _eventHub.dispose();
     _client.close();
   }
 
   // ---------- private ------------------------------------------------------- //
-
-  AttriaxAppOpen? _toPublicAppOpen(AttriaxAppOpenResult? result) {
-    if (result == null) {
-      return null;
-    }
-
-    return AttriaxAppOpen(
-      isNewUser: result.isNewUser,
-      isFirstLaunch: result.isFirstLaunch,
-      deepLink: result.deepLink,
-    );
-  }
 
   void _validateConfig() {
     if (config.appToken.trim().isEmpty) {
@@ -486,21 +428,15 @@ class AttriaxRuntime {
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 
-  String _requireDeviceIdSource() {
-    final source = _deviceIdSource?.trim();
-    if (source == null || source.isEmpty) {
-      return attriaxPersistentStorageDeviceIdSource;
-    }
-
-    return source;
-  }
+  String _requireDeviceIdSource() => _contextManager.requireDeviceIdSource();
 
   Future<void> _applyEnabledState(bool enabled) async {
     if (!enabled) {
+      _sessionManager.deactivate();
       _synchronizer?.deactivate();
       _synchronizer?.setState(AttriaxSynchronizationState.disabled);
       _logger.warning('Attriax SDK disabled.');
-      await _deepLinkListener.stop();
+      await _deepLinkManager.stop();
       await _synchronizer?.stopConnectivitySubscription();
       return;
     }
@@ -508,79 +444,26 @@ class AttriaxRuntime {
     _synchronizer?.activate();
     _synchronizer?.setState(AttriaxSynchronizationState.synchronizing);
     _logger.verbose('Attriax SDK enabled.');
-    if (_initialized && _resolver != null && _synchronizer != null) {
+    if (_initialized && _synchronizer != null) {
       _synchronizer!.startConnectivitySubscription(
         onRestored: _synchronizer!.scheduleFlush,
       );
-      await _deepLinkListener.start(
-        _resolver!.handleIncoming,
-        onInitialLinkProbeCompleted: _eventHub.completeInitialDeepLinkIfAbsent,
-      );
+      await _deepLinkManager.start();
       await _prepareInstallReferrerFutureForEnabledState();
       _scheduleAppOpenIfNeeded();
+      _sessionManager.activate();
       _synchronizer!.scheduleFlush();
     }
   }
 
-  void _setResolvedContextFuture(
-    Future<AttriaxContextSnapshot> future, {
-    required bool includesInstallReferrer,
-  }) {
-    _resolvedContextIncludesInstallReferrer = includesInstallReferrer;
-    _resolvedContextFuture = future
-        .then((resolvedContext) {
-          _context = resolvedContext;
-          return resolvedContext;
-        })
-        .catchError((Object error, StackTrace stackTrace) {
-          _logger.warning(
-            'Failed to resolve the background install referrer context.',
-            error: error,
-            stackTrace: stackTrace,
-          );
-          return _context!;
-        });
-  }
-
-  Future<AttriaxContextSnapshot> _ensureResolvedContextForAppOpen() {
-    final currentFuture = _resolvedContextFuture;
-    if (currentFuture != null && _resolvedContextIncludesInstallReferrer) {
-      return currentFuture;
-    }
-
-    final refreshedFuture = _contextCollector
-        .prepare(deviceId: _deviceId!, isFirstLaunch: _isFirstLaunch)
-        .then((preparedContext) {
-          _context = preparedContext.initialSnapshot;
-          return preparedContext.resolvedSnapshot;
-        })
-        .then((resolvedContext) {
-          _context = resolvedContext;
-          return resolvedContext;
-        })
-        .catchError((Object error, StackTrace stackTrace) {
-          _logger.warning(
-            'Failed to refresh install-referrer context for app-open tracking.',
-            error: error,
-            stackTrace: stackTrace,
-          );
-          return _context!;
-        });
-
-    _resolvedContextIncludesInstallReferrer = true;
-    _resolvedContextFuture = refreshedFuture;
-    return refreshedFuture;
-  }
-
   Future<void> _prepareInstallReferrerFutureForEnabledState() async {
-    _installReferrerState.loadCached(
-      await _preferencesStore.readInstallReferrerDetails(),
+    await _installReferrerManager.prepareForEnabledState(
+      waitForAppOpen: _trackAppOpen,
     );
-    _installReferrerState.prepareForEnabledState();
   }
 
   void _prepareInstallReferrerCompleterForReenable() {
-    _installReferrerState.prepareForReenable();
+    _installReferrerManager.prepareForReenable(waitForAppOpen: _trackAppOpen);
   }
 
   void _scheduleAppOpenIfNeeded() {
@@ -588,52 +471,24 @@ class AttriaxRuntime {
         !isEnabled ||
         !_trackAppOpen ||
         _synchronizer == null ||
-        _appOpenTracker.didSchedule) {
+        _isSchedulingAppOpen ||
+        _appOpenManager.didSchedule) {
       return;
     }
 
-    unawaited(
-      _appOpenTracker.schedule(
-        config: config,
-        contextFuture: _ensureResolvedContextForAppOpen(),
-        deviceIdSource: _requireDeviceIdSource(),
-        synchronizer: _synchronizer!,
-        eventHub: _eventHub,
-        logger: _logger,
-      ),
-    );
-
-    if (_installReferrerState.markResolutionStarted()) {
-      unawaited(_resolveInstallReferrerFromAppOpenTracking());
-    }
+    _isSchedulingAppOpen = true;
+    unawaited(_scheduleAppOpen());
   }
 
-  Future<void> _resolveInstallReferrerFromAppOpenTracking() async {
+  Future<void> _scheduleAppOpen() async {
     try {
-      final result = await _appOpenTracker.waitForResult();
-      final installReferrerDetails = result?.installReferrer;
-      if (installReferrerDetails != null) {
-        await _preferencesStore.setInstallReferrerDetails(
-          details: installReferrerDetails,
-        );
-        _installReferrerState.cache(installReferrerDetails);
-      }
-      _completeInstallReferrer(installReferrerDetails);
-    } catch (error, stackTrace) {
-      _logger.warning(
-        'Failed to resolve the install referrer result from app-open tracking.',
-        error: error,
-        stackTrace: stackTrace,
+      await _appOpenManager.schedule(
+        onCompleted: (result) async {
+          _deepLinkManager.handleDeferredAppOpen(result);
+        },
       );
-      _completeInstallReferrer(null);
+    } finally {
+      _isSchedulingAppOpen = false;
     }
   }
-
-  void _completeInstallReferrer(
-    AttriaxInstallReferrerDetails? details, {
-    bool disabledResult = false,
-  }) => _installReferrerState.complete(
-    details,
-    disabledResult: disabledResult,
-  );
 }

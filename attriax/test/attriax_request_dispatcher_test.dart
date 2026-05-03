@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:attriax/src/internal/attriax_api_models.dart';
 import 'package:attriax/src/internal/attriax_generated_transport.dart';
 import 'package:attriax/src/internal/attriax_logger.dart';
+import 'package:attriax/src/internal/attriax_preferences_store.dart';
 import 'package:attriax/src/internal/attriax_queue.dart';
 import 'package:attriax/src/internal/attriax_request_dispatcher.dart';
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
@@ -26,7 +27,10 @@ void main() {
     setUp(() async {
       SharedPreferences.setMockInitialValues(<String, Object>{});
       prefs = await SharedPreferences.getInstance();
-      queueManager = AttriaxQueueManager(prefs: prefs, maxQueueSize: 10);
+      queueManager = AttriaxQueueManager(
+        preferencesStore: AttriaxPreferencesStore(prefsOverride: prefs),
+        maxQueueSize: 10,
+      );
       connectivityPlatform = FakeConnectivityPlatform();
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
@@ -60,7 +64,7 @@ void main() {
       int? deliveredStatus;
       AttriaxApiResponse? successResponse;
 
-      transport.sendResult = const AttriaxTransportSuccess(
+      transport.sendBatchResult = const AttriaxTransportSuccess(
         statusCode: 202,
         response: AttriaxAckResponse(success: true),
       );
@@ -75,7 +79,8 @@ void main() {
 
       await dispatcher.flush();
 
-      expect(transport.sentRequests, hasLength(1));
+      expect(transport.sentBatches, hasLength(1));
+      expect(transport.sentBatches.single, hasLength(1));
       expect(deliveredRequest, isA<AttriaxTrackEventRequest>());
       expect(deliveredStatus, 202);
       expect(successResponse, isA<AttriaxAckResponse>());
@@ -88,8 +93,8 @@ void main() {
         Object? failedError;
         StackTrace? failedStackTrace;
 
-        transport.sendError = const AttriaxTransportHttpException(
-          statusCode: 503,
+        transport.batchErrors.add(
+          const AttriaxTransportHttpException(statusCode: 503),
         );
         dispatcher.registerHandlers(
           queuedRequest.id,
@@ -101,7 +106,7 @@ void main() {
 
         await dispatcher.flush();
 
-        expect(transport.sentRequests, hasLength(1));
+        expect(transport.sentBatches, hasLength(1));
         expect(await queueManager.readAll(), hasLength(1));
         expect(failedError, isNull);
         expect(failedStackTrace, isNull);
@@ -113,8 +118,8 @@ void main() {
       () async {
         Object? failedError;
 
-        transport.sendError = const AttriaxTransportHttpException(
-          statusCode: 400,
+        transport.batchErrors.add(
+          const AttriaxTransportHttpException(statusCode: 400),
         );
         dispatcher.registerHandlers(
           queuedRequest.id,
@@ -123,17 +128,121 @@ void main() {
 
         await dispatcher.flush();
 
-        expect(transport.sentRequests, hasLength(1));
+        expect(transport.sentBatches, hasLength(1));
         expect(await queueManager.readAll(), isEmpty);
         expect(failedError, isA<AttriaxTransportHttpException>());
       },
     );
+
+    test('batches consecutive queued requests into one batch call', () async {
+      final secondRequest = AttriaxQueuedRequest(
+        id: 'req_2',
+        request: attriaxBuildTrackSessionRequest(
+          appToken: 'ax_test_token',
+          deviceIdSource: 'android_ssaid',
+          session: AttriaxSessionSnapshot(
+            id: 'session_1',
+            deviceId: 'device_1',
+            platform: AttriaxPlatformType.android,
+            locale: 'en-US',
+            isFirstLaunch: false,
+            startedAt: DateTime.utc(2026, 5, 1),
+            lastActivityAt: DateTime.utc(2026, 5, 1, 0, 0, 5),
+            heartbeatInterval: const Duration(seconds: 5),
+            appVersion: '1.0.0',
+            appBuildNumber: '1',
+            appPackageName: 'com.attriax.test',
+            sdkPackageVersion: '1.0.0',
+          ),
+          kind: AttriaxSessionLifecycleKind.heartbeat,
+        ),
+        createdAt: DateTime.utc(2026, 5, 1, 0, 0, 5),
+      );
+      await queueManager.writeAll(<AttriaxQueuedRequest>[
+        queuedRequest,
+        secondRequest,
+      ]);
+
+      await dispatcher.flush();
+
+      expect(transport.sentBatches, hasLength(1));
+      expect(
+        transport.sentBatches.single.map((request) => request.id).toList(),
+        <String>['req_1', 'req_2'],
+      );
+      expect(await queueManager.readAll(), isEmpty);
+    });
+
+    test('splits queue batches when device identity changes', () async {
+      final secondRequest = AttriaxQueuedRequest(
+        id: 'req_2',
+        request: attriaxBuildIdentifyRequest(
+          appToken: 'ax_test_token',
+          deviceId: 'device_2',
+          deviceIdSource: 'android_ssaid',
+          userId: 'user_2',
+        ),
+        createdAt: DateTime.utc(2026, 5, 1, 0, 0, 5),
+      );
+      await queueManager.writeAll(<AttriaxQueuedRequest>[
+        queuedRequest,
+        secondRequest,
+      ]);
+
+      await dispatcher.flush();
+
+      expect(transport.sentBatches, hasLength(2));
+      expect(
+        transport.sentBatches
+            .map((batch) => batch.map((request) => request.id).toList())
+            .toList(),
+        <List<String>>[
+          <String>['req_1'],
+          <String>['req_2'],
+        ],
+      );
+      expect(await queueManager.readAll(), isEmpty);
+    });
+
+    test('splits oversized batches until smaller batches succeed', () async {
+      final secondRequest = AttriaxQueuedRequest(
+        id: 'req_2',
+        request: attriaxBuildIdentifyRequest(
+          appToken: 'ax_test_token',
+          deviceId: 'device_1',
+          deviceIdSource: 'android_ssaid',
+          userId: 'user_1',
+        ),
+        createdAt: DateTime.utc(2026, 5, 1, 0, 0, 5),
+      );
+      await queueManager.writeAll(<AttriaxQueuedRequest>[
+        queuedRequest,
+        secondRequest,
+      ]);
+
+      transport.batchErrors.add(
+        const AttriaxTransportHttpException(statusCode: 413),
+      );
+
+      await dispatcher.flush();
+
+      expect(transport.sentBatches.map((batch) => batch.length).toList(), <int>[
+        2,
+        1,
+        1,
+      ]);
+      expect(await queueManager.readAll(), isEmpty);
+    });
   });
 }
 
 class FakeTransport implements AttriaxGeneratedTransport {
   final List<AttriaxApiRequest> sentRequests = <AttriaxApiRequest>[];
+  final List<List<AttriaxQueuedRequest>> sentBatches =
+      <List<AttriaxQueuedRequest>>[];
   AttriaxTransportSuccess? sendResult;
+  final List<Object> batchErrors = <Object>[];
+  AttriaxTransportSuccess? sendBatchResult;
   Object? sendError;
 
   @override
@@ -143,6 +252,21 @@ class FakeTransport implements AttriaxGeneratedTransport {
       throw sendError!;
     }
     return sendResult ??
+        const AttriaxTransportSuccess(
+          statusCode: 200,
+          response: AttriaxAckResponse(success: true),
+        );
+  }
+
+  @override
+  Future<AttriaxTransportSuccess> sendBatch(
+    List<AttriaxQueuedRequest> requests,
+  ) async {
+    sentBatches.add(List<AttriaxQueuedRequest>.from(requests));
+    if (batchErrors.isNotEmpty) {
+      throw batchErrors.removeAt(0);
+    }
+    return sendBatchResult ??
         const AttriaxTransportSuccess(
           statusCode: 200,
           response: AttriaxAckResponse(success: true),

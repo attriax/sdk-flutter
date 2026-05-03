@@ -12,6 +12,11 @@ void main() {
       // TODO
     });
 
+    // DateTime clientOccurredAt
+    test('to test the property `clientOccurredAt`', () async {
+      // TODO
+    });
+
     // String deviceId
     test('to test the property `deviceId`', () async {
       // TODO
@@ -29,6 +34,17 @@ void main() {
 
     // String eventName
     test('to test the property `eventName`', () async {
+      // TODO
+    });
+
+    // String sessionId
+    test('to test the property `sessionId`', () async {
+      // TODO
+    });
+
+    // Milliseconds since the session started.
+    // num sessionRelativeTimeMs
+    test('to test the property `sessionRelativeTimeMs`', () async {
       // TODO
     });
 

@@ -9,10 +9,13 @@ import 'package:attriax_sdk_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **appToken** | **String** |  | 
+**clientOccurredAt** | [**DateTime**](DateTime.md) |  | [optional] 
 **deviceId** | **String** |  | 
 **deviceIdSource** | **String** |  | [optional] 
 **eventData** | [**BuiltMap&lt;String, JsonObject&gt;**](JsonObject.md) |  | [optional] 
 **eventName** | **String** |  | 
+**sessionId** | **String** |  | [optional] 
+**sessionRelativeTimeMs** | **num** | Milliseconds since the session started. | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

@@ -144,7 +144,7 @@ void main() {
         sdk
           ..enabled = false
           ..enabled = true;
-        await sdk.waitForAppOpenTracking();
+        await pumpEventQueue(times: 20);
 
         expect(appOpenRequests, 1);
       },
@@ -177,17 +177,14 @@ class StaticPreparedContextCollector extends AttriaxContextCollector {
     : super(config: const AttriaxConfig(appToken: 'ax_test_token'));
 
   @override
-  Future<AttriaxPreparedContext> prepare({
+  Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
-    bool resolveInstallReferrer = true,
   }) async {
-    final snapshot = AttriaxContextSnapshot(
+    return AttriaxContextSnapshot(
       platform: AttriaxPlatformType.android,
       deviceId: deviceId,
       isFirstLaunch: isFirstLaunch,
-      rawPlatformInstallReferrer:
-          'utm_source=attriax&utm_medium=cpc&utm_campaign=spring&utm_content=link_1',
       sdk: const AttriaxSdkSnapshot(
         apiVersion: attriaxSdkApiVersion,
         packageVersion: attriaxSdkPackageVersion,
@@ -198,11 +195,6 @@ class StaticPreparedContextCollector extends AttriaxContextCollector {
         packageName: 'com.attriax.test',
       ),
       device: const AttriaxDeviceSnapshot(model: 'Pixel', osVersion: '14'),
-    );
-
-    return AttriaxPreparedContext(
-      initialSnapshot: snapshot,
-      resolvedSnapshot: Future<AttriaxContextSnapshot>.value(snapshot),
     );
   }
 }

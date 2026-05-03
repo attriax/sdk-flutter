@@ -127,12 +127,11 @@ class StaticPreparedContextCollector extends AttriaxContextCollector {
     : super(config: const AttriaxConfig(appToken: 'ax_test_token'));
 
   @override
-  Future<AttriaxPreparedContext> prepare({
+  Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
-    bool resolveInstallReferrer = true,
   }) async {
-    final snapshot = AttriaxContextSnapshot(
+    return AttriaxContextSnapshot(
       platform: AttriaxPlatformType.android,
       deviceId: deviceId,
       isFirstLaunch: isFirstLaunch,
@@ -146,11 +145,6 @@ class StaticPreparedContextCollector extends AttriaxContextCollector {
         packageName: 'com.attriax.test',
       ),
       device: const AttriaxDeviceSnapshot(model: 'Pixel', osVersion: '14'),
-    );
-
-    return AttriaxPreparedContext(
-      initialSnapshot: snapshot,
-      resolvedSnapshot: Future<AttriaxContextSnapshot>.value(snapshot),
     );
   }
 }

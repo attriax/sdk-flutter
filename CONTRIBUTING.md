@@ -67,9 +67,9 @@ Be respectful and constructive in all interactions with other contributors and m
 
 Example:
 ```
-Add method to track custom events
+Add method to record custom events
 
-- Implement trackEvent() in platform interface
+- Implement recordEvent() in platform interface
 - Add Android implementation
 - Add iOS implementation
 - Update example app

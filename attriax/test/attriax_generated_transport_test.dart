@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:attriax/src/internal/attriax_api_models.dart';
 import 'package:attriax/src/internal/attriax_generated_transport.dart';
+import 'package:attriax/src/internal/attriax_queue.dart';
+import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:attriax_sdk_client/attriax_sdk_client.dart' as sdk;
 import 'package:built_value/serializer.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -57,6 +59,101 @@ void main() {
       expect(result.statusCode, 202);
       expect(response.success, isTrue);
     });
+
+    test(
+      'sends session lifecycle requests and maps acknowledge responses',
+      () async {
+        final client = FakeHttpClient((request) async {
+          expect(request.method, 'POST');
+          expect(request.url.path, '/api/sdk/v1/sessions');
+
+          final body = _readRequestBody(request);
+          expect(body, contains('"kind":"pause"'));
+          expect(body, contains('"sessionId":"session_123"'));
+
+          return _jsonResponse(
+            202,
+            _serializeGenerated(
+              sdk.SdkAcknowledgeResponseEnvelopeDto.serializer,
+              _ackEnvelope(),
+            ),
+          );
+        });
+
+        final transport = _createTransport(client);
+        final result = await transport.send(_sessionRequest());
+
+        final response = result.response as AttriaxAckResponse;
+        expect(result.statusCode, 202);
+        expect(response.success, isTrue);
+      },
+    );
+
+    test(
+      'sends batch requests and maps batch responses as acknowledgements',
+      () async {
+        final client = FakeHttpClient((request) async {
+          expect(request.method, 'POST');
+          expect(request.url.path, '/api/sdk/v1/batch');
+
+          final body =
+              jsonDecode(_readRequestBody(request)) as Map<String, Object?>;
+          expect(body['requestId'], 'batch_req_1');
+          expect(body['appToken'], 'ax_test_token');
+          expect(body['deviceId'], 'device_123');
+
+          final items = body['items'] as List<Object?>;
+          expect(items, hasLength(2));
+          expect(
+            items
+                .cast<Map<String, Object?>>()
+                .map((item) => item['kind'])
+                .toList(growable: false),
+            <Object?>['event', 'session'],
+          );
+          expect(
+            items.every(
+              (item) =>
+                  !(item as Map<String, Object?>).containsKey('requestId'),
+            ),
+            isTrue,
+          );
+          expect(
+            items.every(
+              (item) =>
+                  !(((item as Map<String, Object?>)['body']
+                          as Map<String, Object?>)
+                      .containsKey('appToken')),
+            ),
+            isTrue,
+          );
+          expect(
+            items.every(
+              (item) =>
+                  !(((item as Map<String, Object?>)['body']
+                          as Map<String, Object?>)
+                      .containsKey('deviceId')),
+            ),
+            isTrue,
+          );
+
+          return _jsonResponse(
+            202,
+            _serializeGenerated(
+              sdk.SdkV1BatchResponseEnvelopeDto.serializer,
+              _batchEnvelope(),
+            ),
+          );
+        });
+
+        final transport = _createTransport(client);
+        final result = await transport.sendBatch(_batchRequests());
+
+        final response = result.response as AttriaxAckResponse;
+        expect(result.statusCode, 202);
+        expect(response.success, isTrue);
+      },
+    );
 
     test(
       'sends deep-link resolution requests and maps the resolution response',
@@ -192,6 +289,39 @@ AttriaxTrackEventRequest _eventRequest() => AttriaxTrackEventRequest(
   ),
 );
 
+AttriaxTrackSessionRequest _sessionRequest() => AttriaxTrackSessionRequest(
+  AttriaxSessionLifecyclePayload(
+    appToken: 'ax_test_token',
+    deviceId: 'device_123',
+    deviceIdSource: 'android_ssaid',
+    kind: AttriaxSessionLifecycleKind.pause,
+    sessionId: 'session_123',
+    sessionRelativeTimeMs: 15000,
+    clientOccurredAt: DateTime.utc(2026, 1, 1, 12, 0, 15),
+    platform: AttriaxPlatformType.android,
+    locale: 'en-US',
+    isFirstLaunch: false,
+    appVersion: '1.0.0',
+    appBuildNumber: '1',
+    appPackageName: 'com.attriax.test',
+    sdkApiVersion: 'v1',
+    sdkPackageVersion: '1.2.3',
+  ),
+);
+
+List<AttriaxQueuedRequest> _batchRequests() => <AttriaxQueuedRequest>[
+  AttriaxQueuedRequest(
+    id: 'req_1',
+    request: _eventRequest(),
+    createdAt: DateTime.utc(2026, 1, 1),
+  ),
+  AttriaxQueuedRequest(
+    id: 'req_2',
+    request: _sessionRequest(),
+    createdAt: DateTime.utc(2026, 1, 1, 0, 0, 5),
+  ),
+];
+
 AttriaxResolveDeepLinkRequest _resolveRequest() =>
     AttriaxResolveDeepLinkRequest(
       sdk.SdkV1DeepLinkResolveDto(
@@ -244,6 +374,23 @@ sdk.SdkAcknowledgeResponseEnvelopeDto _ackEnvelope() =>
       (builder) => builder
         ..data.replace(
           sdk.SdkAcknowledgeResponseDto((builder) => builder..success = true),
+        )
+        ..success = true
+        ..timestamp = DateTime.utc(2026, 1, 1),
+    );
+
+sdk.SdkV1BatchResponseEnvelopeDto _batchEnvelope() =>
+    sdk.SdkV1BatchResponseEnvelopeDto(
+      (builder) => builder
+        ..data.replace(
+          sdk.SdkV1BatchResponseDto(
+            (builder) => builder
+              ..acceptedAt = DateTime.utc(2026, 1, 1)
+              ..duplicateCount = 0
+              ..itemCount = 2
+              ..processedCount = 2
+              ..requestVersion = 'v1',
+          ),
         )
         ..success = true
         ..timestamp = DateTime.utc(2026, 1, 1),

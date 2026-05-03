@@ -8,6 +8,11 @@ import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
 
 import 'attriax_api_models.dart';
+import 'attriax_json_utils.dart';
+import 'attriax_queue.dart';
+
+const int _attriaxBatchMaxItemCount = 100;
+const int _attriaxBatchMaxBodyBytes = 48 * 1024;
 
 class AttriaxTransportSuccess {
   const AttriaxTransportSuccess({
@@ -86,6 +91,15 @@ class AttriaxGeneratedTransport {
           ),
           mapper: attriaxAckResponseFromGenerated,
         ),
+        AttriaxTrackSessionRequest(:final payload) =>
+          await _sendGeneratedRequest(
+            label: label,
+            invoke: () => _sdkApi.sdkControllerTrackSessionV1(
+              sdkSessionDto: attriaxGeneratedTrackSessionDto(payload),
+              validateStatus: _allowAnyStatus,
+            ),
+            mapper: attriaxAckResponseFromGenerated,
+          ),
         AttriaxIdentifyRequest(:final payload) => await _sendGeneratedRequest(
           label: label,
           invoke: () => _sdkApi.sdkControllerIdentifyV1(
@@ -115,6 +129,86 @@ class AttriaxGeneratedTransport {
       };
     } on DioException catch (error) {
       _rethrowDioException(label, error);
+    }
+  }
+
+  Future<AttriaxTransportSuccess> sendBatch(
+    List<AttriaxQueuedRequest> requests,
+  ) async {
+    if (requests.isEmpty) {
+      throw ArgumentError.value(
+        requests,
+        'requests',
+        'Batch requests are required.',
+      );
+    }
+
+    final firstQueuedRequest = requests.first;
+    final batchRequestId = attriaxBatchRequestId(firstQueuedRequest.id);
+    final sharedIdentity = attriaxBatchRequestIdentity(
+      firstQueuedRequest.request,
+    );
+    for (final queuedRequest in requests.skip(1)) {
+      if (!attriaxCanShareBatchRequest(
+        firstQueuedRequest.request,
+        queuedRequest.request,
+      )) {
+        throw const AttriaxTransportHttpException(statusCode: 400);
+      }
+    }
+
+    final body = <String, Object?>{
+      'requestId': batchRequestId,
+      'appToken': sharedIdentity.appToken,
+      'deviceId': sharedIdentity.deviceId,
+      if (sharedIdentity.deviceIdSource != null)
+        'deviceIdSource': sharedIdentity.deviceIdSource,
+      'items': requests
+          .map(
+            (queuedRequest) => <String, Object?>{
+              'kind': attriaxBatchKindName(queuedRequest.request),
+              'body': attriaxBatchBody(queuedRequest.request),
+            },
+          )
+          .toList(growable: false),
+    };
+
+    final encodedBody = utf8.encode(jsonEncode(attriaxNormalizeJsonMap(body)));
+    if (requests.length > _attriaxBatchMaxItemCount ||
+        encodedBody.length > _attriaxBatchMaxBodyBytes) {
+      throw const AttriaxTransportHttpException(statusCode: 413);
+    }
+
+    final batchDto = sdk.SdkV1BatchDto(
+      (builder) => builder
+        ..requestId = batchRequestId
+        ..appToken = sharedIdentity.appToken
+        ..deviceId = sharedIdentity.deviceId
+        ..deviceIdSource = attriaxStringValue(sharedIdentity.deviceIdSource)
+        ..items.addAll(
+          requests.map(
+            (queuedRequest) => sdk.SdkV1BatchItemDto(
+              (itemBuilder) => itemBuilder
+                ..kind = attriaxGeneratedBatchItemKind(queuedRequest.request)
+                ..body = attriaxGeneratedJsonObjectMap(
+                  attriaxBatchBody(queuedRequest.request),
+                ).toBuilder(),
+            ),
+          ),
+        ),
+    );
+
+    try {
+      return await _sendGeneratedRequest(
+        label: 'batch',
+        invoke: () => _sdkApi.sdkControllerBatchV1(
+          sdkV1BatchDto: batchDto,
+          validateStatus: _allowAnyStatus,
+        ),
+        mapper: (_) => const AttriaxAckResponse(success: true),
+      );
+    } on DioException catch (error) {
+      _rethrowDioException('batch', error);
     }
   }
 

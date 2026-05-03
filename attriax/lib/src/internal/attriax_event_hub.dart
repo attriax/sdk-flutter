@@ -83,7 +83,12 @@ class AttriaxEventHub {
       resolution: resolution,
       failure: failure,
     );
-    _latestDeepLink = result;
+    // If the resolution is deferred, we don't want to shadow initial deeplink
+    if (resolution == null ||
+        !resolution.isDeferred ||
+        _latestDeepLink == null) {
+      _latestDeepLink = result;
+    }
     if (rawEvent?.isInitialLink ?? false) {
       _completeInitialDeepLink(result);
     }
