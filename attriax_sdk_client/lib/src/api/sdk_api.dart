@@ -12,11 +12,11 @@ import 'package:attriax_sdk_client/src/model/sdk_acknowledge_response_envelope_d
 import 'package:attriax_sdk_client/src/model/sdk_create_dynamic_link_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_create_dynamic_link_response_envelope_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_event_dto.dart';
-import 'package:attriax_sdk_client/src/model/sdk_identify_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_latest_unity_release_response_envelope_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_session_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_unity_editor_validate_response_envelope_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_unity_release_list_response_envelope_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_user_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_v1_batch_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_v1_batch_response_envelope_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_v1_deep_link_resolve_dto.dart';
@@ -296,101 +296,6 @@ class SdkApi {
     );
   }
 
-  /// sdkControllerIdentifyV1
-  /// 
-  ///
-  /// Parameters:
-  /// * [sdkIdentifyDto] 
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [SdkAcknowledgeResponseEnvelopeDto] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<SdkAcknowledgeResponseEnvelopeDto>> sdkControllerIdentifyV1({ 
-    required SdkIdentifyDto sdkIdentifyDto,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/api/sdk/v1/identify';
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(SdkIdentifyDto);
-      _bodyData = _serializers.serialize(sdkIdentifyDto, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    SdkAcknowledgeResponseEnvelopeDto? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(SdkAcknowledgeResponseEnvelopeDto),
-      ) as SdkAcknowledgeResponseEnvelopeDto;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<SdkAcknowledgeResponseEnvelopeDto>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
   /// sdkControllerListUnityReleasesV1
   /// 
   ///
@@ -559,6 +464,196 @@ class SdkApi {
     );
   }
 
+  /// sdkControllerRecordEventV1
+  /// 
+  ///
+  /// Parameters:
+  /// * [sdkEventDto] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [SdkAcknowledgeResponseEnvelopeDto] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<SdkAcknowledgeResponseEnvelopeDto>> sdkControllerRecordEventV1({ 
+    required SdkEventDto sdkEventDto,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/api/sdk/v1/events';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(SdkEventDto);
+      _bodyData = _serializers.serialize(sdkEventDto, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    SdkAcknowledgeResponseEnvelopeDto? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(SdkAcknowledgeResponseEnvelopeDto),
+      ) as SdkAcknowledgeResponseEnvelopeDto;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<SdkAcknowledgeResponseEnvelopeDto>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// sdkControllerRecordSessionV1
+  /// 
+  ///
+  /// Parameters:
+  /// * [sdkSessionDto] 
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [SdkAcknowledgeResponseEnvelopeDto] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<SdkAcknowledgeResponseEnvelopeDto>> sdkControllerRecordSessionV1({ 
+    required SdkSessionDto sdkSessionDto,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/api/sdk/v1/sessions';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{
+        ...?headers,
+      },
+      extra: <String, dynamic>{
+        'secure': <Map<String, String>>[],
+        ...?extra,
+      },
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      const _type = FullType(SdkSessionDto);
+      _bodyData = _serializers.serialize(sdkSessionDto, specifiedType: _type);
+
+    } catch(error, stackTrace) {
+      throw DioException(
+         requestOptions: _options.compose(
+          _dio.options,
+          _path,
+        ),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    SdkAcknowledgeResponseEnvelopeDto? _responseData;
+
+    try {
+      final rawResponse = _response.data;
+      _responseData = rawResponse == null ? null : _serializers.deserialize(
+        rawResponse,
+        specifiedType: const FullType(SdkAcknowledgeResponseEnvelopeDto),
+      ) as SdkAcknowledgeResponseEnvelopeDto;
+
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<SdkAcknowledgeResponseEnvelopeDto>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
   /// sdkControllerResolveDeepLinkV1
   /// 
   ///
@@ -654,11 +749,11 @@ class SdkApi {
     );
   }
 
-  /// sdkControllerTrackEventV1
+  /// sdkControllerSetUserV1
   /// 
   ///
   /// Parameters:
-  /// * [sdkEventDto] 
+  /// * [sdkUserDto] 
   /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
   /// * [headers] - Can be used to add additional headers to the request
   /// * [extras] - Can be used to add flags to the request
@@ -668,8 +763,8 @@ class SdkApi {
   ///
   /// Returns a [Future] containing a [Response] with a [SdkAcknowledgeResponseEnvelopeDto] as data
   /// Throws [DioException] if API call or serialization fails
-  Future<Response<SdkAcknowledgeResponseEnvelopeDto>> sdkControllerTrackEventV1({ 
-    required SdkEventDto sdkEventDto,
+  Future<Response<SdkAcknowledgeResponseEnvelopeDto>> sdkControllerSetUserV1({ 
+    required SdkUserDto sdkUserDto,
     CancelToken? cancelToken,
     Map<String, dynamic>? headers,
     Map<String, dynamic>? extra,
@@ -677,7 +772,7 @@ class SdkApi {
     ProgressCallback? onSendProgress,
     ProgressCallback? onReceiveProgress,
   }) async {
-    final _path = r'/api/sdk/v1/events';
+    final _path = r'/api/sdk/v1/users';
     final _options = Options(
       method: r'POST',
       headers: <String, dynamic>{
@@ -694,103 +789,8 @@ class SdkApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SdkEventDto);
-      _bodyData = _serializers.serialize(sdkEventDto, specifiedType: _type);
-
-    } catch(error, stackTrace) {
-      throw DioException(
-         requestOptions: _options.compose(
-          _dio.options,
-          _path,
-        ),
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    final _response = await _dio.request<Object>(
-      _path,
-      data: _bodyData,
-      options: _options,
-      cancelToken: cancelToken,
-      onSendProgress: onSendProgress,
-      onReceiveProgress: onReceiveProgress,
-    );
-
-    SdkAcknowledgeResponseEnvelopeDto? _responseData;
-
-    try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null ? null : _serializers.deserialize(
-        rawResponse,
-        specifiedType: const FullType(SdkAcknowledgeResponseEnvelopeDto),
-      ) as SdkAcknowledgeResponseEnvelopeDto;
-
-    } catch (error, stackTrace) {
-      throw DioException(
-        requestOptions: _response.requestOptions,
-        response: _response,
-        type: DioExceptionType.unknown,
-        error: error,
-        stackTrace: stackTrace,
-      );
-    }
-
-    return Response<SdkAcknowledgeResponseEnvelopeDto>(
-      data: _responseData,
-      headers: _response.headers,
-      isRedirect: _response.isRedirect,
-      requestOptions: _response.requestOptions,
-      redirects: _response.redirects,
-      statusCode: _response.statusCode,
-      statusMessage: _response.statusMessage,
-      extra: _response.extra,
-    );
-  }
-
-  /// sdkControllerTrackSessionV1
-  /// 
-  ///
-  /// Parameters:
-  /// * [sdkSessionDto] 
-  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
-  /// * [headers] - Can be used to add additional headers to the request
-  /// * [extras] - Can be used to add flags to the request
-  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
-  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
-  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
-  ///
-  /// Returns a [Future] containing a [Response] with a [SdkAcknowledgeResponseEnvelopeDto] as data
-  /// Throws [DioException] if API call or serialization fails
-  Future<Response<SdkAcknowledgeResponseEnvelopeDto>> sdkControllerTrackSessionV1({ 
-    required SdkSessionDto sdkSessionDto,
-    CancelToken? cancelToken,
-    Map<String, dynamic>? headers,
-    Map<String, dynamic>? extra,
-    ValidateStatus? validateStatus,
-    ProgressCallback? onSendProgress,
-    ProgressCallback? onReceiveProgress,
-  }) async {
-    final _path = r'/api/sdk/v1/sessions';
-    final _options = Options(
-      method: r'POST',
-      headers: <String, dynamic>{
-        ...?headers,
-      },
-      extra: <String, dynamic>{
-        'secure': <Map<String, String>>[],
-        ...?extra,
-      },
-      contentType: 'application/json',
-      validateStatus: validateStatus,
-    );
-
-    dynamic _bodyData;
-
-    try {
-      const _type = FullType(SdkSessionDto);
-      _bodyData = _serializers.serialize(sdkSessionDto, specifiedType: _type);
+      const _type = FullType(SdkUserDto);
+      _bodyData = _serializers.serialize(sdkUserDto, specifiedType: _type);
 
     } catch(error, stackTrace) {
       throw DioException(

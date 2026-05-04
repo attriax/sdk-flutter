@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:attriax/attriax.dart';
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
@@ -10,6 +11,7 @@ import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -23,8 +25,10 @@ void main() {
     late SharedPreferences prefs;
     late http.Client client;
     late Attriax sdk;
+    late AttriaxPlatform originalPlatform;
 
     setUp(() async {
+      originalPlatform = AttriaxPlatform.instance;
       SharedPreferences.setMockInitialValues(<String, Object>{});
       prefs = await SharedPreferences.getInstance();
       deepLinkSource = FakeDeepLinkSource();
@@ -45,6 +49,7 @@ void main() {
     });
 
     tearDown(() async {
+      AttriaxPlatform.instance = originalPlatform;
       await sdk.dispose();
       await deepLinkSource.dispose();
       await connectivityPlatform.dispose();
@@ -144,6 +149,95 @@ void main() {
         ]);
       },
     );
+
+    test(
+      'imports pending native crash reports during init and clears retry storage after ack',
+      () async {
+        final crashPlatform = FakeCrashReportingPlatform(
+          pendingCrashReport: AttriaxPendingCrashReport(
+            source: 'android_uncaught_exception',
+            isFatal: true,
+            exceptionType: 'java.lang.IllegalStateException',
+            message: 'boom',
+            stackTrace: 'native stack',
+            occurredAt: DateTime.utc(2026, 5, 4, 10, 0, 0),
+            metadata: <String, Object?>{'threadName': 'main'},
+          ),
+        );
+        AttriaxPlatform.instance = crashPlatform;
+        final crashRequest = Completer<Map<String, Object?>>();
+        client = MockClient((request) async {
+          expect(request.url.path, '/api/sdk/v1/crashes');
+          crashRequest.complete(
+            jsonDecode(request.body) as Map<String, Object?>,
+          );
+          return http.Response(
+            jsonEncode(
+              <String, Object?>{
+                'data': <String, Object?>{'success': true},
+              },
+            ),
+            202,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        });
+        contextCollector = CountingContextCollector();
+        sdk = Attriax.test(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init(trackAppOpen: false);
+
+        final body = await crashRequest.future;
+        expect(body['source'], 'android_uncaught_exception');
+        expect(body['message'], 'boom');
+        expect(body['exceptionType'], 'java.lang.IllegalStateException');
+        expect(crashPlatform.consumePendingCrashReportCalls, 1);
+
+        for (var attempt = 0; attempt < 10; attempt += 1) {
+          if (prefs.getString(
+                AttriaxPreferencesStore.pendingCrashReportStorageKey,
+              ) ==
+              null) {
+            break;
+          }
+          await Future<void>.delayed(Duration.zero);
+        }
+
+        expect(
+          prefs.getString(AttriaxPreferencesStore.pendingCrashReportStorageKey),
+          isNull,
+        );
+      },
+    );
+
+    test('persists fatal platform dispatcher errors for the next launch', () async {
+      await sdk.init(trackAppOpen: false);
+
+      final handled = ui.PlatformDispatcher.instance.onError?.call(
+        StateError('boom'),
+        StackTrace.fromString('stack line'),
+      );
+
+      expect(handled, isFalse);
+      await Future<void>.delayed(Duration.zero);
+      final raw = prefs.getString(
+        AttriaxPreferencesStore.pendingCrashReportStorageKey,
+      );
+      expect(raw, isNotNull);
+
+      final body = jsonDecode(raw!) as Map<String, Object?>;
+      expect(body['source'], 'platform_dispatcher');
+      expect(body['isFatal'], isTrue);
+      expect(body['message'], 'Bad state: boom');
+      expect(body['stackTrace'], 'stack line');
+    });
 
     test('creates and persists a current session snapshot', () async {
       final now = DateTime.utc(2026, 5, 3, 12, 0, 0);
@@ -507,5 +601,25 @@ class CountingContextCollector extends AttriaxContextCollector {
       ),
       device: const AttriaxDeviceSnapshot(model: 'Test Device', osVersion: '1'),
     );
+  }
+}
+
+class FakeCrashReportingPlatform extends AttriaxPlatform {
+  FakeCrashReportingPlatform({AttriaxPendingCrashReport? pendingCrashReport})
+    : _pendingCrashReport = pendingCrashReport;
+
+  AttriaxPendingCrashReport? _pendingCrashReport;
+  int consumePendingCrashReportCalls = 0;
+
+  @override
+  Future<AttriaxNativeContext> collectNativeContext() async =>
+      const AttriaxNativeContext();
+
+  @override
+  Future<AttriaxPendingCrashReport?> consumePendingCrashReport() async {
+    consumePendingCrashReportCalls += 1;
+    final report = _pendingCrashReport;
+    _pendingCrashReport = null;
+    return report;
   }
 }

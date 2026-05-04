@@ -5,6 +5,7 @@ import 'package:attriax/src/internal/attriax_context_manager.dart';
 import 'package:attriax/src/internal/attriax_logger.dart';
 import 'package:attriax/src/internal/attriax_preferences_store.dart';
 import 'package:attriax/src/internal/attriax_request_manager.dart';
+import 'package:attriax/src/internal/attriax_runtime_settings_state.dart';
 import 'package:attriax/src/internal/attriax_session_manager.dart';
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:flutter/widgets.dart';
@@ -123,7 +124,7 @@ Future<AttriaxSessionManager> _createSessionManager({
     contextManager: contextManager,
     preferencesStore: preferencesStore,
     logger: logger,
-    isEnabled: () => true,
+    settingsState: const _FakeRuntimeSettingsView(),
     requestManager: requestManager,
     clock: clock,
   );
@@ -175,4 +176,14 @@ class _StaticContextCollector extends AttriaxContextCollector {
       ),
     );
   }
+}
+
+class _FakeRuntimeSettingsView implements AttriaxRuntimeSettingsView {
+  const _FakeRuntimeSettingsView();
+
+  @override
+  bool get isEnabled => true;
+
+  @override
+  bool get areEventsEnabled => true;
 }

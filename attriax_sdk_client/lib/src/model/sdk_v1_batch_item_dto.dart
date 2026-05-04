@@ -24,7 +24,7 @@ abstract class SdkV1BatchItemDto implements Built<SdkV1BatchItemDto, SdkV1BatchI
 
   @BuiltValueField(wireName: r'kind')
   SdkBatchItemKind get kind;
-  // enum kindEnum {  event,  session,  identify,  };
+  // enum kindEnum {  event,  session,  user,  };
 
   SdkV1BatchItemDto._();
 

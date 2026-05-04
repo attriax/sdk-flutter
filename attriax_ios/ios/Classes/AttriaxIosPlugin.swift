@@ -5,6 +5,14 @@ import UIKit
 import AdSupport
 #endif
 
+private let attriaxPendingCrashKey = "attriax.pending_crash"
+private var attriaxPreviousExceptionHandler: NSUncaughtExceptionHandler?
+
+private func attriaxHandleUncaughtException(_ exception: NSException) {
+    AttriaxIosPlugin.persistPendingCrash(exception: exception)
+    attriaxPreviousExceptionHandler?(exception)
+}
+
 public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandler, FlutterSceneLifeCycleDelegate {
     private var eventSink: FlutterEventSink?
     private var initialLink: String?
@@ -30,6 +38,7 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         eventChannel.setStreamHandler(instance)
         registrar.addApplicationDelegate(instance)
         registrar.addSceneDelegate(instance)
+        installCrashReporter()
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -38,6 +47,8 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             result(collectNativeContext())
         case "collectInstallReferrer":
             result(collectInstallReferrer())
+        case "consumePendingCrashReport":
+            result(consumePendingCrashReport())
         case "getInitialLink":
             result(initialLink)
         case "getLatestLink":
@@ -129,6 +140,13 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
 
     private func collectInstallReferrer() -> [String: Any] {
         ["metadata": ["source": "ios_install_referrer"]]
+    }
+
+    private func consumePendingCrashReport() -> [String: Any]? {
+        let defaults = UserDefaults.standard
+        let payload = defaults.dictionary(forKey: attriaxPendingCrashKey) as? [String: Any]
+        defaults.removeObject(forKey: attriaxPendingCrashKey)
+        return payload
     }
 
     private func collectNativeContext() -> [String: Any] {
@@ -301,5 +319,26 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
 
         initialLinkSent = true
         eventSink(link)
+    }
+
+    private static func installCrashReporter() {
+        attriaxPreviousExceptionHandler = NSGetUncaughtExceptionHandler()
+        NSSetUncaughtExceptionHandler(attriaxHandleUncaughtException)
+    }
+
+    fileprivate static func persistPendingCrash(exception: NSException) {
+        let payload: [String: Any] = [
+            "source": "ios_uncaught_exception",
+            "isFatal": true,
+            "exceptionType": exception.name.rawValue,
+            "message": exception.reason ?? exception.name.rawValue,
+            "stackTrace": exception.callStackSymbols.joined(separator: "\n"),
+            "occurredAt": ISO8601DateFormatter().string(from: Date()),
+            "reason": exception.reason as Any,
+            "metadata": [
+                "name": exception.name.rawValue,
+            ],
+        ]
+        UserDefaults.standard.set(payload, forKey: attriaxPendingCrashKey)
     }
 }

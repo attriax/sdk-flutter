@@ -47,6 +47,124 @@ final class AttriaxTrackEventRequest extends AttriaxApiRequest {
       _serializeGenerated(sdk.SdkEventDto.serializer, payload);
 }
 
+final class AttriaxCrashReportPayload {
+  const AttriaxCrashReportPayload({
+    required this.appToken,
+    required this.deviceId,
+    required this.deviceIdSource,
+    required this.source,
+    required this.clientOccurredAt,
+    required this.platform,
+    required this.isFatal,
+    required this.exceptionType,
+    required this.message,
+    required this.stackTrace,
+    required this.isFirstLaunch,
+    this.reason,
+    this.sessionId,
+    this.sessionRelativeTimeMs,
+    this.locale,
+    this.appVersion,
+    this.appBuildNumber,
+    this.appPackageName,
+    this.sdkApiVersion,
+    this.sdkPackageVersion,
+    this.metadata,
+  });
+
+  factory AttriaxCrashReportPayload.fromJson(Map<String, Object?> json) =>
+      AttriaxCrashReportPayload(
+        appToken: attriaxRequireString(json, 'appToken'),
+        deviceId: attriaxRequireString(json, 'deviceId'),
+        deviceIdSource: attriaxRequireString(json, 'deviceIdSource'),
+        source: attriaxRequireString(json, 'source'),
+        clientOccurredAt:
+            attriaxDateTimeValue(json['clientOccurredAt'])?.toUtc() ??
+            DateTime.now().toUtc(),
+        platform: _parseAttriaxPlatformType(
+          attriaxStringValue(json['platform']) ?? 'unknown',
+        ),
+        isFatal: attriaxBoolValue(json['isFatal']) ?? false,
+        exceptionType: attriaxRequireString(json, 'exceptionType'),
+        message: attriaxRequireString(json, 'message'),
+        stackTrace: attriaxRequireString(json, 'stackTrace'),
+        isFirstLaunch: attriaxBoolValue(json['isFirstLaunch']) ?? false,
+        reason: attriaxStringValue(json['reason']),
+        sessionId: attriaxStringValue(json['sessionId']),
+        sessionRelativeTimeMs: _attriaxIntValue(json['sessionRelativeTimeMs']),
+        locale: attriaxStringValue(json['locale']),
+        appVersion: attriaxStringValue(json['appVersion']),
+        appBuildNumber: attriaxStringValue(json['appBuildNumber']),
+        appPackageName: attriaxStringValue(json['appPackageName']),
+        sdkApiVersion: attriaxStringValue(json['sdkApiVersion']),
+        sdkPackageVersion: attriaxStringValue(json['sdkPackageVersion']),
+        metadata: attriaxObjectMap(json['metadata']),
+      );
+
+  final String appToken;
+  final String deviceId;
+  final String deviceIdSource;
+  final String source;
+  final DateTime clientOccurredAt;
+  final AttriaxPlatformType platform;
+  final bool isFatal;
+  final String exceptionType;
+  final String message;
+  final String stackTrace;
+  final bool isFirstLaunch;
+  final String? reason;
+  final String? sessionId;
+  final int? sessionRelativeTimeMs;
+  final String? locale;
+  final String? appVersion;
+  final String? appBuildNumber;
+  final String? appPackageName;
+  final String? sdkApiVersion;
+  final String? sdkPackageVersion;
+  final Map<String, Object?>? metadata;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'appToken': appToken,
+    'deviceId': deviceId,
+    'deviceIdSource': deviceIdSource,
+    'source': source,
+    'clientOccurredAt': clientOccurredAt.toUtc().toIso8601String(),
+    'platform': platform.name,
+    'isFatal': isFatal,
+    'exceptionType': exceptionType,
+    'message': message,
+    'stackTrace': stackTrace,
+    'isFirstLaunch': isFirstLaunch,
+    if (reason != null) 'reason': reason,
+    if (sessionId != null) 'sessionId': sessionId,
+    if (sessionRelativeTimeMs != null)
+      'sessionRelativeTimeMs': sessionRelativeTimeMs,
+    if (locale != null) 'locale': locale,
+    if (appVersion != null) 'appVersion': appVersion,
+    if (appBuildNumber != null) 'appBuildNumber': appBuildNumber,
+    if (appPackageName != null) 'appPackageName': appPackageName,
+    if (sdkApiVersion != null) 'sdkApiVersion': sdkApiVersion,
+    if (sdkPackageVersion != null) 'sdkPackageVersion': sdkPackageVersion,
+    if (metadata != null && metadata!.isNotEmpty)
+      'metadata': attriaxNormalizeJsonMap(metadata!),
+  };
+}
+
+final class AttriaxTrackCrashRequest extends AttriaxApiRequest {
+  const AttriaxTrackCrashRequest(this.payload);
+
+  final AttriaxCrashReportPayload payload;
+
+  @override
+  String get kindName => 'trackCrash';
+
+  @override
+  String get label => 'crash report';
+
+  @override
+  Map<String, Object?> toQueueBody() => payload.toJson();
+}
+
 enum AttriaxSessionLifecycleKind { start, heartbeat, pause, resume, end }
 
 final class AttriaxSessionLifecyclePayload {
@@ -147,20 +265,20 @@ final class AttriaxTrackSessionRequest extends AttriaxApiRequest {
   Map<String, Object?> toQueueBody() => payload.toJson();
 }
 
-final class AttriaxIdentifyRequest extends AttriaxApiRequest {
-  const AttriaxIdentifyRequest(this.payload);
+final class AttriaxUserRequest extends AttriaxApiRequest {
+  const AttriaxUserRequest(this.payload);
 
-  final sdk.SdkIdentifyDto payload;
-
-  @override
-  String get kindName => 'identify';
+  final sdk.SdkUserDto payload;
 
   @override
-  String get label => 'identify';
+  String get kindName => 'user';
+
+  @override
+  String get label => 'user update';
 
   @override
   Map<String, Object?> toQueueBody() =>
-      _serializeGenerated(sdk.SdkIdentifyDto.serializer, payload);
+      _serializeGenerated(sdk.SdkUserDto.serializer, payload);
 }
 
 final class AttriaxResolveDeepLinkRequest extends AttriaxApiRequest {
@@ -200,7 +318,7 @@ String attriaxApiRequestLabel(AttriaxApiRequest request) => request.label;
 bool attriaxCanBatchRequest(AttriaxApiRequest request) => switch (request) {
   AttriaxTrackEventRequest() => true,
   AttriaxTrackSessionRequest() => true,
-  AttriaxIdentifyRequest() => true,
+  AttriaxUserRequest() => true,
   _ => false,
 };
 
@@ -232,7 +350,7 @@ AttriaxBatchRequestIdentity attriaxBatchRequestIdentity(
         deviceId: payload.deviceId,
         deviceIdSource: attriaxStringValue(payload.deviceIdSource),
       );
-    case AttriaxIdentifyRequest(:final payload):
+    case AttriaxUserRequest(:final payload):
       return AttriaxBatchRequestIdentity(
         appToken: payload.appToken,
         deviceId: payload.deviceId,
@@ -280,7 +398,7 @@ String attriaxBatchRequestId(String queuedRequestId) =>
 String attriaxBatchKindName(AttriaxApiRequest request) => switch (request) {
   AttriaxTrackEventRequest() => 'event',
   AttriaxTrackSessionRequest() => 'session',
-  AttriaxIdentifyRequest() => 'identify',
+  AttriaxUserRequest() => 'user',
   _ => throw ArgumentError(
     'Unsupported Attriax batch request kind: ${request.kindName}',
   ),
@@ -299,13 +417,18 @@ AttriaxApiRequest attriaxApiRequestFromJson(
       return AttriaxTrackEventRequest(
         _deserializeGenerated(sdk.SdkEventDto.serializer, body),
       );
+    case 'trackCrash':
+      return AttriaxTrackCrashRequest(
+        AttriaxCrashReportPayload.fromJson(body),
+      );
     case 'trackSession':
       return AttriaxTrackSessionRequest(
         AttriaxSessionLifecyclePayload.fromJson(body),
       );
+    case 'user':
     case 'identify':
-      return AttriaxIdentifyRequest(
-        _deserializeGenerated(sdk.SdkIdentifyDto.serializer, body),
+      return AttriaxUserRequest(
+        _deserializeGenerated(sdk.SdkUserDto.serializer, body),
       );
     case 'resolveDeepLink':
       return AttriaxResolveDeepLinkRequest(
@@ -369,6 +492,56 @@ AttriaxTrackEventRequest attriaxBuildTrackEventRequest({
   );
 
   return AttriaxTrackEventRequest(requestDto);
+}
+
+AttriaxTrackCrashRequest attriaxBuildTrackCrashRequest({
+  required String appToken,
+  required AttriaxContextSnapshot context,
+  required String deviceId,
+  required String deviceIdSource,
+  required String source,
+  required bool isFatal,
+  required String exceptionType,
+  required String message,
+  required String stackTrace,
+  AttriaxSessionSnapshot? session,
+  DateTime? clientOccurredAt,
+  String? reason,
+  Map<String, Object?>? metadata,
+}) {
+  final occurredAt = clientOccurredAt?.toUtc() ?? DateTime.now().toUtc();
+  final sessionRelativeTimeMs = session == null
+      ? null
+      : occurredAt
+            .difference(session.startedAt)
+            .inMilliseconds
+            .clamp(0, 0x7fffffff);
+
+  return AttriaxTrackCrashRequest(
+    AttriaxCrashReportPayload(
+      appToken: appToken,
+      deviceId: deviceId,
+      deviceIdSource: deviceIdSource,
+      source: source,
+      clientOccurredAt: occurredAt,
+      platform: context.platform,
+      isFatal: isFatal,
+      exceptionType: exceptionType,
+      message: message,
+      stackTrace: stackTrace,
+      isFirstLaunch: context.isFirstLaunch,
+      reason: attriaxStringValue(reason),
+      sessionId: session?.id,
+      sessionRelativeTimeMs: sessionRelativeTimeMs,
+      locale: session?.locale ?? context.device.language,
+      appVersion: context.app.version,
+      appBuildNumber: context.app.buildNumber,
+      appPackageName: context.app.packageName,
+      sdkApiVersion: context.sdk.apiVersion,
+      sdkPackageVersion: context.sdk.packageVersion,
+      metadata: metadata,
+    ),
+  );
 }
 
 AttriaxTrackSessionRequest attriaxBuildTrackSessionRequest({
@@ -435,7 +608,7 @@ sdk.SdkBatchItemKind attriaxGeneratedBatchItemKind(AttriaxApiRequest request) =>
     switch (request) {
       AttriaxTrackEventRequest() => sdk.SdkBatchItemKind.event,
       AttriaxTrackSessionRequest() => sdk.SdkBatchItemKind.session,
-      AttriaxIdentifyRequest() => sdk.SdkBatchItemKind.identify,
+      AttriaxUserRequest() => sdk.SdkBatchItemKind.user,
       _ => throw ArgumentError(
         'Unsupported Attriax batch request kind: ${request.kindName}',
       ),
@@ -447,23 +620,39 @@ BuiltMap<String, JsonObject?> attriaxGeneratedJsonObjectMap(
     _generatedJsonObjectMap(value) ??
     BuiltMap<String, JsonObject?>(const <String, JsonObject?>{});
 
-AttriaxIdentifyRequest attriaxBuildIdentifyRequest({
+AttriaxUserRequest attriaxBuildUserRequest({
   required String appToken,
   required String deviceId,
   required String deviceIdSource,
-  required String? userId,
-  String? userName,
+  String? externalUserId,
+  String? externalUserName,
+  bool clearExternalUser = false,
+  Map<String, Object?>? properties,
+  List<String>? clearPropertyKeys,
+  bool clearAllProperties = false,
 }) {
-  final requestDto = sdk.SdkIdentifyDto(
+  final normalizedClearPropertyKeys = clearPropertyKeys
+      ?.map((value) => value.trim())
+      .where((value) => value.isNotEmpty)
+      .toList(growable: false);
+  final requestDto = sdk.SdkUserDto(
     (builder) => builder
       ..appToken = appToken
       ..deviceId = deviceId
       ..deviceIdSource = deviceIdSource
-      ..externalUserId = attriaxStringValue(userId)
-      ..externalUserName = attriaxStringValue(userName),
+      ..externalUserId = attriaxStringValue(externalUserId)
+      ..externalUserName = attriaxStringValue(externalUserName)
+      ..clearAllProperties = clearAllProperties ? true : null
+      ..clearExternalUser = clearExternalUser ? true : null
+      ..clearPropertyKeys =
+          normalizedClearPropertyKeys == null ||
+              normalizedClearPropertyKeys.isEmpty
+          ? null
+          : ListBuilder<String>(normalizedClearPropertyKeys)
+      ..properties = _generatedJsonObjectMap(properties)?.toBuilder(),
   );
 
-  return AttriaxIdentifyRequest(requestDto);
+  return AttriaxUserRequest(requestDto);
 }
 
 AttriaxResolveDeepLinkRequest attriaxBuildResolveDeepLinkRequest({

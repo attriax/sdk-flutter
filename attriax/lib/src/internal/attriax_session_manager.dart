@@ -7,6 +7,7 @@ import 'attriax_id_generator.dart';
 import 'attriax_logger.dart';
 import 'attriax_preferences_store.dart';
 import 'attriax_request_manager.dart';
+import 'attriax_runtime_settings_state.dart';
 import 'attriax_session_lifecycle_manager.dart';
 
 final class AttriaxSessionRestoreResult {
@@ -21,13 +22,17 @@ final class AttriaxSessionRestoreResult {
   final AttriaxSessionSnapshot? replacedSession;
 }
 
-class AttriaxSessionManager {
+abstract interface class AttriaxTrackedSessionPreparer {
+  Future<AttriaxSessionSnapshot?> prepareTrackedSessionAt(DateTime occurredAt);
+}
+
+class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
   AttriaxSessionManager({
     required AttriaxConfig config,
     required AttriaxContextManager contextManager,
     required AttriaxPreferencesStore preferencesStore,
     required AttriaxLogger logger,
-    required bool Function() isEnabled,
+    required AttriaxRuntimeSettingsView settingsState,
     required AttriaxRequestManager requestManager,
     AttriaxClock? clock,
   }) : _config = config,
@@ -39,7 +44,7 @@ class AttriaxSessionManager {
       config: config,
       sessionManager: this,
       clock: _clock,
-      isEnabled: isEnabled,
+      settingsState: settingsState,
       requestManager: requestManager,
     );
   }
@@ -191,6 +196,7 @@ class AttriaxSessionManager {
   void handleLifecycleState(AppLifecycleState state) =>
       _lifecycleManager.handleLifecycleState(state);
 
+  @override
   Future<AttriaxSessionSnapshot?> prepareTrackedSessionAt(
     DateTime occurredAt,
   ) => _lifecycleManager.prepareTrackedSessionAt(occurredAt);

@@ -63,12 +63,14 @@ class AttriaxGeneratedTransport {
 
     return AttriaxGeneratedTransport._(
       sdk.AttriaxSdkClient(dio: dio).getSdkApi(),
+      dio,
     );
   }
 
-  AttriaxGeneratedTransport._(this._sdkApi);
+  AttriaxGeneratedTransport._(this._sdkApi, this._dio);
 
   final sdk.SdkApi _sdkApi;
+  final Dio _dio;
 
   Future<AttriaxTransportSuccess> send(AttriaxApiRequest request) async {
     final label = request.label;
@@ -85,25 +87,27 @@ class AttriaxGeneratedTransport {
         ),
         AttriaxTrackEventRequest(:final payload) => await _sendGeneratedRequest(
           label: label,
-          invoke: () => _sdkApi.sdkControllerTrackEventV1(
+          invoke: () => _sdkApi.sdkControllerRecordEventV1(
             sdkEventDto: payload,
             validateStatus: _allowAnyStatus,
           ),
           mapper: attriaxAckResponseFromGenerated,
         ),
+        AttriaxTrackCrashRequest(:final payload) =>
+          await _sendCrashReportRequest(payload),
         AttriaxTrackSessionRequest(:final payload) =>
           await _sendGeneratedRequest(
             label: label,
-            invoke: () => _sdkApi.sdkControllerTrackSessionV1(
+            invoke: () => _sdkApi.sdkControllerRecordSessionV1(
               sdkSessionDto: attriaxGeneratedTrackSessionDto(payload),
               validateStatus: _allowAnyStatus,
             ),
             mapper: attriaxAckResponseFromGenerated,
           ),
-        AttriaxIdentifyRequest(:final payload) => await _sendGeneratedRequest(
+        AttriaxUserRequest(:final payload) => await _sendGeneratedRequest(
           label: label,
-          invoke: () => _sdkApi.sdkControllerIdentifyV1(
-            sdkIdentifyDto: payload,
+          invoke: () => _sdkApi.sdkControllerSetUserV1(
+            sdkUserDto: payload,
             validateStatus: _allowAnyStatus,
           ),
           mapper: attriaxAckResponseFromGenerated,
@@ -225,6 +229,18 @@ class AttriaxGeneratedTransport {
     return response.result;
   }
 
+  Future<AttriaxTransportSuccess> _sendCrashReportRequest(
+    AttriaxCrashReportPayload payload,
+  ) async {
+    final response = await _dio.post<Object?>(
+      '/api/sdk/v1/crashes',
+      data: attriaxNormalizeJsonMap(payload.toJson()),
+      options: Options(validateStatus: _allowAnyStatus),
+    );
+
+    return _unwrapAckLikeResponse(label: 'crash report', response: response);
+  }
+
   Future<AttriaxTransportSuccess> _sendGeneratedRequest<T>({
     required String label,
     required Future<Response<T>> Function() invoke,
@@ -257,6 +273,27 @@ class AttriaxGeneratedTransport {
     return AttriaxTransportSuccess(
       statusCode: statusCode,
       response: mapper(envelope),
+    );
+  }
+
+  AttriaxTransportSuccess _unwrapAckLikeResponse({
+    required String label,
+    required Response<Object?> response,
+  }) {
+    final statusCode = response.statusCode ?? 0;
+    if (!_isSuccessful(statusCode)) {
+      throw AttriaxTransportHttpException(
+        statusCode: statusCode,
+        body: response.data,
+      );
+    }
+
+    final body = attriaxObjectMap(response.data);
+    return AttriaxTransportSuccess(
+      statusCode: statusCode,
+      response: body == null
+          ? const AttriaxAckResponse(success: true)
+          : attriaxAckResponseFromJsonEnvelope(body),
     );
   }
 

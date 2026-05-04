@@ -47,6 +47,29 @@ class MethodChannelAttriax extends AttriaxPlatform {
     }
   }
 
+  @override
+  Future<AttriaxPendingCrashReport?> consumePendingCrashReport() async {
+    try {
+      final result = await _channel.invokeMethod<Object?>(
+        'consumePendingCrashReport',
+      );
+      if (result == null) {
+        return null;
+      }
+
+      return AttriaxPendingCrashReport.fromPayload(result);
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException('consumePendingCrashReport', error, stackTrace);
+      return null;
+    } on PlatformException catch (error, stackTrace) {
+      _logException('consumePendingCrashReport', error, stackTrace);
+      return null;
+    } on FormatException catch (error, stackTrace) {
+      _logException('consumePendingCrashReport', error, stackTrace);
+      return null;
+    }
+  }
+
   AttriaxInstallReferrerContext missingPluginInstallReferrerContext(
     MissingPluginException error,
   ) => const AttriaxInstallReferrerContext();

@@ -21,7 +21,6 @@ Serializers _$serializers =
           ..add(SdkCreateDynamicLinkResponseEnvelopeDto.serializer)
           ..add(SdkDynamicLinkRecordDto.serializer)
           ..add(SdkEventDto.serializer)
-          ..add(SdkIdentifyDto.serializer)
           ..add(SdkInstallReferrerResultDto.serializer)
           ..add(SdkJsonDeepLinkDto.serializer)
           ..add(SdkLatestUnityReleaseResponseDto.serializer)
@@ -36,6 +35,7 @@ Serializers _$serializers =
           ..add(SdkUnityEditorValidateResponseEnvelopeDto.serializer)
           ..add(SdkUnityReleaseListResponseDto.serializer)
           ..add(SdkUnityReleaseListResponseEnvelopeDto.serializer)
+          ..add(SdkUserDto.serializer)
           ..add(SdkV1BatchDto.serializer)
           ..add(SdkV1BatchItemDto.serializer)
           ..add(SdkV1BatchResponseDto.serializer)
@@ -58,6 +58,17 @@ Serializers _$serializers =
           ..addBuilderFactory(
             const FullType(BuiltList, const [const FullType(String)]),
             () => ListBuilder<String>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltList, const [const FullType(String)]),
+            () => ListBuilder<String>(),
+          )
+          ..addBuilderFactory(
+            const FullType(BuiltMap, const [
+              const FullType(String),
+              const FullType.nullable(JsonObject),
+            ]),
+            () => MapBuilder<String, JsonObject?>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltList, const [

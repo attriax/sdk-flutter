@@ -217,6 +217,23 @@ class Attriax {
     source: source,
   );
 
+  /// Queues a handled error or crash report for delivery to the Attriax backend.
+  Future<void> recordError(
+    Object error,
+    StackTrace stackTrace, {
+    bool fatal = false,
+    String source = 'manual',
+    String? reason,
+    Map<String, Object?>? metadata,
+  }) => _runtime.recordError(
+    error,
+    stackTrace,
+    fatal: fatal,
+    source: source,
+    reason: reason,
+    metadata: metadata,
+  );
+
   /// Associates the current installation with an external application user.
   ///
   /// Call this after your app signs a user in or when you need to attach Attriax
@@ -224,6 +241,18 @@ class Attriax {
   /// `null` to clear the currently associated external user id.
   Future<void> setUser(String? userId, {String? userName}) =>
       _runtime.setUser(userId, userName: userName);
+
+  /// Sets or clears a single user property attached to future tracked events.
+  Future<void> setUserProperty(String name, Object? value) =>
+      _runtime.setUserProperty(name, value);
+
+  /// Sets multiple user properties attached to future tracked events.
+  Future<void> setUserProperties(Map<String, Object?> properties) =>
+      _runtime.setUserProperties(properties);
+
+  /// Clears selected user properties or every stored user property when omitted.
+  Future<void> clearUserProperties({List<String>? propertyNames}) =>
+      _runtime.clearUserProperties(propertyNames: propertyNames);
 
   /// Creates a short dynamic link that can carry optional routing data.
   ///

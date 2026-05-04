@@ -2,11 +2,12 @@ import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 
 import '../attriax_clock.dart';
 import 'attriax_api_models.dart';
+import 'attriax_context_manager.dart';
 import 'attriax_logger.dart';
 import 'attriax_request_manager.dart';
-
-typedef AttriaxTrackingSessionPreparer =
-    Future<AttriaxSessionSnapshot?> Function(DateTime occurredAt);
+import 'attriax_runtime_settings_state.dart';
+import 'attriax_session_manager.dart';
+import 'attriax_user_properties.dart';
 
 /// Owns tracking request construction and enqueueing for runtime APIs.
 class AttriaxTrackingManager {
@@ -14,37 +15,31 @@ class AttriaxTrackingManager {
     required AttriaxConfig config,
     required AttriaxLogger logger,
     required AttriaxClock clock,
-    required String Function() deviceIdProvider,
-    required String Function() deviceIdSourceProvider,
-    required bool Function() isEnabled,
-    required bool Function() areEventsEnabled,
+    required AttriaxTrackingContext contextManager,
+    required AttriaxRuntimeSettingsView settingsState,
     required AttriaxRequestManager requestManager,
-    required AttriaxTrackingSessionPreparer prepareSession,
+    required AttriaxTrackedSessionPreparer sessionManager,
   }) : _config = config,
        _logger = logger,
        _clock = clock,
-       _deviceIdProvider = deviceIdProvider,
-       _deviceIdSourceProvider = deviceIdSourceProvider,
-       _isEnabled = isEnabled,
-       _areEventsEnabled = areEventsEnabled,
+       _contextManager = contextManager,
+       _settingsState = settingsState,
        _requestManager = requestManager,
-       _prepareSession = prepareSession;
+       _sessionManager = sessionManager;
 
   final AttriaxConfig _config;
   final AttriaxLogger _logger;
   final AttriaxClock _clock;
-  final String Function() _deviceIdProvider;
-  final String Function() _deviceIdSourceProvider;
-  final bool Function() _isEnabled;
-  final bool Function() _areEventsEnabled;
+  final AttriaxTrackingContext _contextManager;
+  final AttriaxRuntimeSettingsView _settingsState;
   final AttriaxRequestManager _requestManager;
-  final AttriaxTrackingSessionPreparer _prepareSession;
+  final AttriaxTrackedSessionPreparer _sessionManager;
 
   Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
   }) async {
-    if (!_isEnabled() || !_areEventsEnabled()) {
+    if (!_settingsState.isEnabled || !_settingsState.areEventsEnabled) {
       _logger.verbose(
         'Ignoring recordEvent("$eventName") because SDK or events are disabled.',
       );
@@ -52,13 +47,15 @@ class AttriaxTrackingManager {
     }
 
     final occurredAt = _clock.now();
-    final currentSession = await _prepareSession(occurredAt);
+    final currentSession = await _sessionManager.prepareTrackedSessionAt(
+      occurredAt,
+    );
     await _requestManager.enqueue(
       attriaxBuildTrackEventRequest(
         appToken: _config.appToken,
         clientOccurredAt: occurredAt,
-        deviceId: _deviceIdProvider(),
-        deviceIdSource: _deviceIdSourceProvider(),
+        deviceId: _contextManager.requiredDeviceId,
+        deviceIdSource: _contextManager.requireDeviceIdSource(),
         eventName: eventName,
         eventData: eventData,
         sessionId: currentSession?.id,
@@ -105,26 +102,116 @@ class AttriaxTrackingManager {
     );
   }
 
-  Future<void> setUser(
-    String? userId, {
-    String? userName,
+  Future<void> recordError(
+    Object error,
+    StackTrace stackTrace, {
+    bool fatal = false,
+    String source = 'manual',
+    String? reason,
+    Map<String, Object?>? metadata,
   }) async {
-    if (!_isEnabled()) {
+    if (!_settingsState.isEnabled) {
+      _logger.verbose('Ignoring recordError() because SDK is disabled.');
+      return;
+    }
+
+    final occurredAt = _clock.now();
+    final currentSession = await _sessionManager.prepareTrackedSessionAt(
+      occurredAt,
+    );
+    await _requestManager.enqueue(
+      attriaxBuildTrackCrashRequest(
+        appToken: _config.appToken,
+        clientOccurredAt: occurredAt,
+        context: _contextManager.requiredSnapshot,
+        deviceId: _contextManager.requiredDeviceId,
+        deviceIdSource: _contextManager.requireDeviceIdSource(),
+        source: _trimOrNull(source) ?? 'manual',
+        isFatal: fatal,
+        exceptionType: error.runtimeType.toString(),
+        message: error.toString(),
+        metadata: metadata,
+        reason: _trimOrNull(reason),
+        session: currentSession,
+        stackTrace: stackTrace.toString(),
+      ),
+    );
+  }
+
+  Future<void> setUser(String? userId, {String? userName}) async {
+    if (!_settingsState.isEnabled) {
+      _logger.verbose('Ignoring setUser("$userId") because SDK is disabled.');
+      return;
+    }
+
+    await _sessionManager.prepareTrackedSessionAt(_clock.now());
+    await _requestManager.enqueue(
+      attriaxBuildUserRequest(
+        appToken: _config.appToken,
+        deviceId: _contextManager.requiredDeviceId,
+        deviceIdSource: _contextManager.requireDeviceIdSource(),
+        externalUserId: userId,
+        externalUserName: userName,
+        clearExternalUser: userId == null,
+      ),
+    );
+  }
+
+  Future<void> setUserProperty(String name, Object? value) async {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty) {
+      return;
+    }
+
+    if (value == null) {
+      await clearUserProperties(propertyNames: <String>[trimmedName]);
+      return;
+    }
+
+    await setUserProperties(<String, Object?>{trimmedName: value});
+  }
+
+  Future<void> setUserProperties(Map<String, Object?> properties) async {
+    if (!_settingsState.isEnabled) {
+      _logger.verbose('Ignoring setUserProperties() because SDK is disabled.');
+      return;
+    }
+
+    final sanitizedUpdate = attriaxSanitizeUserPropertyUpdate(properties);
+    if (sanitizedUpdate.isEmpty) {
+      return;
+    }
+
+    await _queueUserUpdate(
+      properties: sanitizedUpdate.properties.isEmpty
+          ? null
+          : sanitizedUpdate.properties,
+      clearPropertyKeys: sanitizedUpdate.clearPropertyKeys.isEmpty
+          ? null
+          : sanitizedUpdate.clearPropertyKeys,
+    );
+  }
+
+  Future<void> clearUserProperties({List<String>? propertyNames}) async {
+    if (!_settingsState.isEnabled) {
       _logger.verbose(
-        'Ignoring setUser("$userId") because SDK is disabled.',
+        'Ignoring clearUserProperties() because SDK is disabled.',
       );
       return;
     }
 
-    await _prepareSession(_clock.now());
-    await _requestManager.enqueue(
-      attriaxBuildIdentifyRequest(
-        appToken: _config.appToken,
-        deviceId: _deviceIdProvider(),
-        deviceIdSource: _deviceIdSourceProvider(),
-        userId: userId,
-        userName: userName,
-      ),
+    final normalizedPropertyNames = propertyNames
+        ?.map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toList(growable: false);
+
+    await _queueUserUpdate(
+      clearPropertyKeys:
+          normalizedPropertyNames == null || normalizedPropertyNames.isEmpty
+          ? null
+          : normalizedPropertyNames,
+      clearAllProperties:
+          normalizedPropertyNames == null || normalizedPropertyNames.isEmpty,
     );
   }
 
@@ -145,5 +232,29 @@ class AttriaxTrackingManager {
         .difference(session.startedAt)
         .inMilliseconds
         .clamp(0, 0x7fffffff);
+  }
+
+  Future<void> _queueUserUpdate({
+    String? externalUserId,
+    String? externalUserName,
+    bool clearExternalUser = false,
+    Map<String, Object?>? properties,
+    List<String>? clearPropertyKeys,
+    bool clearAllProperties = false,
+  }) async {
+    await _sessionManager.prepareTrackedSessionAt(_clock.now());
+    await _requestManager.enqueue(
+      attriaxBuildUserRequest(
+        appToken: _config.appToken,
+        deviceId: _contextManager.requiredDeviceId,
+        deviceIdSource: _contextManager.requireDeviceIdSource(),
+        externalUserId: externalUserId,
+        externalUserName: externalUserName,
+        clearExternalUser: clearExternalUser,
+        properties: properties,
+        clearPropertyKeys: clearPropertyKeys,
+        clearAllProperties: clearAllProperties,
+      ),
+    );
   }
 }

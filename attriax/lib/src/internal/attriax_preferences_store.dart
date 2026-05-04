@@ -79,6 +79,7 @@ class AttriaxPreferencesStore {
       'attriax.install_referrer.details.loaded';
   static const String sessionSnapshotStorageKey = 'attriax.session.current';
   static const String queueStorageKey = 'attriax.queue.v1';
+  static const String pendingCrashReportStorageKey = 'attriax.crash.pending';
 
   final SharedPreferences? _prefsOverride;
   final Future<SharedPreferences> Function()? _preferencesLoader;
@@ -294,6 +295,18 @@ class AttriaxPreferencesStore {
     }
 
     await _writeString(queueStorageKey, value);
+  }
+
+  Future<String?> readPendingCrashReportPayload() =>
+      _readString(pendingCrashReportStorageKey);
+
+  Future<void> writePendingCrashReportPayload(String? value) async {
+    if (value == null || value.isEmpty) {
+      await _remove(pendingCrashReportStorageKey);
+      return;
+    }
+
+    await _writeString(pendingCrashReportStorageKey, value);
   }
 
   Future<SharedPreferences?> sharedPreferencesOrNull() => _preferencesOrNull();

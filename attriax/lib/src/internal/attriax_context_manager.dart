@@ -5,8 +5,15 @@ import 'attriax_id_generator.dart';
 import 'attriax_logger.dart';
 import 'attriax_preferences_store.dart';
 
+abstract interface class AttriaxTrackingContext {
+  String get requiredDeviceId;
+  AttriaxContextSnapshot get requiredSnapshot;
+
+  String requireDeviceIdSource();
+}
+
 /// Owns the in-memory Attriax runtime context and device identity state.
-class AttriaxContextManager {
+class AttriaxContextManager implements AttriaxTrackingContext {
   AttriaxContextManager({
     required AttriaxContextCollector contextCollector,
     required AttriaxPreferencesStore preferencesStore,

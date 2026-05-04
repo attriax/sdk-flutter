@@ -60,6 +60,31 @@ void main() {
       expect(response.success, isTrue);
     });
 
+    test('sends crash reports and maps acknowledge responses', () async {
+      final client = FakeHttpClient((request) async {
+        expect(request.method, 'POST');
+        expect(request.url.path, '/api/sdk/v1/crashes');
+
+        final body =
+            jsonDecode(_readRequestBody(request)) as Map<String, Object?>;
+        expect(body['source'], 'flutter_error');
+        expect(body['isFatal'], isTrue);
+        expect(body['exceptionType'], 'StateError');
+        expect(body['appVersion'], '1.0.0');
+
+        return _jsonResponse(202, <String, Object?>{
+          'data': <String, Object?>{'success': true},
+        });
+      });
+
+      final transport = _createTransport(client);
+      final result = await transport.send(_crashRequest());
+
+      final response = result.response as AttriaxAckResponse;
+      expect(result.statusCode, 202);
+      expect(response.success, isTrue);
+    });
+
     test(
       'sends session lifecycle requests and maps acknowledge responses',
       () async {
@@ -286,6 +311,28 @@ AttriaxTrackEventRequest _eventRequest() => AttriaxTrackEventRequest(
       ..deviceId = 'device_123'
       ..deviceIdSource = 'android_ssaid'
       ..eventName = 'purchase',
+  ),
+);
+
+AttriaxTrackCrashRequest _crashRequest() => AttriaxTrackCrashRequest(
+  AttriaxCrashReportPayload(
+    appToken: 'ax_test_token',
+    deviceId: 'device_123',
+    deviceIdSource: 'android_ssaid',
+    source: 'flutter_error',
+    clientOccurredAt: DateTime.utc(2026, 1, 1, 12, 0, 15),
+    platform: AttriaxPlatformType.android,
+    isFatal: true,
+    exceptionType: 'StateError',
+    message: 'Bad state: boom',
+    stackTrace: 'stack line',
+    isFirstLaunch: false,
+    reason: 'Widget build failed',
+    appVersion: '1.0.0',
+    appBuildNumber: '1',
+    appPackageName: 'com.attriax.test',
+    sdkApiVersion: 'v1',
+    sdkPackageVersion: '1.2.3',
   ),
 );
 

@@ -25,7 +25,6 @@ export 'package:attriax_sdk_client/src/model/sdk_create_dynamic_link_response_dt
 export 'package:attriax_sdk_client/src/model/sdk_create_dynamic_link_response_envelope_dto.dart';
 export 'package:attriax_sdk_client/src/model/sdk_dynamic_link_record_dto.dart';
 export 'package:attriax_sdk_client/src/model/sdk_event_dto.dart';
-export 'package:attriax_sdk_client/src/model/sdk_identify_dto.dart';
 export 'package:attriax_sdk_client/src/model/sdk_install_referrer_result_dto.dart';
 export 'package:attriax_sdk_client/src/model/sdk_json_deep_link_dto.dart';
 export 'package:attriax_sdk_client/src/model/sdk_latest_unity_release_response_dto.dart';
@@ -40,6 +39,7 @@ export 'package:attriax_sdk_client/src/model/sdk_unity_editor_validate_response_
 export 'package:attriax_sdk_client/src/model/sdk_unity_editor_validate_response_envelope_dto.dart';
 export 'package:attriax_sdk_client/src/model/sdk_unity_release_list_response_dto.dart';
 export 'package:attriax_sdk_client/src/model/sdk_unity_release_list_response_envelope_dto.dart';
+export 'package:attriax_sdk_client/src/model/sdk_user_dto.dart';
 export 'package:attriax_sdk_client/src/model/sdk_v1_batch_dto.dart';
 export 'package:attriax_sdk_client/src/model/sdk_v1_batch_item_dto.dart';
 export 'package:attriax_sdk_client/src/model/sdk_v1_batch_response_dto.dart';

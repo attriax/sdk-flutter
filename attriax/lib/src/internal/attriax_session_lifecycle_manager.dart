@@ -6,6 +6,7 @@ import 'package:flutter/widgets.dart';
 import '../attriax_clock.dart';
 import 'attriax_api_models.dart';
 import 'attriax_request_manager.dart';
+import 'attriax_runtime_settings_state.dart';
 import 'attriax_session_manager.dart';
 
 /// Owns session lifecycle telemetry, heartbeat scheduling, and lifecycle
@@ -15,18 +16,18 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
     required AttriaxConfig config,
     required AttriaxSessionManager sessionManager,
     required AttriaxClock clock,
-    required bool Function() isEnabled,
+      required AttriaxRuntimeSettingsView settingsState,
     required AttriaxRequestManager requestManager,
   }) : _config = config,
        _sessionManager = sessionManager,
        _clock = clock,
-       _isEnabled = isEnabled,
+      _settingsState = settingsState,
        _requestManager = requestManager;
 
   final AttriaxConfig _config;
   final AttriaxSessionManager _sessionManager;
   final AttriaxClock _clock;
-  final bool Function() _isEnabled;
+    final AttriaxRuntimeSettingsView _settingsState;
   final AttriaxRequestManager _requestManager;
 
   Timer? _heartbeatTimer;
@@ -102,7 +103,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
 
     final session = _sessionManager.currentSession;
     if (!_sessionManager.isTrackingEnabled ||
-        !_isEnabled() ||
+        !_settingsState.isEnabled ||
         _isInBackground ||
         session == null) {
       return;
@@ -119,7 +120,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
   }
 
   Future<void> _sendSessionHeartbeat() async {
-    if (!_sessionManager.isTrackingEnabled || !_isEnabled()) {
+    if (!_sessionManager.isTrackingEnabled || !_settingsState.isEnabled) {
       return;
     }
 
@@ -143,7 +144,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
     _stopHeartbeatTimer();
     if (wasInBackground ||
         !_sessionManager.isTrackingEnabled ||
-        !_isEnabled()) {
+        !_settingsState.isEnabled) {
       return;
     }
 
@@ -166,7 +167,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
     _isInBackground = false;
     final context = _sessionManager.context;
     if (!_sessionManager.isTrackingEnabled ||
-        !_isEnabled() ||
+        !_settingsState.isEnabled ||
         context == null) {
       _restartHeartbeatTimer();
       return;
@@ -199,7 +200,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
   Future<void> _handleLifecycleDetached() async {
     _isInBackground = true;
     _stopHeartbeatTimer();
-    if (!_sessionManager.isTrackingEnabled || !_isEnabled()) {
+    if (!_sessionManager.isTrackingEnabled || !_settingsState.isEnabled) {
       return;
     }
 
@@ -235,7 +236,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
     final pendingSession = _pendingRecoveredSessionEnd;
     if (!_sessionManager.isTrackingEnabled ||
         pendingSession == null ||
-        !_isEnabled()) {
+        !_settingsState.isEnabled) {
       return;
     }
 
@@ -254,7 +255,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
     required DateTime occurredAt,
     Map<String, Object?>? metadata,
   }) async {
-    if (!_sessionManager.isTrackingEnabled || !_isEnabled()) {
+    if (!_sessionManager.isTrackingEnabled || !_settingsState.isEnabled) {
       return;
     }
 

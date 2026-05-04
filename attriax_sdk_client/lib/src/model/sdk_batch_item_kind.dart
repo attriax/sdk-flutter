@@ -15,8 +15,8 @@ class SdkBatchItemKind extends EnumClass {
   static const SdkBatchItemKind event = _$event;
   @BuiltValueEnumConst(wireName: r'session')
   static const SdkBatchItemKind session = _$session;
-  @BuiltValueEnumConst(wireName: r'identify')
-  static const SdkBatchItemKind identify = _$identify;
+  @BuiltValueEnumConst(wireName: r'user')
+  static const SdkBatchItemKind user = _$user;
 
   static Serializer<SdkBatchItemKind> get serializer => _$sdkBatchItemKindSerializer;
 

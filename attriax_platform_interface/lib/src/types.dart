@@ -105,6 +105,76 @@ class AttriaxInstallReferrerContext {
   };
 }
 
+class AttriaxPendingCrashReport {
+  const AttriaxPendingCrashReport({
+    required this.source,
+    required this.isFatal,
+    required this.exceptionType,
+    required this.message,
+    required this.stackTrace,
+    this.occurredAt,
+    this.reason,
+    this.metadata = const <String, Object?>{},
+  });
+
+  factory AttriaxPendingCrashReport.fromJson(Map<String, Object?> json) {
+    final metadata =
+        _jsonObject(json['metadata']) ??
+        <String, Object?>{
+          for (final entry in json.entries)
+            if (entry.key != 'source' &&
+                entry.key != 'isFatal' &&
+                entry.key != 'exceptionType' &&
+                entry.key != 'message' &&
+                entry.key != 'stackTrace' &&
+                entry.key != 'occurredAt' &&
+                entry.key != 'reason')
+              entry.key: _normalizeJsonValue(entry.value),
+        };
+
+    return AttriaxPendingCrashReport(
+      source: _jsonString(json['source']) ?? 'native',
+      isFatal: _jsonBool(json['isFatal']) ?? true,
+      exceptionType: _jsonString(json['exceptionType']) ?? 'UnknownError',
+      message: _jsonString(json['message']) ?? 'Unknown crash',
+      stackTrace: _jsonString(json['stackTrace']) ?? '',
+      occurredAt: _jsonDateTime(json['occurredAt']),
+      reason: _jsonString(json['reason']),
+      metadata: metadata,
+    );
+  }
+
+  factory AttriaxPendingCrashReport.fromPayload(Object? payload) {
+    final json = _jsonObject(payload);
+    if (json == null || json.isEmpty) {
+      throw const FormatException('Pending crash report payload is empty.');
+    }
+
+    return AttriaxPendingCrashReport.fromJson(json);
+  }
+
+  final String source;
+  final bool isFatal;
+  final String exceptionType;
+  final String message;
+  final String stackTrace;
+  final DateTime? occurredAt;
+  final String? reason;
+  final Map<String, Object?> metadata;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'source': source,
+    'isFatal': isFatal,
+    'exceptionType': exceptionType,
+    'message': message,
+    'stackTrace': stackTrace,
+    if (occurredAt != null)
+      'occurredAt': occurredAt!.toUtc().toIso8601String(),
+    if (reason != null) 'reason': reason,
+    if (metadata.isNotEmpty) 'metadata': _normalizeJsonMap(metadata),
+  };
+}
+
 /// SDK version and metadata snapshot captured during initialization.
 class AttriaxSdkSnapshot {
   const AttriaxSdkSnapshot({

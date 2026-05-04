@@ -22,11 +22,6 @@ void main() {
       // TODO
     });
 
-    //Future<SdkAcknowledgeResponseEnvelopeDto> sdkControllerIdentifyV1(SdkIdentifyDto sdkIdentifyDto) async
-    test('test sdkControllerIdentifyV1', () async {
-      // TODO
-    });
-
     //Future<SdkUnityReleaseListResponseEnvelopeDto> sdkControllerListUnityReleasesV1() async
     test('test sdkControllerListUnityReleasesV1', () async {
       // TODO
@@ -37,18 +32,23 @@ void main() {
       // TODO
     });
 
+    //Future<SdkAcknowledgeResponseEnvelopeDto> sdkControllerRecordEventV1(SdkEventDto sdkEventDto) async
+    test('test sdkControllerRecordEventV1', () async {
+      // TODO
+    });
+
+    //Future<SdkAcknowledgeResponseEnvelopeDto> sdkControllerRecordSessionV1(SdkSessionDto sdkSessionDto) async
+    test('test sdkControllerRecordSessionV1', () async {
+      // TODO
+    });
+
     //Future<SdkV1DeepLinkResolveResponseEnvelopeDto> sdkControllerResolveDeepLinkV1(SdkV1DeepLinkResolveDto sdkV1DeepLinkResolveDto) async
     test('test sdkControllerResolveDeepLinkV1', () async {
       // TODO
     });
 
-    //Future<SdkAcknowledgeResponseEnvelopeDto> sdkControllerTrackEventV1(SdkEventDto sdkEventDto) async
-    test('test sdkControllerTrackEventV1', () async {
-      // TODO
-    });
-
-    //Future<SdkAcknowledgeResponseEnvelopeDto> sdkControllerTrackSessionV1(SdkSessionDto sdkSessionDto) async
-    test('test sdkControllerTrackSessionV1', () async {
+    //Future<SdkAcknowledgeResponseEnvelopeDto> sdkControllerSetUserV1(SdkUserDto sdkUserDto) async
+    test('test sdkControllerSetUserV1', () async {
       // TODO
     });
 

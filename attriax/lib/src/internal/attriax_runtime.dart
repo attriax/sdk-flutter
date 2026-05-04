@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -65,7 +68,7 @@ class AttriaxRuntime {
       contextManager: _contextManager,
       preferencesStore: _preferencesStore,
       logger: _logger,
-      isEnabled: () => isEnabled,
+      settingsState: _settingsState,
       requestManager: _requestManager,
       clock: _clock,
     );
@@ -94,12 +97,10 @@ class AttriaxRuntime {
       config: config,
       logger: _logger,
       clock: _clock,
-      deviceIdProvider: () => _contextManager.requiredDeviceId,
-      deviceIdSourceProvider: _requireDeviceIdSource,
-      isEnabled: () => isEnabled,
-      areEventsEnabled: () => areEventsEnabled,
+      contextManager: _contextManager,
+      settingsState: _settingsState,
       requestManager: _requestManager,
-      prepareSession: _sessionManager.prepareTrackedSessionAt,
+      sessionManager: _sessionManager,
     );
   }
 
@@ -133,6 +134,10 @@ class AttriaxRuntime {
   Future<void>? _initializationFuture;
   AttriaxNormalizedApiBaseUrl? _normalizedApiBaseUrl;
   bool _isSchedulingAppOpen = false;
+  FlutterExceptionHandler? _previousFlutterErrorHandler;
+  FlutterExceptionHandler? _installedFlutterErrorHandler;
+  bool Function(Object, StackTrace)? _previousPlatformErrorHandler;
+  bool Function(Object, StackTrace)? _installedPlatformErrorHandler;
 
   // ---------- getters ------------------------------------------------------- //
 
@@ -254,6 +259,9 @@ class AttriaxRuntime {
     }
 
     _sessionManager.seedRecoveredSessionEnd(sessionRestore?.replacedSession);
+    _installCrashHandlers();
+    await _capturePendingNativeCrashReport();
+    await _replayPendingCrashReport();
 
     _synchronizer!.startConnectivitySubscription(
       onRestored: _synchronizer!.scheduleFlush,
@@ -298,9 +306,43 @@ class AttriaxRuntime {
     );
   }
 
+  Future<void> recordError(
+    Object error,
+    StackTrace stackTrace, {
+    bool fatal = false,
+    String source = 'manual',
+    String? reason,
+    Map<String, Object?>? metadata,
+  }) async {
+    _assertInitialized();
+    await _trackingManager.recordError(
+      error,
+      stackTrace,
+      fatal: fatal,
+      source: source,
+      reason: reason,
+      metadata: metadata,
+    );
+  }
+
   Future<void> setUser(String? userId, {String? userName}) async {
     _assertInitialized();
     await _trackingManager.setUser(userId, userName: userName);
+  }
+
+  Future<void> setUserProperty(String name, Object? value) async {
+    _assertInitialized();
+    await _trackingManager.setUserProperty(name, value);
+  }
+
+  Future<void> setUserProperties(Map<String, Object?> properties) async {
+    _assertInitialized();
+    await _trackingManager.setUserProperties(properties);
+  }
+
+  Future<void> clearUserProperties({List<String>? propertyNames}) async {
+    _assertInitialized();
+    await _trackingManager.clearUserProperties(propertyNames: propertyNames);
   }
 
   Future<AttriaxCreateDynamicLinkResult> createDynamicLink({
@@ -396,6 +438,7 @@ class AttriaxRuntime {
 
   Future<void> dispose() async {
     _logger.verbose('Disposing Attriax SDK runtime.');
+    _restoreCrashHandlers();
     _sessionManager.dispose();
     _installReferrerManager.dispose();
     await _deepLinkManager.stop();
@@ -489,6 +532,183 @@ class AttriaxRuntime {
       );
     } finally {
       _isSchedulingAppOpen = false;
+    }
+  }
+
+  void _installCrashHandlers() {
+    if (_installedFlutterErrorHandler == null) {
+      _previousFlutterErrorHandler = FlutterError.onError;
+      _installedFlutterErrorHandler = (details) {
+        _previousFlutterErrorHandler?.call(details);
+        final metadata = <String, Object?>{
+          if (details.library != null) 'library': details.library!,
+          if (details.silent) 'silent': true,
+        };
+        unawaited(
+          _recordAutomaticFrameworkError(
+            details.exception,
+            details.stack ?? StackTrace.current,
+            reason: details.context?.toDescription(),
+            metadata: metadata.isEmpty ? null : metadata,
+          ),
+        );
+      };
+      FlutterError.onError = _installedFlutterErrorHandler;
+    }
+
+    if (_installedPlatformErrorHandler == null) {
+      _previousPlatformErrorHandler = ui.PlatformDispatcher.instance.onError;
+      _installedPlatformErrorHandler = (error, stackTrace) {
+        unawaited(
+          _persistFatalCrashForRetry(
+            error,
+            stackTrace,
+            source: 'platform_dispatcher',
+            reason: 'Unhandled root isolate error',
+          ),
+        );
+
+        final previous = _previousPlatformErrorHandler;
+        if (previous != null) {
+          return previous(error, stackTrace);
+        }
+
+        return false;
+      };
+      ui.PlatformDispatcher.instance.onError = _installedPlatformErrorHandler;
+    }
+  }
+
+  void _restoreCrashHandlers() {
+    if (identical(FlutterError.onError, _installedFlutterErrorHandler)) {
+      FlutterError.onError = _previousFlutterErrorHandler;
+    }
+    if (identical(
+      ui.PlatformDispatcher.instance.onError,
+      _installedPlatformErrorHandler,
+    )) {
+      ui.PlatformDispatcher.instance.onError = _previousPlatformErrorHandler;
+    }
+
+    _installedFlutterErrorHandler = null;
+    _previousFlutterErrorHandler = null;
+    _installedPlatformErrorHandler = null;
+    _previousPlatformErrorHandler = null;
+  }
+
+  Future<void> _recordAutomaticFrameworkError(
+    Object error,
+    StackTrace stackTrace, {
+    String? reason,
+    Map<String, Object?>? metadata,
+  }) async {
+    if (!_initialized || !isEnabled) {
+      return;
+    }
+
+    await _trackingManager.recordError(
+      error,
+      stackTrace,
+      fatal: false,
+      source: 'flutter_error',
+      reason: reason,
+      metadata: metadata,
+    );
+  }
+
+  Future<void> _persistFatalCrashForRetry(
+    Object error,
+    StackTrace stackTrace, {
+    required String source,
+    String? reason,
+    Map<String, Object?>? metadata,
+  }) async {
+    if (!_initialized || !isEnabled) {
+      return;
+    }
+
+    await _storePendingCrashReport(
+      attriaxBuildTrackCrashRequest(
+        appToken: config.appToken,
+        clientOccurredAt: _clock.now(),
+        context: _contextManager.requiredSnapshot,
+        deviceId: _contextManager.requiredDeviceId,
+        deviceIdSource: _requireDeviceIdSource(),
+        source: source,
+        isFatal: true,
+        exceptionType: error.runtimeType.toString(),
+        message: error.toString(),
+        metadata: metadata,
+        reason: reason,
+        stackTrace: stackTrace.toString(),
+      ),
+    );
+  }
+
+  Future<void> _capturePendingNativeCrashReport() async {
+    final nativeReport = await AttriaxPlatform.instance
+        .consumePendingCrashReport();
+    if (nativeReport == null) {
+      return;
+    }
+
+    await _storePendingCrashReport(
+      attriaxBuildTrackCrashRequest(
+        appToken: config.appToken,
+        clientOccurredAt: nativeReport.occurredAt,
+        context: _contextManager.requiredSnapshot,
+        deviceId: _contextManager.requiredDeviceId,
+        deviceIdSource: _requireDeviceIdSource(),
+        source: nativeReport.source,
+        isFatal: nativeReport.isFatal,
+        exceptionType: nativeReport.exceptionType,
+        message: nativeReport.message,
+        metadata: nativeReport.metadata,
+        reason: nativeReport.reason,
+        stackTrace: nativeReport.stackTrace,
+      ),
+    );
+  }
+
+  Future<void> _replayPendingCrashReport() async {
+    final payload = await _readPendingCrashReport();
+    if (payload == null) {
+      return;
+    }
+
+    await _requestManager.enqueue(
+      AttriaxTrackCrashRequest(payload),
+      onSuccess: (_) {
+        unawaited(_preferencesStore.writePendingCrashReportPayload(null));
+      },
+    );
+  }
+
+  Future<void> _storePendingCrashReport(AttriaxTrackCrashRequest request) {
+    return _preferencesStore.writePendingCrashReportPayload(
+      jsonEncode(request.payload.toJson()),
+    );
+  }
+
+  Future<AttriaxCrashReportPayload?> _readPendingCrashReport() async {
+    final raw = await _preferencesStore.readPendingCrashReportPayload();
+    if (raw == null || raw.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) {
+        await _preferencesStore.writePendingCrashReportPayload(null);
+        return null;
+      }
+
+      return AttriaxCrashReportPayload.fromJson(
+        decoded.map((key, value) => MapEntry(key.toString(), value as Object?)),
+      );
+    } catch (_) {
+      await _preferencesStore.writePendingCrashReportPayload(null);
+      return null;
     }
   }
 }

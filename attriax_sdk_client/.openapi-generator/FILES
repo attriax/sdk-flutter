@@ -16,7 +16,6 @@ doc/SdkCreateDynamicLinkResponseDto.md
 doc/SdkCreateDynamicLinkResponseEnvelopeDto.md
 doc/SdkDynamicLinkRecordDto.md
 doc/SdkEventDto.md
-doc/SdkIdentifyDto.md
 doc/SdkInstallReferrerResultDto.md
 doc/SdkJsonDeepLinkDto.md
 doc/SdkLatestUnityReleaseResponseDto.md
@@ -31,6 +30,7 @@ doc/SdkUnityEditorValidateResponseDto.md
 doc/SdkUnityEditorValidateResponseEnvelopeDto.md
 doc/SdkUnityReleaseListResponseDto.md
 doc/SdkUnityReleaseListResponseEnvelopeDto.md
+doc/SdkUserDto.md
 doc/SdkV1BatchDto.md
 doc/SdkV1BatchItemDto.md
 doc/SdkV1BatchResponseDto.md
@@ -68,7 +68,6 @@ lib/src/model/sdk_create_dynamic_link_response_dto.dart
 lib/src/model/sdk_create_dynamic_link_response_envelope_dto.dart
 lib/src/model/sdk_dynamic_link_record_dto.dart
 lib/src/model/sdk_event_dto.dart
-lib/src/model/sdk_identify_dto.dart
 lib/src/model/sdk_install_referrer_result_dto.dart
 lib/src/model/sdk_json_deep_link_dto.dart
 lib/src/model/sdk_latest_unity_release_response_dto.dart
@@ -83,6 +82,7 @@ lib/src/model/sdk_unity_editor_validate_response_dto.dart
 lib/src/model/sdk_unity_editor_validate_response_envelope_dto.dart
 lib/src/model/sdk_unity_release_list_response_dto.dart
 lib/src/model/sdk_unity_release_list_response_envelope_dto.dart
+lib/src/model/sdk_user_dto.dart
 lib/src/model/sdk_v1_batch_dto.dart
 lib/src/model/sdk_v1_batch_item_dto.dart
 lib/src/model/sdk_v1_batch_response_dto.dart
@@ -112,7 +112,6 @@ test/sdk_create_dynamic_link_response_dto_test.dart
 test/sdk_create_dynamic_link_response_envelope_dto_test.dart
 test/sdk_dynamic_link_record_dto_test.dart
 test/sdk_event_dto_test.dart
-test/sdk_identify_dto_test.dart
 test/sdk_install_referrer_result_dto_test.dart
 test/sdk_json_deep_link_dto_test.dart
 test/sdk_latest_unity_release_response_dto_test.dart
@@ -127,6 +126,7 @@ test/sdk_unity_editor_validate_response_dto_test.dart
 test/sdk_unity_editor_validate_response_envelope_dto_test.dart
 test/sdk_unity_release_list_response_dto_test.dart
 test/sdk_unity_release_list_response_envelope_dto_test.dart
+test/sdk_user_dto_test.dart
 test/sdk_v1_batch_dto_test.dart
 test/sdk_v1_batch_item_dto_test.dart
 test/sdk_v1_batch_response_dto_test.dart

@@ -10,6 +10,7 @@ import android.content.pm.verify.domain.DomainVerificationManager;
 import android.content.pm.verify.domain.DomainVerificationUserState;
 import android.os.Build;
 import android.provider.Settings;
+import android.util.Log;
 import androidx.annotation.NonNull;
 import com.android.installreferrer.api.InstallReferrerClient;
 import com.android.installreferrer.api.InstallReferrerStateListener;
@@ -24,14 +25,20 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import io.flutter.plugin.common.PluginRegistry.NewIntentListener;
 import java.security.MessageDigest;
+import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicBoolean;
+import android.content.SharedPreferences;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 public class AttriaxAndroidPlugin implements
     FlutterPlugin,
@@ -41,6 +48,8 @@ public class AttriaxAndroidPlugin implements
     NewIntentListener {
     private static final String CHANNEL_NAME = "attriax";
     private static final String DEEP_LINK_EVENTS_CHANNEL = "attriax/deep_links/events";
+    private static final String CRASH_PREFERENCES_NAME = "attriax.crashes";
+    private static final String PENDING_CRASH_KEY = "attriax.pending_crash";
 
     private MethodChannel channel;
     private EventChannel deepLinkEventChannel;
@@ -51,6 +60,9 @@ public class AttriaxAndroidPlugin implements
     private String initialLink;
     private boolean initialLinkSent = false;
     private String latestLink;
+    private Thread.UncaughtExceptionHandler previousUncaughtExceptionHandler;
+    private Thread.UncaughtExceptionHandler attriaxUncaughtExceptionHandler;
+    private final AtomicBoolean crashHandlerInstalled = new AtomicBoolean(false);
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
@@ -62,6 +74,7 @@ public class AttriaxAndroidPlugin implements
         );
         deepLinkEventChannel.setStreamHandler(this);
         context = binding.getApplicationContext();
+        installCrashReporter();
     }
 
     @Override
@@ -75,6 +88,7 @@ public class AttriaxAndroidPlugin implements
         synchronized (deepLinkStateLock) {
             deepLinkEventSink = null;
         }
+        restoreCrashReporter();
     }
 
     @Override
@@ -85,6 +99,9 @@ public class AttriaxAndroidPlugin implements
                 break;
             case "collectInstallReferrer":
                 collectInstallReferrer(result);
+                break;
+            case "consumePendingCrashReport":
+                consumePendingCrashReport(result);
                 break;
             case "getInitialLink":
                 synchronized (deepLinkStateLock) {
@@ -361,6 +378,133 @@ public class AttriaxAndroidPlugin implements
         }
     }
 
+    private void installCrashReporter() {
+        if (context == null || !crashHandlerInstalled.compareAndSet(false, true)) {
+            return;
+        }
+
+        previousUncaughtExceptionHandler = Thread.getDefaultUncaughtExceptionHandler();
+        attriaxUncaughtExceptionHandler = (thread, throwable) -> {
+            try {
+                persistPendingCrashReport(thread, throwable);
+            } catch (Exception ignored) {
+            }
+
+            if (previousUncaughtExceptionHandler != null
+                    && previousUncaughtExceptionHandler != attriaxUncaughtExceptionHandler) {
+                previousUncaughtExceptionHandler.uncaughtException(thread, throwable);
+            }
+        };
+        Thread.setDefaultUncaughtExceptionHandler(attriaxUncaughtExceptionHandler);
+    }
+
+    private void restoreCrashReporter() {
+        if (!crashHandlerInstalled.compareAndSet(true, false)) {
+            return;
+        }
+
+        if (Thread.getDefaultUncaughtExceptionHandler() == attriaxUncaughtExceptionHandler) {
+            Thread.setDefaultUncaughtExceptionHandler(previousUncaughtExceptionHandler);
+        }
+        attriaxUncaughtExceptionHandler = null;
+        previousUncaughtExceptionHandler = null;
+    }
+
+    private void persistPendingCrashReport(Thread thread, Throwable throwable) {
+        if (context == null) {
+            return;
+        }
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("threadName", thread.getName());
+        metadata.put("threadId", thread.getId());
+        metadata.put("androidApiLevel", Build.VERSION.SDK_INT);
+        metadata.put("deviceModel", Build.MODEL);
+        metadata.put("deviceManufacturer", Build.MANUFACTURER);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("source", "android_uncaught_exception");
+        payload.put("isFatal", true);
+        payload.put("exceptionType", throwable.getClass().getName());
+        payload.put(
+            "message",
+            throwable.getMessage() == null ? throwable.toString() : throwable.getMessage()
+        );
+        payload.put("stackTrace", Log.getStackTraceString(throwable));
+        payload.put("occurredAt", isoTimestamp(System.currentTimeMillis()));
+        payload.put("reason", "Uncaught exception on thread " + thread.getName());
+        payload.put("metadata", metadata);
+
+        crashPreferences().edit().putString(PENDING_CRASH_KEY, new JSONObject(payload).toString()).apply();
+    }
+
+    private void consumePendingCrashReport(@NonNull Result result) {
+        String raw = crashPreferences().getString(PENDING_CRASH_KEY, null);
+        if (raw == null || raw.isEmpty()) {
+            result.success(null);
+            return;
+        }
+
+        crashPreferences().edit().remove(PENDING_CRASH_KEY).apply();
+        try {
+            result.success(jsonObjectToMap(new JSONObject(raw)));
+        } catch (JSONException exception) {
+            result.success(null);
+        }
+    }
+
+    private SharedPreferences crashPreferences() {
+        return context.getSharedPreferences(CRASH_PREFERENCES_NAME, Context.MODE_PRIVATE);
+    }
+
+    private String isoTimestamp(long millis) {
+        SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US);
+        formatter.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return formatter.format(new Date(millis));
+    }
+
+    private Map<String, Object> jsonObjectToMap(JSONObject object) throws JSONException {
+        Map<String, Object> map = new HashMap<>();
+        JSONArray names = object.names();
+        if (names == null) {
+            return map;
+        }
+
+        for (int index = 0; index < names.length(); index += 1) {
+            String key = names.getString(index);
+            Object value = object.get(key);
+            if (value instanceof JSONObject) {
+                map.put(key, jsonObjectToMap((JSONObject) value));
+            } else if (value instanceof JSONArray) {
+                map.put(key, jsonArrayToList((JSONArray) value));
+            } else if (value == JSONObject.NULL) {
+                map.put(key, null);
+            } else {
+                map.put(key, value);
+            }
+        }
+
+        return map;
+    }
+
+    private List<Object> jsonArrayToList(JSONArray array) throws JSONException {
+        List<Object> values = new ArrayList<>();
+        for (int index = 0; index < array.length(); index += 1) {
+            Object value = array.get(index);
+            if (value instanceof JSONObject) {
+                values.add(jsonObjectToMap((JSONObject) value));
+            } else if (value instanceof JSONArray) {
+                values.add(jsonArrayToList((JSONArray) value));
+            } else if (value == JSONObject.NULL) {
+                values.add(null);
+            } else {
+                values.add(value);
+            }
+        }
+
+        return values;
+    }
+
     private void collectInstallReferrer(@NonNull Result result) {
         AtomicBoolean completed = new AtomicBoolean(false);
 
@@ -419,6 +563,33 @@ public class AttriaxAndroidPlugin implements
                     finishCollectInstallReferrer(
                         result,
                         referrerClient,
+                        completed,
+                        createInstallReferrerPayload(installReferrer, metadata)
+                    );
+                }
+            }
+
+            @Override
+            public void onInstallReferrerServiceDisconnected() {
+                Map<String, Object> metadata = createInstallReferrerMetadata();
+                metadata.put("installReferrerStatus", "service_disconnected");
+                finishCollectInstallReferrer(
+                    result,
+                    referrerClient,
+                    completed,
+                    createInstallReferrerPayload(null, metadata)
+                );
+            }
+        });
+    }
+
+    private Map<String, Object> createInstallReferrerMetadata() {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("source", "android_install_referrer");
+        metadata.put("packageName", context.getPackageName());
+        return metadata;
+    }
+
     private Map<String, Object> createInstallReferrerPayload(
         String installReferrer,
         Map<String, Object> metadata

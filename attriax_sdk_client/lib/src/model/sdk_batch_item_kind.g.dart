@@ -8,7 +8,7 @@ part of 'sdk_batch_item_kind.dart';
 
 const SdkBatchItemKind _$event = const SdkBatchItemKind._('event');
 const SdkBatchItemKind _$session = const SdkBatchItemKind._('session');
-const SdkBatchItemKind _$identify = const SdkBatchItemKind._('identify');
+const SdkBatchItemKind _$user = const SdkBatchItemKind._('user');
 
 SdkBatchItemKind _$valueOf(String name) {
   switch (name) {
@@ -16,15 +16,15 @@ SdkBatchItemKind _$valueOf(String name) {
       return _$event;
     case 'session':
       return _$session;
-    case 'identify':
-      return _$identify;
+    case 'user':
+      return _$user;
     default:
       throw ArgumentError(name);
   }
 }
 
 final BuiltSet<SdkBatchItemKind> _$values = BuiltSet<SdkBatchItemKind>(
-  const <SdkBatchItemKind>[_$event, _$session, _$identify],
+  const <SdkBatchItemKind>[_$event, _$session, _$user],
 );
 
 Serializer<SdkBatchItemKind> _$sdkBatchItemKindSerializer =
@@ -35,12 +35,12 @@ class _$SdkBatchItemKindSerializer
   static const Map<String, Object> _toWire = const <String, Object>{
     'event': 'event',
     'session': 'session',
-    'identify': 'identify',
+    'user': 'user',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'event': 'event',
     'session': 'session',
-    'identify': 'identify',
+    'user': 'user',
   };
 
   @override

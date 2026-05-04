@@ -27,7 +27,6 @@ import 'package:attriax_sdk_client/src/model/sdk_create_dynamic_link_response_dt
 import 'package:attriax_sdk_client/src/model/sdk_create_dynamic_link_response_envelope_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_dynamic_link_record_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_event_dto.dart';
-import 'package:attriax_sdk_client/src/model/sdk_identify_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_install_referrer_result_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_json_deep_link_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_latest_unity_release_response_dto.dart';
@@ -42,6 +41,7 @@ import 'package:attriax_sdk_client/src/model/sdk_unity_editor_validate_response_
 import 'package:attriax_sdk_client/src/model/sdk_unity_editor_validate_response_envelope_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_unity_release_list_response_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_unity_release_list_response_envelope_dto.dart';
+import 'package:attriax_sdk_client/src/model/sdk_user_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_v1_batch_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_v1_batch_item_dto.dart';
 import 'package:attriax_sdk_client/src/model/sdk_v1_batch_response_dto.dart';
@@ -72,7 +72,6 @@ part 'serializers.g.dart';
   SdkCreateDynamicLinkResponseEnvelopeDto,
   SdkDynamicLinkRecordDto,
   SdkEventDto,
-  SdkIdentifyDto,
   SdkInstallReferrerResultDto,
   SdkJsonDeepLinkDto,
   SdkLatestUnityReleaseResponseDto,
@@ -87,6 +86,7 @@ part 'serializers.g.dart';
   SdkUnityEditorValidateResponseEnvelopeDto,
   SdkUnityReleaseListResponseDto,
   SdkUnityReleaseListResponseEnvelopeDto,
+  SdkUserDto,
   SdkV1BatchDto,
   SdkV1BatchItemDto,
   SdkV1BatchResponseDto,

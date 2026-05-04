@@ -3,7 +3,12 @@ import 'dart:async';
 import 'attriax_logger.dart';
 import 'attriax_preferences_store.dart';
 
-class AttriaxRuntimeSettingsState {
+abstract interface class AttriaxRuntimeSettingsView {
+  bool get isEnabled;
+  bool get areEventsEnabled;
+}
+
+class AttriaxRuntimeSettingsState implements AttriaxRuntimeSettingsView {
   AttriaxRuntimeSettingsState({
     required AttriaxPreferencesStore preferencesStore,
     required AttriaxLogger logger,

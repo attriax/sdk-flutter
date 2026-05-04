@@ -25,4 +25,6 @@ abstract class AttriaxPlatform extends PlatformInterface {
 
   Future<AttriaxInstallReferrerContext> collectInstallReferrer() async =>
       const AttriaxInstallReferrerContext();
+
+  Future<AttriaxPendingCrashReport?> consumePendingCrashReport() async => null;
 }

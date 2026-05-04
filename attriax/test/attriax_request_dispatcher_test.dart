@@ -176,11 +176,11 @@ void main() {
     test('splits queue batches when device identity changes', () async {
       final secondRequest = AttriaxQueuedRequest(
         id: 'req_2',
-        request: attriaxBuildIdentifyRequest(
+        request: attriaxBuildUserRequest(
           appToken: 'ax_test_token',
           deviceId: 'device_2',
           deviceIdSource: 'android_ssaid',
-          userId: 'user_2',
+          externalUserId: 'user_2',
         ),
         createdAt: DateTime.utc(2026, 5, 1, 0, 0, 5),
       );
@@ -207,11 +207,11 @@ void main() {
     test('splits oversized batches until smaller batches succeed', () async {
       final secondRequest = AttriaxQueuedRequest(
         id: 'req_2',
-        request: attriaxBuildIdentifyRequest(
+        request: attriaxBuildUserRequest(
           appToken: 'ax_test_token',
           deviceId: 'device_1',
           deviceIdSource: 'android_ssaid',
-          userId: 'user_1',
+          externalUserId: 'user_1',
         ),
         createdAt: DateTime.utc(2026, 5, 1, 0, 0, 5),
       );

@@ -15,6 +15,8 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin {
             result(collectNativeContext())
         case "collectInstallReferrer":
             result(collectInstallReferrer())
+        case "consumePendingCrashReport":
+            result(nil)
         default:
             result(FlutterMethodNotImplemented)
         }
