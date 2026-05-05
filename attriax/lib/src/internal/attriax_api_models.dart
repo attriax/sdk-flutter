@@ -1030,12 +1030,53 @@ BuiltMap<String, JsonObject?>? _generatedJsonObjectMap(
     return null;
   }
 
-  return BuiltMap<String, JsonObject?>(
-    value.map(
-      (key, nestedValue) =>
-          MapEntry(key, JsonObject(attriaxNormalizeJsonValue(nestedValue))),
-    ),
-  );
+  final result = <String, JsonObject?>{};
+  for (final entry in value.entries) {
+    final generatedValue = _generatedJsonValue(entry.value);
+    if (identical(generatedValue, _generatedJsonOmittedValue)) {
+      continue;
+    }
+    result[entry.key] = JsonObject(generatedValue);
+  }
+
+  if (result.isEmpty) {
+    return null;
+  }
+
+  return BuiltMap<String, JsonObject?>(result);
+}
+
+const Object _generatedJsonOmittedValue = Object();
+
+Object _generatedJsonValue(Object? value) {
+  if (value == null) {
+    return _generatedJsonOmittedValue;
+  }
+
+  if (value is String || value is num || value is bool) {
+    return value;
+  }
+
+  if (value is List) {
+    return value
+        .map(_generatedJsonValue)
+        .where((item) => !identical(item, _generatedJsonOmittedValue))
+        .toList(growable: false);
+  }
+
+  if (value is Map) {
+    final result = <String, Object?>{};
+    for (final entry in value.entries) {
+      final generatedValue = _generatedJsonValue(entry.value);
+      if (identical(generatedValue, _generatedJsonOmittedValue)) {
+        continue;
+      }
+      result[entry.key.toString()] = generatedValue;
+    }
+    return result;
+  }
+
+  return value.toString();
 }
 
 Map<String, Object?>? _plainJsonObjectMap(

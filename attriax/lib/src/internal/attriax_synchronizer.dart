@@ -19,11 +19,13 @@ class AttriaxSynchronizer {
     required Connectivity connectivity,
     required AttriaxPreferencesStore preferencesStore,
     required int maxQueueSize,
+    required Duration eventFlushInterval,
     required AttriaxLogger logger,
     void Function(AttriaxApiRequest request, int statusCode)?
     onRequestDelivered,
     void Function(AttriaxApiRequest request, Object error)? onRequestFailed,
   }) : _connectivity = connectivity,
+       _eventFlushInterval = eventFlushInterval,
        _logger = logger {
     _queueManager = AttriaxQueueManager(
       preferencesStore: preferencesStore,
@@ -43,6 +45,7 @@ class AttriaxSynchronizer {
   }
 
   final Connectivity _connectivity;
+  final Duration _eventFlushInterval;
   final AttriaxLogger _logger;
   late final AttriaxQueueManager _queueManager;
   late final AttriaxRequestDispatcher _dispatcher;
@@ -54,6 +57,7 @@ class AttriaxSynchronizer {
   bool _isSynchronizationRefreshScheduled = false;
   bool _needsSynchronizationRefresh = false;
   bool _lastFlushHadFailure = false;
+  Timer? _deferredFlushTimer;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
   /// Invoked whenever [synchronizationState] transitions to a new value.
@@ -69,6 +73,7 @@ class AttriaxSynchronizer {
     AttriaxApiRequest request, {
     void Function(AttriaxApiResponse response)? onSuccess,
     void Function(Object error, StackTrace? stackTrace)? onError,
+    bool flushImmediately = true,
   }) async {
     final queued = AttriaxQueuedRequest(
       id: attriaxGenerateId(),
@@ -83,12 +88,19 @@ class AttriaxSynchronizer {
     await _queueManager.enqueue(queued);
     setState(AttriaxSynchronizationState.synchronizing);
     _logger.verbose('Queued ${attriaxApiRequestLabel(request)} request.');
-    scheduleFlush();
+    if (flushImmediately || _eventFlushInterval == Duration.zero) {
+      scheduleFlush();
+      return;
+    }
+
+    _scheduleDeferredFlush();
   }
 
   /// Schedules a flush unless one is already running. Rapid back-to-back calls
   /// collapse into a single additional iteration after the current one ends.
   void scheduleFlush() {
+    _deferredFlushTimer?.cancel();
+    _deferredFlushTimer = null;
     if (_isSynchronizationRefreshScheduled) {
       _needsSynchronizationRefresh = true;
       return;
@@ -138,13 +150,19 @@ class AttriaxSynchronizer {
   }
 
   /// Marks the synchronizer inactive so that in-flight flush loops exit early.
-  void deactivate() => _active = false;
+  void deactivate() {
+    _active = false;
+    _deferredFlushTimer?.cancel();
+    _deferredFlushTimer = null;
+  }
 
   /// Marks the synchronizer active again after re-enabling the SDK.
   void activate() => _active = true;
 
   Future<void> dispose() async {
     _active = false;
+    _deferredFlushTimer?.cancel();
+    _deferredFlushTimer = null;
     await stopConnectivitySubscription();
   }
 
@@ -191,5 +209,19 @@ class AttriaxSynchronizer {
           ? AttriaxSynchronizationState.synchronized
           : AttriaxSynchronizationState.synchronizing,
     );
+  }
+
+  void _scheduleDeferredFlush() {
+    if (_deferredFlushTimer != null) {
+      return;
+    }
+
+    _deferredFlushTimer = Timer(_eventFlushInterval, () {
+      _deferredFlushTimer = null;
+      if (!_active) {
+        return;
+      }
+      scheduleFlush();
+    });
   }
 }

@@ -38,6 +38,7 @@ class AttriaxTrackingManager {
   Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
+    bool flushImmediately = false,
   }) async {
     if (!_settingsState.isEnabled || !_settingsState.areEventsEnabled) {
       _logger.verbose(
@@ -64,6 +65,9 @@ class AttriaxTrackingManager {
           occurredAt: occurredAt,
         ),
       ),
+      flushImmediately: _shouldFlushEventImmediately(
+        flushImmediately: flushImmediately,
+      ),
     );
   }
 
@@ -74,6 +78,7 @@ class AttriaxTrackingManager {
     String? previousPageName,
     Map<String, Object?>? parameters,
     String source = 'manual',
+    bool flushImmediately = false,
   }) async {
     final normalizedPageName = pageName.trim();
     if (normalizedPageName.isEmpty) {
@@ -99,6 +104,7 @@ class AttriaxTrackingManager {
           'previousPageName': normalizedPreviousPageName,
         'source': source,
       },
+      flushImmediately: flushImmediately,
     );
   }
 
@@ -218,6 +224,15 @@ class AttriaxTrackingManager {
   String? _trimOrNull(String? value) {
     final trimmed = value?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  bool _shouldFlushEventImmediately({required bool flushImmediately}) {
+    if (flushImmediately) {
+      return true;
+    }
+
+    return _config.flushEventsImmediatelyOnFirstLaunch &&
+        _contextManager.requiredSnapshot.isFirstLaunch;
   }
 
   int? _sessionRelativeTimeMs({

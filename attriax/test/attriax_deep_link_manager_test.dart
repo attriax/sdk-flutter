@@ -151,6 +151,7 @@ class _FakeRequestManager extends AttriaxRequestManager {
     AttriaxApiRequest request, {
     void Function(AttriaxApiResponse response)? onSuccess,
     void Function(Object error, StackTrace? stackTrace)? onError,
+    bool flushImmediately = true,
   }) async {
     lastRequest = request;
     _onSuccess = onSuccess;

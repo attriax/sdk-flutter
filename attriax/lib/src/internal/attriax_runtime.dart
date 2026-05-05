@@ -243,6 +243,7 @@ class AttriaxRuntime {
       connectivity: _connectivity,
       preferencesStore: _preferencesStore,
       maxQueueSize: config.maxQueueSize,
+      eventFlushInterval: config.eventFlushInterval,
       logger: _logger,
     );
     _requestManager.bindSynchronizer(_synchronizer!);
@@ -282,9 +283,14 @@ class AttriaxRuntime {
   Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
+    bool flushImmediately = false,
   }) async {
     _assertInitialized();
-    await _trackingManager.recordEvent(eventName, eventData: eventData);
+    await _trackingManager.recordEvent(
+      eventName,
+      eventData: eventData,
+      flushImmediately: flushImmediately,
+    );
   }
 
   Future<void> recordPageView(
@@ -294,6 +300,7 @@ class AttriaxRuntime {
     String? previousPageName,
     Map<String, Object?>? parameters,
     String source = 'manual',
+    bool flushImmediately = false,
   }) async {
     _assertInitialized();
     await _trackingManager.recordPageView(
@@ -303,6 +310,7 @@ class AttriaxRuntime {
       previousPageName: previousPageName,
       parameters: parameters,
       source: source,
+      flushImmediately: flushImmediately,
     );
   }
 
@@ -500,6 +508,9 @@ class AttriaxRuntime {
     _apiBaseUrlConfig;
     if (config.maxQueueSize <= 0) {
       throw ArgumentError('Attriax maxQueueSize must be greater than zero.');
+    }
+    if (config.eventFlushInterval.isNegative) {
+      throw ArgumentError('Attriax eventFlushInterval must not be negative.');
     }
   }
 

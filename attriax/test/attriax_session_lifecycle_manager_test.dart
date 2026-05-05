@@ -142,6 +142,7 @@ class _RecordingRequestManager extends AttriaxRequestManager {
     AttriaxApiRequest request, {
     void Function(AttriaxApiResponse response)? onSuccess,
     void Function(Object error, StackTrace? stackTrace)? onError,
+    bool flushImmediately = true,
   }) async {
     _requests.add(request);
   }

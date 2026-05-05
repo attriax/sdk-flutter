@@ -189,12 +189,18 @@ class Attriax {
   ///
   /// [eventData] accepts regular JSON-compatible Dart values represented as a
   /// `Map<String, Object?>` with nested maps, lists, strings, numbers, booleans,
-  /// or `null`. The request is queued locally and flushed immediately when the
-  /// device is online.
+  /// or `null`. Regular events are buffered after first launch and flushed
+  /// using [AttriaxConfig.eventFlushInterval] unless [flushImmediately] is set
+  /// to `true` or another immediate request drains the queue sooner.
   Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
-  }) => _runtime.recordEvent(eventName, eventData: eventData);
+    bool flushImmediately = false,
+  }) => _runtime.recordEvent(
+    eventName,
+    eventData: eventData,
+    flushImmediately: flushImmediately,
+  );
 
   /// Queues a standardized purchase revenue event for delivery to Attriax.
   ///
@@ -246,6 +252,7 @@ class Attriax {
     bool? test,
     String? validationId,
     Map<String, Object?>? metadata,
+    bool flushImmediately = true,
   }) {
     final normalizedRevenue = revenue.toDouble();
     if (!normalizedRevenue.isFinite) {
@@ -293,6 +300,7 @@ class Attriax {
         if (test != null) 'test': test,
         if (_trimOrNull(validationId) case final value?) 'validationId': value,
       },
+      flushImmediately: flushImmediately,
     );
   }
 
@@ -320,6 +328,7 @@ class Attriax {
     bool? test,
     String? reason,
     Map<String, Object?>? metadata,
+    bool flushImmediately = true,
   }) {
     final normalizedRevenue = revenue.toDouble();
     if (!normalizedRevenue.isFinite) {
@@ -356,6 +365,7 @@ class Attriax {
         if (test != null) 'test': test,
         if (_trimOrNull(reason) case final value?) 'reason': value,
       },
+      flushImmediately: flushImmediately,
     );
   }
 
@@ -418,6 +428,7 @@ class Attriax {
     String? adPlacement,
     bool? test,
     Map<String, Object?>? metadata,
+    bool flushImmediately = true,
   }) {
     final normalizedRevenue = revenue.toDouble();
     if (!normalizedRevenue.isFinite) {
@@ -439,6 +450,7 @@ class Attriax {
         if (_trimOrNull(adPlacement) case final value?) 'adPlacement': value,
         if (test != null) 'test': test,
       },
+      flushImmediately: flushImmediately,
     );
   }
 
@@ -454,6 +466,7 @@ class Attriax {
     String? previousPageName,
     Map<String, Object?>? parameters,
     String source = 'manual',
+    bool flushImmediately = false,
   }) => _runtime.recordPageView(
     pageName,
     pageClass: pageClass,
@@ -461,6 +474,7 @@ class Attriax {
     previousPageName: previousPageName,
     parameters: parameters,
     source: source,
+    flushImmediately: flushImmediately,
   );
 
   /// Queues a handled error or crash report for delivery to the Attriax backend.

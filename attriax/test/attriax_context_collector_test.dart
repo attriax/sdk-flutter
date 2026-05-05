@@ -4,7 +4,6 @@ import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:device_info_plus/device_info_plus.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -33,6 +32,47 @@ void main() {
     },
   );
 
+  test('builds app and device snapshots from native metadata', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+    final collector = AttriaxContextCollector(
+      config: const AttriaxConfig(appToken: 'ax_test_token'),
+      platform: FakeAttriaxPlatform.withNativeContext(
+        const AttriaxNativeContext(
+          androidId: 'android-ssaid',
+          metadata: <String, Object?>{
+            'appVersion': '1.2.3',
+            'appBuildNumber': '45',
+            'packageName': 'com.example.attriax',
+            'model': 'Pixel 9',
+            'device': 'tokay',
+            'brand': 'Google',
+            'manufacturer': 'Google',
+            'hardware': 'tensor-g4',
+            'osVersion': '14',
+            'isPhysicalDevice': true,
+            'supportedAbis': <String>['arm64-v8a'],
+            'timezone': 'UTC',
+          },
+        ),
+      ),
+    );
+
+    final context = await collector.collectContextSnapshot(
+      deviceId: 'device_test_1',
+      isFirstLaunch: true,
+    );
+
+    expect(context.app.version, '1.2.3');
+    expect(context.app.buildNumber, '45');
+    expect(context.app.packageName, 'com.example.attriax');
+    expect(context.device.model, 'Pixel 9');
+    expect(context.device.name, 'tokay');
+    expect(context.device.supportedAbis, <String>['arm64-v8a']);
+    expect(context.device.androidId, 'android-ssaid');
+  });
+
   test('prefers android SSAID before GAID and storage', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.android;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
@@ -43,42 +83,6 @@ void main() {
         AttriaxNativeContext(
           androidId: 'android-ssaid',
           advertisingId: 'android-gaid',
-        ),
-      ),
-      deviceInfoPlugin: fakeDeviceInfoPlugin(
-        android: AndroidDeviceInfo.setMockInitialValues(
-          version: AndroidBuildVersion.setMockInitialValues(
-            codename: 'REL',
-            incremental: '1',
-            previewSdkInt: 0,
-            release: '14',
-            sdkInt: 34,
-          ),
-          board: 'board',
-          bootloader: 'bootloader',
-          brand: 'brand',
-          device: 'device',
-          display: 'display',
-          fingerprint: 'fingerprint',
-          hardware: 'hardware',
-          host: 'host',
-          id: 'id',
-          manufacturer: 'manufacturer',
-          model: 'model',
-          product: 'product',
-          name: 'name',
-          supported32BitAbis: const <String>[],
-          supported64BitAbis: const <String>[],
-          supportedAbis: const <String>[],
-          tags: 'tags',
-          type: 'user',
-          isPhysicalDevice: true,
-          freeDiskSize: 1,
-          totalDiskSize: 1,
-          systemFeatures: const <String>[],
-          isLowRamDevice: false,
-          physicalRamSize: 1,
-          availableRamSize: 1,
         ),
       ),
     );
@@ -100,42 +104,6 @@ void main() {
       config: const AttriaxConfig(appToken: 'ax_test_token'),
       platform: FakeAttriaxPlatform.withNativeContext(
         AttriaxNativeContext(advertisingId: 'android-gaid'),
-      ),
-      deviceInfoPlugin: fakeDeviceInfoPlugin(
-        android: AndroidDeviceInfo.setMockInitialValues(
-          version: AndroidBuildVersion.setMockInitialValues(
-            codename: 'REL',
-            incremental: '1',
-            previewSdkInt: 0,
-            release: '14',
-            sdkInt: 34,
-          ),
-          board: 'board',
-          bootloader: 'bootloader',
-          brand: 'brand',
-          device: 'device',
-          display: 'display',
-          fingerprint: 'fingerprint',
-          hardware: 'hardware',
-          host: 'host',
-          id: 'id',
-          manufacturer: 'manufacturer',
-          model: 'model',
-          product: 'product',
-          name: 'name',
-          supported32BitAbis: const <String>[],
-          supported64BitAbis: const <String>[],
-          supportedAbis: const <String>[],
-          tags: 'tags',
-          type: 'user',
-          isPhysicalDevice: true,
-          freeDiskSize: 1,
-          totalDiskSize: 1,
-          systemFeatures: const <String>[],
-          isLowRamDevice: false,
-          physicalRamSize: 1,
-          availableRamSize: 1,
-        ),
       ),
     );
 
@@ -162,31 +130,6 @@ void main() {
           },
         ),
       ),
-      deviceInfoPlugin: fakeDeviceInfoPlugin(
-        ios: IosDeviceInfo.setMockInitialValues(
-          name: 'iPhone',
-          systemName: 'iOS',
-          systemVersion: '18.0',
-          model: 'iPhone',
-          modelName: 'iPhone Test',
-          localizedModel: 'iPhone',
-          freeDiskSize: 1,
-          totalDiskSize: 1,
-          identifierForVendor: 'ios-idfv',
-          isPhysicalDevice: true,
-          isiOSAppOnMac: false,
-          isiOSAppOnVision: false,
-          physicalRamSize: 1,
-          availableRamSize: 1,
-          utsname: IosUtsname.setMockInitialValues(
-            sysname: 'Darwin',
-            nodename: 'test',
-            release: '1',
-            version: '1',
-            machine: 'iPhone17,1',
-          ),
-        ),
-      ),
     );
 
     final resolved = await collector.resolvePreferredDeviceId(
@@ -197,7 +140,7 @@ void main() {
     expect(resolved.source, 'ios_keychain');
   });
 
-  test('prefers macOS IOPlatformUUID before keychain and storage', () async {
+  test('prefers macOS keychain before storage', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
@@ -208,32 +151,14 @@ void main() {
           metadata: <String, Object?>{'keychainDeviceId': 'macos-keychain-id'},
         ),
       ),
-      deviceInfoPlugin: fakeDeviceInfoPlugin(
-        macos: MacOsDeviceInfo.setMockInitialValues(
-          computerName: 'Mac',
-          hostName: 'Mac.local',
-          arch: 'arm64',
-          model: 'Mac16,2',
-          modelName: 'MacBook Pro',
-          kernelVersion: 'Darwin 24.0.0',
-          osRelease: '15.0',
-          majorVersion: 15,
-          minorVersion: 0,
-          patchVersion: 0,
-          activeCPUs: 8,
-          memorySize: 16,
-          cpuFrequency: 1,
-          systemGUID: 'macos-platform-uuid',
-        ),
-      ),
     );
 
     final resolved = await collector.resolvePreferredDeviceId(
       fallbackDeviceId: 'stored-fallback',
     );
 
-    expect(resolved.value, 'macos-platform-uuid');
-    expect(resolved.source, 'macos_platform_uuid');
+    expect(resolved.value, 'macos-keychain-id');
+    expect(resolved.source, 'macos_keychain');
   });
 }
 
@@ -265,17 +190,3 @@ class FakeAttriaxPlatform extends AttriaxPlatform {
     return const AttriaxInstallReferrerContext();
   }
 }
-
-DeviceInfoPlugin fakeDeviceInfoPlugin({
-  AndroidDeviceInfo? android,
-  IosDeviceInfo? ios,
-  LinuxDeviceInfo? linux,
-  MacOsDeviceInfo? macos,
-  WindowsDeviceInfo? windows,
-}) => DeviceInfoPlugin.setMockInitialValues(
-  androidDeviceInfo: android,
-  iosDeviceInfo: ios,
-  linuxDeviceInfo: linux,
-  macOsDeviceInfo: macos,
-  windowsDeviceInfo: windows,
-);

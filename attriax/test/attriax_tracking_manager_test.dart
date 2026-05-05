@@ -55,6 +55,41 @@ void main() {
       expect(body['sessionId'], 'session_1');
       expect(body['sessionRelativeTimeMs'], 7000);
       expect(body['clientOccurredAt'], occurredAt.toIso8601String());
+      expect(requestManager.lastFlushImmediately, isTrue);
+    });
+
+    test('recordEvent defers flushes after first launch by default', () async {
+      final requestManager = _RecordingRequestManager();
+      final manager = AttriaxTrackingManager(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        logger: AttriaxLogger(enableDebugLogs: false),
+        clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
+        contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+        settingsState: const _FakeRuntimeSettingsView(),
+        requestManager: requestManager,
+        sessionManager: _FakeTrackedSessionPreparer((_) async => null),
+      );
+
+      await manager.recordEvent('signup_completed');
+
+      expect(requestManager.lastFlushImmediately, isFalse);
+    });
+
+    test('recordEvent flushImmediately override bypasses deferral', () async {
+      final requestManager = _RecordingRequestManager();
+      final manager = AttriaxTrackingManager(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        logger: AttriaxLogger(enableDebugLogs: false),
+        clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
+        contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+        settingsState: const _FakeRuntimeSettingsView(),
+        requestManager: requestManager,
+        sessionManager: _FakeTrackedSessionPreparer((_) async => null),
+      );
+
+      await manager.recordEvent('signup_completed', flushImmediately: true);
+
+      expect(requestManager.lastFlushImmediately, isTrue);
     });
 
     test(
@@ -233,25 +268,26 @@ void main() {
   });
 }
 
-AttriaxContextSnapshot _context() => const AttriaxContextSnapshot(
-  platform: AttriaxPlatformType.android,
-  deviceId: 'device_1',
-  isFirstLaunch: true,
-  sdk: AttriaxSdkSnapshot(
-    apiVersion: attriaxSdkApiVersion,
-    packageVersion: '1.2.3',
-  ),
-  app: AttriaxAppSnapshot(
-    version: '1.0.0',
-    buildNumber: '1',
-    packageName: 'com.attriax.test',
-  ),
-  device: AttriaxDeviceSnapshot(
-    model: 'Pixel',
-    osVersion: '14',
-    language: 'en-US',
-  ),
-);
+AttriaxContextSnapshot _context({bool isFirstLaunch = true}) =>
+    AttriaxContextSnapshot(
+      platform: AttriaxPlatformType.android,
+      deviceId: 'device_1',
+      isFirstLaunch: isFirstLaunch,
+      sdk: const AttriaxSdkSnapshot(
+        apiVersion: attriaxSdkApiVersion,
+        packageVersion: '1.2.3',
+      ),
+      app: const AttriaxAppSnapshot(
+        version: '1.0.0',
+        buildNumber: '1',
+        packageName: 'com.attriax.test',
+      ),
+      device: const AttriaxDeviceSnapshot(
+        model: 'Pixel',
+        osVersion: '14',
+        language: 'en-US',
+      ),
+    );
 
 class _FakeTrackedSessionPreparer implements AttriaxTrackedSessionPreparer {
   const _FakeTrackedSessionPreparer(this._prepare);
@@ -278,13 +314,16 @@ class _FakeRuntimeSettingsView implements AttriaxRuntimeSettingsView {
 }
 
 class _StaticTrackingContext implements AttriaxTrackingContext {
-  const _StaticTrackingContext();
+  const _StaticTrackingContext({this.isFirstLaunch = true});
+
+  final bool isFirstLaunch;
 
   @override
   String get requiredDeviceId => 'device_1';
 
   @override
-  AttriaxContextSnapshot get requiredSnapshot => _context();
+  AttriaxContextSnapshot get requiredSnapshot =>
+      _context(isFirstLaunch: isFirstLaunch);
 
   @override
   String requireDeviceIdSource() => 'android_ssaid';
@@ -293,14 +332,17 @@ class _StaticTrackingContext implements AttriaxTrackingContext {
 class _RecordingRequestManager extends AttriaxRequestManager {
   int enqueueCalls = 0;
   AttriaxApiRequest? lastRequest;
+  bool? lastFlushImmediately;
 
   @override
   Future<void> enqueue(
     AttriaxApiRequest request, {
     void Function(AttriaxApiResponse response)? onSuccess,
     void Function(Object error, StackTrace? stackTrace)? onError,
+    bool flushImmediately = true,
   }) async {
     enqueueCalls += 1;
     lastRequest = request;
+    lastFlushImmediately = flushImmediately;
   }
 }

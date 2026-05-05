@@ -941,6 +941,8 @@ class AttriaxConfig {
     this.enableDebugLogs,
     this.requestTimeout = const Duration(seconds: 12),
     this.maxQueueSize = 200,
+    this.eventFlushInterval = const Duration(seconds: 30),
+    this.flushEventsImmediatelyOnFirstLaunch = true,
     this.sessionTrackingEnabled = true,
     this.sessionHeartbeatInterval = const Duration(seconds: 30),
     this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 5),
@@ -981,6 +983,20 @@ class AttriaxConfig {
 
   /// Maximum number of queued requests persisted locally for retry.
   final int maxQueueSize;
+
+  /// Minimum delay between automatic flushes of regular queued events.
+  ///
+  /// Non-important events are buffered locally after first launch and flushed
+  /// when this interval elapses, unless a later important request drains the
+  /// queue sooner. Set this to `Duration.zero` to keep immediate event flushes.
+  final Duration eventFlushInterval;
+
+  /// Whether regular events should still flush immediately during first launch.
+  ///
+  /// When `true`, event requests keep the current eager delivery behavior for
+  /// the installation's first launch session. Later launches use
+  /// [eventFlushInterval] unless a caller marks an event as important.
+  final bool flushEventsImmediatelyOnFirstLaunch;
 
   /// Enables automatic session lifecycle tracking and session enrichment.
   final bool sessionTrackingEnabled;

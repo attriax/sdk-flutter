@@ -110,6 +110,7 @@ class FakeRequestManager extends AttriaxRequestManager {
     AttriaxApiRequest request, {
     void Function(AttriaxApiResponse response)? onSuccess,
     void Function(Object error, StackTrace? stackTrace)? onError,
+    bool flushImmediately = true,
   }) async {
     enqueueCalls += 1;
     _onSuccess = onSuccess;

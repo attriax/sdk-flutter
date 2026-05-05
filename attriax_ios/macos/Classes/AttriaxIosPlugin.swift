@@ -23,6 +23,8 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin {
     }
 
     private func collectNativeContext() -> [String: Any] {
+        let bundle = Bundle.main
+        let processInfo = ProcessInfo.processInfo
         [
             "metadata": [
                 "source": "macos_native",
@@ -30,8 +32,16 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin {
                 "locale": Locale.current.identifier,
                 "regionCode": Locale.current.regionCode as Any,
                 "preferredLanguages": Locale.preferredLanguages,
-                "bundleIdentifier": Bundle.main.bundleIdentifier as Any,
+                "appVersion": bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as Any,
+                "appBuildNumber": bundle.object(forInfoDictionaryKey: kCFBundleVersionKey as String)
+                    as Any,
+                "packageName": bundle.bundleIdentifier as Any,
+                "bundleIdentifier": bundle.bundleIdentifier as Any,
                 "keychainDeviceId": readKeychainDeviceId() as Any,
+                "computerName": Host.current().localizedName as Any,
+                "hostName": processInfo.hostName,
+                "operatingSystemVersionString": processInfo.operatingSystemVersionString,
+                "isPhysicalDevice": true,
             ],
         ]
     }

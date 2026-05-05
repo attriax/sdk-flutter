@@ -153,6 +153,10 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         let device = UIDevice.current
         let screen = UIScreen.main
         let screenBounds = screen.bounds
+        let bundle = Bundle.main
+        let appVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
+        let appBuildNumber = bundle.object(forInfoDictionaryKey: kCFBundleVersionKey as String)
+            as? String
 
         // Top-level payload picked up by the SDK init request. Keys here
         // map 1:1 to columns the backend uses for multi-signal attribution
@@ -177,10 +181,16 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             "locale": Locale.current.identifier,
             "regionCode": Locale.current.regionCode as Any,
             "preferredLanguages": Locale.preferredLanguages,
+            "appVersion": appVersion as Any,
+            "appBuildNumber": appBuildNumber as Any,
+            "packageName": bundle.bundleIdentifier as Any,
             "keychainDeviceId": readKeychainDeviceId() as Any,
             "vendorIdentifier": device.identifierForVendor?.uuidString as Any,
+            "name": device.name,
+            "localizedModel": device.localizedModel,
+            "model": device.model,
             "deviceModel": device.model,
-            "bundleIdentifier": Bundle.main.bundleIdentifier as Any,
+            "bundleIdentifier": bundle.bundleIdentifier as Any,
             "systemName": device.systemName,
             "systemVersion": device.systemVersion,
             "screenWidthPoints": screenBounds.width,
@@ -227,8 +237,10 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
 
 #if targetEnvironment(simulator)
         metadata["isSimulator"] = true
+    metadata["isPhysicalDevice"] = false
 #else
         metadata["isSimulator"] = false
+    metadata["isPhysicalDevice"] = true
 #endif
 
         payload["metadata"] = metadata

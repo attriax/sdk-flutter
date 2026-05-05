@@ -6,6 +6,7 @@ import 'package:attriax/src/internal/attriax_queue.dart';
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:attriax_sdk_client/attriax_sdk_client.dart' as sdk;
 import 'package:built_value/serializer.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 
@@ -36,6 +37,66 @@ void main() {
       expect(response.result.userId, 'user_123');
       expect(response.result.deepLink?.path, '/offers/spring');
       expect(response.result.isNewUser, isTrue);
+    });
+
+    test('omits null metadata values from generated open requests', () async {
+      final request = attriaxBuildOpenRequest(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        context: const AttriaxContextSnapshot(
+          platform: AttriaxPlatformType.android,
+          deviceId: 'device_123',
+          isFirstLaunch: true,
+          sdk: AttriaxSdkSnapshot(
+            apiVersion: '2025-01-01',
+            packageVersion: '1.2.3',
+            metadata: <String, Object?>{
+              'clientRuntime': 'flutter',
+              'optionalField': null,
+            },
+          ),
+          app: AttriaxAppSnapshot(
+            version: '1.0.0',
+            buildNumber: '1',
+            packageName: 'com.attriax.test',
+          ),
+          device: AttriaxDeviceSnapshot(
+            model: 'Pixel 9',
+            metadata: <String, Object?>{
+              'appVersion': '1.0.0',
+              'installerPackageName': null,
+              'nested': <String, Object?>{'child': null},
+              'tags': <Object?>['one', null, 'two'],
+            },
+          ),
+        ),
+        deviceIdSource: 'android_ssaid',
+      );
+
+      final client = FakeHttpClient((request) async {
+        final body =
+            jsonDecode(_readRequestBody(request)) as Map<String, Object?>;
+        final sdkBody = body['sdk'] as Map<String, Object?>;
+        final sdkMetadata = sdkBody['metadata'] as Map<String, Object?>;
+        final deviceBody = body['device'] as Map<String, Object?>;
+        final deviceMetadata = deviceBody['metadata'] as Map<String, Object?>;
+        final nestedMetadata = deviceMetadata['nested'] as Map<String, Object?>;
+
+        expect(sdkMetadata.containsKey('optionalField'), isFalse);
+        expect(deviceMetadata.containsKey('installerPackageName'), isFalse);
+        expect(nestedMetadata.containsKey('child'), isFalse);
+        expect(deviceMetadata['tags'], <Object?>['one', 'two']);
+
+        return _jsonResponse(
+          200,
+          _serializeGenerated(
+            sdk.SdkV1OpenResponseEnvelopeDto.serializer,
+            _openEnvelope(),
+          ),
+        );
+      });
+
+      final transport = _createTransport(client);
+      await expectLater(() => transport.send(request), returnsNormally);
     });
 
     test('sends event requests and maps acknowledge responses', () async {
@@ -203,6 +264,39 @@ void main() {
         expect(response.result.matched, isTrue);
         expect(response.result.deepLink?.path, '/offers/spring');
         expect(response.result.reason, isNull);
+      },
+    );
+
+    test(
+      'surfaces browser fetch failures with a CORS hint for web SDK requests',
+      () async {
+        final client = FakeHttpClient((request) async {
+          throw http.ClientException('Failed to fetch', request.url);
+        });
+
+        final transport = _createTransport(client);
+
+        await expectLater(
+          () => transport.send(_resolveRequest()),
+          throwsA(
+            isA<DioException>()
+                .having(
+                  (error) => error.message,
+                  'message',
+                  contains('/api/sdk/v1/deep-links/resolve'),
+                )
+                .having(
+                  (error) => error.message,
+                  'message',
+                  contains('allowedWebOrigins'),
+                )
+                .having(
+                  (error) => error.message,
+                  'message',
+                  contains('OPTIONS request returned 403'),
+                ),
+          ),
+        );
       },
     );
 

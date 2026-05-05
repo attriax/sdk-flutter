@@ -419,6 +419,7 @@ class AttriaxDioHttpClientAdapter implements HttpClientAdapter {
         requestOptions: options,
         type: DioExceptionType.connectionError,
         error: error,
+        message: _clientExceptionMessage(options, error),
         stackTrace: stackTrace,
       );
     }
@@ -451,5 +452,25 @@ class AttriaxDioHttpClientAdapter implements HttpClientAdapter {
     }
 
     return Uint8List.fromList(utf8.encode(jsonEncode(data)));
+  }
+
+  String _clientExceptionMessage(
+    RequestOptions options,
+    http.ClientException error,
+  ) {
+    final buffer = StringBuffer(
+      'Connection error for ${options.method.toUpperCase()} ${options.uri}: ${error.message}.',
+    );
+
+    if (error.message.toLowerCase().contains('failed to fetch')) {
+      buffer.write(
+        ' In Flutter web this usually means the browser blocked the request '
+        'before it reached the API, commonly because the page origin is '
+        'missing from the app allowedWebOrigins list or the CORS preflight '
+        'OPTIONS request returned 403.',
+      );
+    }
+
+    return buffer.toString();
   }
 }

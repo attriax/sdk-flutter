@@ -1,7 +1,5 @@
-import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
-import 'package:package_info_plus/package_info_plus.dart';
 
 import 'attriax_logger.dart';
 import 'attriax_platform_install_referrer_manager.dart';
@@ -26,7 +24,6 @@ class AttriaxContextCollector {
     required AttriaxConfig config,
     AttriaxLogger? logger,
     AttriaxPlatform? platform,
-    DeviceInfoPlugin? deviceInfoPlugin,
     AttriaxPlatformInstallReferrerManager? platformInstallReferrerManager,
     AttriaxPreferencesStore? preferencesStore,
     Duration installReferrerTimeout = _defaultInstallReferrerTimeout,
@@ -34,7 +31,6 @@ class AttriaxContextCollector {
   }) : _config = config,
        _platform = platform ?? AttriaxPlatform.instance,
        _platformType = _resolveCurrentPlatformType(),
-       _deviceInfoPlugin = deviceInfoPlugin ?? DeviceInfoPlugin(),
        _platformInstallReferrerManager =
            platformInstallReferrerManager ??
            AttriaxPlatformInstallReferrerManager(
@@ -52,7 +48,6 @@ class AttriaxContextCollector {
   final AttriaxConfig _config;
   final AttriaxPlatform _platform;
   final AttriaxPlatformType _platformType;
-  final DeviceInfoPlugin _deviceInfoPlugin;
   final AttriaxPlatformInstallReferrerManager _platformInstallReferrerManager;
 
   AttriaxPlatformInstallReferrerManager get platformInstallReferrerManager =>
@@ -63,7 +58,7 @@ class AttriaxContextCollector {
     required bool isFirstLaunch,
   }) async {
     final nativeContext = await _platform.collectNativeContext();
-    final appSnapshot = await _collectAppSnapshot();
+    final appSnapshot = _collectAppSnapshot(nativeContext);
     final deviceSnapshot = await _collectDeviceSnapshot(
       _platformType,
       nativeContext,
@@ -82,7 +77,7 @@ class AttriaxContextCollector {
   }) async {
     try {
       final nativeContext = await _platform.collectNativeContext();
-      final rawData = await _loadRawDeviceData(_platformType);
+      final rawData = _loadRawDeviceData(nativeContext);
       final resolved = _resolvePreferredDeviceIdFromSignals(
         platformType: _platformType,
         nativeContext: nativeContext,
@@ -129,23 +124,23 @@ class AttriaxContextCollector {
     'clientRuntime': 'flutter',
   };
 
-  Future<AttriaxAppSnapshot> _collectAppSnapshot() async {
-    try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      return AttriaxAppSnapshot(
-        version: _config.appVersion ?? _emptyToNull(packageInfo.version),
-        buildNumber:
-            _config.appBuildNumber ?? _emptyToNull(packageInfo.buildNumber),
-        packageName:
-            _config.appPackageName ?? _emptyToNull(packageInfo.packageName),
-      );
-    } catch (_) {
-      return AttriaxAppSnapshot(
-        version: _config.appVersion,
-        buildNumber: _config.appBuildNumber,
-        packageName: _config.appPackageName,
-      );
-    }
+  AttriaxAppSnapshot _collectAppSnapshot(AttriaxNativeContext nativeContext) {
+    final rawData = _loadRawDeviceData(nativeContext);
+    return AttriaxAppSnapshot(
+      version:
+          _config.appVersion ??
+          _readFirstString(rawData, const ['appVersion', 'versionName']),
+      buildNumber:
+          _config.appBuildNumber ??
+          _readFirstString(rawData, const [
+            'appBuildNumber',
+            'buildNumber',
+            'versionCode',
+          ]),
+      packageName:
+          _config.appPackageName ??
+          _readFirstString(rawData, const ['packageName', 'bundleIdentifier']),
+    );
   }
 
   AttriaxContextSnapshot _buildContextSnapshot({
@@ -182,7 +177,7 @@ class AttriaxContextCollector {
     final screenHeight = screenDimensions?.height;
 
     try {
-      final rawData = await _loadRawDeviceData(platformType);
+      final rawData = _loadRawDeviceData(nativeContext);
       final metadata = <String, Object?>{
         ...rawData,
         if (nativeContext.metadata.isNotEmpty)
@@ -206,7 +201,9 @@ class AttriaxContextCollector {
             brand: _readString(rawData, 'brand'),
             manufacturer: _readString(rawData, 'manufacturer'),
             hardware: _readString(rawData, 'hardware'),
-            osVersion: _readNestedString(rawData, ['version', 'release']),
+            osVersion:
+                _readString(rawData, 'osVersion') ??
+                _readNestedString(rawData, ['version', 'release']),
             language: locale,
             timezone: timezone,
             screenResolution: screenResolution,
@@ -220,15 +217,16 @@ class AttriaxContextCollector {
             metadata: metadata,
           );
         case AttriaxPlatformType.ios:
-          final utsname = _readNestedString(rawData, ['utsname', 'machine']);
           return AttriaxDeviceSnapshot(
-            model: _readString(rawData, 'model') ?? utsname,
+            model:
+                _readString(rawData, 'model') ??
+                _readString(rawData, 'deviceModel'),
             name:
                 _readString(rawData, 'name') ??
                 _readString(rawData, 'localizedModel'),
             brand: 'Apple',
             manufacturer: 'Apple',
-            hardware: utsname,
+            hardware: _readString(rawData, 'hardwareModel'),
             osVersion: _readString(rawData, 'systemVersion'),
             language: locale,
             timezone: timezone,
@@ -243,11 +241,15 @@ class AttriaxContextCollector {
         case AttriaxPlatformType.macos:
           return AttriaxDeviceSnapshot(
             model: _readString(rawData, 'model'),
-            name: _readString(rawData, 'computerName'),
+            name:
+                _readString(rawData, 'computerName') ??
+                _readString(rawData, 'hostName'),
             brand: 'Apple',
             manufacturer: 'Apple',
             hardware: _readString(rawData, 'arch'),
-            osVersion: _readString(rawData, 'osRelease'),
+            osVersion:
+                _readString(rawData, 'osRelease') ??
+                _readString(rawData, 'operatingSystemVersionString'),
             language: locale,
             timezone: timezone,
             screenResolution: screenResolution,
@@ -351,28 +353,8 @@ class AttriaxContextCollector {
     }
   }
 
-  Future<Map<String, Object?>> _loadRawDeviceData(
-    AttriaxPlatformType platformType,
-  ) async {
-    switch (platformType) {
-      case AttriaxPlatformType.android:
-        return _sanitizeDeviceData((await _deviceInfoPlugin.androidInfo).data);
-      case AttriaxPlatformType.ios:
-        return _sanitizeDeviceData((await _deviceInfoPlugin.iosInfo).data);
-      case AttriaxPlatformType.macos:
-        return _sanitizeDeviceData((await _deviceInfoPlugin.macOsInfo).data);
-      case AttriaxPlatformType.windows:
-        return _sanitizeDeviceData((await _deviceInfoPlugin.windowsInfo).data);
-      case AttriaxPlatformType.linux:
-        return _sanitizeDeviceData((await _deviceInfoPlugin.linuxInfo).data);
-      case AttriaxPlatformType.web:
-        return _sanitizeDeviceData(
-          (await _deviceInfoPlugin.webBrowserInfo).data,
-        );
-      case AttriaxPlatformType.unknown:
-        return const {};
-    }
-  }
+  Map<String, Object?> _loadRawDeviceData(AttriaxNativeContext nativeContext) =>
+      _sanitizeDeviceData(Map<Object?, Object?>.from(nativeContext.metadata));
 
   Map<String, Object?> _sanitizeDeviceData(Map<Object?, Object?> input) => input
       .map((key, value) => MapEntry(key.toString(), _sanitizeValue(value)));
@@ -527,6 +509,16 @@ class AttriaxContextCollector {
     final value = data[key];
     if (value is String && value.trim().isNotEmpty) {
       return value;
+    }
+    return null;
+  }
+
+  String? _readFirstString(Map<String, Object?> data, List<String> keys) {
+    for (final key in keys) {
+      final value = _readString(data, key);
+      if (value != null) {
+        return value;
+      }
     }
     return null;
   }

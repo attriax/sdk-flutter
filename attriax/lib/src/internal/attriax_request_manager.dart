@@ -14,6 +14,7 @@ class AttriaxRequestManager {
     AttriaxApiRequest request, {
     void Function(AttriaxApiResponse response)? onSuccess,
     void Function(Object error, StackTrace? stackTrace)? onError,
+    bool flushImmediately = true,
   }) {
     final synchronizer = _synchronizer;
     if (synchronizer == null) {
@@ -26,6 +27,7 @@ class AttriaxRequestManager {
       request,
       onSuccess: onSuccess,
       onError: onError,
+      flushImmediately: flushImmediately,
     );
   }
 }

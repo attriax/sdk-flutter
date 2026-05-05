@@ -28,6 +28,7 @@ import java.security.MessageDigest;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -201,21 +202,24 @@ public class AttriaxAndroidPlugin implements
         metadata.put("source", "android_native");
         metadata.put("timezone", TimeZone.getDefault().getID());
         metadata.put("locale", Locale.getDefault().toLanguageTag());
+        metadata.put("appVersion", readAppVersion());
+        metadata.put("appBuildNumber", readAppBuildNumber());
         metadata.put("packageName", context.getPackageName());
+        metadata.put("model", Build.MODEL);
+        metadata.put("device", Build.DEVICE);
+        metadata.put("product", Build.PRODUCT);
+        metadata.put("brand", Build.BRAND);
+        metadata.put("manufacturer", Build.MANUFACTURER);
+        metadata.put("hardware", Build.HARDWARE);
+        metadata.put("osVersion", Build.VERSION.RELEASE);
+        metadata.put("isPhysicalDevice", !isProbablyEmulator());
+        metadata.put("supportedAbis", Arrays.asList(Build.SUPPORTED_ABIS));
+        metadata.put("supported32BitAbis", Arrays.asList(Build.SUPPORTED_32_BIT_ABIS));
+        metadata.put("supported64BitAbis", Arrays.asList(Build.SUPPORTED_64_BIT_ABIS));
 
         try {
             PackageManager packageManager = context.getPackageManager();
-            String installerPackageName;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                InstallSourceInfo installSourceInfo = packageManager.getInstallSourceInfo(
-                    context.getPackageName()
-                );
-                installerPackageName = installSourceInfo.getInstallingPackageName();
-            } else {
-                installerPackageName = packageManager.getInstallerPackageName(
-                    context.getPackageName()
-                );
-            }
+            String installerPackageName = getInstallingPackageNameCompat(packageManager);
             metadata.put(
                 "installerPackageName",
                 installerPackageName
@@ -234,19 +238,14 @@ public class AttriaxAndroidPlugin implements
     @SuppressWarnings("deprecation")
     private void appendSigningFingerprints(Map<String, Object> metadata) {
         try {
-            PackageManager packageManager = context.getPackageManager();
             PackageInfo packageInfo;
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                packageInfo = packageManager.getPackageInfo(
-                    context.getPackageName(),
+                packageInfo = getPackageInfoCompat(
                     PackageManager.GET_SIGNING_CERTIFICATES
                 );
             } else {
-                packageInfo = packageManager.getPackageInfo(
-                    context.getPackageName(),
-                    PackageManager.GET_SIGNATURES
-                );
+                packageInfo = getPackageInfoCompat(PackageManager.GET_SIGNATURES);
             }
 
             List<String> fingerprints = new ArrayList<>();
@@ -277,6 +276,86 @@ public class AttriaxAndroidPlugin implements
         } catch (Exception exception) {
             metadata.put("signingSha256FingerprintError", exception.getMessage());
         }
+    }
+
+    private PackageInfo getPackageInfoCompat(long flags)
+        throws PackageManager.NameNotFoundException {
+        PackageManager packageManager = context.getPackageManager();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return packageManager.getPackageInfo(
+                context.getPackageName(),
+                PackageManager.PackageInfoFlags.of(flags)
+            );
+        }
+
+        @SuppressWarnings("deprecation")
+        PackageInfo packageInfo = packageManager.getPackageInfo(
+            context.getPackageName(),
+            (int) flags
+        );
+        return packageInfo;
+    }
+
+    private String getInstallingPackageNameCompat(PackageManager packageManager)
+        throws PackageManager.NameNotFoundException {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            InstallSourceInfo installSourceInfo = packageManager.getInstallSourceInfo(
+                context.getPackageName()
+            );
+            return installSourceInfo.getInstallingPackageName();
+        }
+
+        @SuppressWarnings("deprecation")
+        String installerPackageName = packageManager.getInstallerPackageName(
+            context.getPackageName()
+        );
+        return installerPackageName;
+    }
+
+    private long getPackageVersionCodeCompat(PackageInfo packageInfo) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            return packageInfo.getLongVersionCode();
+        }
+
+        try {
+            Object versionCode = PackageInfo.class.getField("versionCode").get(packageInfo);
+            if (versionCode instanceof Number) {
+                return ((Number) versionCode).longValue();
+            }
+        } catch (NoSuchFieldException | IllegalAccessException ignored) {
+        }
+
+        return 0L;
+    }
+
+    private String readAppVersion() {
+        try {
+            PackageInfo packageInfo = getPackageInfoCompat(0);
+            return packageInfo.versionName;
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    private String readAppBuildNumber() {
+        try {
+            PackageInfo packageInfo = getPackageInfoCompat(0);
+            long versionCode = getPackageVersionCodeCompat(packageInfo);
+            return Long.toString(versionCode);
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    private boolean isProbablyEmulator() {
+        return Build.FINGERPRINT.startsWith("generic")
+            || Build.FINGERPRINT.startsWith("unknown")
+            || Build.MODEL.contains("google_sdk")
+            || Build.MODEL.contains("Emulator")
+            || Build.MODEL.contains("Android SDK built for x86")
+            || Build.MANUFACTURER.contains("Genymotion")
+            || Build.BRAND.startsWith("generic") && Build.DEVICE.startsWith("generic")
+            || "google_sdk".equals(Build.PRODUCT);
     }
 
     private void appendDomainVerificationState(Map<String, Object> metadata) {
