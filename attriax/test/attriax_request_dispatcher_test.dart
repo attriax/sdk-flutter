@@ -279,6 +279,13 @@ class FakeTransport implements AttriaxGeneratedTransport {
   ) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<AttriaxRevenueReceiptValidationResult> validateRevenueReceipt(
+    Map<String, Object?> payload,
+  ) {
+    throw UnimplementedError();
+  }
 }
 
 class FakeConnectivityPlatform extends ConnectivityPlatform {

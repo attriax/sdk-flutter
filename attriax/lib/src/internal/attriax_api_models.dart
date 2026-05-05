@@ -418,9 +418,7 @@ AttriaxApiRequest attriaxApiRequestFromJson(
         _deserializeGenerated(sdk.SdkEventDto.serializer, body),
       );
     case 'trackCrash':
-      return AttriaxTrackCrashRequest(
-        AttriaxCrashReportPayload.fromJson(body),
-      );
+      return AttriaxTrackCrashRequest(AttriaxCrashReportPayload.fromJson(body));
     case 'trackSession':
       return AttriaxTrackSessionRequest(
         AttriaxSessionLifecyclePayload.fromJson(body),
@@ -716,6 +714,45 @@ AttriaxCreateDynamicLinkRequest attriaxBuildCreateDynamicLinkRequest({
   return AttriaxCreateDynamicLinkRequest(requestDto);
 }
 
+Map<String, Object?> attriaxBuildValidateRevenueReceiptRequest({
+  required String appToken,
+  required String deviceId,
+  required DateTime clientOccurredAt,
+  String? provider,
+  String? environment,
+  String? transactionId,
+  String? originalTransactionId,
+  String? productId,
+  String? store,
+  String? packageName,
+  String? purchaseToken,
+  String? receiptData,
+  String? signedPayload,
+  String? receiptSignature,
+  bool? test,
+}) => <String, Object?>{
+  'appToken': appToken,
+  'deviceId': deviceId,
+  'clientOccurredAt': clientOccurredAt.toUtc().toIso8601String(),
+  if (attriaxStringValue(provider) case final value?) 'provider': value,
+  if (attriaxStringValue(environment) case final value?) 'environment': value,
+  if (attriaxStringValue(transactionId) case final value?)
+    'transactionId': value,
+  if (attriaxStringValue(originalTransactionId) case final value?)
+    'originalTransactionId': value,
+  if (attriaxStringValue(productId) case final value?) 'productId': value,
+  if (attriaxStringValue(store) case final value?) 'store': value,
+  if (attriaxStringValue(packageName) case final value?) 'packageName': value,
+  if (attriaxStringValue(purchaseToken) case final value?)
+    'purchaseToken': value,
+  if (attriaxStringValue(receiptData) case final value?) 'receiptData': value,
+  if (attriaxStringValue(signedPayload) case final value?)
+    'signedPayload': value,
+  if (attriaxStringValue(receiptSignature) case final value?)
+    'receiptSignature': value,
+  if (test != null) 'test': test,
+};
+
 abstract class AttriaxApiResponse {
   const AttriaxApiResponse();
 }
@@ -742,6 +779,12 @@ class AttriaxCreateDynamicLinkApiResponse extends AttriaxApiResponse {
   const AttriaxCreateDynamicLinkApiResponse({required this.result});
 
   final AttriaxCreateDynamicLinkResult result;
+}
+
+class AttriaxRevenueReceiptValidationApiResponse extends AttriaxApiResponse {
+  const AttriaxRevenueReceiptValidationApiResponse({required this.result});
+
+  final AttriaxRevenueReceiptValidationResult result;
 }
 
 AttriaxAckResponse attriaxAckResponseFromGenerated(
@@ -776,6 +819,20 @@ attriaxCreateDynamicLinkResponseFromGenerated(
 ) => AttriaxCreateDynamicLinkApiResponse(
   result: _mapCreateDynamicLinkResult(envelope.data),
 );
+
+AttriaxRevenueReceiptValidationApiResponse
+attriaxRevenueReceiptValidationResponseFromJsonEnvelope(
+  Map<String, Object?> envelope,
+) {
+  final data = attriaxObjectMap(envelope['data']);
+  if (data == null) {
+    throw const FormatException('Missing or invalid "data".');
+  }
+
+  return AttriaxRevenueReceiptValidationApiResponse(
+    result: AttriaxRevenueReceiptValidationResult.fromJson(data),
+  );
+}
 
 sdk.Platform _generatedPlatform(AttriaxPlatformType platform) =>
     switch (platform) {

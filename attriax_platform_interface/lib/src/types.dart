@@ -29,6 +29,15 @@ enum AttriaxSynchronizationState {
   disabled,
 }
 
+enum AttriaxRevenueReceiptValidationStatus {
+  verified,
+  rejected,
+  pending,
+  unconfigured,
+  providerError,
+  passthrough,
+}
+
 class AttriaxNativeContext {
   const AttriaxNativeContext({
     this.installReferrer,
@@ -168,8 +177,7 @@ class AttriaxPendingCrashReport {
     'exceptionType': exceptionType,
     'message': message,
     'stackTrace': stackTrace,
-    if (occurredAt != null)
-      'occurredAt': occurredAt!.toUtc().toIso8601String(),
+    if (occurredAt != null) 'occurredAt': occurredAt!.toUtc().toIso8601String(),
     if (reason != null) 'reason': reason,
     if (metadata.isNotEmpty) 'metadata': _normalizeJsonMap(metadata),
   };
@@ -534,6 +542,57 @@ class AttriaxCreateDynamicLinkResult {
   final AttriaxDynamicLinkRecord link;
   final String? requestVersion;
   final DateTime? acceptedAt;
+}
+
+class AttriaxRevenueReceiptValidationResult {
+  const AttriaxRevenueReceiptValidationResult({
+    required this.validationId,
+    required this.status,
+    required this.publicReceipt,
+    this.requestVersion,
+    this.acceptedAt,
+    this.provider,
+    this.environment,
+    this.transactionId,
+    this.originalTransactionId,
+    this.productId,
+    this.failureReason,
+    this.expiresAt,
+    this.providerResult,
+  });
+
+  factory AttriaxRevenueReceiptValidationResult.fromJson(
+    Map<String, Object?> json,
+  ) => AttriaxRevenueReceiptValidationResult(
+    requestVersion: _jsonString(json['requestVersion']),
+    acceptedAt: _jsonDateTime(json['acceptedAt']),
+    validationId: _requireJsonString(json, 'validationId'),
+    status: _parseRevenueReceiptValidationStatus(_jsonString(json['status'])),
+    provider: _jsonString(json['provider']),
+    environment: _jsonString(json['environment']),
+    transactionId: _jsonString(json['transactionId']),
+    originalTransactionId: _jsonString(json['originalTransactionId']),
+    productId: _jsonString(json['productId']),
+    failureReason: _jsonString(json['failureReason']),
+    expiresAt: _jsonDateTime(json['expiresAt']),
+    providerResult: _jsonObject(json['providerResult']),
+    publicReceipt:
+        _jsonObject(json['publicReceipt']) ?? const <String, Object?>{},
+  );
+
+  final String validationId;
+  final AttriaxRevenueReceiptValidationStatus status;
+  final String? requestVersion;
+  final DateTime? acceptedAt;
+  final String? provider;
+  final String? environment;
+  final String? transactionId;
+  final String? originalTransactionId;
+  final String? productId;
+  final String? failureReason;
+  final DateTime? expiresAt;
+  final Map<String, Object?>? providerResult;
+  final Map<String, Object?> publicReceipt;
 }
 
 /// Raw deep-link activation captured by the SDK before backend resolution.
@@ -1029,6 +1088,26 @@ AttriaxDeepLinkResolutionStatus _parseResolutionStatus(String? value) {
     case 'invalid':
     default:
       return AttriaxDeepLinkResolutionStatus.invalid;
+  }
+}
+
+AttriaxRevenueReceiptValidationStatus _parseRevenueReceiptValidationStatus(
+  String? value,
+) {
+  switch (value) {
+    case 'verified':
+      return AttriaxRevenueReceiptValidationStatus.verified;
+    case 'pending':
+      return AttriaxRevenueReceiptValidationStatus.pending;
+    case 'unconfigured':
+      return AttriaxRevenueReceiptValidationStatus.unconfigured;
+    case 'provider_error':
+      return AttriaxRevenueReceiptValidationStatus.providerError;
+    case 'passthrough':
+      return AttriaxRevenueReceiptValidationStatus.passthrough;
+    case 'rejected':
+    default:
+      return AttriaxRevenueReceiptValidationStatus.rejected;
   }
 }
 

@@ -172,11 +172,9 @@ void main() {
             jsonDecode(request.body) as Map<String, Object?>,
           );
           return http.Response(
-            jsonEncode(
-              <String, Object?>{
-                'data': <String, Object?>{'success': true},
-              },
-            ),
+            jsonEncode(<String, Object?>{
+              'data': <String, Object?>{'success': true},
+            }),
             202,
             headers: <String, String>{'content-type': 'application/json'},
           );
@@ -217,27 +215,30 @@ void main() {
       },
     );
 
-    test('persists fatal platform dispatcher errors for the next launch', () async {
-      await sdk.init(trackAppOpen: false);
+    test(
+      'persists fatal platform dispatcher errors for the next launch',
+      () async {
+        await sdk.init(trackAppOpen: false);
 
-      final handled = ui.PlatformDispatcher.instance.onError?.call(
-        StateError('boom'),
-        StackTrace.fromString('stack line'),
-      );
+        final handled = ui.PlatformDispatcher.instance.onError?.call(
+          StateError('boom'),
+          StackTrace.fromString('stack line'),
+        );
 
-      expect(handled, isFalse);
-      await Future<void>.delayed(Duration.zero);
-      final raw = prefs.getString(
-        AttriaxPreferencesStore.pendingCrashReportStorageKey,
-      );
-      expect(raw, isNotNull);
+        expect(handled, isFalse);
+        await Future<void>.delayed(Duration.zero);
+        final raw = prefs.getString(
+          AttriaxPreferencesStore.pendingCrashReportStorageKey,
+        );
+        expect(raw, isNotNull);
 
-      final body = jsonDecode(raw!) as Map<String, Object?>;
-      expect(body['source'], 'platform_dispatcher');
-      expect(body['isFatal'], isTrue);
-      expect(body['message'], 'Bad state: boom');
-      expect(body['stackTrace'], 'stack line');
-    });
+        final body = jsonDecode(raw!) as Map<String, Object?>;
+        expect(body['source'], 'platform_dispatcher');
+        expect(body['isFatal'], isTrue);
+        expect(body['message'], 'Bad state: boom');
+        expect(body['stackTrace'], 'stack line');
+      },
+    );
 
     test('creates and persists a current session snapshot', () async {
       final now = DateTime.utc(2026, 5, 3, 12, 0, 0);
@@ -401,6 +402,223 @@ void main() {
       expect(body['sessionId'], session!.id);
       expect(body['sessionRelativeTimeMs'], 7000);
       expect(body['clientOccurredAt'], now.toIso8601String());
+    });
+
+    test(
+      'recordPurchase queues a normalized purchase revenue payload',
+      () async {
+        connectivityPlatform = FakeConnectivityPlatform(
+          currentResults: const <ConnectivityResult>[ConnectivityResult.none],
+        );
+        ConnectivityPlatform.instance = connectivityPlatform;
+        connectivity = Connectivity();
+        sdk = Attriax.test(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init(trackAppOpen: false);
+        await sdk.recordPurchase(
+          revenue: 4.99,
+          currency: 'usd',
+          productId: 'coins_500',
+          transactionId: 'txn_123',
+          validationProvider: 'google_play',
+          purchaseToken: 'purchase-token-123',
+          isRenewal: false,
+          quantity: 2,
+          metadata: const <String, Object?>{'placement': 'paywall'},
+        );
+
+        final queuedRaw = prefs.getString('attriax.queue.v1');
+        expect(queuedRaw, isNotNull);
+
+        final decoded = jsonDecode(queuedRaw!) as List<Object?>;
+        final queued = decoded.single as Map<String, Object?>;
+        final body = queued['body'] as Map<String, Object?>;
+        final eventData = body['eventData'] as Map<String, Object?>;
+
+        expect(body['eventName'], 'purchase');
+        expect(eventData['revenue'], 4.99);
+        expect(eventData['currency'], 'USD');
+        expect(eventData['productId'], 'coins_500');
+        expect(eventData['transactionId'], 'txn_123');
+        expect(eventData['validationProvider'], 'google_play');
+        expect(eventData['purchaseToken'], 'purchase-token-123');
+        expect(eventData['isRenewal'], isFalse);
+        expect(eventData['quantity'], 2);
+        expect(eventData['placement'], 'paywall');
+      },
+    );
+
+    test('recordRefund queues a normalized refund revenue payload', () async {
+      connectivityPlatform = FakeConnectivityPlatform(
+        currentResults: const <ConnectivityResult>[ConnectivityResult.none],
+      );
+      ConnectivityPlatform.instance = connectivityPlatform;
+      connectivity = Connectivity();
+      sdk = Attriax.test(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        client: client,
+        deepLinkSource: deepLinkSource,
+        connectivity: connectivity,
+        contextCollector: contextCollector,
+        prefs: prefs,
+        enableDebugLogs: false,
+      );
+
+      await sdk.init(trackAppOpen: false);
+      await sdk.recordRefund(
+        revenue: 4.99,
+        currency: 'eur',
+        transactionId: 'refund_txn_123',
+        originalTransactionId: 'txn_123',
+        productId: 'coins_500',
+        quantity: 2,
+        test: true,
+        reason: 'chargeback',
+      );
+
+      final queuedRaw = prefs.getString('attriax.queue.v1');
+      expect(queuedRaw, isNotNull);
+
+      final decoded = jsonDecode(queuedRaw!) as List<Object?>;
+      final queued = decoded.single as Map<String, Object?>;
+      final body = queued['body'] as Map<String, Object?>;
+      final eventData = body['eventData'] as Map<String, Object?>;
+
+      expect(body['eventName'], 'refund');
+      expect(eventData['revenue'], -4.99);
+      expect(eventData['currency'], 'EUR');
+      expect(eventData['revenueType'], 'refund');
+      expect(eventData['productId'], 'coins_500');
+      expect(eventData['transactionId'], 'refund_txn_123');
+      expect(eventData['originalTransactionId'], 'txn_123');
+      expect(eventData['quantity'], 2);
+      expect(eventData['test'], isTrue);
+      expect(eventData.containsKey('refundEventId'), isFalse);
+      expect(eventData['reason'], 'chargeback');
+    });
+
+    test(
+      'validateReceipt posts directly and returns the public result',
+      () async {
+        client = MockClient((request) async {
+          expect(request.url.path, '/api/sdk/v1/revenue/receipts/validate');
+
+          final body = jsonDecode(request.body) as Map<String, Object?>;
+          expect(body['appToken'], 'ax_test_token');
+          expect(body['provider'], 'unity');
+          expect(body['productId'], 'coins_500');
+          expect(body['purchaseToken'], 'purchase-token-123');
+
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'timestamp': '2026-05-06T10:00:00.000Z',
+              'data': <String, Object?>{
+                'requestVersion': 'v1',
+                'acceptedAt': '2026-05-06T10:00:00.000Z',
+                'validationId': 'validation_1',
+                'status': 'passthrough',
+                'provider': 'unity',
+                'productId': 'coins_500',
+                'providerResult': <String, Object?>{
+                  'provider': 'unity',
+                  'unityReceipt': <String, Object?>{
+                    'store': 'google_play',
+                    'transactionId': 'unity_txn_1',
+                  },
+                },
+                'publicReceipt': <String, Object?>{
+                  'provider': 'unity',
+                  'unityReceipt': <String, Object?>{
+                    'store': 'google_play',
+                    'transactionId': 'unity_txn_1',
+                  },
+                },
+              },
+            }),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        });
+
+        sdk = Attriax.test(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init(trackAppOpen: false);
+        final result = await sdk.validateReceipt(
+          provider: 'unity',
+          productId: 'coins_500',
+          purchaseToken: 'purchase-token-123',
+          receiptData:
+              '{"Store":"GooglePlay","TransactionID":"unity_txn_1","Payload":"{}"}',
+        );
+
+        expect(
+          result.status,
+          AttriaxRevenueReceiptValidationStatus.passthrough,
+        );
+        expect(result.validationId, 'validation_1');
+        expect(result.provider, 'unity');
+        expect(result.productId, 'coins_500');
+        expect(result.publicReceipt['provider'], 'unity');
+      },
+    );
+
+    test('recordAdRevenue queues a normalized ad revenue payload', () async {
+      connectivityPlatform = FakeConnectivityPlatform(
+        currentResults: const <ConnectivityResult>[ConnectivityResult.none],
+      );
+      ConnectivityPlatform.instance = connectivityPlatform;
+      connectivity = Connectivity();
+      sdk = Attriax.test(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        client: client,
+        deepLinkSource: deepLinkSource,
+        connectivity: connectivity,
+        contextCollector: contextCollector,
+        prefs: prefs,
+        enableDebugLogs: false,
+      );
+
+      await sdk.init(trackAppOpen: false);
+      await sdk.recordAdRevenue(
+        revenue: 120000,
+        revenueInMicros: true,
+        adNetwork: 'admob',
+        adFormat: 'rewarded',
+        adPlacement: 'level_end',
+      );
+
+      final queuedRaw = prefs.getString('attriax.queue.v1');
+      expect(queuedRaw, isNotNull);
+
+      final decoded = jsonDecode(queuedRaw!) as List<Object?>;
+      final queued = decoded.single as Map<String, Object?>;
+      final body = queued['body'] as Map<String, Object?>;
+      final eventData = body['eventData'] as Map<String, Object?>;
+
+      expect(body['eventName'], 'ad_revenue');
+      expect(eventData['revenue'], 120000);
+      expect(eventData['revenueInMicros'], isTrue);
+      expect(eventData['currency'], 'USD');
+      expect(eventData['adNetwork'], 'admob');
+      expect(eventData['adFormat'], 'rewarded');
+      expect(eventData['adPlacement'], 'level_end');
     });
 
     test(

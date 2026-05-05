@@ -229,6 +229,30 @@ class AttriaxGeneratedTransport {
     return response.result;
   }
 
+  Future<AttriaxRevenueReceiptValidationResult> validateRevenueReceipt(
+    Map<String, Object?> payload,
+  ) async {
+    final response = await _dio.post<Object?>(
+      '/api/sdk/v1/revenue/receipts/validate',
+      data: attriaxNormalizeJsonMap(payload),
+      options: Options(validateStatus: _allowAnyStatus),
+    );
+
+    final result = _unwrapJsonEnvelope(
+      label: 'receipt validation',
+      response: response,
+      mapper: attriaxRevenueReceiptValidationResponseFromJsonEnvelope,
+    );
+    if (result.response is! AttriaxRevenueReceiptValidationApiResponse) {
+      throw const AttriaxTransportInvalidResponseException(
+        'Unexpected receipt validation response type.',
+      );
+    }
+
+    return (result.response as AttriaxRevenueReceiptValidationApiResponse)
+        .result;
+  }
+
   Future<AttriaxTransportSuccess> _sendCrashReportRequest(
     AttriaxCrashReportPayload payload,
   ) async {
@@ -294,6 +318,32 @@ class AttriaxGeneratedTransport {
       response: body == null
           ? const AttriaxAckResponse(success: true)
           : attriaxAckResponseFromJsonEnvelope(body),
+    );
+  }
+
+  AttriaxTransportSuccess _unwrapJsonEnvelope({
+    required String label,
+    required Response<Object?> response,
+    required AttriaxApiResponse Function(Map<String, Object?> envelope) mapper,
+  }) {
+    final statusCode = response.statusCode ?? 0;
+    if (!_isSuccessful(statusCode)) {
+      throw AttriaxTransportHttpException(
+        statusCode: statusCode,
+        body: response.data,
+      );
+    }
+
+    final body = attriaxObjectMap(response.data);
+    if (body == null) {
+      throw AttriaxTransportInvalidResponseException(
+        'Missing $label response body.',
+      );
+    }
+
+    return AttriaxTransportSuccess(
+      statusCode: statusCode,
+      response: mapper(body),
     );
   }
 

@@ -196,6 +196,252 @@ class Attriax {
     Map<String, Object?>? eventData,
   }) => _runtime.recordEvent(eventName, eventData: eventData);
 
+  /// Queues a standardized purchase revenue event for delivery to Attriax.
+  ///
+  /// Use negative [revenue] values to report refunds or downward adjustments.
+  /// Any [metadata] fields are merged into the outgoing event payload before
+  /// the typed purchase fields are applied.
+  ///
+  /// [currency] should be an ISO 4217 code such as `USD` or `EUR`.
+  /// Set [revenueInMicros] to `true` only when [revenue] is already expressed
+  /// in micros instead of whole currency units.
+  /// [purchaseType] is an optional stable subtype for your own reporting,
+  /// such as `one_time`, `subscription_initial`, or
+  /// `subscription_renewal`; prefer normalized machine-readable values over
+  /// localized labels.
+  /// [transactionId] should be the unique store order or transaction id used
+  /// for idempotency. [originalTransactionId] should point at the root purchase
+  /// when renewals or restorations share subscription history.
+  /// [validationProvider] and [validationEnvironment] describe how the receipt
+  /// payload should be interpreted, for example `google_play` with
+  /// `production` or `app_store` with `sandbox`.
+  /// [purchaseToken], [receiptData], [signedPayload], and [receiptSignature]
+  /// should contain the raw platform payloads you want Attriax to hash and
+  /// associate with server-side validation.
+  /// [store] and [packageName] help disambiguate which app-store record or app
+  /// build produced the purchase, especially in multi-app or white-label setups.
+  /// [validationId] links this event to an already-created validation record
+  /// when validation happened before the revenue event was sent.
+  /// [test] marks sandbox or QA purchases. [voided] marks store data that was
+  /// already voided when you are backfilling or replaying events.
+  Future<void> recordPurchase({
+    required num revenue,
+    String currency = 'USD',
+    bool revenueInMicros = false,
+    String? purchaseType,
+    String? productId,
+    String? transactionId,
+    String? originalTransactionId,
+    String? validationProvider,
+    String? validationEnvironment,
+    String? purchaseToken,
+    String? receiptData,
+    String? signedPayload,
+    String? receiptSignature,
+    bool? isRenewal,
+    int quantity = 1,
+    String? store,
+    String? packageName,
+    bool? voided,
+    bool? test,
+    String? validationId,
+    Map<String, Object?>? metadata,
+  }) {
+    final normalizedRevenue = revenue.toDouble();
+    if (!normalizedRevenue.isFinite) {
+      throw ArgumentError.value(revenue, 'revenue', 'revenue must be finite.');
+    }
+    if (quantity <= 0) {
+      throw ArgumentError.value(
+        quantity,
+        'quantity',
+        'quantity must be positive.',
+      );
+    }
+
+    final normalizedCurrency = _normalizeCurrency(currency);
+
+    return _runtime.recordEvent(
+      'purchase',
+      eventData: <String, Object?>{
+        ...?metadata,
+        'revenue': revenue,
+        'currency': normalizedCurrency,
+        if (revenueInMicros) 'revenueInMicros': true,
+        if (_trimOrNull(purchaseType) case final value?) 'purchaseType': value,
+        if (_trimOrNull(productId) case final value?) 'productId': value,
+        if (_trimOrNull(transactionId) case final value?)
+          'transactionId': value,
+        if (_trimOrNull(originalTransactionId) case final value?)
+          'originalTransactionId': value,
+        if (_trimOrNull(validationProvider) case final value?)
+          'validationProvider': value,
+        if (_trimOrNull(validationEnvironment) case final value?)
+          'validationEnvironment': value,
+        if (_trimOrNull(purchaseToken) case final value?)
+          'purchaseToken': value,
+        if (_trimOrNull(receiptData) case final value?) 'receiptData': value,
+        if (_trimOrNull(signedPayload) case final value?)
+          'signedPayload': value,
+        if (_trimOrNull(receiptSignature) case final value?)
+          'receiptSignature': value,
+        if (isRenewal != null) 'isRenewal': isRenewal,
+        if (quantity != 1) 'quantity': quantity,
+        if (_trimOrNull(store) case final value?) 'store': value,
+        if (_trimOrNull(packageName) case final value?) 'packageName': value,
+        if (voided != null) 'voided': voided,
+        if (test != null) 'test': test,
+        if (_trimOrNull(validationId) case final value?) 'validationId': value,
+      },
+    );
+  }
+
+  /// Queues a standardized refund revenue event for delivery to Attriax.
+  ///
+  /// The outgoing payload always uses a negative revenue amount and the
+  /// `refund` event name so callers do not need to negate values manually.
+  ///
+  /// Use [transactionId] for the refund transaction itself and
+  /// [originalTransactionId] for the original order or subscription root.
+  /// [reason] accepts an optional machine-readable refund reason such as
+  /// `chargeback` or `revoked`.
+  Future<void> recordRefund({
+    required num revenue,
+    String currency = 'USD',
+    bool revenueInMicros = false,
+    String? purchaseType,
+    String? productId,
+    String? transactionId,
+    String? originalTransactionId,
+    int quantity = 1,
+    String? store,
+    String? packageName,
+    bool? voided,
+    bool? test,
+    String? reason,
+    Map<String, Object?>? metadata,
+  }) {
+    final normalizedRevenue = revenue.toDouble();
+    if (!normalizedRevenue.isFinite) {
+      throw ArgumentError.value(revenue, 'revenue', 'revenue must be finite.');
+    }
+    if (quantity <= 0) {
+      throw ArgumentError.value(
+        quantity,
+        'quantity',
+        'quantity must be positive.',
+      );
+    }
+
+    final normalizedCurrency = _normalizeCurrency(currency);
+
+    return _runtime.recordEvent(
+      'refund',
+      eventData: <String, Object?>{
+        ...?metadata,
+        'revenue': -normalizedRevenue.abs(),
+        'currency': normalizedCurrency,
+        'revenueType': 'refund',
+        if (revenueInMicros) 'revenueInMicros': true,
+        if (_trimOrNull(purchaseType) case final value?) 'purchaseType': value,
+        if (_trimOrNull(productId) case final value?) 'productId': value,
+        if (_trimOrNull(transactionId) case final value?)
+          'transactionId': value,
+        if (_trimOrNull(originalTransactionId) case final value?)
+          'originalTransactionId': value,
+        if (quantity != 1) 'quantity': quantity,
+        if (_trimOrNull(store) case final value?) 'store': value,
+        if (_trimOrNull(packageName) case final value?) 'packageName': value,
+        if (voided != null) 'voided': voided,
+        if (test != null) 'test': test,
+        if (_trimOrNull(reason) case final value?) 'reason': value,
+      },
+    );
+  }
+
+  /// Validates a purchase receipt immediately and returns the public result.
+  ///
+  /// Use this during a purchase flow when the app needs an immediate receipt
+  /// verification response. The current SDK device id is attached
+  /// automatically.
+  Future<AttriaxRevenueReceiptValidationResult> validateReceipt({
+    String? provider,
+    String? environment,
+    String? transactionId,
+    String? originalTransactionId,
+    String? productId,
+    String? store,
+    String? packageName,
+    String? purchaseToken,
+    String? receiptData,
+    String? signedPayload,
+    String? receiptSignature,
+    bool? test,
+  }) => _runtime.validateReceipt(
+    provider: provider,
+    environment: environment,
+    transactionId: transactionId,
+    originalTransactionId: originalTransactionId,
+    productId: productId,
+    store: store,
+    packageName: packageName,
+    purchaseToken: purchaseToken,
+    receiptData: receiptData,
+    signedPayload: signedPayload,
+    receiptSignature: receiptSignature,
+    test: test,
+  );
+
+  /// Queues a standardized ad revenue event for delivery to Attriax.
+  ///
+  /// Any [metadata] fields are merged into the outgoing event payload before
+  /// the typed ad monetization fields are applied.
+  /// [currency] should be an ISO 4217 code such as `USD`.
+  /// Set [revenueInMicros] to `true` only when [revenue] is already expressed
+  /// in micros.
+  /// [adNetwork] should identify the network or mediation source, for example
+  /// `admob`, `applovin_max`, or `unity_ads`.
+  /// [adFormat] should describe the served format such as `banner`,
+  /// `interstitial`, `rewarded`, or `native`.
+  /// [adType] is an optional app-defined subtype like `impression`,
+  /// `paid_event`, or `rewarded_complete`.
+  /// [adPlacement] should be your in-app placement or slot identifier so the
+  /// dashboard can separate monetization by surface.
+  /// [test] marks monetization callbacks that came from sandbox or QA traffic.
+  Future<void> recordAdRevenue({
+    required num revenue,
+    String currency = 'USD',
+    bool revenueInMicros = false,
+    String? adNetwork,
+    String? adFormat,
+    String? adType,
+    String? adPlacement,
+    bool? test,
+    Map<String, Object?>? metadata,
+  }) {
+    final normalizedRevenue = revenue.toDouble();
+    if (!normalizedRevenue.isFinite) {
+      throw ArgumentError.value(revenue, 'revenue', 'revenue must be finite.');
+    }
+
+    final normalizedCurrency = _normalizeCurrency(currency);
+
+    return _runtime.recordEvent(
+      'ad_revenue',
+      eventData: <String, Object?>{
+        ...?metadata,
+        'revenue': revenue,
+        'currency': normalizedCurrency,
+        if (revenueInMicros) 'revenueInMicros': true,
+        if (_trimOrNull(adNetwork) case final value?) 'adNetwork': value,
+        if (_trimOrNull(adFormat) case final value?) 'adFormat': value,
+        if (_trimOrNull(adType) case final value?) 'adType': value,
+        if (_trimOrNull(adPlacement) case final value?) 'adPlacement': value,
+        if (test != null) 'test': test,
+      },
+    );
+  }
+
   /// Queues a first-class page view event for screen analytics and funnels.
   ///
   /// This is a convenience wrapper over [recordEvent] that standardizes the
@@ -299,6 +545,24 @@ class Attriax {
 
   /// Releases listeners, closes streams, and disposes runtime resources.
   Future<void> dispose() => _runtime.dispose();
+
+  String _normalizeCurrency(String currency) {
+    final normalizedCurrency = _trimOrNull(currency)?.toUpperCase();
+    if (normalizedCurrency == null) {
+      throw ArgumentError.value(
+        currency,
+        'currency',
+        'currency must not be empty.',
+      );
+    }
+
+    return normalizedCurrency;
+  }
+
+  String? _trimOrNull(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
 }
 
 /// Deep-link state and subscriptions exposed by [Attriax].

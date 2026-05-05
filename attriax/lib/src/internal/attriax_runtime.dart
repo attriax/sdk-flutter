@@ -391,6 +391,49 @@ class AttriaxRuntime {
     return _transport!.createDynamicLink(request);
   }
 
+  Future<AttriaxRevenueReceiptValidationResult> validateReceipt({
+    String? provider,
+    String? environment,
+    String? transactionId,
+    String? originalTransactionId,
+    String? productId,
+    String? store,
+    String? packageName,
+    String? purchaseToken,
+    String? receiptData,
+    String? signedPayload,
+    String? receiptSignature,
+    bool? test,
+  }) async {
+    _assertInitialized();
+
+    final currentDeviceId = deviceId;
+    if (currentDeviceId == null) {
+      throw StateError('Attriax SDK did not restore a device id.');
+    }
+
+    final request = attriaxBuildValidateRevenueReceiptRequest(
+      appToken: config.appToken,
+      deviceId: currentDeviceId,
+      clientOccurredAt: _clock.now(),
+      provider: _trimOrNull(provider),
+      environment: _trimOrNull(environment),
+      transactionId: _trimOrNull(transactionId),
+      originalTransactionId: _trimOrNull(originalTransactionId),
+      productId: _trimOrNull(productId),
+      store: _trimOrNull(store),
+      packageName:
+          _trimOrNull(packageName) ?? _trimOrNull(config.appPackageName),
+      purchaseToken: _trimOrNull(purchaseToken),
+      receiptData: _trimOrNull(receiptData),
+      signedPayload: _trimOrNull(signedPayload),
+      receiptSignature: _trimOrNull(receiptSignature),
+      test: test,
+    );
+
+    return _transport!.validateRevenueReceipt(request);
+  }
+
   Future<AttriaxDeepLinkResolution?> recordDeepLink({
     Uri? uri,
     String? linkPath,
