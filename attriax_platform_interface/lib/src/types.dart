@@ -941,10 +941,10 @@ class AttriaxConfig {
     this.enableDebugLogs,
     this.requestTimeout = const Duration(seconds: 12),
     this.maxQueueSize = 200,
-    this.eventFlushInterval = const Duration(seconds: 30),
+    this.eventFlushInterval = const Duration(seconds: 60),
     this.flushEventsImmediatelyOnFirstLaunch = true,
     this.sessionTrackingEnabled = true,
-    this.sessionHeartbeatInterval = const Duration(seconds: 30),
+    this.sessionHeartbeatInterval = const Duration(seconds: 60),
     this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 5),
   });
 

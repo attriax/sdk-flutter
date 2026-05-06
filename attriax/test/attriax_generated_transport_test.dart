@@ -338,6 +338,14 @@ void main() {
               (error) => error.statusCode,
               'statusCode',
               503,
+            ).having(
+              (error) => error.toString(),
+              'toString()',
+              contains("HTTP 503"),
+            ).having(
+              (error) => error.toString(),
+              'toString()',
+              contains('down'),
             ),
           ),
         );

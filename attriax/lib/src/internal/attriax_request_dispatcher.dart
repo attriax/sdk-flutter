@@ -42,17 +42,20 @@ class AttriaxRequestDispatcher {
     required Connectivity connectivity,
     required AttriaxQueueManager queueManager,
     required AttriaxLogger logger,
+    bool Function()? isAppOpenScheduled,
     this.onDelivered,
     this.onFailed,
   }) : _transport = transport,
        _connectivity = connectivity,
        _queueManager = queueManager,
-       _logger = logger;
+       _logger = logger,
+       _isAppOpenScheduled = isAppOpenScheduled ?? _appOpenScheduledByDefault;
 
   final AttriaxGeneratedTransport _transport;
   final Connectivity _connectivity;
   final AttriaxQueueManager _queueManager;
   final AttriaxLogger _logger;
+  final bool Function() _isAppOpenScheduled;
 
   /// Called after a request is successfully delivered to the server.
   /// Receives the request kind and the HTTP status code.
@@ -95,7 +98,7 @@ class AttriaxRequestDispatcher {
 
     _isFlushing = true;
     try {
-      final queue = await _queueManager.readAll();
+      final queue = _prioritizeAppOpenRequests(await _queueManager.readAll());
       if (queue.isEmpty) {
         return;
       }
@@ -107,6 +110,14 @@ class AttriaxRequestDispatcher {
       for (var i = 0; i < queue.length;) {
         final queuedRequest = queue[i];
         final request = queuedRequest.request;
+
+        if (!_canDispatchRequest(request)) {
+          _logger.verbose(
+            'Deferring queued ${attriaxApiRequestLabel(request)} request(s) until app-open is scheduled.',
+          );
+          remaining.addAll(queue.skip(i));
+          break;
+        }
 
         if (attriaxCanBatchRequest(request)) {
           final batch = <AttriaxQueuedRequest>[queuedRequest];
@@ -148,6 +159,27 @@ class AttriaxRequestDispatcher {
           i += 1;
           continue;
         } catch (error, stackTrace) {
+          if (_isAppOpenRequest(request)) {
+            final action = _handleAppOpenFailure(
+              requestId: queuedRequest.id,
+              error: error,
+              stackTrace: stackTrace,
+              hasPendingAppOpenAfter: _hasPendingAppOpen(
+                queue,
+                startIndex: i + 1,
+              ),
+            );
+            if (action == _DispatchFailureAction.retry) {
+              remaining
+                ..add(queuedRequest)
+                ..addAll(queue.skip(i + 1));
+              break;
+            }
+
+            i += 1;
+            continue;
+          }
+
           final action = _handleFailure(
             request: request,
             requestId: queuedRequest.id,
@@ -170,6 +202,31 @@ class AttriaxRequestDispatcher {
     } finally {
       _isFlushing = false;
     }
+  }
+
+  _DispatchFailureAction _handleAppOpenFailure({
+    required String requestId,
+    required Object error,
+    required StackTrace stackTrace,
+    required bool hasPendingAppOpenAfter,
+  }) {
+    final retryable = _isRetryableRequestError(error);
+    if (!retryable && hasPendingAppOpenAfter) {
+      _logger.warning(
+        'App-open request failed permanently and will be dropped because another queued app-open request can still unblock delivery.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _clearHandlers(requestId, error: error, stackTrace: stackTrace);
+      return _DispatchFailureAction.drop;
+    }
+
+    _logger.warning(
+      'App-open request failed and queued requests will remain blocked until an app-open request succeeds.',
+      error: error,
+      stackTrace: stackTrace,
+    );
+    return _DispatchFailureAction.retry;
   }
 
   _DispatchFailureAction _handleFailure({
@@ -313,6 +370,57 @@ class AttriaxRequestDispatcher {
     };
   }
 
+  bool _canDispatchRequest(AttriaxApiRequest request) {
+    if (_isAppOpenRequest(request)) {
+      return true;
+    }
+
+    return _isAppOpenScheduled();
+  }
+
+  List<AttriaxQueuedRequest> _prioritizeAppOpenRequests(
+    List<AttriaxQueuedRequest> queue,
+  ) {
+    final appOpenRequests = <AttriaxQueuedRequest>[];
+    final otherRequests = <AttriaxQueuedRequest>[];
+
+    for (final queuedRequest in queue) {
+      if (_isAppOpenRequest(queuedRequest.request)) {
+        appOpenRequests.add(queuedRequest);
+      } else {
+        otherRequests.add(queuedRequest);
+      }
+    }
+
+    return <AttriaxQueuedRequest>[...appOpenRequests, ...otherRequests];
+  }
+
+  bool _hasPendingAppOpen(
+    List<AttriaxQueuedRequest> queue, {
+    required int startIndex,
+  }) {
+    for (var i = startIndex; i < queue.length; i += 1) {
+      if (_isAppOpenRequest(queue[i].request)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool _isRetryableRequestError(Object error) {
+    return switch (error) {
+      AttriaxTransportHttpException(statusCode: final statusCode) =>
+        statusCode == 429 || statusCode >= 500,
+      TimeoutException() => true,
+      DioException() => true,
+      _ => false,
+    };
+  }
+
+  bool _isAppOpenRequest(AttriaxApiRequest request) =>
+      request is AttriaxOpenRequest;
+
   void _clearHandlers(
     String requestId, {
     required Object error,
@@ -322,3 +430,5 @@ class AttriaxRequestDispatcher {
     _errorHandlers.remove(requestId)?.call(error, stackTrace);
   }
 }
+
+bool _appOpenScheduledByDefault() => true;

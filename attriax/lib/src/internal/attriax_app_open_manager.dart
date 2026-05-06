@@ -58,6 +58,10 @@ class AttriaxAppOpenManager {
       return;
     }
 
+    if (!_requestManager.isBound) {
+      return;
+    }
+
     await _tracker.schedule(
       config: _config,
       context: context,

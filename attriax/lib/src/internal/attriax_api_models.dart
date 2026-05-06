@@ -753,6 +753,33 @@ Map<String, Object?> attriaxBuildValidateRevenueReceiptRequest({
   if (test != null) 'test': test,
 };
 
+Map<String, Object?> attriaxBuildRegisterUninstallTokenRequest({
+  required String appToken,
+  required String deviceId,
+  required String deviceIdSource,
+  required AttriaxPlatformType platform,
+  required String token,
+  Map<String, Object?>? metadata,
+}) => <String, Object?>{
+  'appToken': appToken,
+  'deviceId': deviceId,
+  'deviceIdSource': deviceIdSource,
+  'platform': _uninstallTrackingPlatformName(platform),
+  'provider': 'fcm',
+  'token': token,
+  if (metadata != null) 'metadata': metadata,
+};
+
+String _uninstallTrackingPlatformName(AttriaxPlatformType platform) {
+  return switch (platform) {
+    AttriaxPlatformType.android => 'android',
+    AttriaxPlatformType.ios => 'ios',
+    _ => throw UnsupportedError(
+      'Firebase uninstall tracking is only supported on Android and iOS.',
+    ),
+  };
+}
+
 abstract class AttriaxApiResponse {
   const AttriaxApiResponse();
 }

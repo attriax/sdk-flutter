@@ -233,6 +233,85 @@ void main() {
       ]);
       expect(await queueManager.readAll(), isEmpty);
     });
+
+    test(
+      'waits for app-open scheduling and sends app-open before cached batchable requests',
+      () async {
+        var isAppOpenScheduled = false;
+        dispatcher = AttriaxRequestDispatcher(
+          transport: transport,
+          connectivity: connectivity,
+          queueManager: queueManager,
+          logger: AttriaxLogger(enableDebugLogs: false),
+          isAppOpenScheduled: () => isAppOpenScheduled,
+        );
+        final openRequest = AttriaxQueuedRequest(
+          id: 'req_open',
+          request: attriaxBuildOpenRequest(
+            config: const AttriaxConfig(appToken: 'ax_test_token'),
+            context: AttriaxContextSnapshot(
+              platform: AttriaxPlatformType.android,
+              deviceId: 'device_1',
+              isFirstLaunch: true,
+              sdk: const AttriaxSdkSnapshot(
+                apiVersion: attriaxSdkApiVersion,
+                packageVersion: attriaxSdkPackageVersion,
+              ),
+              app: const AttriaxAppSnapshot(
+                version: '1.0.0',
+                buildNumber: '1',
+                packageName: 'com.attriax.test',
+              ),
+              device: const AttriaxDeviceSnapshot(
+                model: 'Pixel',
+                osVersion: '14',
+              ),
+            ),
+            deviceIdSource: 'android_ssaid',
+            rawPlatformInstallReferrer: null,
+            sessionId: null,
+            sessionStartedAt: null,
+          ),
+          createdAt: DateTime.utc(2026, 5, 1, 0, 0, 1),
+        );
+
+        await dispatcher.flush();
+
+        expect(transport.sentRequests, isEmpty);
+        expect(transport.sentBatches, isEmpty);
+        expect(await queueManager.readAll(), hasLength(1));
+
+        await queueManager.enqueue(openRequest);
+        isAppOpenScheduled = true;
+        transport.sendResult = AttriaxTransportSuccess(
+          statusCode: 200,
+          response: AttriaxOpenApiResponse(
+            result: AttriaxAppOpenResult(
+              userId: 'user_1',
+              isNewUser: true,
+              isFirstLaunch: true,
+              requestVersion: 'v1',
+              acceptedAt: DateTime.utc(2026, 5, 1, 0, 0, 2),
+            ),
+          ),
+        );
+        transport.sendBatchResult = const AttriaxTransportSuccess(
+          statusCode: 202,
+          response: AttriaxAckResponse(success: true),
+        );
+
+        await dispatcher.flush();
+
+        expect(transport.sentRequests, hasLength(1));
+        expect(transport.sentRequests.single, isA<AttriaxOpenRequest>());
+        expect(transport.sentBatches, hasLength(1));
+        expect(
+          transport.sentBatches.single.map((request) => request.id).toList(),
+          <String>['req_1'],
+        );
+        expect(await queueManager.readAll(), isEmpty);
+      },
+    );
   });
 }
 
@@ -277,6 +356,11 @@ class FakeTransport implements AttriaxGeneratedTransport {
   Future<AttriaxCreateDynamicLinkResult> createDynamicLink(
     AttriaxCreateDynamicLinkRequest request,
   ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<void> registerUninstallToken(Map<String, Object?> payload) {
     throw UnimplementedError();
   }
 

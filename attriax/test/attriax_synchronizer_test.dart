@@ -136,6 +136,11 @@ class FakeTransport implements AttriaxGeneratedTransport {
   }
 
   @override
+  Future<void> registerUninstallToken(Map<String, Object?> payload) {
+    throw UnimplementedError();
+  }
+
+  @override
   Future<AttriaxRevenueReceiptValidationResult> validateRevenueReceipt(
     Map<String, Object?> payload,
   ) {

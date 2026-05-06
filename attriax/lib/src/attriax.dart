@@ -167,23 +167,13 @@ class Attriax {
   /// Initializes the SDK runtime.
   ///
   /// This restores persisted flags, generates or loads the SDK device ID,
-  /// captures the immediate context snapshot, starts deep-link listeners, and
-  /// optionally schedules the initial app-open request.
+  /// captures the immediate context snapshot, and starts listeners.
   ///
+  /// App-open tracking is always scheduled automatically in the background.
   /// Set [enabled] or [eventsEnabled] to override the persisted values for the
-  /// current startup. Set [trackAppOpen] to `false` only when you explicitly
-  /// want to skip automatic app-open tracking; doing so also prevents deferred
-  /// deep-link delivery from the app-open response and causes [installReferrer]
-  /// to resolve to `null` for that startup.
-  Future<void> init({
-    bool? enabled,
-    bool? eventsEnabled,
-    bool trackAppOpen = true,
-  }) => _runtime.init(
-    enabled: enabled,
-    eventsEnabled: eventsEnabled,
-    trackAppOpen: trackAppOpen,
-  );
+  /// current startup.
+  Future<void> init({bool? enabled, bool? eventsEnabled}) =>
+      _runtime.init(enabled: enabled, eventsEnabled: eventsEnabled);
 
   /// Queues a custom analytics event for delivery to the Attriax backend.
   ///
@@ -402,6 +392,16 @@ class Attriax {
     test: test,
   );
 
+  /// Registers the current Firebase Cloud Messaging token for uninstall tracking.
+  ///
+  /// Call this after your app receives an FCM token and again whenever Firebase
+  /// rotates that token. Attriax currently supports this flow on Android and iOS.
+  Future<void> registerFirebaseMessagingToken(
+    String token, {
+    Map<String, Object?>? metadata,
+  }) =>
+      _runtime.registerFirebaseMessagingToken(token: token, metadata: metadata);
+
   /// Queues a standardized ad revenue event for delivery to Attriax.
   ///
   /// Any [metadata] fields are merged into the outgoing event payload before
@@ -458,7 +458,9 @@ class Attriax {
   ///
   /// This is a convenience wrapper over [recordEvent] that standardizes the
   /// payload under the `page_view` event name so the dashboard can aggregate
-  /// top pages and conversion funnels consistently.
+  /// top pages and conversion funnels consistently. By default page views use
+  /// the configured event batching interval even during first launch unless
+  /// [flushImmediately] is set.
   Future<void> recordPageView(
     String pageName, {
     String? pageClass,

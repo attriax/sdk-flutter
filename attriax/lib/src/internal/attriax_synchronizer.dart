@@ -21,6 +21,7 @@ class AttriaxSynchronizer {
     required int maxQueueSize,
     required Duration eventFlushInterval,
     required AttriaxLogger logger,
+    bool Function()? isAppOpenScheduled,
     void Function(AttriaxApiRequest request, int statusCode)?
     onRequestDelivered,
     void Function(AttriaxApiRequest request, Object error)? onRequestFailed,
@@ -36,6 +37,7 @@ class AttriaxSynchronizer {
       connectivity: connectivity,
       queueManager: _queueManager,
       logger: logger,
+      isAppOpenScheduled: isAppOpenScheduled,
       onDelivered: onRequestDelivered,
       onFailed: (kind, error) {
         _lastFlushHadFailure = true;
@@ -57,6 +59,7 @@ class AttriaxSynchronizer {
   bool _isSynchronizationRefreshScheduled = false;
   bool _needsSynchronizationRefresh = false;
   bool _lastFlushHadFailure = false;
+  Future<void>? _synchronizationRefreshFuture;
   Timer? _deferredFlushTimer;
   StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
 
@@ -106,7 +109,15 @@ class AttriaxSynchronizer {
       return;
     }
     _isSynchronizationRefreshScheduled = true;
-    unawaited(_runSynchronizationRefreshLoop());
+    final refreshLoop = _runSynchronizationRefreshLoop();
+    _synchronizationRefreshFuture = refreshLoop;
+    unawaited(
+      refreshLoop.whenComplete(() {
+        if (identical(_synchronizationRefreshFuture, refreshLoop)) {
+          _synchronizationRefreshFuture = null;
+        }
+      }),
+    );
   }
 
   /// Transitions to [nextState] and notifies [onStateChanged].
@@ -164,6 +175,10 @@ class AttriaxSynchronizer {
     _deferredFlushTimer?.cancel();
     _deferredFlushTimer = null;
     await stopConnectivitySubscription();
+    final inFlightRefresh = _synchronizationRefreshFuture;
+    if (inFlightRefresh != null) {
+      await inFlightRefresh;
+    }
   }
 
   // ---------- private ------------------------------------------------------- //

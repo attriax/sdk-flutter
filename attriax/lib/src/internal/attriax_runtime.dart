@@ -130,10 +130,9 @@ class AttriaxRuntime {
         preferencesStore: _preferencesStore,
         logger: _logger,
       );
-  bool _trackAppOpen = true;
   Future<void>? _initializationFuture;
   AttriaxNormalizedApiBaseUrl? _normalizedApiBaseUrl;
-  bool _isSchedulingAppOpen = false;
+  Future<void>? _appOpenSchedulingFuture;
   FlutterExceptionHandler? _previousFlutterErrorHandler;
   FlutterExceptionHandler? _installedFlutterErrorHandler;
   bool Function(Object, StackTrace)? _previousPlatformErrorHandler;
@@ -175,11 +174,7 @@ class AttriaxRuntime {
 
   // ---------- init ---------------------------------------------------------- //
 
-  Future<void> init({
-    bool? enabled,
-    bool? eventsEnabled,
-    bool trackAppOpen = true,
-  }) {
+  Future<void> init({bool? enabled, bool? eventsEnabled}) {
     if (_initialized) {
       return Future<void>.value();
     }
@@ -192,7 +187,6 @@ class AttriaxRuntime {
     final initialization = _runInit(
       enabled: enabled,
       eventsEnabled: eventsEnabled,
-      trackAppOpen: trackAppOpen,
     );
     _initializationFuture = initialization;
 
@@ -203,11 +197,7 @@ class AttriaxRuntime {
     });
   }
 
-  Future<void> _runInit({
-    required bool trackAppOpen,
-    bool? enabled,
-    bool? eventsEnabled,
-  }) async {
+  Future<void> _runInit({bool? enabled, bool? eventsEnabled}) async {
     _logger.verbose('Initializing Attriax SDK.');
     _validateConfig();
 
@@ -221,11 +211,7 @@ class AttriaxRuntime {
       enabled: storedRuntimePreferences.isEnabled,
       eventsEnabled: storedRuntimePreferences.areEventsEnabled,
     );
-    _trackAppOpen = trackAppOpen;
-    await _installReferrerManager.init(
-      enabled: isEnabled,
-      waitForAppOpen: trackAppOpen,
-    );
+    await _installReferrerManager.init(enabled: isEnabled);
 
     await _contextManager.init();
     final sessionRestore = await _sessionManager.init(
@@ -245,6 +231,7 @@ class AttriaxRuntime {
       maxQueueSize: config.maxQueueSize,
       eventFlushInterval: config.eventFlushInterval,
       logger: _logger,
+      isAppOpenScheduled: () => _appOpenManager.didSchedule,
     );
     _requestManager.bindSynchronizer(_synchronizer!);
     _synchronizer!.onStateChanged = _eventHub.emitSynchronizationState;
@@ -259,6 +246,8 @@ class AttriaxRuntime {
       return;
     }
 
+    unawaited(_scheduleAppOpenIfNeeded());
+
     _sessionManager.seedRecoveredSessionEnd(sessionRestore?.replacedSession);
     _installCrashHandlers();
     await _capturePendingNativeCrashReport();
@@ -268,10 +257,6 @@ class AttriaxRuntime {
       onRestored: _synchronizer!.scheduleFlush,
     );
     await _deepLinkManager.start();
-
-    if (trackAppOpen) {
-      _scheduleAppOpenIfNeeded();
-    }
 
     _sessionManager.activate();
     _synchronizer!.scheduleFlush();
@@ -442,6 +427,34 @@ class AttriaxRuntime {
     return _transport!.validateRevenueReceipt(request);
   }
 
+  Future<void> registerFirebaseMessagingToken({
+    required String token,
+    Map<String, Object?>? metadata,
+  }) async {
+    _assertInitialized();
+
+    final normalizedToken = _trimOrNull(token);
+    if (normalizedToken == null) {
+      throw ArgumentError.value(token, 'token', 'token must not be empty.');
+    }
+
+    final currentDeviceId = deviceId;
+    if (currentDeviceId == null) {
+      throw StateError('Attriax SDK did not restore a device id.');
+    }
+
+    final request = attriaxBuildRegisterUninstallTokenRequest(
+      appToken: config.appToken,
+      deviceId: currentDeviceId,
+      deviceIdSource: _contextManager.requireDeviceIdSource(),
+      platform: _contextManager.requiredSnapshot.platform,
+      token: normalizedToken,
+      metadata: metadata,
+    );
+
+    await _transport!.registerUninstallToken(request);
+  }
+
   Future<AttriaxDeepLinkResolution?> recordDeepLink({
     Uri? uri,
     String? linkPath,
@@ -490,6 +503,7 @@ class AttriaxRuntime {
   Future<void> dispose() async {
     _logger.verbose('Disposing Attriax SDK runtime.');
     _restoreCrashHandlers();
+    _requestManager.unbindSynchronizer();
     _sessionManager.dispose();
     _installReferrerManager.dispose();
     await _deepLinkManager.stop();
@@ -545,48 +559,50 @@ class AttriaxRuntime {
       _synchronizer!.startConnectivitySubscription(
         onRestored: _synchronizer!.scheduleFlush,
       );
-      await _deepLinkManager.start();
       await _prepareInstallReferrerFutureForEnabledState();
-      _scheduleAppOpenIfNeeded();
+      unawaited(_scheduleAppOpenIfNeeded());
+      await _deepLinkManager.start();
       _sessionManager.activate();
       _synchronizer!.scheduleFlush();
     }
   }
 
   Future<void> _prepareInstallReferrerFutureForEnabledState() async {
-    await _installReferrerManager.prepareForEnabledState(
-      waitForAppOpen: _trackAppOpen,
-    );
+    await _installReferrerManager.prepareForEnabledState();
   }
 
   void _prepareInstallReferrerCompleterForReenable() {
-    _installReferrerManager.prepareForReenable(waitForAppOpen: _trackAppOpen);
+    _installReferrerManager.prepareForReenable();
   }
 
-  void _scheduleAppOpenIfNeeded() {
+  Future<void> _scheduleAppOpenIfNeeded() {
     if (!_initialized ||
         !isEnabled ||
-        !_trackAppOpen ||
         _synchronizer == null ||
-        _isSchedulingAppOpen ||
         _appOpenManager.didSchedule) {
-      return;
+      return Future<void>.value();
     }
 
-    _isSchedulingAppOpen = true;
-    unawaited(_scheduleAppOpen());
+    final inFlight = _appOpenSchedulingFuture;
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final scheduling = _scheduleAppOpen();
+    _appOpenSchedulingFuture = scheduling;
+    return scheduling.whenComplete(() {
+      if (identical(_appOpenSchedulingFuture, scheduling)) {
+        _appOpenSchedulingFuture = null;
+      }
+    });
   }
 
   Future<void> _scheduleAppOpen() async {
-    try {
-      await _appOpenManager.schedule(
-        onCompleted: (result) async {
-          _deepLinkManager.handleDeferredAppOpen(result);
-        },
-      );
-    } finally {
-      _isSchedulingAppOpen = false;
-    }
+    await _appOpenManager.schedule(
+      onCompleted: (result) async {
+        _deepLinkManager.handleDeferredAppOpen(result);
+      },
+    );
   }
 
   void _installCrashHandlers() {

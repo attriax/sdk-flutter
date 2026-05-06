@@ -6,6 +6,8 @@ import 'package:attriax/attriax.dart';
 import 'package:attriax_platform_interface/attriax_platform_interface.dart';
 import 'package:attriax/src/internal/attriax_context_collector.dart';
 import 'package:attriax/src/internal/attriax_preferences_store.dart';
+import 'package:attriax_sdk_client/attriax_sdk_client.dart' as generated_sdk;
+import 'package:built_value/serializer.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
 import 'package:flutter/widgets.dart';
@@ -59,11 +61,7 @@ void main() {
     test(
       'shares a single initialization pass across concurrent callers',
       () async {
-        await Future.wait(<Future<void>>[
-          sdk.init(trackAppOpen: false),
-          sdk.init(trackAppOpen: false),
-          sdk.init(trackAppOpen: false),
-        ]);
+        await Future.wait(<Future<void>>[sdk.init(), sdk.init(), sdk.init()]);
 
         expect(sdk.isInitialized, isTrue);
         expect(contextCollector.collectContextSnapshotCalls, 1);
@@ -72,8 +70,8 @@ void main() {
     );
 
     test('treats repeated init calls after success as a no-op', () async {
-      await sdk.init(trackAppOpen: false);
-      await sdk.init(trackAppOpen: false);
+      await sdk.init();
+      await sdk.init();
 
       expect(contextCollector.collectContextSnapshotCalls, 1);
       expect(deepLinkSource.getInitialLinkCalls, 1);
@@ -97,7 +95,7 @@ void main() {
           enableDebugLogs: false,
         );
 
-        await sdk.init(trackAppOpen: false);
+        await sdk.init();
 
         expect(sdk.sdkSnapshot, isNotNull);
         expect(
@@ -133,7 +131,7 @@ void main() {
           enableDebugLogs: false,
         );
 
-        await sdk.init(trackAppOpen: false);
+        await sdk.init();
 
         expect(
           prefs.getString(AttriaxPreferencesStore.deviceIdStorageKey),
@@ -167,6 +165,22 @@ void main() {
         AttriaxPlatform.instance = crashPlatform;
         final crashRequest = Completer<Map<String, Object?>>();
         client = MockClient((request) async {
+          if (request.url.path == '/api/sdk/v1/open') {
+            return http.Response(
+              _sdkEnvelope(<String, Object?>{
+                'userId': 'user_1',
+                'isNewUser': true,
+                'isFirstLaunch': true,
+                'requestVersion': 'v1',
+                'acceptedAt': '2026-05-06T10:00:00.000Z',
+              }),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
           expect(request.url.path, '/api/sdk/v1/crashes');
           crashRequest.complete(
             jsonDecode(request.body) as Map<String, Object?>,
@@ -190,7 +204,7 @@ void main() {
           enableDebugLogs: false,
         );
 
-        await sdk.init(trackAppOpen: false);
+        await sdk.init();
 
         final body = await crashRequest.future;
         expect(body['source'], 'android_uncaught_exception');
@@ -216,9 +230,136 @@ void main() {
     );
 
     test(
+      'init stays fast while queued work waits for delayed app-open scheduling',
+      () async {
+        final delayedPlatform = DelayedInstallReferrerPlatform();
+        AttriaxPlatform.instance = delayedPlatform;
+        contextCollector = CountingContextCollector();
+        final requestPaths = <String>[];
+        final batchBodies = <Map<String, Object?>>[];
+        client = MockClient((request) async {
+          requestPaths.add(request.url.path);
+
+          if (request.url.path == '/api/sdk/v1/open') {
+            return http.Response(
+              _sdkEnvelope(<String, Object?>{
+                'userId': 'user_1',
+                'isNewUser': true,
+                'isFirstLaunch': true,
+                'requestVersion': 'v1',
+                'acceptedAt': '2026-05-06T10:00:00.000Z',
+              }),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          if (request.url.path == '/api/sdk/v1/batch') {
+            batchBodies.add(jsonDecode(request.body) as Map<String, Object?>);
+            return http.Response(
+              jsonEncode(
+                _serializeGenerated(
+                  generated_sdk.SdkV1BatchResponseEnvelopeDto.serializer,
+                  _batchEnvelope(),
+                ),
+              ),
+              202,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          return http.Response(
+            _sdkEnvelope(<String, Object?>{'success': true}),
+            200,
+            headers: const <String, String>{'content-type': 'application/json'},
+          );
+        });
+        sdk = Attriax.test(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init().timeout(const Duration(milliseconds: 200));
+        await sdk.recordEvent(
+          'purchase',
+          eventData: const <String, Object?>{'value': 42},
+        );
+        await _flushRuntimeTransitions();
+
+        expect(requestPaths, isEmpty);
+
+        delayedPlatform.complete(
+          const AttriaxInstallReferrerContext(
+            installReferrer: 'utm_source=attriax&utm_campaign=delayed',
+          ),
+        );
+        await _flushRuntimeTransitions();
+
+        expect(requestPaths, <String>['/api/sdk/v1/open', '/api/sdk/v1/batch']);
+        expect(batchBodies, hasLength(1));
+
+        final items = batchBodies.single['items'] as List<Object?>;
+        expect(items, hasLength(1));
+        final item = items.single as Map<String, Object?>;
+        expect(item['kind'], 'event');
+      },
+    );
+
+    test(
+      'queues app open before replaying pending crash reports during init',
+      () async {
+        final crashPlatform = FakeCrashReportingPlatform(
+          pendingCrashReport: AttriaxPendingCrashReport(
+            source: 'android_uncaught_exception',
+            isFatal: true,
+            exceptionType: 'java.lang.IllegalStateException',
+            message: 'boom',
+            stackTrace: 'native stack',
+            occurredAt: DateTime.utc(2026, 5, 4, 10, 0, 0),
+          ),
+        );
+        AttriaxPlatform.instance = crashPlatform;
+        contextCollector = CountingContextCollector();
+        connectivityPlatform = FakeConnectivityPlatform(
+          currentResults: const <ConnectivityResult>[ConnectivityResult.none],
+        );
+        ConnectivityPlatform.instance = connectivityPlatform;
+        connectivity = Connectivity();
+        sdk = Attriax.test(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init();
+        await _flushRuntimeTransitions();
+
+        final queued = _queuedEntriesFromPrefs(prefs);
+        expect(queued, hasLength(2));
+        expect(
+          queued.map((entry) => entry['kind']),
+          containsAll(<String>['open', 'trackCrash']),
+        );
+      },
+    );
+
+    test(
       'persists fatal platform dispatcher errors for the next launch',
       () async {
-        await sdk.init(trackAppOpen: false);
+        await sdk.init();
 
         final handled = ui.PlatformDispatcher.instance.onError?.call(
           StateError('boom'),
@@ -253,7 +394,7 @@ void main() {
         enableDebugLogs: false,
       );
 
-      await sdk.init(trackAppOpen: false);
+      await sdk.init();
 
       final session = _storedSessionSnapshot(prefs);
       expect(session, isNotNull);
@@ -277,7 +418,7 @@ void main() {
         enableDebugLogs: false,
       );
 
-      await sdk.init(trackAppOpen: false);
+      await sdk.init();
       final initialSession = _storedSessionSnapshot(prefs);
       expect(initialSession, isNotNull);
 
@@ -297,7 +438,7 @@ void main() {
         enableDebugLogs: false,
       );
 
-      await secondSdk.init(trackAppOpen: false);
+      await secondSdk.init();
 
       final restoredSession = _storedSessionSnapshot(prefs);
       expect(restoredSession, isNotNull);
@@ -328,7 +469,7 @@ void main() {
           enableDebugLogs: false,
         );
 
-        await sdk.init(trackAppOpen: false);
+        await sdk.init();
         final initialSession = _storedSessionSnapshot(prefs);
         expect(initialSession, isNotNull);
 
@@ -348,7 +489,7 @@ void main() {
           enableDebugLogs: false,
         );
 
-        await secondSdk.init(trackAppOpen: false);
+        await secondSdk.init();
 
         final newSession = _storedSessionSnapshot(prefs);
         expect(newSession, isNotNull);
@@ -379,7 +520,7 @@ void main() {
         enableDebugLogs: false,
       );
 
-      await sdk.init(trackAppOpen: false);
+      await sdk.init();
       final session = _storedSessionSnapshot(prefs);
       expect(session, isNotNull);
 
@@ -390,14 +531,10 @@ void main() {
         eventData: const <String, Object?>{'value': 42},
       );
 
-      final queuedRaw = prefs.getString('attriax.queue.v1');
-      expect(queuedRaw, isNotNull);
+      final bodies = _queuedBodiesFromPrefs(prefs);
+      expect(bodies, hasLength(1));
 
-      final decoded = jsonDecode(queuedRaw!) as List<Object?>;
-      expect(decoded, hasLength(1));
-
-      final queued = decoded.single as Map<String, Object?>;
-      final body = queued['body'] as Map<String, Object?>;
+      final body = bodies.single;
       expect(body['eventName'], 'purchase');
       expect(body['sessionId'], session!.id);
       expect(body['sessionRelativeTimeMs'], 7000);
@@ -422,7 +559,7 @@ void main() {
           enableDebugLogs: false,
         );
 
-        await sdk.init(trackAppOpen: false);
+        await sdk.init();
         await sdk.recordPurchase(
           revenue: 4.99,
           currency: 'usd',
@@ -435,12 +572,10 @@ void main() {
           metadata: const <String, Object?>{'placement': 'paywall'},
         );
 
-        final queuedRaw = prefs.getString('attriax.queue.v1');
-        expect(queuedRaw, isNotNull);
+        final bodies = _queuedBodiesFromPrefs(prefs);
+        expect(bodies, hasLength(1));
 
-        final decoded = jsonDecode(queuedRaw!) as List<Object?>;
-        final queued = decoded.single as Map<String, Object?>;
-        final body = queued['body'] as Map<String, Object?>;
+        final body = bodies.single;
         final eventData = body['eventData'] as Map<String, Object?>;
 
         expect(body['eventName'], 'purchase');
@@ -472,7 +607,7 @@ void main() {
         enableDebugLogs: false,
       );
 
-      await sdk.init(trackAppOpen: false);
+      await sdk.init();
       await sdk.recordRefund(
         revenue: 4.99,
         currency: 'eur',
@@ -484,12 +619,10 @@ void main() {
         reason: 'chargeback',
       );
 
-      final queuedRaw = prefs.getString('attriax.queue.v1');
-      expect(queuedRaw, isNotNull);
+      final bodies = _queuedBodiesFromPrefs(prefs);
+      expect(bodies, hasLength(1));
 
-      final decoded = jsonDecode(queuedRaw!) as List<Object?>;
-      final queued = decoded.single as Map<String, Object?>;
-      final body = queued['body'] as Map<String, Object?>;
+      final body = bodies.single;
       final eventData = body['eventData'] as Map<String, Object?>;
 
       expect(body['eventName'], 'refund');
@@ -509,6 +642,22 @@ void main() {
       'validateReceipt posts directly and returns the public result',
       () async {
         client = MockClient((request) async {
+          if (request.url.path == '/api/sdk/v1/open') {
+            return http.Response(
+              _sdkEnvelope(<String, Object?>{
+                'userId': 'user_1',
+                'isNewUser': true,
+                'isFirstLaunch': true,
+                'requestVersion': 'v1',
+                'acceptedAt': '2026-05-06T10:00:00.000Z',
+              }),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
           expect(request.url.path, '/api/sdk/v1/revenue/receipts/validate');
 
           final body = jsonDecode(request.body) as Map<String, Object?>;
@@ -559,7 +708,7 @@ void main() {
           enableDebugLogs: false,
         );
 
-        await sdk.init(trackAppOpen: false);
+        await sdk.init();
         final result = await sdk.validateReceipt(
           provider: 'unity',
           productId: 'coins_500',
@@ -595,7 +744,7 @@ void main() {
         enableDebugLogs: false,
       );
 
-      await sdk.init(trackAppOpen: false);
+      await sdk.init();
       await sdk.recordAdRevenue(
         revenue: 120000,
         revenueInMicros: true,
@@ -604,12 +753,10 @@ void main() {
         adPlacement: 'level_end',
       );
 
-      final queuedRaw = prefs.getString('attriax.queue.v1');
-      expect(queuedRaw, isNotNull);
+      final bodies = _queuedBodiesFromPrefs(prefs);
+      expect(bodies, hasLength(1));
 
-      final decoded = jsonDecode(queuedRaw!) as List<Object?>;
-      final queued = decoded.single as Map<String, Object?>;
-      final body = queued['body'] as Map<String, Object?>;
+      final body = bodies.single;
       final eventData = body['eventData'] as Map<String, Object?>;
 
       expect(body['eventName'], 'ad_revenue');
@@ -620,6 +767,91 @@ void main() {
       expect(eventData['adFormat'], 'rewarded');
       expect(eventData['adPlacement'], 'level_end');
     });
+
+    test(
+      'registerFirebaseMessagingToken sends the uninstall-token payload',
+      () async {
+        client = MockClient((request) async {
+          if (request.url.path == '/api/sdk/v1/open') {
+            return http.Response(
+              _sdkEnvelope(<String, Object?>{
+                'userId': 'user_1',
+                'isNewUser': true,
+                'isFirstLaunch': true,
+                'requestVersion': 'v1',
+                'acceptedAt': '2026-05-06T10:00:00.000Z',
+              }),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          expect(request.method, 'POST');
+          expect(request.url.path, '/api/sdk/v1/uninstall-tokens');
+
+          final body = jsonDecode(request.body) as Map<String, Object?>;
+          expect(body['appToken'], 'ax_test_token');
+          expect(body['deviceId'], isNotEmpty);
+          expect(body['deviceIdSource'], isNotEmpty);
+          expect(body['platform'], 'android');
+          expect(body['provider'], 'fcm');
+          expect(body['token'], 'fcm_token_123');
+          expect(body['metadata'], <String, Object?>{'source': 'tests'});
+
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{'success': true},
+            }),
+            202,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        });
+
+        sdk = Attriax.test(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init();
+        await sdk.registerFirebaseMessagingToken(
+          'fcm_token_123',
+          metadata: <String, Object?>{'source': 'tests'},
+        );
+      },
+    );
+
+    test(
+      'registerFirebaseMessagingToken rejects unsupported platforms',
+      () async {
+        contextCollector = CountingContextCollector(
+          platform: AttriaxPlatformType.windows,
+        );
+        sdk = Attriax.test(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init();
+
+        await expectLater(
+          () => sdk.registerFirebaseMessagingToken('fcm_token_123'),
+          throwsA(isA<UnsupportedError>()),
+        );
+      },
+    );
 
     test(
       'queues session heartbeats while the app stays foregrounded',
@@ -643,7 +875,7 @@ void main() {
           enableDebugLogs: false,
         );
 
-        await sdk.init(trackAppOpen: false);
+        await sdk.init();
         final session = _storedSessionSnapshot(prefs);
         expect(session, isNotNull);
 
@@ -677,7 +909,7 @@ void main() {
           enableDebugLogs: false,
         );
 
-        await sdk.init(trackAppOpen: false);
+        await sdk.init();
         final session = _storedSessionSnapshot(prefs);
         expect(session, isNotNull);
 
@@ -721,13 +953,17 @@ AttriaxSessionSnapshot? _storedSessionSnapshot(SharedPreferences prefs) {
   return AttriaxSessionSnapshot.fromJson(decoded);
 }
 
-List<Map<String, Object?>> _queuedBodiesFromPrefs(SharedPreferences prefs) {
+List<Map<String, Object?>> _queuedEntriesFromPrefs(SharedPreferences prefs) {
   final queuedRaw = prefs.getString('attriax.queue.v1');
   expect(queuedRaw, isNotNull);
 
   final decoded = jsonDecode(queuedRaw!) as List<Object?>;
-  return decoded
-      .cast<Map<String, Object?>>()
+  return decoded.cast<Map<String, Object?>>().toList(growable: false);
+}
+
+List<Map<String, Object?>> _queuedBodiesFromPrefs(SharedPreferences prefs) {
+  return _queuedEntriesFromPrefs(prefs)
+      .where((entry) => entry['kind'] != 'open')
       .map((entry) => entry['body'] as Map<String, Object?>)
       .toList(growable: false);
 }
@@ -776,13 +1012,14 @@ class FakeConnectivityPlatform extends ConnectivityPlatform {
 }
 
 class CountingContextCollector extends AttriaxContextCollector {
-  CountingContextCollector()
+  CountingContextCollector({this.platform = AttriaxPlatformType.android})
     : super(config: const AttriaxConfig(appToken: 'ax_test_token'));
 
   int collectContextSnapshotCalls = 0;
   int resolvePreferredDeviceIdCalls = 0;
   final List<String> collectedContextDeviceIds = <String>[];
   AttriaxResolvedDeviceId? resolvedDeviceId;
+  final AttriaxPlatformType platform;
 
   @override
   Future<AttriaxResolvedDeviceId> resolvePreferredDeviceId({
@@ -805,7 +1042,7 @@ class CountingContextCollector extends AttriaxContextCollector {
     collectContextSnapshotCalls += 1;
     collectedContextDeviceIds.add(deviceId);
     return AttriaxContextSnapshot(
-      platform: AttriaxPlatformType.android,
+      platform: platform,
       deviceId: deviceId,
       isFirstLaunch: isFirstLaunch,
       sdk: const AttriaxSdkSnapshot(
@@ -823,15 +1060,26 @@ class CountingContextCollector extends AttriaxContextCollector {
 }
 
 class FakeCrashReportingPlatform extends AttriaxPlatform {
-  FakeCrashReportingPlatform({AttriaxPendingCrashReport? pendingCrashReport})
-    : _pendingCrashReport = pendingCrashReport;
+  FakeCrashReportingPlatform({
+    AttriaxPendingCrashReport? pendingCrashReport,
+    AttriaxInstallReferrerContext installReferrerContext =
+        const AttriaxInstallReferrerContext(
+          installReferrer: 'utm_source=attriax&utm_campaign=tests',
+        ),
+  }) : _pendingCrashReport = pendingCrashReport,
+       _installReferrerContext = installReferrerContext;
 
   AttriaxPendingCrashReport? _pendingCrashReport;
+  final AttriaxInstallReferrerContext _installReferrerContext;
   int consumePendingCrashReportCalls = 0;
 
   @override
   Future<AttriaxNativeContext> collectNativeContext() async =>
       const AttriaxNativeContext();
+
+  @override
+  Future<AttriaxInstallReferrerContext> collectInstallReferrer() async =>
+      _installReferrerContext;
 
   @override
   Future<AttriaxPendingCrashReport?> consumePendingCrashReport() async {
@@ -841,3 +1089,48 @@ class FakeCrashReportingPlatform extends AttriaxPlatform {
     return report;
   }
 }
+
+class DelayedInstallReferrerPlatform extends AttriaxPlatform {
+  final Completer<AttriaxInstallReferrerContext> _completer =
+      Completer<AttriaxInstallReferrerContext>();
+
+  void complete(AttriaxInstallReferrerContext context) {
+    if (!_completer.isCompleted) {
+      _completer.complete(context);
+    }
+  }
+
+  @override
+  Future<AttriaxNativeContext> collectNativeContext() async =>
+      const AttriaxNativeContext();
+
+  @override
+  Future<AttriaxInstallReferrerContext> collectInstallReferrer() =>
+      _completer.future;
+}
+
+String _sdkEnvelope(Map<String, Object?> data) => jsonEncode(<String, Object?>{
+  'success': true,
+  'timestamp': '2026-05-06T10:00:00.000Z',
+  'data': data,
+});
+
+generated_sdk.SdkV1BatchResponseEnvelopeDto _batchEnvelope() =>
+    generated_sdk.SdkV1BatchResponseEnvelopeDto(
+      (builder) => builder
+        ..data.replace(
+          generated_sdk.SdkV1BatchResponseDto(
+            (builder) => builder
+              ..acceptedAt = DateTime.utc(2026, 5, 6, 10, 0, 0)
+              ..duplicateCount = 0
+              ..itemCount = 1
+              ..processedCount = 1
+              ..requestVersion = 'v1',
+          ),
+        )
+        ..success = true
+        ..timestamp = DateTime.utc(2026, 5, 6, 10, 0, 0),
+    );
+
+Object? _serializeGenerated<T>(Serializer<T> serializer, T value) =>
+    generated_sdk.standardSerializers.serializeWith(serializer, value);

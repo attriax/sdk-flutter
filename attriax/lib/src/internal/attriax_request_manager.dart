@@ -10,6 +10,10 @@ class AttriaxRequestManager {
     _synchronizer = synchronizer;
   }
 
+  void unbindSynchronizer() {
+    _synchronizer = null;
+  }
+
   Future<void> enqueue(
     AttriaxApiRequest request, {
     void Function(AttriaxApiResponse response)? onSuccess,

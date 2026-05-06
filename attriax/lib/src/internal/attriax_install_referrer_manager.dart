@@ -30,10 +30,7 @@ class AttriaxInstallReferrerManager {
   bool get isLoaded => _isLoaded;
   AttriaxInstallReferrerDetails? get value => _value;
 
-  Future<void> init({
-    required bool enabled,
-    required bool waitForAppOpen,
-  }) async {
+  Future<void> init({required bool enabled}) async {
     _ensureCompleter();
     final stored = await _preferencesStore.readStoredInstallReferrerDetails();
     _value ??= stored.value;
@@ -51,17 +48,10 @@ class AttriaxInstallReferrerManager {
     }
 
     _reopenCompleterIfNeeded();
-    if (!waitForAppOpen) {
-      _complete(null);
-      return;
-    }
-
     _ensureObservationStarted();
   }
 
-  Future<void> prepareForEnabledState({
-    required bool waitForAppOpen,
-  }) async {
+  Future<void> prepareForEnabledState() async {
     if (!_isLoaded) {
       final stored = await _preferencesStore.readStoredInstallReferrerDetails();
       _value ??= stored.value;
@@ -75,25 +65,15 @@ class AttriaxInstallReferrerManager {
     }
 
     _reopenCompleterIfNeeded();
-    if (!waitForAppOpen) {
-      _complete(null);
-      return;
-    }
-
     _ensureObservationStarted();
   }
 
-  void prepareForReenable({required bool waitForAppOpen}) {
+  void prepareForReenable() {
     if (_isLoaded) {
       return;
     }
 
     _reopenCompleterIfNeeded();
-    if (!waitForAppOpen) {
-      _complete(null);
-      return;
-    }
-
     _ensureObservationStarted();
   }
 

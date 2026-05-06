@@ -34,6 +34,27 @@ class AttriaxTransportHttpException implements Exception {
   final int statusCode;
   final Object? body;
   final DioException? source;
+
+  @override
+  String toString() {
+    final buffer = StringBuffer('Attriax request failed with HTTP $statusCode');
+
+    final sourceMessage = source?.message?.trim();
+    if (sourceMessage != null && sourceMessage.isNotEmpty) {
+      buffer.write(': $sourceMessage');
+    }
+
+    final responseBody = body;
+    if (responseBody != null) {
+      buffer.write(
+        '. Response body: ${_attriaxSummarizeErrorBody(responseBody)}',
+      );
+    } else {
+      buffer.write('.');
+    }
+
+    return buffer.toString();
+  }
 }
 
 class AttriaxTransportInvalidResponseException implements Exception {
@@ -253,6 +274,19 @@ class AttriaxGeneratedTransport {
         .result;
   }
 
+  Future<void> registerUninstallToken(Map<String, Object?> payload) async {
+    final response = await _dio.post<Object?>(
+      '/api/sdk/v1/uninstall-tokens',
+      data: attriaxNormalizeJsonMap(payload),
+      options: Options(validateStatus: _allowAnyStatus),
+    );
+
+    _unwrapAckLikeResponse(
+      label: 'uninstall token registration',
+      response: response,
+    );
+  }
+
   Future<AttriaxTransportSuccess> _sendCrashReportRequest(
     AttriaxCrashReportPayload payload,
   ) async {
@@ -377,6 +411,20 @@ class AttriaxGeneratedTransport {
   bool _isSuccessful(int statusCode) => statusCode >= 200 && statusCode < 300;
 
   bool _allowAnyStatus(int? _) => true;
+}
+
+String _attriaxSummarizeErrorBody(Object body) {
+  final text = body is String ? body.trim() : body.toString();
+  if (text.isEmpty) {
+    return '<empty>';
+  }
+
+  const maxLength = 500;
+  if (text.length <= maxLength) {
+    return text;
+  }
+
+  return '${text.substring(0, maxLength)}...';
 }
 
 class AttriaxDioHttpClientAdapter implements HttpClientAdapter {

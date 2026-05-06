@@ -123,6 +123,27 @@ void main() {
         expect(eventData['previousPageName'], 'Cart');
         expect(eventData['source'], 'manual');
         expect(eventData['step'], 2);
+        expect(requestManager.lastFlushImmediately, isFalse);
+      },
+    );
+
+    test(
+      'recordPageView flushImmediately override bypasses deferral',
+      () async {
+        final requestManager = _RecordingRequestManager();
+        final manager = AttriaxTrackingManager(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          logger: AttriaxLogger(enableDebugLogs: false),
+          clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
+          contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+          settingsState: const _FakeRuntimeSettingsView(),
+          requestManager: requestManager,
+          sessionManager: _FakeTrackedSessionPreparer((_) async => null),
+        );
+
+        await manager.recordPageView('Checkout', flushImmediately: true);
+
+        expect(requestManager.lastFlushImmediately, isTrue);
       },
     );
 

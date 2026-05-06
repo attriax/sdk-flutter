@@ -45,7 +45,7 @@ void main() {
     });
 
     test('persists enabled changes after init', () async {
-      await sdk.init(trackAppOpen: false);
+      await sdk.init();
 
       sdk.enabled = false;
       await _flushRuntimeTransitions();
@@ -61,7 +61,7 @@ void main() {
     });
 
     test('persists eventsEnabled changes after init', () async {
-      await sdk.init(trackAppOpen: false);
+      await sdk.init();
 
       sdk.eventsEnabled = false;
       await _flushRuntimeTransitions();
@@ -88,7 +88,7 @@ void main() {
         sdk.enabled = false;
         await _flushRuntimeTransitions();
 
-        await sdk.init(trackAppOpen: false);
+        await sdk.init();
 
         expect(sdk.enabled, isFalse);
         expect(

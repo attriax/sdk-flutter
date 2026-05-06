@@ -39,37 +39,13 @@ class AttriaxTrackingManager {
     String eventName, {
     Map<String, Object?>? eventData,
     bool flushImmediately = false,
-  }) async {
-    if (!_settingsState.isEnabled || !_settingsState.areEventsEnabled) {
-      _logger.verbose(
-        'Ignoring recordEvent("$eventName") because SDK or events are disabled.',
-      );
-      return;
-    }
-
-    final occurredAt = _clock.now();
-    final currentSession = await _sessionManager.prepareTrackedSessionAt(
-      occurredAt,
-    );
-    await _requestManager.enqueue(
-      attriaxBuildTrackEventRequest(
-        appToken: _config.appToken,
-        clientOccurredAt: occurredAt,
-        deviceId: _contextManager.requiredDeviceId,
-        deviceIdSource: _contextManager.requireDeviceIdSource(),
-        eventName: eventName,
-        eventData: eventData,
-        sessionId: currentSession?.id,
-        sessionRelativeTimeMs: _sessionRelativeTimeMs(
-          session: currentSession,
-          occurredAt: occurredAt,
-        ),
-      ),
-      flushImmediately: _shouldFlushEventImmediately(
-        flushImmediately: flushImmediately,
-      ),
-    );
-  }
+  }) => _queueEvent(
+    eventName,
+    eventData: eventData,
+    flushImmediately: _shouldFlushEventImmediately(
+      flushImmediately: flushImmediately,
+    ),
+  );
 
   Future<void> recordPageView(
     String pageName, {
@@ -93,7 +69,7 @@ class AttriaxTrackingManager {
     final normalizedPageTitle = _trimOrNull(pageTitle);
     final normalizedPreviousPageName = _trimOrNull(previousPageName);
 
-    await recordEvent(
+    await _queueEvent(
       'page_view',
       eventData: <String, Object?>{
         ...?parameters,
@@ -104,7 +80,9 @@ class AttriaxTrackingManager {
           'previousPageName': normalizedPreviousPageName,
         'source': source,
       },
-      flushImmediately: flushImmediately,
+      flushImmediately: _shouldFlushEventImmediately(
+        flushImmediately: flushImmediately,
+      ),
     );
   }
 
@@ -226,12 +204,16 @@ class AttriaxTrackingManager {
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 
-  bool _shouldFlushEventImmediately({required bool flushImmediately}) {
+  bool _shouldFlushEventImmediately({
+    required bool flushImmediately,
+    bool allowFirstLaunchEagerFlush = true,
+  }) {
     if (flushImmediately) {
       return true;
     }
 
-    return _config.flushEventsImmediatelyOnFirstLaunch &&
+    return allowFirstLaunchEagerFlush &&
+        _config.flushEventsImmediatelyOnFirstLaunch &&
         _contextManager.requiredSnapshot.isFirstLaunch;
   }
 
@@ -247,6 +229,40 @@ class AttriaxTrackingManager {
         .difference(session.startedAt)
         .inMilliseconds
         .clamp(0, 0x7fffffff);
+  }
+
+  Future<void> _queueEvent(
+    String eventName, {
+    Map<String, Object?>? eventData,
+    required bool flushImmediately,
+  }) async {
+    if (!_settingsState.isEnabled || !_settingsState.areEventsEnabled) {
+      _logger.verbose(
+        'Ignoring recordEvent("$eventName") because SDK or events are disabled.',
+      );
+      return;
+    }
+
+    final occurredAt = _clock.now();
+    final currentSession = await _sessionManager.prepareTrackedSessionAt(
+      occurredAt,
+    );
+    await _requestManager.enqueue(
+      attriaxBuildTrackEventRequest(
+        appToken: _config.appToken,
+        clientOccurredAt: occurredAt,
+        deviceId: _contextManager.requiredDeviceId,
+        deviceIdSource: _contextManager.requireDeviceIdSource(),
+        eventName: eventName,
+        eventData: eventData,
+        sessionId: currentSession?.id,
+        sessionRelativeTimeMs: _sessionRelativeTimeMs(
+          session: currentSession,
+          occurredAt: occurredAt,
+        ),
+      ),
+      flushImmediately: flushImmediately,
+    );
   }
 
   Future<void> _queueUserUpdate({
