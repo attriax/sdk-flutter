@@ -81,6 +81,9 @@ internal package.
 ```bash
 cd flutter-plugin\attriax\example
 flutter run
+
+# For the full SDK flow, provide a real token.
+flutter run --dart-define=ATTRIAX_APP_TOKEN=...
 ```
 
 ### Run the internal tester

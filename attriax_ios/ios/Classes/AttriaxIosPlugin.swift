@@ -267,12 +267,8 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
 #endif
     }
 
-    private func readEntitlementValue(key: String) -> Any? {
-        guard let task = SecTaskCreateFromSelf(nil) else {
-            return nil
-        }
-
-        return SecTaskCopyValueForEntitlement(task, key as CFString, nil)
+    private func readEntitlementValue(key _: String) -> Any? {
+        nil
     }
 
     private func readEntitlementString(key: String) -> String? {

@@ -9,13 +9,16 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   late FakeExampleAttriaxSdk sdk;
 
-  test('rejects the placeholder example app token', () {
+  test('detects whether the example app token is configured', () {
+    expect(isExampleAppConfigured(appToken: 'ax_your_app_token'), isFalse);
+    expect(isExampleAppConfigured(appToken: exampleDefaultAppToken), isTrue);
+
     expect(
       () => ensureExampleAppConfigured(appToken: 'ax_your_app_token'),
       throwsA(isA<StateError>()),
     );
     expect(
-      () => ensureExampleAppConfigured(appToken: 'ax_live_demo_token'),
+      () => ensureExampleAppConfigured(appToken: exampleDefaultAppToken),
       returnsNormally,
     );
   });
@@ -37,7 +40,9 @@ void main() {
         campaign: 'spring-launch',
       );
 
-      await tester.pumpWidget(AttriaxPackageExampleApp(sdk: sdk));
+      await tester.pumpWidget(
+        AttriaxPackageExampleApp(sdk: sdk, appToken: exampleDefaultAppToken),
+      );
       await tester.ensureVisible(find.text('Load startup attribution result'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Load startup attribution result'));
@@ -54,7 +59,9 @@ void main() {
   testWidgets('navigates to the promo route when a deep link match arrives', (
     tester,
   ) async {
-    await tester.pumpWidget(AttriaxPackageExampleApp(sdk: sdk));
+    await tester.pumpWidget(
+      AttriaxPackageExampleApp(sdk: sdk, appToken: exampleDefaultAppToken),
+    );
 
     final rawEvent = AttriaxRawDeepLinkEvent(
       uri: Uri.parse('https://links.attriax.com/promo/spring-launch'),
@@ -89,6 +96,21 @@ void main() {
     expect(find.text('Matched path: promo/spring-launch'), findsOneWidget);
     expect(find.text('Navigation source: matched_conversion'), findsOneWidget);
     expect(find.text('campaign: spring-launch'), findsOneWidget);
+  });
+
+  testWidgets('shows setup instructions when the token is not configured', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      AttriaxPackageExampleApp(sdk: sdk, appToken: 'ax_your_app_token'),
+    );
+
+    expect(find.text('Configure the Example App'), findsOneWidget);
+    expect(find.textContaining('ATTRIAX_APP_TOKEN='), findsOneWidget);
+    expect(
+      find.textContaining('Current token: ax_your_app_token'),
+      findsOneWidget,
+    );
   });
 }
 

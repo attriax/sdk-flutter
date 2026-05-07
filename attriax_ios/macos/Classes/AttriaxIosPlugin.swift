@@ -2,11 +2,16 @@ import Cocoa
 import FlutterMacOS
 import Security
 
-public final class AttriaxIosPlugin: NSObject, FlutterPlugin {
+public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "attriax", binaryMessenger: registrar.messenger)
+        let eventChannel = FlutterEventChannel(
+            name: "attriax/deep_links/events",
+            binaryMessenger: registrar.messenger
+        )
         let instance = AttriaxIosPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
+        eventChannel.setStreamHandler(instance)
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -17,15 +22,29 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin {
             result(collectInstallReferrer())
         case "consumePendingCrashReport":
             result(nil)
+        case "getInitialLink":
+            result(nil)
+        case "getLatestLink":
+            result(nil)
         default:
             result(FlutterMethodNotImplemented)
         }
     }
 
+    public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink)
+        -> FlutterError?
+    {
+        nil
+    }
+
+    public func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        nil
+    }
+
     private func collectNativeContext() -> [String: Any] {
         let bundle = Bundle.main
         let processInfo = ProcessInfo.processInfo
-        [
+        return [
             "metadata": [
                 "source": "macos_native",
                 "timezone": TimeZone.current.identifier,

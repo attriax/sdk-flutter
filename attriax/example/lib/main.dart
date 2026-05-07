@@ -5,10 +5,18 @@ import 'package:attriax/attriax.dart';
 
 import 'example_attriax_sdk.dart';
 
-const String exampleAppToken = 'ax_your_app_token';
+const String exampleDefaultAppToken = 'ax_your_app_token';
+
+const String exampleAppToken = String.fromEnvironment(
+  'ATTRIAX_APP_TOKEN',
+  defaultValue: exampleDefaultAppToken,
+);
+
+bool isExampleAppConfigured({required String appToken}) =>
+    !appToken.startsWith('ax_your_');
 
 void ensureExampleAppConfigured({required String appToken}) {
-  if (appToken.startsWith('ax_your_')) {
+  if (!isExampleAppConfigured(appToken: appToken)) {
     throw StateError(
       'Replace the example Attriax app token before running this app.',
     );
@@ -148,38 +156,127 @@ Route<void> _onGenerateExampleRoute(
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  ensureExampleAppConfigured(appToken: exampleAppToken);
+  final isConfigured = isExampleAppConfigured(appToken: exampleAppToken);
 
   // Recommended: await initialization during startup so the SDK has restored
   // persisted state, collected context, and started listeners before the UI.
   // If your app must remain non-blocking, you can intentionally choose
   // unawaited(attriax.init()) instead.
-  await exampleSdk.init();
+  if (isConfigured) {
+    await exampleSdk.init();
+  }
 
-  runApp(AttriaxPackageExampleApp());
+  runApp(AttriaxPackageExampleApp(appToken: exampleAppToken));
 }
 
 // ── App widget ────────────────────────────────────────────────────────────────
 
 class AttriaxPackageExampleApp extends StatelessWidget {
-  AttriaxPackageExampleApp({super.key, ExampleAttriaxSdk? sdk})
-    : sdk = sdk ?? exampleSdk;
+  AttriaxPackageExampleApp({
+    super.key,
+    ExampleAttriaxSdk? sdk,
+    String? appToken,
+  }) : sdk = sdk ?? exampleSdk,
+       appToken = appToken ?? exampleAppToken;
 
   final ExampleAttriaxSdk sdk;
+  final String appToken;
 
   @override
   Widget build(BuildContext context) {
+    final isConfigured = isExampleAppConfigured(appToken: appToken);
+
     return MaterialApp(
       title: 'Attriax Example',
-      navigatorKey: _exampleNavigatorKey,
-      navigatorObservers: sdk.buildNavigatorObservers(),
+      navigatorKey: isConfigured ? _exampleNavigatorKey : null,
+      navigatorObservers: isConfigured
+          ? sdk.buildNavigatorObservers()
+          : const <NavigatorObserver>[],
       theme: ThemeData(
         colorSchemeSeed: const Color(0xFF0F766E),
         useMaterial3: true,
       ),
-      onGenerateRoute: (settings) =>
-          _onGenerateExampleRoute(settings, sdk: sdk),
-      initialRoute: '/',
+      home: isConfigured
+          ? ExampleHomePage(sdk: sdk)
+          : ExampleConfigurationRequiredPage(appToken: appToken),
+      onGenerateRoute: isConfigured
+          ? (settings) => _onGenerateExampleRoute(settings, sdk: sdk)
+          : null,
+    );
+  }
+}
+
+class ExampleConfigurationRequiredPage extends StatelessWidget {
+  const ExampleConfigurationRequiredPage({super.key, required this.appToken});
+
+  final String appToken;
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Attriax Example')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Configure the Example App',
+                        style: textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'The example app launched successfully, but Attriax '
+                        'initialization was skipped because the placeholder '
+                        'app token is still in use.',
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Current token: $appToken',
+                        style: textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Run with a real token',
+                        style: textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      const SelectableText(
+                        'flutter run --dart-define=ATTRIAX_APP_TOKEN=$exampleDefaultAppToken',
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Once a real token is provided, the example will '
+                        'initialize the SDK and unlock the event, '
+                        'synchronization, and deep-link demo flows.',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
