@@ -1,0 +1,25 @@
+import 'package:test/test.dart';
+import 'package:attriax_api_client/attriax_api_client.dart';
+
+// tests for SdkV1BatchResponseEnvelopeDto
+void main() {
+  final instance = SdkV1BatchResponseEnvelopeDtoBuilder();
+  // TODO add properties to the builder and call build()
+
+  group(SdkV1BatchResponseEnvelopeDto, () {
+    // SdkV1BatchResponseDto data
+    test('to test the property `data`', () async {
+      // TODO
+    });
+
+    // bool success
+    test('to test the property `success`', () async {
+      // TODO
+    });
+
+    // DateTime timestamp
+    test('to test the property `timestamp`', () async {
+      // TODO
+    });
+  });
+}

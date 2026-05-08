@@ -1,0 +1,14 @@
+name: attriax_flutter_workspace
+description: Workspace configuration for the Attriax Flutter monorepo.
+publish_to: none
+
+environment:
+  sdk: ^3.8.0
+
+workspace:
+  - attriax
+  - attriax_api_client
+  - attriax/example
+  - attriax_flutter_android
+  - attriax_flutter_ios
+  - attriax_flutter_platform_interface

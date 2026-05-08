@@ -1,0 +1,51 @@
+group 'com.attriax.attriax_flutter_android'
+
+def attriaxPubspecVersion = '0.0.1'
+def attriaxPubspec = file('../pubspec.yaml')
+if (attriaxPubspec.exists()) {
+    attriaxPubspec.eachLine { line ->
+        def matcher = line =~ /^version:\s*(.+)$/
+        if (matcher.matches()) {
+            attriaxPubspecVersion = matcher[0][1].trim()
+        }
+    }
+}
+version attriaxPubspecVersion
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.1.0'
+    }
+}
+
+rootProject.allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: 'com.android.library'
+
+android {
+    namespace 'com.attriax.attriax_flutter_android'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 21
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.android.installreferrer:installreferrer:2.2'
+    testImplementation 'junit:junit:4.13.2'
+}
