@@ -12,6 +12,8 @@ part 'app_user_uninstall_token_provider.g.dart';
 class AppUserUninstallTokenProvider extends EnumClass {
   @BuiltValueEnumConst(wireName: r'fcm')
   static const AppUserUninstallTokenProvider fcm = _$fcm;
+  @BuiltValueEnumConst(wireName: r'apns')
+  static const AppUserUninstallTokenProvider apns = _$apns;
 
   static Serializer<AppUserUninstallTokenProvider> get serializer =>
       _$appUserUninstallTokenProviderSerializer;

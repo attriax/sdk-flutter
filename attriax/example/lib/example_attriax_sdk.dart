@@ -18,6 +18,14 @@ abstract class ExampleAttriaxSdk {
   Future<void> init();
   Future<void> dispose();
   Future<void> recordEvent(String eventName, {Map<String, Object?>? eventData});
+  Future<void> registerFirebaseMessagingToken(
+    String? token, {
+    Map<String, Object?>? metadata,
+  });
+  Future<void> registerApplePushToken(
+    String? token, {
+    Map<String, Object?>? metadata,
+  });
   Future<void> setUser(String? userId, {String? userName});
   Future<AttriaxCreateDynamicLinkResult> createDynamicLink({
     String? name,
@@ -93,6 +101,18 @@ class LiveExampleAttriaxSdk implements ExampleAttriaxSdk {
     String eventName, {
     Map<String, Object?>? eventData,
   }) => _sdk.recordEvent(eventName, eventData: eventData);
+
+  @override
+  Future<void> registerFirebaseMessagingToken(
+    String? token, {
+    Map<String, Object?>? metadata,
+  }) => _sdk.registerFirebaseMessagingToken(token, metadata: metadata);
+
+  @override
+  Future<void> registerApplePushToken(
+    String? token, {
+    Map<String, Object?>? metadata,
+  }) => _sdk.registerApplePushToken(token, metadata: metadata);
 
   @override
   Future<void> setUser(String? userId, {String? userName}) =>

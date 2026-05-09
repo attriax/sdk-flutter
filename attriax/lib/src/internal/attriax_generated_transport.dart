@@ -88,7 +88,7 @@ class AttriaxGeneratedTransport {
     )..httpClientAdapter = AttriaxDioHttpClientAdapter(httpClient);
 
     return AttriaxGeneratedTransport._(
-      sdk.AttriaxSdkClient(dio: dio).getSdkApi(),
+      sdk.AttriaxApiClient(dio: dio).getSdkApi(),
       dio,
     );
   }

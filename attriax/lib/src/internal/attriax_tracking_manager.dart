@@ -1,6 +1,5 @@
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 
-import '../attriax_clock.dart';
 import 'attriax_api_models.dart';
 import 'attriax_context_manager.dart';
 import 'attriax_logger.dart';

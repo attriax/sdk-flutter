@@ -751,6 +751,7 @@ Map<String, Object?> attriaxBuildRegisterUninstallTokenRequest({
   required String deviceId,
   required String deviceIdSource,
   required AttriaxPlatformType platform,
+  required String provider,
   String? token,
   Map<String, Object?>? metadata,
 }) => <String, Object?>{
@@ -758,7 +759,7 @@ Map<String, Object?> attriaxBuildRegisterUninstallTokenRequest({
   'deviceId': deviceId,
   'deviceIdSource': deviceIdSource,
   'platform': _uninstallTrackingPlatformName(platform),
-  'provider': 'fcm',
+  'provider': provider,
   'token': ?attriaxStringValue(token),
   'metadata': ?metadata,
 };
@@ -768,7 +769,7 @@ String _uninstallTrackingPlatformName(AttriaxPlatformType platform) =>
       AttriaxPlatformType.android => 'android',
       AttriaxPlatformType.ios => 'ios',
       _ => throw UnsupportedError(
-        'Firebase uninstall tracking is only supported on Android and iOS.',
+        'Uninstall token registration is only supported on Android and iOS.',
       ),
     };
 
@@ -913,6 +914,8 @@ sdk.DeviceContextDto _generatedDeviceContext(AttriaxDeviceSnapshot device) =>
         ..advertisingId = attriaxStringValue(device.advertisingId)
         ..androidId = attriaxStringValue(device.androidId)
         ..brand = attriaxStringValue(device.brand)
+        ..colorDepth = device.colorDepth
+        ..devicePixelRatio = device.devicePixelRatio
         ..hardware = attriaxStringValue(device.hardware)
         ..isPhysicalDevice = device.isPhysicalDevice
         ..language = attriaxStringValue(device.language)
@@ -921,7 +924,9 @@ sdk.DeviceContextDto _generatedDeviceContext(AttriaxDeviceSnapshot device) =>
         ..model = attriaxStringValue(device.model)
         ..name = attriaxStringValue(device.name)
         ..osVersion = attriaxStringValue(device.osVersion)
+        ..screenHeight = device.screenHeight
         ..screenResolution = attriaxStringValue(device.screenResolution)
+        ..screenWidth = device.screenWidth
         ..supportedAbis = device.supportedAbis.isEmpty
             ? null
             : ListBuilder<String>(device.supportedAbis)

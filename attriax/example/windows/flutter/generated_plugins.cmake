@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  attriax_flutter_windows
   connectivity_plus
 )
 

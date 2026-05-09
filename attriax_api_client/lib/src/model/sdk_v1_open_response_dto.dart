@@ -3,8 +3,8 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_install_referrer_result_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 

@@ -30,7 +30,7 @@ Method | HTTP request | Description
 ```dart
 import 'package:attriax_api_client/api.dart';
 
-final api = AttriaxSdkClient().getSdkApi();
+final api = AttriaxApiClient().getSdkApi();
 final SdkV1BatchDto sdkV1BatchDto = ; // SdkV1BatchDto | 
 
 try {
@@ -71,7 +71,7 @@ No authorization required
 ```dart
 import 'package:attriax_api_client/api.dart';
 
-final api = AttriaxSdkClient().getSdkApi();
+final api = AttriaxApiClient().getSdkApi();
 final SdkCreateDynamicLinkDto sdkCreateDynamicLinkDto = ; // SdkCreateDynamicLinkDto | 
 
 try {
@@ -112,7 +112,7 @@ No authorization required
 ```dart
 import 'package:attriax_api_client/api.dart';
 
-final api = AttriaxSdkClient().getSdkApi();
+final api = AttriaxApiClient().getSdkApi();
 final SdkV1OpenDto sdkV1OpenDto = ; // SdkV1OpenDto | 
 
 try {
@@ -153,7 +153,7 @@ No authorization required
 ```dart
 import 'package:attriax_api_client/api.dart';
 
-final api = AttriaxSdkClient().getSdkApi();
+final api = AttriaxApiClient().getSdkApi();
 final SdkCrashDto sdkCrashDto = ; // SdkCrashDto | 
 
 try {
@@ -194,7 +194,7 @@ No authorization required
 ```dart
 import 'package:attriax_api_client/api.dart';
 
-final api = AttriaxSdkClient().getSdkApi();
+final api = AttriaxApiClient().getSdkApi();
 final SdkEventDto sdkEventDto = ; // SdkEventDto | 
 
 try {
@@ -235,7 +235,7 @@ No authorization required
 ```dart
 import 'package:attriax_api_client/api.dart';
 
-final api = AttriaxSdkClient().getSdkApi();
+final api = AttriaxApiClient().getSdkApi();
 final SdkSessionDto sdkSessionDto = ; // SdkSessionDto | 
 
 try {
@@ -276,7 +276,7 @@ No authorization required
 ```dart
 import 'package:attriax_api_client/api.dart';
 
-final api = AttriaxSdkClient().getSdkApi();
+final api = AttriaxApiClient().getSdkApi();
 final SdkRegisterUninstallTokenDto sdkRegisterUninstallTokenDto = ; // SdkRegisterUninstallTokenDto | 
 
 try {
@@ -317,7 +317,7 @@ No authorization required
 ```dart
 import 'package:attriax_api_client/api.dart';
 
-final api = AttriaxSdkClient().getSdkApi();
+final api = AttriaxApiClient().getSdkApi();
 final SdkV1DeepLinkResolveDto sdkV1DeepLinkResolveDto = ; // SdkV1DeepLinkResolveDto | 
 
 try {
@@ -358,7 +358,7 @@ No authorization required
 ```dart
 import 'package:attriax_api_client/api.dart';
 
-final api = AttriaxSdkClient().getSdkApi();
+final api = AttriaxApiClient().getSdkApi();
 final SdkUserDto sdkUserDto = ; // SdkUserDto | 
 
 try {
@@ -399,7 +399,7 @@ No authorization required
 ```dart
 import 'package:attriax_api_client/api.dart';
 
-final api = AttriaxSdkClient().getSdkApi();
+final api = AttriaxApiClient().getSdkApi();
 final SdkV1RevenueReceiptValidateDto sdkV1RevenueReceiptValidateDto = ; // SdkV1RevenueReceiptValidateDto | 
 
 try {

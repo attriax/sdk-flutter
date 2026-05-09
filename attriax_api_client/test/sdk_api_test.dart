@@ -3,7 +3,7 @@ import 'package:attriax_api_client/attriax_api_client.dart';
 
 /// tests for SdkApi
 void main() {
-  final instance = AttriaxSdkClient().getSdkApi();
+  final instance = AttriaxApiClient().getSdkApi();
 
   group(SdkApi, () {
     //Future<SdkV1BatchResponseEnvelopeDto> sdkControllerBatchV1(SdkV1BatchDto sdkV1BatchDto) async

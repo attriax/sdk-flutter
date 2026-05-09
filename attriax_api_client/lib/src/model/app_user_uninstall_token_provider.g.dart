@@ -8,11 +8,15 @@ part of 'app_user_uninstall_token_provider.dart';
 
 const AppUserUninstallTokenProvider _$fcm =
     const AppUserUninstallTokenProvider._('fcm');
+const AppUserUninstallTokenProvider _$apns =
+    const AppUserUninstallTokenProvider._('apns');
 
 AppUserUninstallTokenProvider _$valueOf(String name) {
   switch (name) {
     case 'fcm':
       return _$fcm;
+    case 'apns':
+      return _$apns;
     default:
       throw ArgumentError(name);
   }
@@ -20,7 +24,7 @@ AppUserUninstallTokenProvider _$valueOf(String name) {
 
 final BuiltSet<AppUserUninstallTokenProvider> _$values =
     BuiltSet<AppUserUninstallTokenProvider>(
-      const <AppUserUninstallTokenProvider>[_$fcm],
+      const <AppUserUninstallTokenProvider>[_$fcm, _$apns],
     );
 
 Serializer<AppUserUninstallTokenProvider>
@@ -31,9 +35,11 @@ class _$AppUserUninstallTokenProviderSerializer
     implements PrimitiveSerializer<AppUserUninstallTokenProvider> {
   static const Map<String, Object> _toWire = const <String, Object>{
     'fcm': 'fcm',
+    'apns': 'apns',
   };
   static const Map<Object, String> _fromWire = const <Object, String>{
     'fcm': 'fcm',
+    'apns': 'apns',
   };
 
   @override

@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 import 'package:flutter/widgets.dart';
 
-import '../attriax_clock.dart';
 import 'attriax_api_models.dart';
 import 'attriax_request_manager.dart';
 import 'attriax_runtime_settings_state.dart';

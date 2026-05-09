@@ -1,4 +1,3 @@
-import 'package:attriax_flutter/attriax_flutter.dart';
 import 'package:attriax_flutter/src/internal/attriax_context_collector.dart';
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 import 'package:flutter/foundation.dart';
@@ -199,6 +198,55 @@ void main() {
     expect(resolved.value, 'macos-keychain-id');
     expect(resolved.source, 'macos_keychain');
   });
+
+  test(
+    'builds Windows app and device snapshots from native metadata',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.windows;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      final collector = AttriaxContextCollector(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        platform: FakeAttriaxPlatform.withNativeContext(
+          const AttriaxNativeContext(
+            metadata: <String, Object?>{
+              'appVersion': '2.4.0',
+              'appBuildNumber': '2401',
+              'packageName': 'Attriax.InternalTester',
+              'productName': 'Surface Laptop 7',
+              'computerName': 'QA-DESKTOP',
+              'manufacturer': 'Microsoft',
+              'deviceId': 'machine-guid-123',
+              'displayVersion': '24H2',
+              'osVersion': 'Windows 11 24H2 (build 26100)',
+              'colorDepth': 32,
+            },
+          ),
+        ),
+      );
+
+      final context = await collector.collectContextSnapshot(
+        deviceId: 'device_test_windows',
+        isFirstLaunch: false,
+      );
+      final resolved = await collector.resolvePreferredDeviceId(
+        fallbackDeviceId: 'stored-fallback',
+      );
+
+      expect(context.app.version, '2.4.0');
+      expect(context.app.buildNumber, '2401');
+      expect(context.app.packageName, 'Attriax.InternalTester');
+      expect(context.device.model, 'Surface Laptop 7');
+      expect(context.device.name, 'QA-DESKTOP');
+      expect(context.device.brand, 'Microsoft');
+      expect(context.device.manufacturer, 'Microsoft');
+      expect(context.device.hardware, 'machine-guid-123');
+      expect(context.device.osVersion, 'Windows 11 24H2 (build 26100)');
+      expect(context.device.colorDepth, 32);
+      expect(resolved.value, 'machine-guid-123');
+      expect(resolved.source, 'windows_machine_guid');
+    },
+  );
 
   test('builds web app and device snapshots from platform metadata', () async {
     final collector = AttriaxContextCollector(

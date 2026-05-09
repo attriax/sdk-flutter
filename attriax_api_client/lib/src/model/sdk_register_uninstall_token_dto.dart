@@ -3,9 +3,9 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:attriax_api_client/src/model/platform.dart';
-import 'package:attriax_api_client/src/model/app_user_uninstall_token_provider.dart';
 import 'package:built_collection/built_collection.dart';
+import 'package:attriax_api_client/src/model/app_user_uninstall_token_provider.dart';
+import 'package:attriax_api_client/src/model/platform.dart';
 import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
@@ -47,10 +47,10 @@ abstract class SdkRegisterUninstallTokenDto
 
   @BuiltValueField(wireName: r'provider')
   AppUserUninstallTokenProvider get provider;
-  // enum providerEnum {  fcm,  };
+  // enum providerEnum {  fcm,  apns,  };
 
   @BuiltValueField(wireName: r'token')
-  String get token;
+  JsonObject? get token;
 
   SdkRegisterUninstallTokenDto._();
 
@@ -119,11 +119,13 @@ class _$SdkRegisterUninstallTokenDtoSerializer
       object.provider,
       specifiedType: const FullType(AppUserUninstallTokenProvider),
     );
-    yield r'token';
-    yield serializers.serialize(
-      object.token,
-      specifiedType: const FullType(String),
-    );
+    if (object.token != null) {
+      yield r'token';
+      yield serializers.serialize(
+        object.token,
+        specifiedType: const FullType.nullable(JsonObject),
+      );
+    }
   }
 
   @override
@@ -214,9 +216,10 @@ class _$SdkRegisterUninstallTokenDtoSerializer
           final valueDes =
               serializers.deserialize(
                     value,
-                    specifiedType: const FullType(String),
+                    specifiedType: const FullType.nullable(JsonObject),
                   )
-                  as String;
+                  as JsonObject?;
+          if (valueDes == null) continue;
           result.token = valueDes;
           break;
         default:

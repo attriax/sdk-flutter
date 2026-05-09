@@ -25,6 +25,8 @@ flutter:
         default_package: attriax_flutter_ios
       macos:
         default_package: attriax_flutter_ios
+      windows:
+        default_package: attriax_flutter_windows
       web:
         pluginClass: AttriaxWebPlugin
         fileName: src/internal/attriax_web_platform.dart
@@ -34,6 +36,7 @@ dependencies:
   attriax_flutter_android: ^0.0.1
   attriax_flutter_ios: ^0.0.1
   attriax_flutter_platform_interface: ^0.0.1
+  attriax_flutter_windows: ^0.0.1
   built_collection: ^5.1.1
   built_value: ^8.12.6
   connectivity_plus: ^7.1.1

@@ -188,6 +188,58 @@ forwarding when you wire a desktop protocol handler.
 
 Because Android install referrer is the strongest attribution input for mobile installs, validate at least one Play-distributed Android build before release. iOS does not have an install-referrer equivalent, so universal-link handling and the initial app-open request become the primary checks there.
 
+## Uninstall Tracking
+
+Attriax accepts uninstall-tracking tokens from mobile apps so the backend can
+probe whether the app instance is still reachable.
+
+- Android: call `registerFirebaseMessagingToken(token)` after your app receives an FCM registration token and again whenever Firebase rotates that token.
+- Apple platforms: if your app receives an FCM registration token, call `registerFirebaseMessagingToken(token)` there too.
+- Apple platforms: if your app also receives the native APNs device token, call `registerApplePushToken(token)` to register it as a separate Apple token provider.
+- Pass `null` or whitespace to either method when you need to clear the currently registered token for that provider.
+
+Attriax probes FCM registrations through Firebase Admin. When you configure the
+APNs auth key in the Attriax dashboard, Attriax can also probe native APNs
+tokens directly for Apple-platform uninstall detection.
+
+```dart
+import 'dart:async';
+import 'package:attriax_flutter/attriax.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+
+Future<void> syncPushTokensWithAttriax(Attriax attriax) async {
+  final messaging = FirebaseMessaging.instance;
+
+  await messaging.requestPermission();
+
+  final fcmToken = await messaging.getToken();
+  await attriax.registerFirebaseMessagingToken(
+    fcmToken,
+    metadata: const <String, Object?>{'source': 'firebase_messaging'},
+  );
+
+  if (!kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS)) {
+    final apnsToken = await messaging.getAPNSToken();
+    await attriax.registerApplePushToken(
+      apnsToken,
+      metadata: const <String, Object?>{'source': 'firebase_messaging_apns'},
+    );
+  }
+
+  messaging.onTokenRefresh.listen((token) {
+    unawaited(
+      attriax.registerFirebaseMessagingToken(
+        token,
+        metadata: const <String, Object?>{'source': 'firebase_messaging_refresh'},
+      ),
+    );
+  });
+}
+```
+
 ## Synchronization
 
 Most apps do not need to surface synchronization state in normal product UI.

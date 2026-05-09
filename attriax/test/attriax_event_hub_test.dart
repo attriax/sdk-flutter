@@ -94,6 +94,34 @@ void main() {
       expect(result.failure, isNull);
     });
 
+    test('marks Attriax subdomain deep links with isAttriax', () async {
+      final rawEvent = AttriaxRawDeepLinkEvent(
+        uri: Uri.parse('https://demo.attriax.com/promo/spring-launch'),
+        linkPath: 'promo/spring-launch',
+        isFirstLaunch: true,
+        isInitialLink: true,
+        occurredAt: DateTime.utc(2026, 4, 24),
+      );
+
+      final emittedEvent = hub.emitPendingDeepLink(rawEvent);
+
+      expect(emittedEvent.isAttriax, isTrue);
+    });
+
+    test('leaves custom-domain deep links with isAttriax false', () async {
+      final rawEvent = AttriaxRawDeepLinkEvent(
+        uri: Uri.parse('https://app.example.com/promo/spring-launch'),
+        linkPath: 'promo/spring-launch',
+        isFirstLaunch: true,
+        isInitialLink: true,
+        occurredAt: DateTime.utc(2026, 4, 24),
+      );
+
+      final emittedEvent = hub.emitPendingDeepLink(rawEvent);
+
+      expect(emittedEvent.isAttriax, isFalse);
+    });
+
     test('exposes the resolved initial deep link result', () async {
       final rawEvent = AttriaxRawDeepLinkEvent(
         uri: Uri.parse('https://example.com/promo/launch'),

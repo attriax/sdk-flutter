@@ -210,6 +210,7 @@ class AttriaxContextCollector {
 
     try {
       final rawData = _loadRawDeviceData(nativeContext);
+      final colorDepth = _readInt(rawData, 'colorDepth');
       final metadata = <String, Object?>{
         ...rawData,
         if (nativeContext.metadata.isNotEmpty)
@@ -242,6 +243,7 @@ class AttriaxContextCollector {
             screenWidth: screenWidth,
             screenHeight: screenHeight,
             devicePixelRatio: devicePixelRatio,
+            colorDepth: colorDepth,
             advertisingId: nativeContext.advertisingId,
             androidId: nativeContext.androidId,
             isPhysicalDevice: _readBool(rawData, 'isPhysicalDevice'),
@@ -269,6 +271,7 @@ class AttriaxContextCollector {
             screenWidth: screenWidth,
             screenHeight: screenHeight,
             devicePixelRatio: devicePixelRatio,
+            colorDepth: colorDepth,
             advertisingId: nativeContext.advertisingId,
             isPhysicalDevice: _readBool(rawData, 'isPhysicalDevice'),
             metadata: metadata,
@@ -291,6 +294,7 @@ class AttriaxContextCollector {
             screenWidth: screenWidth,
             screenHeight: screenHeight,
             devicePixelRatio: devicePixelRatio,
+            colorDepth: colorDepth,
             isPhysicalDevice: true,
             metadata: metadata,
           );
@@ -302,14 +306,17 @@ class AttriaxContextCollector {
             manufacturer: _readString(rawData, 'manufacturer'),
             hardware: _readString(rawData, 'deviceId'),
             osVersion:
+                _readString(rawData, 'osVersion') ??
                 _readString(rawData, 'displayVersion') ??
-                _readString(rawData, 'releaseId'),
+                _readString(rawData, 'releaseId') ??
+                _readString(rawData, 'currentBuildNumber'),
             language: locale,
             timezone: timezone,
             screenResolution: screenResolution,
             screenWidth: screenWidth,
             screenHeight: screenHeight,
             devicePixelRatio: devicePixelRatio,
+            colorDepth: colorDepth,
             isPhysicalDevice: true,
             metadata: metadata,
           );
@@ -335,6 +342,7 @@ class AttriaxContextCollector {
             screenWidth: screenWidth,
             screenHeight: screenHeight,
             devicePixelRatio: devicePixelRatio,
+            colorDepth: colorDepth,
             isPhysicalDevice: true,
             metadata: metadata,
           );
@@ -354,6 +362,7 @@ class AttriaxContextCollector {
             screenWidth: screenWidth,
             screenHeight: screenHeight,
             devicePixelRatio: devicePixelRatio,
+            colorDepth: colorDepth,
             metadata: metadata,
           );
         case AttriaxPlatformType.unknown:
@@ -364,6 +373,7 @@ class AttriaxContextCollector {
             screenWidth: screenWidth,
             screenHeight: screenHeight,
             devicePixelRatio: devicePixelRatio,
+            colorDepth: colorDepth,
             metadata: {
               if (nativeContext.metadata.isNotEmpty)
                 'nativeContext': nativeContext.metadata,
@@ -554,6 +564,17 @@ class AttriaxContextCollector {
       if (value != null) {
         return value;
       }
+    }
+    return null;
+  }
+
+  int? _readInt(Map<String, Object?> data, String key) {
+    final value = data[key];
+    if (value is int) {
+      return value;
+    }
+    if (value is num) {
+      return value.toInt();
     }
     return null;
   }

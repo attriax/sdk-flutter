@@ -541,12 +541,20 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   final TextEditingController _manualPathController = TextEditingController(
     text: 'promo/spring-launch',
   );
+  final TextEditingController _firebaseTokenController = TextEditingController(
+    text: 'demo_firebase_registration_token',
+  );
+  final TextEditingController _apnsTokenController = TextEditingController(
+    text: 'demo_apns_device_token',
+  );
   StreamSubscription<AttriaxDeepLinkEvent>? _deepLinkSubscription;
   StreamSubscription<AttriaxSynchronizationState>? _synchronizationSubscription;
 
   bool _sdkEnabled = true;
   bool _eventsEnabled = true;
   String _status = 'SDK initialized.';
+  String _firebaseTokenStatus = 'Not sent to Attriax yet.';
+  String _apnsTokenStatus = 'Not sent to Attriax yet.';
   AttriaxInstallReferrerDetails? _startupInstallReferrer;
   AttriaxDeepLinkResult? _startupInitialDeepLink;
   AttriaxDynamicLinkRecord? _lastCreatedDynamicLink;
@@ -578,6 +586,8 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
     unawaited(_deepLinkSubscription?.cancel() ?? Future<void>.value());
     unawaited(_synchronizationSubscription?.cancel() ?? Future<void>.value());
     _manualPathController.dispose();
+    _firebaseTokenController.dispose();
+    _apnsTokenController.dispose();
     super.dispose();
   }
 
@@ -675,6 +685,60 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
     );
     if (!mounted) return;
     setState(() => _status = 'Queued purchase_completed event.');
+  }
+
+  Future<void> _registerFirebaseToken() async {
+    final token = _firebaseTokenController.text.trim();
+    await widget.sdk.registerFirebaseMessagingToken(
+      token.isEmpty ? null : token,
+      metadata: const <String, Object?>{
+        'surface': 'package_example',
+        'source': 'manual_demo',
+      },
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _firebaseTokenStatus = token.isEmpty
+          ? 'Firebase token cleared in Attriax.'
+          : 'Firebase token sent to Attriax.';
+      _status = _firebaseTokenStatus;
+    });
+  }
+
+  Future<void> _clearFirebaseToken() async {
+    _firebaseTokenController.clear();
+    await _registerFirebaseToken();
+  }
+
+  Future<void> _registerApnsToken() async {
+    final token = _apnsTokenController.text.trim();
+    await widget.sdk.registerApplePushToken(
+      token.isEmpty ? null : token,
+      metadata: const <String, Object?>{
+        'surface': 'package_example',
+        'source': 'manual_demo',
+      },
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _apnsTokenStatus = token.isEmpty
+          ? 'APNs token cleared in Attriax.'
+          : 'APNs token sent to Attriax.';
+      _status = _apnsTokenStatus;
+    });
+  }
+
+  Future<void> _clearApnsToken() async {
+    _apnsTokenController.clear();
+    await _registerApnsToken();
   }
 
   Future<void> _setSampleUser() async {
@@ -1007,6 +1071,98 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                             : null,
                         child: const Text('Report manual deep link'),
                       ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        'Uninstall Token Registration',
+                        style: textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Real host apps usually call these methods after '
+                        'Firebase Messaging or APNs gives them a token. This '
+                        'example lets you manually send a value to Attriax so '
+                        'you can verify the integration flow without adding '
+                        'Firebase to the demo app.',
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Android normally sends only the Firebase token. Apple '
+                        'platforms can send the Firebase token, the APNs token, '
+                        'or both when your app has access to both values.',
+                        style: textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _firebaseTokenController,
+                        decoration: const InputDecoration(
+                          labelText: 'Firebase registration token',
+                          helperText:
+                              'Example host call: attriax.registerFirebaseMessagingToken(token)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: <Widget>[
+                          FilledButton.tonal(
+                            onPressed: widget.sdk.isInitialized
+                                ? _registerFirebaseToken
+                                : null,
+                            child: const Text('Send Firebase token'),
+                          ),
+                          OutlinedButton(
+                            onPressed: widget.sdk.isInitialized
+                                ? _clearFirebaseToken
+                                : null,
+                            child: const Text('Clear Firebase token'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text('Firebase status: $_firebaseTokenStatus'),
+                      const SizedBox(height: 16),
+                      TextField(
+                        controller: _apnsTokenController,
+                        decoration: const InputDecoration(
+                          labelText: 'Apple APNs device token',
+                          helperText:
+                              'Example host call: attriax.registerApplePushToken(token)',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: <Widget>[
+                          FilledButton.tonal(
+                            onPressed: widget.sdk.isInitialized
+                                ? _registerApnsToken
+                                : null,
+                            child: const Text('Send APNs token'),
+                          ),
+                          OutlinedButton(
+                            onPressed: widget.sdk.isInitialized
+                                ? _clearApnsToken
+                                : null,
+                            child: const Text('Clear APNs token'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text('APNs status: $_apnsTokenStatus'),
                     ],
                   ),
                 ),

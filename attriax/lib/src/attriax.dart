@@ -421,13 +421,26 @@ class Attriax {
   ///
   /// Call this after your app receives an FCM token and again whenever Firebase
   /// rotates that token. Pass `null` or an empty string to clear the currently
-  /// registered uninstall token for this device. Attriax currently supports this
-  /// flow on Android and iOS.
+  /// registered FCM uninstall token for this device. Attriax currently supports
+  /// this flow on Android and iOS. On Apple platforms, Firebase must already be
+  /// configured to map the APNs device token to the FCM registration token.
   Future<void> registerFirebaseMessagingToken(
     String? token, {
     Map<String, Object?>? metadata,
   }) =>
       _runtime.registerFirebaseMessagingToken(token: token, metadata: metadata);
+
+  /// Registers the current Apple Push Notification service token for uninstall
+  /// tracking.
+  ///
+  /// Call this after your app receives an APNs device token and again whenever
+  /// Apple rotates that token. Pass `null` or an empty string to clear the
+  /// currently registered APNs uninstall token for this device. Attriax
+  /// currently supports this flow on Apple platforms only.
+  Future<void> registerApplePushToken(
+    String? token, {
+    Map<String, Object?>? metadata,
+  }) => _runtime.registerApplePushToken(token: token, metadata: metadata);
 
   /// Queues a standardized ad revenue event for delivery to Attriax.
   ///

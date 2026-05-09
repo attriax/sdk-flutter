@@ -1,4 +1,3 @@
-import 'package:attriax_flutter/src/attriax_clock.dart';
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
 import 'package:attriax_flutter/src/internal/attriax_context_manager.dart';
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';

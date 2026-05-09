@@ -1014,6 +1014,70 @@ void main() {
     );
 
     test(
+      'registerApplePushToken sends the uninstall-token payload with the APNs provider',
+      () async {
+        contextCollector = CountingContextCollector(
+          platform: AttriaxPlatformType.ios,
+        );
+
+        client = MockClient((request) async {
+          if (request.url.path == '/api/sdk/v1/open') {
+            return http.Response(
+              _sdkEnvelope(<String, Object?>{
+                'userId': 'user_1',
+                'isNewUser': true,
+                'isFirstLaunch': true,
+                'requestVersion': 'v1',
+                'acceptedAt': '2026-05-06T10:00:00.000Z',
+              }),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          expect(request.method, 'POST');
+          expect(request.url.path, '/api/sdk/v1/uninstall-tokens');
+
+          final body = jsonDecode(request.body) as Map<String, Object?>;
+          expect(body['appToken'], 'ax_test_token');
+          expect(body['deviceId'], isNotEmpty);
+          expect(body['deviceIdSource'], isNotEmpty);
+          expect(body['platform'], 'ios');
+          expect(body['provider'], 'apns');
+          expect(body['token'], 'apns_token_123');
+          expect(body['metadata'], <String, Object?>{'source': 'tests'});
+
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'data': <String, Object?>{'success': true},
+            }),
+            202,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        });
+
+        sdk = Attriax.test(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init();
+        await sdk.registerApplePushToken(
+          'apns_token_123',
+          metadata: <String, Object?>{'source': 'tests'},
+        );
+      },
+    );
+
+    test(
       'registerFirebaseMessagingToken rejects unsupported platforms',
       () async {
         contextCollector = CountingContextCollector(

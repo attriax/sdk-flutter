@@ -170,6 +170,42 @@ void main() {
     expect(find.text('Save configuration and initialize'), findsOneWidget);
     expect(find.text('ax_your_app_token'), findsOneWidget);
   });
+
+  testWidgets('sends Firebase and APNs token examples to Attriax', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      AttriaxPackageExampleApp(
+        sdk: sdk,
+        initialConfiguration: const ExampleAppConfiguration(
+          appToken: configuredExampleAppToken,
+        ),
+      ),
+    );
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Firebase registration token'),
+      'firebase_token_demo',
+    );
+    await tester.ensureVisible(find.text('Send Firebase token'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Send Firebase token'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.widgetWithText(TextField, 'Apple APNs device token'),
+      'apns_token_demo',
+    );
+    await tester.ensureVisible(find.text('Send APNs token'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Send APNs token'));
+    await tester.pumpAndSettle();
+
+    expect(sdk.lastRegisteredFirebaseToken, 'firebase_token_demo');
+    expect(sdk.lastRegisteredApplePushToken, 'apns_token_demo');
+    expect(find.text('Firebase status: Firebase token sent to Attriax.'), findsOneWidget);
+    expect(find.text('APNs status: APNs token sent to Attriax.'), findsOneWidget);
+  });
 }
 
 class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
@@ -186,6 +222,8 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
 
   AttriaxInstallReferrerDetails? installReferrerResult;
   AttriaxDeepLinkResult? initialDeepLinkResult;
+  String? lastRegisteredFirebaseToken;
+  String? lastRegisteredApplePushToken;
   @override
   late final AttriaxDeepLinks deepLinks = _FakeAttriaxDeepLinks(this);
 
@@ -243,6 +281,22 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
     String eventName, {
     Map<String, Object?>? eventData,
   }) async {}
+
+  @override
+  Future<void> registerFirebaseMessagingToken(
+    String? token, {
+    Map<String, Object?>? metadata,
+  }) async {
+    lastRegisteredFirebaseToken = token;
+  }
+
+  @override
+  Future<void> registerApplePushToken(
+    String? token, {
+    Map<String, Object?>? metadata,
+  }) async {
+    lastRegisteredApplePushToken = token;
+  }
 
   @override
   Future<void> setUser(String? userId, {String? userName}) async {}

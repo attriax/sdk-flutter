@@ -8,7 +8,6 @@ import 'package:http/http.dart' as http;
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../attriax_clock.dart';
 import 'attriax_api_models.dart';
 import 'attriax_api_base_url.dart';
 import 'attriax_app_open_manager.dart';
@@ -466,6 +465,29 @@ class AttriaxRuntime {
     required String? token,
     Map<String, Object?>? metadata,
   }) async {
+    await _registerUninstallToken(
+      provider: 'fcm',
+      token: token,
+      metadata: metadata,
+    );
+  }
+
+  Future<void> registerApplePushToken({
+    required String? token,
+    Map<String, Object?>? metadata,
+  }) async {
+    await _registerUninstallToken(
+      provider: 'apns',
+      token: token,
+      metadata: metadata,
+    );
+  }
+
+  Future<void> _registerUninstallToken({
+    required String provider,
+    required String? token,
+    Map<String, Object?>? metadata,
+  }) async {
     _assertInitialized();
 
     final normalizedToken = _trimOrNull(token);
@@ -480,6 +502,7 @@ class AttriaxRuntime {
       deviceId: currentDeviceId,
       deviceIdSource: _contextManager.requireDeviceIdSource(),
       platform: _contextManager.requiredSnapshot.platform,
+      provider: provider,
       token: normalizedToken,
       metadata: metadata,
     );

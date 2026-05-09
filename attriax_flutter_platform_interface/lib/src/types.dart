@@ -706,6 +706,12 @@ class AttriaxDeepLinkEvent {
 
   bool get hasRawEvent => rawEvent != null;
 
+  /// Whether the captured raw URL belongs to an Attriax-managed subdomain.
+  bool get isAttriax {
+    final host = rawEvent?.uri.host.trim().toLowerCase();
+    return host != null && host.endsWith('.attriax.com');
+  }
+
   /// Waits for the backend resolution corresponding to this deep link.
   Future<AttriaxDeepLinkResult> resolve() => resultFuture;
 }

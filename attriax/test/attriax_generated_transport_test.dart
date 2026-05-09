@@ -100,6 +100,63 @@ void main() {
       await expectLater(() => transport.send(request), returnsNormally);
     });
 
+    test('serializes typed device metrics in open requests', () async {
+      final request = attriaxBuildOpenRequest(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        context: const AttriaxContextSnapshot(
+          platform: AttriaxPlatformType.windows,
+          deviceId: 'device_windows_1',
+          isFirstLaunch: false,
+          sdk: AttriaxSdkSnapshot(
+            apiVersion: '2025-01-01',
+            packageVersion: '1.2.3',
+          ),
+          app: AttriaxAppSnapshot(
+            version: '2.4.0',
+            buildNumber: '2401',
+            packageName: 'Attriax.InternalTester',
+          ),
+          device: AttriaxDeviceSnapshot(
+            model: 'Surface Laptop 7',
+            name: 'QA-DESKTOP',
+            manufacturer: 'Microsoft',
+            brand: 'Microsoft',
+            hardware: 'machine-guid-123',
+            osVersion: 'Windows 11 24H2 (build 26100)',
+            screenResolution: '1920x1080',
+            screenWidth: 1920,
+            screenHeight: 1080,
+            devicePixelRatio: 1.25,
+            colorDepth: 32,
+          ),
+        ),
+        deviceIdSource: 'windows_machine_guid',
+      );
+
+      final client = FakeHttpClient((request) async {
+        final body =
+            jsonDecode(_readRequestBody(request)) as Map<String, Object?>;
+        final deviceBody = body['device']! as Map<String, Object?>;
+
+        expect(deviceBody['screenWidth'], 1920);
+        expect(deviceBody['screenHeight'], 1080);
+        expect(deviceBody['devicePixelRatio'], 1.25);
+        expect(deviceBody['colorDepth'], 32);
+        expect(deviceBody['osVersion'], 'Windows 11 24H2 (build 26100)');
+
+        return _jsonResponse(
+          200,
+          _serializeGenerated(
+            sdk.SdkV1OpenResponseEnvelopeDto.serializer,
+            _openEnvelope(),
+          ),
+        );
+      });
+
+      final transport = _createTransport(client);
+      await expectLater(() => transport.send(request), returnsNormally);
+    });
+
     test('sends event requests and maps acknowledge responses', () async {
       final client = FakeHttpClient((request) async {
         expect(request.method, 'POST');

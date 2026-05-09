@@ -20,7 +20,7 @@ class _$SdkRegisterUninstallTokenDto extends SdkRegisterUninstallTokenDto {
   @override
   final AppUserUninstallTokenProvider provider;
   @override
-  final String token;
+  final JsonObject? token;
 
   factory _$SdkRegisterUninstallTokenDto([
     void Function(SdkRegisterUninstallTokenDtoBuilder)? updates,
@@ -33,7 +33,7 @@ class _$SdkRegisterUninstallTokenDto extends SdkRegisterUninstallTokenDto {
     this.metadata,
     required this.platform,
     required this.provider,
-    required this.token,
+    this.token,
   }) : super._();
   @override
   SdkRegisterUninstallTokenDto rebuild(
@@ -121,9 +121,9 @@ class SdkRegisterUninstallTokenDtoBuilder
   set provider(AppUserUninstallTokenProvider? provider) =>
       _$this._provider = provider;
 
-  String? _token;
-  String? get token => _$this._token;
-  set token(String? token) => _$this._token = token;
+  JsonObject? _token;
+  JsonObject? get token => _$this._token;
+  set token(JsonObject? token) => _$this._token = token;
 
   SdkRegisterUninstallTokenDtoBuilder() {
     SdkRegisterUninstallTokenDto._defaults(this);
@@ -185,11 +185,7 @@ class SdkRegisterUninstallTokenDtoBuilder
               r'SdkRegisterUninstallTokenDto',
               'provider',
             ),
-            token: BuiltValueNullFieldError.checkNotNull(
-              token,
-              r'SdkRegisterUninstallTokenDto',
-              'token',
-            ),
+            token: token,
           );
     } catch (_) {
       late String _$failedField;

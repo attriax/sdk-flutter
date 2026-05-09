@@ -3,10 +3,10 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:attriax_api_client/src/model/platform.dart';
+import 'package:attriax_api_client/src/model/device_context_dto.dart';
 import 'package:attriax_api_client/src/model/app_version_context_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_version_context_dto.dart';
-import 'package:attriax_api_client/src/model/device_context_dto.dart';
+import 'package:attriax_api_client/src/model/platform.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 

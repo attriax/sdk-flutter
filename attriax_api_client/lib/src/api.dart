@@ -11,13 +11,13 @@ import 'package:attriax_api_client/src/auth/bearer_auth.dart';
 import 'package:attriax_api_client/src/auth/oauth.dart';
 import 'package:attriax_api_client/src/api/sdk_api.dart';
 
-class AttriaxSdkClient {
+class AttriaxApiClient {
   static const String basePath = r'http://localhost';
 
   final Dio dio;
   final Serializers serializers;
 
-  AttriaxSdkClient({
+  AttriaxApiClient({
     Dio? dio,
     Serializers? serializers,
     String? basePathOverride,
