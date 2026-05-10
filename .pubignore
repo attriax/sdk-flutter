@@ -1,0 +1,11 @@
+# Generated workspace and package artifacts.
+.dart_tool/
+build/
+coverage/
+
+# Nested Flutter package artifacts.
+**/.dart_tool/
+**/.flutter-plugins-dependencies
+**/build/
+**/coverage/
+**/windows/flutter/ephemeral/

@@ -12,7 +12,8 @@ cleanly:
 2. `attriax_api_client`
 3. `attriax_flutter_android`
 4. `attriax_flutter_ios`
-5. `attriax_flutter`
+5. `attriax_flutter_windows`
+6. `attriax_flutter`
 
 Keep versions aligned unless there is a strong reason to version a federated
 package independently. The Android Gradle project and iOS podspec derive their
@@ -107,8 +108,11 @@ The publish helper follows the release order above and delegates to
 
 ## Other Platforms
 
-- Windows and Linux use the Dart-side SDK path without federated native
-  packages. macOS is implemented through `attriax_flutter_ios`. Validate connectivity
+- Windows now ships through the federated `attriax_flutter_windows` package.
+  Validate the Windows example app, native plugin registration, and local publish
+  dry-run output before the main `attriax_flutter` package release.
+- Linux still uses the Dart-side SDK path without a federated native package.
+- macOS is implemented through `attriax_flutter_ios`. Validate connectivity
   changes, persistence behavior, app-open tracking, and the bundled macOS
   privacy manifest there after any runtime change.
 

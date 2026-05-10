@@ -1,15 +1,14 @@
 # Changelog
 
-## [Unreleased]
+## 0.0.2
 
 ### Added
-- Example app widget coverage for app-open status updates and matched deep-link navigation.
+- Windows support through the new federated `attriax_flutter_windows` package.
+- Updated SDK request and response contract coverage for app opens, deep-link resolution, sessions, crashes, and uninstall token registration.
+- Stronger package example coverage for app-open state updates and matched deep-link navigation.
 
 ### Changed
-- Public README now documents hosted installation, local workspace development, and stronger platform validation guidance.
-
-### Fixed
-- Package-level lint configuration now ships with the publishable package so standalone analysis matches the workspace.
+- Public docs and the package example now include Windows-focused setup and validation guidance.
 
 ## 0.0.1
 

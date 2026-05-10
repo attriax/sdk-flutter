@@ -1,15 +1,20 @@
 # attriax_flutter_windows
 
-A new Flutter plugin project.
+Windows implementation package for the Attriax Flutter SDK.
 
-## Getting Started
+This package is published as the federated Windows implementation that backs
+`attriax_flutter` on Windows. Most apps should depend on `attriax_flutter`
+instead of importing this package directly.
 
-This project is a starting point for a Flutter
-[plug-in package](https://flutter.dev/to/develop-plugins),
-a specialized package that includes platform-specific implementation code for
-Android and/or iOS.
+## Usage
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Add `attriax_flutter` to your Flutter app for the public cross-platform API.
+Flutter will register `attriax_flutter_windows` automatically on Windows.
+
+## Development
+
+This repository keeps the Windows plugin package in the `sdk-flutter/`
+workspace alongside the main `attriax_flutter` package and the shared API
+client. Run workspace dependency resolution from the workspace root when
+developing locally.
 
