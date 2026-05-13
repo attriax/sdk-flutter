@@ -32,7 +32,7 @@ abstract class SdkV1DeepLinkResolveResponseDto
   DateTime get acceptedAt;
 
   @BuiltValueField(wireName: r'consumedAt')
-  DateTime? get consumedAt;
+  DateTime get consumedAt;
 
   @BuiltValueField(wireName: r'deepLink')
   SdkJsonDeepLinkDto? get deepLink;
@@ -88,13 +88,11 @@ class _$SdkV1DeepLinkResolveResponseDtoSerializer
       object.acceptedAt,
       specifiedType: const FullType(DateTime),
     );
-    if (object.consumedAt != null) {
-      yield r'consumedAt';
-      yield serializers.serialize(
-        object.consumedAt,
-        specifiedType: const FullType.nullable(DateTime),
-      );
-    }
+    yield r'consumedAt';
+    yield serializers.serialize(
+      object.consumedAt,
+      specifiedType: const FullType(DateTime),
+    );
     if (object.deepLink != null) {
       yield r'deepLink';
       yield serializers.serialize(
@@ -169,10 +167,9 @@ class _$SdkV1DeepLinkResolveResponseDtoSerializer
           final valueDes =
               serializers.deserialize(
                     value,
-                    specifiedType: const FullType.nullable(DateTime),
+                    specifiedType: const FullType(DateTime),
                   )
-                  as DateTime?;
-          if (valueDes == null) continue;
+                  as DateTime;
           result.consumedAt = valueDes;
           break;
         case r'deepLink':

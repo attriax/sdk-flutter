@@ -18,15 +18,25 @@ class _$SdkInstallReferrerResultDto extends SdkInstallReferrerResultDto {
   @override
   final String? content;
   @override
-  final BuiltMap<String, JsonObject?>? deepLinkData;
+  final BuiltMap<String, String>? deepLinkData;
+  @override
+  final String? deepLinkUri;
   @override
   final String? deepLinkUrl;
+  @override
+  final bool? googlePlayInstantParam;
+  @override
+  final num? installBeginTimestampSeconds;
   @override
   final String? medium;
   @override
   final num precision;
   @override
   final String? rawPlatformInstallReferrer;
+  @override
+  final num? referrerClickTimestampSeconds;
+  @override
+  final DateTime? registeredAt;
   @override
   final String? source_;
   @override
@@ -43,10 +53,15 @@ class _$SdkInstallReferrerResultDto extends SdkInstallReferrerResultDto {
     this.campaign,
     this.content,
     this.deepLinkData,
+    this.deepLinkUri,
     this.deepLinkUrl,
+    this.googlePlayInstantParam,
+    this.installBeginTimestampSeconds,
     this.medium,
     required this.precision,
     this.rawPlatformInstallReferrer,
+    this.referrerClickTimestampSeconds,
+    this.registeredAt,
     this.source_,
     this.term,
   }) : super._();
@@ -69,10 +84,15 @@ class _$SdkInstallReferrerResultDto extends SdkInstallReferrerResultDto {
         campaign == other.campaign &&
         content == other.content &&
         deepLinkData == other.deepLinkData &&
+        deepLinkUri == other.deepLinkUri &&
         deepLinkUrl == other.deepLinkUrl &&
+        googlePlayInstantParam == other.googlePlayInstantParam &&
+        installBeginTimestampSeconds == other.installBeginTimestampSeconds &&
         medium == other.medium &&
         precision == other.precision &&
         rawPlatformInstallReferrer == other.rawPlatformInstallReferrer &&
+        referrerClickTimestampSeconds == other.referrerClickTimestampSeconds &&
+        registeredAt == other.registeredAt &&
         source_ == other.source_ &&
         term == other.term;
   }
@@ -86,10 +106,15 @@ class _$SdkInstallReferrerResultDto extends SdkInstallReferrerResultDto {
     _$hash = $jc(_$hash, campaign.hashCode);
     _$hash = $jc(_$hash, content.hashCode);
     _$hash = $jc(_$hash, deepLinkData.hashCode);
+    _$hash = $jc(_$hash, deepLinkUri.hashCode);
     _$hash = $jc(_$hash, deepLinkUrl.hashCode);
+    _$hash = $jc(_$hash, googlePlayInstantParam.hashCode);
+    _$hash = $jc(_$hash, installBeginTimestampSeconds.hashCode);
     _$hash = $jc(_$hash, medium.hashCode);
     _$hash = $jc(_$hash, precision.hashCode);
     _$hash = $jc(_$hash, rawPlatformInstallReferrer.hashCode);
+    _$hash = $jc(_$hash, referrerClickTimestampSeconds.hashCode);
+    _$hash = $jc(_$hash, registeredAt.hashCode);
     _$hash = $jc(_$hash, source_.hashCode);
     _$hash = $jc(_$hash, term.hashCode);
     _$hash = $jf(_$hash);
@@ -105,10 +130,15 @@ class _$SdkInstallReferrerResultDto extends SdkInstallReferrerResultDto {
           ..add('campaign', campaign)
           ..add('content', content)
           ..add('deepLinkData', deepLinkData)
+          ..add('deepLinkUri', deepLinkUri)
           ..add('deepLinkUrl', deepLinkUrl)
+          ..add('googlePlayInstantParam', googlePlayInstantParam)
+          ..add('installBeginTimestampSeconds', installBeginTimestampSeconds)
           ..add('medium', medium)
           ..add('precision', precision)
           ..add('rawPlatformInstallReferrer', rawPlatformInstallReferrer)
+          ..add('referrerClickTimestampSeconds', referrerClickTimestampSeconds)
+          ..add('registeredAt', registeredAt)
           ..add('source_', source_)
           ..add('term', term))
         .toString();
@@ -144,15 +174,29 @@ class SdkInstallReferrerResultDtoBuilder
   String? get content => _$this._content;
   set content(String? content) => _$this._content = content;
 
-  MapBuilder<String, JsonObject?>? _deepLinkData;
-  MapBuilder<String, JsonObject?> get deepLinkData =>
-      _$this._deepLinkData ??= MapBuilder<String, JsonObject?>();
-  set deepLinkData(MapBuilder<String, JsonObject?>? deepLinkData) =>
+  MapBuilder<String, String>? _deepLinkData;
+  MapBuilder<String, String> get deepLinkData =>
+      _$this._deepLinkData ??= MapBuilder<String, String>();
+  set deepLinkData(MapBuilder<String, String>? deepLinkData) =>
       _$this._deepLinkData = deepLinkData;
+
+  String? _deepLinkUri;
+  String? get deepLinkUri => _$this._deepLinkUri;
+  set deepLinkUri(String? deepLinkUri) => _$this._deepLinkUri = deepLinkUri;
 
   String? _deepLinkUrl;
   String? get deepLinkUrl => _$this._deepLinkUrl;
   set deepLinkUrl(String? deepLinkUrl) => _$this._deepLinkUrl = deepLinkUrl;
+
+  bool? _googlePlayInstantParam;
+  bool? get googlePlayInstantParam => _$this._googlePlayInstantParam;
+  set googlePlayInstantParam(bool? googlePlayInstantParam) =>
+      _$this._googlePlayInstantParam = googlePlayInstantParam;
+
+  num? _installBeginTimestampSeconds;
+  num? get installBeginTimestampSeconds => _$this._installBeginTimestampSeconds;
+  set installBeginTimestampSeconds(num? installBeginTimestampSeconds) =>
+      _$this._installBeginTimestampSeconds = installBeginTimestampSeconds;
 
   String? _medium;
   String? get medium => _$this._medium;
@@ -166,6 +210,17 @@ class SdkInstallReferrerResultDtoBuilder
   String? get rawPlatformInstallReferrer => _$this._rawPlatformInstallReferrer;
   set rawPlatformInstallReferrer(String? rawPlatformInstallReferrer) =>
       _$this._rawPlatformInstallReferrer = rawPlatformInstallReferrer;
+
+  num? _referrerClickTimestampSeconds;
+  num? get referrerClickTimestampSeconds =>
+      _$this._referrerClickTimestampSeconds;
+  set referrerClickTimestampSeconds(num? referrerClickTimestampSeconds) =>
+      _$this._referrerClickTimestampSeconds = referrerClickTimestampSeconds;
+
+  DateTime? _registeredAt;
+  DateTime? get registeredAt => _$this._registeredAt;
+  set registeredAt(DateTime? registeredAt) =>
+      _$this._registeredAt = registeredAt;
 
   String? _source_;
   String? get source_ => _$this._source_;
@@ -188,10 +243,15 @@ class SdkInstallReferrerResultDtoBuilder
       _campaign = $v.campaign;
       _content = $v.content;
       _deepLinkData = $v.deepLinkData?.toBuilder();
+      _deepLinkUri = $v.deepLinkUri;
       _deepLinkUrl = $v.deepLinkUrl;
+      _googlePlayInstantParam = $v.googlePlayInstantParam;
+      _installBeginTimestampSeconds = $v.installBeginTimestampSeconds;
       _medium = $v.medium;
       _precision = $v.precision;
       _rawPlatformInstallReferrer = $v.rawPlatformInstallReferrer;
+      _referrerClickTimestampSeconds = $v.referrerClickTimestampSeconds;
+      _registeredAt = $v.registeredAt;
       _source_ = $v.source_;
       _term = $v.term;
       _$v = null;
@@ -228,7 +288,10 @@ class SdkInstallReferrerResultDtoBuilder
             campaign: campaign,
             content: content,
             deepLinkData: _deepLinkData?.build(),
+            deepLinkUri: deepLinkUri,
             deepLinkUrl: deepLinkUrl,
+            googlePlayInstantParam: googlePlayInstantParam,
+            installBeginTimestampSeconds: installBeginTimestampSeconds,
             medium: medium,
             precision: BuiltValueNullFieldError.checkNotNull(
               precision,
@@ -236,6 +299,8 @@ class SdkInstallReferrerResultDtoBuilder
               'precision',
             ),
             rawPlatformInstallReferrer: rawPlatformInstallReferrer,
+            referrerClickTimestampSeconds: referrerClickTimestampSeconds,
+            registeredAt: registeredAt,
             source_: source_,
             term: term,
           );

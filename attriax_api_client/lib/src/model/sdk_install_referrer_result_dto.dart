@@ -5,7 +5,6 @@
 // ignore_for_file: unused_element
 import 'package:attriax_api_client/src/model/attribution_type.dart';
 import 'package:built_collection/built_collection.dart';
-import 'package:built_value/json_object.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -16,14 +15,19 @@ part 'sdk_install_referrer_result_dto.g.dart';
 /// Properties:
 /// * [adClickId] - Detected ad click identifier such as gclid or fbclid.
 /// * [adNetwork] - Detected ad-network identifier inferred from the referrer.
-/// * [attributionType] - Attribution source classification for the install-referrer payload. Current platform install-referrer parsing reports `referrer`; `external` is reserved for future provider-based payloads.
+/// * [attributionType] - Attribution source classification for the startup referrer payload.
 /// * [campaign] - Resolved UTM campaign extracted from the install referrer.
 /// * [content] - Resolved UTM content extracted from the install referrer.
-/// * [deepLinkData] - Resolved deep-link payload data associated with the install referrer.
-/// * [deepLinkUrl] - Full tracked short-link URL associated with the resolved deep link.
+/// * [deepLinkData] - Resolved deep-link payload data associated with the startup referrer.
+/// * [deepLinkUri] - Full tracked short-link URI associated with the resolved deep link.
+/// * [deepLinkUrl] - Deprecated alias for deepLinkUri kept for HTTP compatibility.
+/// * [googlePlayInstantParam]
+/// * [installBeginTimestampSeconds]
 /// * [medium] - Resolved UTM medium extracted from the install referrer.
 /// * [precision] - Confidence score from 0.0 to 1.0 for the returned interpretation.
-/// * [rawPlatformInstallReferrer] - Raw platform install-referrer string cached by the SDK.
+/// * [rawPlatformInstallReferrer] - Raw platform startup referrer string cached by the SDK, when available.
+/// * [referrerClickTimestampSeconds]
+/// * [registeredAt]
 /// * [source_] - Resolved UTM source extracted from the install referrer.
 /// * [term] - Resolved UTM term extracted from the install referrer.
 @BuiltValue()
@@ -38,7 +42,7 @@ abstract class SdkInstallReferrerResultDto
   @BuiltValueField(wireName: r'adNetwork')
   String? get adNetwork;
 
-  /// Attribution source classification for the install-referrer payload. Current platform install-referrer parsing reports `referrer`; `external` is reserved for future provider-based payloads.
+  /// Attribution source classification for the startup referrer payload.
   @BuiltValueField(wireName: r'attributionType')
   AttributionType get attributionType;
   // enum attributionTypeEnum {  referrer,  fingerprint,  external,  organic,  };
@@ -51,13 +55,23 @@ abstract class SdkInstallReferrerResultDto
   @BuiltValueField(wireName: r'content')
   String? get content;
 
-  /// Resolved deep-link payload data associated with the install referrer.
+  /// Resolved deep-link payload data associated with the startup referrer.
   @BuiltValueField(wireName: r'deepLinkData')
-  BuiltMap<String, JsonObject?>? get deepLinkData;
+  BuiltMap<String, String>? get deepLinkData;
 
-  /// Full tracked short-link URL associated with the resolved deep link.
+  /// Full tracked short-link URI associated with the resolved deep link.
+  @BuiltValueField(wireName: r'deepLinkUri')
+  String? get deepLinkUri;
+
+  /// Deprecated alias for deepLinkUri kept for HTTP compatibility.
   @BuiltValueField(wireName: r'deepLinkUrl')
   String? get deepLinkUrl;
+
+  @BuiltValueField(wireName: r'googlePlayInstantParam')
+  bool? get googlePlayInstantParam;
+
+  @BuiltValueField(wireName: r'installBeginTimestampSeconds')
+  num? get installBeginTimestampSeconds;
 
   /// Resolved UTM medium extracted from the install referrer.
   @BuiltValueField(wireName: r'medium')
@@ -67,9 +81,15 @@ abstract class SdkInstallReferrerResultDto
   @BuiltValueField(wireName: r'precision')
   num get precision;
 
-  /// Raw platform install-referrer string cached by the SDK.
+  /// Raw platform startup referrer string cached by the SDK, when available.
   @BuiltValueField(wireName: r'rawPlatformInstallReferrer')
   String? get rawPlatformInstallReferrer;
+
+  @BuiltValueField(wireName: r'referrerClickTimestampSeconds')
+  num? get referrerClickTimestampSeconds;
+
+  @BuiltValueField(wireName: r'registeredAt')
+  DateTime? get registeredAt;
 
   /// Resolved UTM source extracted from the install referrer.
   @BuiltValueField(wireName: r'source')
@@ -148,8 +168,15 @@ class _$SdkInstallReferrerResultDtoSerializer
         object.deepLinkData,
         specifiedType: const FullType(BuiltMap, [
           FullType(String),
-          FullType.nullable(JsonObject),
+          FullType(String),
         ]),
+      );
+    }
+    if (object.deepLinkUri != null) {
+      yield r'deepLinkUri';
+      yield serializers.serialize(
+        object.deepLinkUri,
+        specifiedType: const FullType(String),
       );
     }
     if (object.deepLinkUrl != null) {
@@ -157,6 +184,20 @@ class _$SdkInstallReferrerResultDtoSerializer
       yield serializers.serialize(
         object.deepLinkUrl,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.googlePlayInstantParam != null) {
+      yield r'googlePlayInstantParam';
+      yield serializers.serialize(
+        object.googlePlayInstantParam,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.installBeginTimestampSeconds != null) {
+      yield r'installBeginTimestampSeconds';
+      yield serializers.serialize(
+        object.installBeginTimestampSeconds,
+        specifiedType: const FullType(num),
       );
     }
     if (object.medium != null) {
@@ -176,6 +217,20 @@ class _$SdkInstallReferrerResultDtoSerializer
       yield serializers.serialize(
         object.rawPlatformInstallReferrer,
         specifiedType: const FullType(String),
+      );
+    }
+    if (object.referrerClickTimestampSeconds != null) {
+      yield r'referrerClickTimestampSeconds';
+      yield serializers.serialize(
+        object.referrerClickTimestampSeconds,
+        specifiedType: const FullType(num),
+      );
+    }
+    if (object.registeredAt != null) {
+      yield r'registeredAt';
+      yield serializers.serialize(
+        object.registeredAt,
+        specifiedType: const FullType(DateTime),
       );
     }
     if (object.source_ != null) {
@@ -270,11 +325,20 @@ class _$SdkInstallReferrerResultDtoSerializer
                     value,
                     specifiedType: const FullType(BuiltMap, [
                       FullType(String),
-                      FullType.nullable(JsonObject),
+                      FullType(String),
                     ]),
                   )
-                  as BuiltMap<String, JsonObject?>;
+                  as BuiltMap<String, String>;
           result.deepLinkData.replace(valueDes);
+          break;
+        case r'deepLinkUri':
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
+          result.deepLinkUri = valueDes;
           break;
         case r'deepLinkUrl':
           final valueDes =
@@ -284,6 +348,21 @@ class _$SdkInstallReferrerResultDtoSerializer
                   )
                   as String;
           result.deepLinkUrl = valueDes;
+          break;
+        case r'googlePlayInstantParam':
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(bool),
+                  )
+                  as bool;
+          result.googlePlayInstantParam = valueDes;
+          break;
+        case r'installBeginTimestampSeconds':
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(num))
+                  as num;
+          result.installBeginTimestampSeconds = valueDes;
           break;
         case r'medium':
           final valueDes =
@@ -308,6 +387,21 @@ class _$SdkInstallReferrerResultDtoSerializer
                   )
                   as String;
           result.rawPlatformInstallReferrer = valueDes;
+          break;
+        case r'referrerClickTimestampSeconds':
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(num))
+                  as num;
+          result.referrerClickTimestampSeconds = valueDes;
+          break;
+        case r'registeredAt':
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(DateTime),
+                  )
+                  as DateTime;
+          result.registeredAt = valueDes;
           break;
         case r'source':
           final valueDes =

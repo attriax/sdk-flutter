@@ -9,7 +9,7 @@ import 'package:attriax_api_client/api.dart';
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **acceptedAt** | [**DateTime**](DateTime.md) |  | 
-**consumedAt** | [**DateTime**](DateTime.md) |  | [optional] 
+**consumedAt** | [**DateTime**](DateTime.md) |  | 
 **deepLink** | [**SdkJsonDeepLinkDto**](SdkJsonDeepLinkDto.md) |  | [optional] 
 **isFirstLaunch** | **bool** |  | 
 **matched** | **bool** |  | 

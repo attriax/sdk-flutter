@@ -24,8 +24,10 @@ void main() {
     late FakeTransport transport;
     late AttriaxRequestDispatcher dispatcher;
     late AttriaxQueuedRequest queuedRequest;
+    late DateTime now;
 
     setUp(() async {
+      now = DateTime.now().toUtc();
       SharedPreferences.setMockInitialValues(<String, Object>{});
       prefs = await SharedPreferences.getInstance();
       queueManager = AttriaxQueueManager(
@@ -51,7 +53,7 @@ void main() {
           eventName: 'purchase',
           eventData: const <String, Object?>{'value': 42},
         ),
-        createdAt: DateTime.utc(2026, 5),
+        createdAt: now.subtract(const Duration(days: 1)),
       );
       await queueManager.writeAll(<AttriaxQueuedRequest>[queuedRequest]);
     });
@@ -202,8 +204,8 @@ void main() {
               platform: AttriaxPlatformType.android,
               locale: 'en-US',
               isFirstLaunch: false,
-              startedAt: DateTime.utc(2026, 5),
-              lastActivityAt: DateTime.utc(2026, 5, 1, 0, 0, 5),
+              startedAt: now.subtract(const Duration(minutes: 1)),
+              lastActivityAt: now.subtract(const Duration(seconds: 30)),
               heartbeatInterval: const Duration(seconds: 5),
               appVersion: '1.0.0',
               appBuildNumber: '1',
@@ -212,7 +214,7 @@ void main() {
             ),
             kind: AttriaxSessionLifecycleKind.heartbeat,
           ),
-          createdAt: DateTime.utc(2026, 5, 1, 0, 0, 5),
+          createdAt: now.subtract(const Duration(seconds: 30)),
         );
         await queueManager.writeAll(<AttriaxQueuedRequest>[
           deferredRequest,
@@ -251,6 +253,42 @@ void main() {
     });
 
     test(
+      'keeps stale deep-link resolution requests queued until they succeed',
+      () async {
+        final staleRequest = AttriaxQueuedRequest(
+          id: 'req_resolve',
+          request: attriaxBuildResolveDeepLinkRequest(
+            appToken: 'ax_test_token',
+            deviceId: 'device_1',
+            deviceIdSource: 'android_ssaid',
+            platform: AttriaxPlatformType.android,
+            source: 'attriax_sdk',
+            isFirstLaunch: false,
+            rawUrl: 'https://app.example/promo/deferred',
+          ),
+          createdAt: DateTime.now().toUtc().subtract(const Duration(days: 8)),
+          attemptCount: 8,
+        );
+        await queueManager.writeAll(<AttriaxQueuedRequest>[staleRequest]);
+        transport.sendError = const AttriaxTransportHttpException(
+          statusCode: 503,
+        );
+
+        await dispatcher.flush();
+
+        expect(transport.sentRequests, hasLength(1));
+        final persisted = await queueManager.readAll();
+        expect(persisted, hasLength(1));
+        expect(persisted.single.id, 'req_resolve');
+        expect(persisted.single.attemptCount, 9);
+        expect(persisted.single.lastErrorClass, 'http_503');
+        expect(persisted.single.lastHttpStatusCode, 503);
+        final diagnostics = await queueManager.readDiagnostics();
+        expect(diagnostics.droppedRequestCount, 0);
+      },
+    );
+
+    test(
       'drops the request and calls the error handler on non-retryable HTTP errors',
       () async {
         Object? failedError;
@@ -283,8 +321,8 @@ void main() {
             platform: AttriaxPlatformType.android,
             locale: 'en-US',
             isFirstLaunch: false,
-            startedAt: DateTime.utc(2026, 5),
-            lastActivityAt: DateTime.utc(2026, 5, 1, 0, 0, 5),
+            startedAt: now.subtract(const Duration(minutes: 1)),
+            lastActivityAt: now.subtract(const Duration(seconds: 30)),
             heartbeatInterval: const Duration(seconds: 5),
             appVersion: '1.0.0',
             appBuildNumber: '1',
@@ -293,7 +331,7 @@ void main() {
           ),
           kind: AttriaxSessionLifecycleKind.heartbeat,
         ),
-        createdAt: DateTime.utc(2026, 5, 1, 0, 0, 5),
+        createdAt: now.subtract(const Duration(seconds: 30)),
       );
       await queueManager.writeAll(<AttriaxQueuedRequest>[
         queuedRequest,
@@ -319,7 +357,7 @@ void main() {
           deviceIdSource: 'android_ssaid',
           externalUserId: 'user_2',
         ),
-        createdAt: DateTime.utc(2026, 5, 1, 0, 0, 5),
+        createdAt: now.subtract(const Duration(seconds: 30)),
       );
       await queueManager.writeAll(<AttriaxQueuedRequest>[
         queuedRequest,
@@ -403,7 +441,7 @@ void main() {
             ),
             deviceIdSource: 'android_ssaid',
           ),
-          createdAt: DateTime.utc(2026, 5, 1, 0, 0, 1),
+          createdAt: now.subtract(const Duration(seconds: 31)),
         );
 
         await dispatcher.flush();
@@ -422,7 +460,7 @@ void main() {
               isNewUser: true,
               isFirstLaunch: true,
               requestVersion: 'v1',
-              acceptedAt: DateTime.utc(2026, 5, 1, 0, 0, 2),
+              acceptedAt: now,
             ),
           ),
         );

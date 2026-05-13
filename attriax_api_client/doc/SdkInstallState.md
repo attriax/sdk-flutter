@@ -1,4 +1,4 @@
-# attriax_api_client.model.SdkJsonDeepLinkDto
+# attriax_api_client.model.SdkInstallState
 
 ## Load the model package
 ```dart
@@ -8,10 +8,6 @@ import 'package:attriax_api_client/api.dart';
 ## Properties
 Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
-**data** | **BuiltMap&lt;String, String&gt;** |  | [optional] 
-**path** | **String** |  | 
-**uri** | **String** |  | [optional] 
-**utm** | [**SdkUtmPayloadDto**](SdkUtmPayloadDto.md) |  | [optional] 
 
 [[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
 

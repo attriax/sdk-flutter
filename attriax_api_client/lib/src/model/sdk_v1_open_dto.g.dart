@@ -18,11 +18,17 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
   @override
   final String? deviceIdSource;
   @override
+  final bool? googlePlayInstantParam;
+  @override
+  final num? installBeginTimestampSeconds;
+  @override
   final String? installReferrer;
   @override
   final bool? isFirstLaunch;
   @override
   final Platform platform;
+  @override
+  final num? referrerClickTimestampSeconds;
   @override
   final SdkVersionContextDto sdk;
   @override
@@ -39,9 +45,12 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
     required this.device,
     required this.deviceId,
     this.deviceIdSource,
+    this.googlePlayInstantParam,
+    this.installBeginTimestampSeconds,
     this.installReferrer,
     this.isFirstLaunch,
     required this.platform,
+    this.referrerClickTimestampSeconds,
     required this.sdk,
     this.sessionId,
     this.sessionStartedAt,
@@ -62,9 +71,12 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
         device == other.device &&
         deviceId == other.deviceId &&
         deviceIdSource == other.deviceIdSource &&
+        googlePlayInstantParam == other.googlePlayInstantParam &&
+        installBeginTimestampSeconds == other.installBeginTimestampSeconds &&
         installReferrer == other.installReferrer &&
         isFirstLaunch == other.isFirstLaunch &&
         platform == other.platform &&
+        referrerClickTimestampSeconds == other.referrerClickTimestampSeconds &&
         sdk == other.sdk &&
         sessionId == other.sessionId &&
         sessionStartedAt == other.sessionStartedAt;
@@ -78,9 +90,12 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
     _$hash = $jc(_$hash, device.hashCode);
     _$hash = $jc(_$hash, deviceId.hashCode);
     _$hash = $jc(_$hash, deviceIdSource.hashCode);
+    _$hash = $jc(_$hash, googlePlayInstantParam.hashCode);
+    _$hash = $jc(_$hash, installBeginTimestampSeconds.hashCode);
     _$hash = $jc(_$hash, installReferrer.hashCode);
     _$hash = $jc(_$hash, isFirstLaunch.hashCode);
     _$hash = $jc(_$hash, platform.hashCode);
+    _$hash = $jc(_$hash, referrerClickTimestampSeconds.hashCode);
     _$hash = $jc(_$hash, sdk.hashCode);
     _$hash = $jc(_$hash, sessionId.hashCode);
     _$hash = $jc(_$hash, sessionStartedAt.hashCode);
@@ -96,9 +111,12 @@ class _$SdkV1OpenDto extends SdkV1OpenDto {
           ..add('device', device)
           ..add('deviceId', deviceId)
           ..add('deviceIdSource', deviceIdSource)
+          ..add('googlePlayInstantParam', googlePlayInstantParam)
+          ..add('installBeginTimestampSeconds', installBeginTimestampSeconds)
           ..add('installReferrer', installReferrer)
           ..add('isFirstLaunch', isFirstLaunch)
           ..add('platform', platform)
+          ..add('referrerClickTimestampSeconds', referrerClickTimestampSeconds)
           ..add('sdk', sdk)
           ..add('sessionId', sessionId)
           ..add('sessionStartedAt', sessionStartedAt))
@@ -133,6 +151,16 @@ class SdkV1OpenDtoBuilder
   set deviceIdSource(String? deviceIdSource) =>
       _$this._deviceIdSource = deviceIdSource;
 
+  bool? _googlePlayInstantParam;
+  bool? get googlePlayInstantParam => _$this._googlePlayInstantParam;
+  set googlePlayInstantParam(bool? googlePlayInstantParam) =>
+      _$this._googlePlayInstantParam = googlePlayInstantParam;
+
+  num? _installBeginTimestampSeconds;
+  num? get installBeginTimestampSeconds => _$this._installBeginTimestampSeconds;
+  set installBeginTimestampSeconds(num? installBeginTimestampSeconds) =>
+      _$this._installBeginTimestampSeconds = installBeginTimestampSeconds;
+
   String? _installReferrer;
   String? get installReferrer => _$this._installReferrer;
   set installReferrer(String? installReferrer) =>
@@ -146,6 +174,12 @@ class SdkV1OpenDtoBuilder
   Platform? _platform;
   Platform? get platform => _$this._platform;
   set platform(Platform? platform) => _$this._platform = platform;
+
+  num? _referrerClickTimestampSeconds;
+  num? get referrerClickTimestampSeconds =>
+      _$this._referrerClickTimestampSeconds;
+  set referrerClickTimestampSeconds(num? referrerClickTimestampSeconds) =>
+      _$this._referrerClickTimestampSeconds = referrerClickTimestampSeconds;
 
   SdkVersionContextDtoBuilder? _sdk;
   SdkVersionContextDtoBuilder get sdk =>
@@ -173,9 +207,12 @@ class SdkV1OpenDtoBuilder
       _device = $v.device.toBuilder();
       _deviceId = $v.deviceId;
       _deviceIdSource = $v.deviceIdSource;
+      _googlePlayInstantParam = $v.googlePlayInstantParam;
+      _installBeginTimestampSeconds = $v.installBeginTimestampSeconds;
       _installReferrer = $v.installReferrer;
       _isFirstLaunch = $v.isFirstLaunch;
       _platform = $v.platform;
+      _referrerClickTimestampSeconds = $v.referrerClickTimestampSeconds;
       _sdk = $v.sdk.toBuilder();
       _sessionId = $v.sessionId;
       _sessionStartedAt = $v.sessionStartedAt;
@@ -216,6 +253,8 @@ class SdkV1OpenDtoBuilder
               'deviceId',
             ),
             deviceIdSource: deviceIdSource,
+            googlePlayInstantParam: googlePlayInstantParam,
+            installBeginTimestampSeconds: installBeginTimestampSeconds,
             installReferrer: installReferrer,
             isFirstLaunch: isFirstLaunch,
             platform: BuiltValueNullFieldError.checkNotNull(
@@ -223,6 +262,7 @@ class SdkV1OpenDtoBuilder
               r'SdkV1OpenDto',
               'platform',
             ),
+            referrerClickTimestampSeconds: referrerClickTimestampSeconds,
             sdk: sdk.build(),
             sessionId: sessionId,
             sessionStartedAt: sessionStartedAt,

@@ -17,8 +17,23 @@ void main() {
       // TODO
     });
 
+    // DateTime deepLinkClickedAt
+    test('to test the property `deepLinkClickedAt`', () async {
+      // TODO
+    });
+
+    // DateTime deepLinkConsumedAt
+    test('to test the property `deepLinkConsumedAt`', () async {
+      // TODO
+    });
+
     // SdkInstallReferrerResultDto installReferrer
     test('to test the property `installReferrer`', () async {
+      // TODO
+    });
+
+    // SdkInstallState installState
+    test('to test the property `installState`', () async {
       // TODO
     });
 
@@ -29,6 +44,16 @@ void main() {
 
     // bool isNewUser
     test('to test the property `isNewUser`', () async {
+      // TODO
+    });
+
+    // SdkInstallReferrerResultDto originalInstallReferrer
+    test('to test the property `originalInstallReferrer`', () async {
+      // TODO
+    });
+
+    // SdkInstallReferrerResultDto reinstallReferrer
+    test('to test the property `reinstallReferrer`', () async {
       // TODO
     });
 

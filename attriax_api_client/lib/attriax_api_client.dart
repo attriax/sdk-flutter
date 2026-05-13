@@ -28,6 +28,7 @@ export 'package:attriax_api_client/src/model/sdk_create_dynamic_link_response_en
 export 'package:attriax_api_client/src/model/sdk_dynamic_link_record_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_event_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_install_referrer_result_dto.dart';
+export 'package:attriax_api_client/src/model/sdk_install_state.dart';
 export 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_register_uninstall_token_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_revenue_receipt_validate_response_dto.dart';
@@ -35,6 +36,7 @@ export 'package:attriax_api_client/src/model/sdk_revenue_receipt_validate_respon
 export 'package:attriax_api_client/src/model/sdk_session_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_session_lifecycle_kind.dart';
 export 'package:attriax_api_client/src/model/sdk_user_dto.dart';
+export 'package:attriax_api_client/src/model/sdk_utm_payload_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_v1_batch_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_v1_batch_item_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_v1_batch_response_dto.dart';

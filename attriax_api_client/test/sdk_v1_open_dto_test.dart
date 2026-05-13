@@ -32,6 +32,16 @@ void main() {
       // TODO
     });
 
+    // bool googlePlayInstantParam
+    test('to test the property `googlePlayInstantParam`', () async {
+      // TODO
+    });
+
+    // num installBeginTimestampSeconds
+    test('to test the property `installBeginTimestampSeconds`', () async {
+      // TODO
+    });
+
     // String installReferrer
     test('to test the property `installReferrer`', () async {
       // TODO
@@ -44,6 +54,11 @@ void main() {
 
     // Platform platform
     test('to test the property `platform`', () async {
+      // TODO
+    });
+
+    // num referrerClickTimestampSeconds
+    test('to test the property `referrerClickTimestampSeconds`', () async {
       // TODO
     });
 

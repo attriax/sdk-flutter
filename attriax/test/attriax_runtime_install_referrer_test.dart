@@ -13,7 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  group('Attriax.installReferrer', () {
+  group('Attriax.referrer', () {
     late SharedPreferences prefs;
     late Connectivity connectivity;
     late FakeConnectivityPlatform connectivityPlatform;
@@ -35,9 +35,10 @@ void main() {
                 'userId': 'user_1',
                 'isNewUser': true,
                 'isFirstLaunch': true,
+                'installState': 'new_install',
                 'requestVersion': 'v1',
                 'acceptedAt': '2026-04-29T12:00:00.000Z',
-                'installReferrer': <String, Object?>{
+                'originalInstallReferrer': <String, Object?>{
                   'rawPlatformInstallReferrer':
                       'utm_source=attriax&utm_medium=cpc&utm_campaign=spring&utm_content=link_1',
                   'source': 'attriax',
@@ -76,11 +77,13 @@ void main() {
     test('resolves from the first successful app-open response', () async {
       await sdk.init();
 
-      final installReferrer = await sdk.installReferrer;
+      final installReferrer = await sdk.referrer.getOriginalInstallReferrer();
+      final reinstallReferrer = await sdk.referrer.getReinstallReferrer();
 
       expect(installReferrer, isNotNull);
       expect(installReferrer!.campaign, 'spring');
       expect(installReferrer.precision, 1);
+      expect(reinstallReferrer, isNull);
     });
 
     test(
@@ -97,9 +100,10 @@ void main() {
                   'userId': 'user_1',
                   'isNewUser': true,
                   'isFirstLaunch': true,
+                  'installState': 'new_install',
                   'requestVersion': 'v1',
                   'acceptedAt': '2026-04-29T12:00:00.000Z',
-                  'installReferrer': <String, Object?>{
+                  'originalInstallReferrer': <String, Object?>{
                     'rawPlatformInstallReferrer':
                         'utm_source=attriax&utm_campaign=reenabled',
                     'source': 'attriax',
@@ -132,11 +136,11 @@ void main() {
 
         await sdk.init(enabled: false);
 
-        expect(await sdk.installReferrer, isNull);
+        expect(await sdk.referrer.getOriginalInstallReferrer(), isNull);
         expect(appOpenRequests, 0);
 
         sdk.enabled = true;
-        final installReferrer = await sdk.installReferrer;
+        final installReferrer = await sdk.referrer.getOriginalInstallReferrer();
 
         expect(appOpenRequests, 1);
         expect(installReferrer?.campaign, 'reenabled');

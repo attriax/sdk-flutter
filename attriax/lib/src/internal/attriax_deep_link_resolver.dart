@@ -17,38 +17,24 @@ class AttriaxDeepLinkResolver {
     return normalized.isEmpty ? null : normalized;
   }
 
-  AttriaxDeepLinkResolution? buildResolution(
+  AttriaxDeepLinkResolution buildResolution(
     AttriaxDeepLinkResolutionResult result, {
-    required AttriaxRawDeepLinkEvent? rawEvent,
-    required bool isDeferred,
+    required DateTime clickedAt,
   }) {
-    final deepLink = result.deepLink;
-    if (!result.matched || deepLink == null) {
-      return null;
-    }
+    final canonicalUri =
+        result.deepLink?.uri ??
+        _uriFromNormalizedPath(normalizeLinkPath(result.deepLink?.path));
 
     return AttriaxDeepLinkResolution(
-      deepLink: deepLink,
-      rawEvent: rawEvent,
-      isFirstLaunch: result.isFirstLaunch,
-      isDeferred: isDeferred,
-      consumedAt: result.consumedAt,
-      occurredAt: result.acceptedAt ?? DateTime.now().toUtc(),
+      uri: canonicalUri,
+      clickedAt: clickedAt,
+      consumedAt:
+          result.consumedAt ?? result.acceptedAt ?? DateTime.now().toUtc(),
+      found: result.matched,
+      data: stringifyData(result.deepLink?.data),
+      utm: result.deepLink?.utm,
     );
   }
-
-  AttriaxDeepLinkResolutionFailure buildFailure(
-    AttriaxDeepLinkResolutionResult result, {
-    required AttriaxRawDeepLinkEvent? rawEvent,
-  }) => AttriaxDeepLinkResolutionFailure(
-    reason: result.reason ?? result.status.name,
-    rawEvent: rawEvent,
-    isFirstLaunch: result.isFirstLaunch,
-    status: result.status,
-    requestVersion: result.requestVersion,
-    acceptedAt: result.acceptedAt,
-    occurredAt: result.acceptedAt ?? DateTime.now().toUtc(),
-  );
 
   String? extractLinkPathFromUri(Uri uri) {
     final candidate = uri.path.isNotEmpty && uri.path != '/'
@@ -56,4 +42,60 @@ class AttriaxDeepLinkResolver {
         : uri.host;
     return normalizeLinkPath(candidate);
   }
+
+  bool isAttriaxDomain(Uri uri) {
+    final host = uri.host.trim().toLowerCase();
+    return host.isNotEmpty && host.endsWith('.attriax.com');
+  }
+
+  Uri buildDeferredUri(AttriaxAppOpenResult result) {
+    final deferredUri =
+        result.deepLink?.uri ??
+        result.reinstallReferrer?.deepLinkUri ??
+        result.installReferrer?.deepLinkUri ??
+        (result.installReferrer?.deepLinkUrl == null
+            ? null
+            : Uri.tryParse(result.installReferrer!.deepLinkUrl!));
+    if (deferredUri != null) {
+      return deferredUri;
+    }
+
+    return _uriFromNormalizedPath(normalizeLinkPath(result.deepLink?.path));
+  }
+
+  AttriaxDeepLinkResolution buildDeferredResolution(
+    AttriaxAppOpenResult result, {
+    required DateTime fallbackTime,
+  }) {
+    return AttriaxDeepLinkResolution(
+      uri: buildDeferredUri(result),
+      clickedAt: result.deepLinkClickedAt ?? result.acceptedAt ?? fallbackTime,
+      consumedAt:
+          result.deepLinkConsumedAt ?? result.acceptedAt ?? fallbackTime,
+      found: result.deepLink != null,
+      data: stringifyData(
+        result.deepLink?.data ??
+            result.reinstallReferrer?.deepLinkData ??
+            result.installReferrer?.deepLinkData,
+      ),
+      utm:
+          result.deepLink?.utm ??
+          result.reinstallReferrer?.utm ??
+          result.installReferrer?.utm,
+    );
+  }
+
+  Map<String, String>? stringifyData(Map<String, Object?>? data) {
+    if (data == null || data.isEmpty) {
+      return null;
+    }
+
+    return <String, String>{
+      for (final entry in data.entries)
+        entry.key: entry.value == null ? '' : entry.value.toString(),
+    };
+  }
+
+  Uri _uriFromNormalizedPath(String? normalizedPath) =>
+      Uri(path: normalizedPath == null ? '/' : '/$normalizedPath');
 }

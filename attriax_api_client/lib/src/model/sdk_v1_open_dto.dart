@@ -20,9 +20,12 @@ part 'sdk_v1_open_dto.g.dart';
 /// * [device]
 /// * [deviceId]
 /// * [deviceIdSource]
+/// * [googlePlayInstantParam]
+/// * [installBeginTimestampSeconds]
 /// * [installReferrer]
 /// * [isFirstLaunch]
 /// * [platform]
+/// * [referrerClickTimestampSeconds]
 /// * [sdk]
 /// * [sessionId]
 /// * [sessionStartedAt]
@@ -44,6 +47,12 @@ abstract class SdkV1OpenDto
   @BuiltValueField(wireName: r'deviceIdSource')
   String? get deviceIdSource;
 
+  @BuiltValueField(wireName: r'googlePlayInstantParam')
+  bool? get googlePlayInstantParam;
+
+  @BuiltValueField(wireName: r'installBeginTimestampSeconds')
+  num? get installBeginTimestampSeconds;
+
   @BuiltValueField(wireName: r'installReferrer')
   String? get installReferrer;
 
@@ -53,6 +62,9 @@ abstract class SdkV1OpenDto
   @BuiltValueField(wireName: r'platform')
   Platform get platform;
   // enum platformEnum {  ios,  android,  unity_editor,  windows,  macos,  linux,  web,  unknown,  };
+
+  @BuiltValueField(wireName: r'referrerClickTimestampSeconds')
+  num? get referrerClickTimestampSeconds;
 
   @BuiltValueField(wireName: r'sdk')
   SdkVersionContextDto get sdk;
@@ -113,6 +125,20 @@ class _$SdkV1OpenDtoSerializer implements PrimitiveSerializer<SdkV1OpenDto> {
         specifiedType: const FullType(String),
       );
     }
+    if (object.googlePlayInstantParam != null) {
+      yield r'googlePlayInstantParam';
+      yield serializers.serialize(
+        object.googlePlayInstantParam,
+        specifiedType: const FullType(bool),
+      );
+    }
+    if (object.installBeginTimestampSeconds != null) {
+      yield r'installBeginTimestampSeconds';
+      yield serializers.serialize(
+        object.installBeginTimestampSeconds,
+        specifiedType: const FullType(num),
+      );
+    }
     if (object.installReferrer != null) {
       yield r'installReferrer';
       yield serializers.serialize(
@@ -132,6 +158,13 @@ class _$SdkV1OpenDtoSerializer implements PrimitiveSerializer<SdkV1OpenDto> {
       object.platform,
       specifiedType: const FullType(Platform),
     );
+    if (object.referrerClickTimestampSeconds != null) {
+      yield r'referrerClickTimestampSeconds';
+      yield serializers.serialize(
+        object.referrerClickTimestampSeconds,
+        specifiedType: const FullType(num),
+      );
+    }
     yield r'sdk';
     yield serializers.serialize(
       object.sdk,
@@ -223,6 +256,21 @@ class _$SdkV1OpenDtoSerializer implements PrimitiveSerializer<SdkV1OpenDto> {
                   as String;
           result.deviceIdSource = valueDes;
           break;
+        case r'googlePlayInstantParam':
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(bool),
+                  )
+                  as bool;
+          result.googlePlayInstantParam = valueDes;
+          break;
+        case r'installBeginTimestampSeconds':
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(num))
+                  as num;
+          result.installBeginTimestampSeconds = valueDes;
+          break;
         case r'installReferrer':
           final valueDes =
               serializers.deserialize(
@@ -249,6 +297,12 @@ class _$SdkV1OpenDtoSerializer implements PrimitiveSerializer<SdkV1OpenDto> {
                   )
                   as Platform;
           result.platform = valueDes;
+          break;
+        case r'referrerClickTimestampSeconds':
+          final valueDes =
+              serializers.deserialize(value, specifiedType: const FullType(num))
+                  as num;
+          result.referrerClickTimestampSeconds = valueDes;
           break;
         case r'sdk':
           final valueDes =

@@ -19,7 +19,7 @@ void main() {
       // TODO
     });
 
-    // Attribution source classification for the install-referrer payload. Current platform install-referrer parsing reports `referrer`; `external` is reserved for future provider-based payloads.
+    // Attribution source classification for the startup referrer payload.
     // AttributionType attributionType
     test('to test the property `attributionType`', () async {
       // TODO
@@ -37,15 +37,31 @@ void main() {
       // TODO
     });
 
-    // Resolved deep-link payload data associated with the install referrer.
-    // BuiltMap<String, JsonObject> deepLinkData
+    // Resolved deep-link payload data associated with the startup referrer.
+    // BuiltMap<String, String> deepLinkData
     test('to test the property `deepLinkData`', () async {
       // TODO
     });
 
-    // Full tracked short-link URL associated with the resolved deep link.
+    // Full tracked short-link URI associated with the resolved deep link.
+    // String deepLinkUri
+    test('to test the property `deepLinkUri`', () async {
+      // TODO
+    });
+
+    // Deprecated alias for deepLinkUri kept for HTTP compatibility.
     // String deepLinkUrl
     test('to test the property `deepLinkUrl`', () async {
+      // TODO
+    });
+
+    // bool googlePlayInstantParam
+    test('to test the property `googlePlayInstantParam`', () async {
+      // TODO
+    });
+
+    // num installBeginTimestampSeconds
+    test('to test the property `installBeginTimestampSeconds`', () async {
       // TODO
     });
 
@@ -61,9 +77,19 @@ void main() {
       // TODO
     });
 
-    // Raw platform install-referrer string cached by the SDK.
+    // Raw platform startup referrer string cached by the SDK, when available.
     // String rawPlatformInstallReferrer
     test('to test the property `rawPlatformInstallReferrer`', () async {
+      // TODO
+    });
+
+    // num referrerClickTimestampSeconds
+    test('to test the property `referrerClickTimestampSeconds`', () async {
+      // TODO
+    });
+
+    // DateTime registeredAt
+    test('to test the property `registeredAt`', () async {
       // TODO
     });
 

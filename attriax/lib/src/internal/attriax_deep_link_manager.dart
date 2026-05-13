@@ -8,6 +8,7 @@ import 'attriax_deep_link_listener.dart';
 import 'attriax_deep_link_resolver.dart';
 import 'attriax_event_hub.dart';
 import 'attriax_logger.dart';
+import 'attriax_preferences_store.dart';
 import 'attriax_request_manager.dart';
 
 /// Owns deep-link listener lifecycle, stream state, and manual/deferred link
@@ -18,6 +19,8 @@ class AttriaxDeepLinkManager {
     required AttriaxContextManager contextManager,
     required AttriaxDeepLinkListener listener,
     required AttriaxEventHub eventHub,
+    required AttriaxPreferencesStore preferencesStore,
+    String? Function()? currentSessionIdProvider,
     required AttriaxRequestManager requestManager,
     required AttriaxLogger logger,
     AttriaxDeepLinkResolver resolver = const AttriaxDeepLinkResolver(),
@@ -26,6 +29,8 @@ class AttriaxDeepLinkManager {
        _contextManager = contextManager,
        _listener = listener,
        _eventHub = eventHub,
+       _preferencesStore = preferencesStore,
+       _currentSessionIdProvider = currentSessionIdProvider ?? _noSessionId,
        _requestManager = requestManager,
        _logger = logger,
        _resolver = resolver,
@@ -35,17 +40,19 @@ class AttriaxDeepLinkManager {
   final AttriaxContextManager _contextManager;
   final AttriaxDeepLinkListener _listener;
   final AttriaxEventHub _eventHub;
+  final AttriaxPreferencesStore _preferencesStore;
+  final String? Function() _currentSessionIdProvider;
   final AttriaxRequestManager _requestManager;
   final AttriaxLogger _logger;
   final AttriaxDeepLinkResolver _resolver;
   final AttriaxClock _clock;
 
   Stream<AttriaxDeepLinkEvent> get stream => _eventHub.deepLinks;
-  AttriaxDeepLinkResult? get initialDeepLink => _eventHub.initialDeepLinkValue;
+  AttriaxDeepLinkEvent? get initialDeepLink => _eventHub.initialDeepLinkValue;
   bool get isInitialDeepLinkResolved => _eventHub.isInitialDeepLinkResolved;
-  Future<AttriaxDeepLinkResult?> waitForInitialDeepLink() =>
+  Future<AttriaxDeepLinkEvent?> waitForInitialDeepLink() =>
       _eventHub.initialDeepLink;
-  AttriaxDeepLinkResult? get latestDeepLink => _eventHub.latestDeepLink;
+  AttriaxDeepLinkEvent? get latestDeepLink => _eventHub.latestDeepLink;
 
   Future<void> start() => _listener.start(
     _handleIncomingLink,
@@ -71,15 +78,8 @@ class AttriaxDeepLinkManager {
     final effectiveUri =
         uri ??
         Uri(path: normalizedLinkPath == null ? '/' : '/$normalizedLinkPath');
-    final rawEvent = AttriaxRawDeepLinkEvent(
-      uri: effectiveUri,
-      linkPath:
-          _resolver.extractLinkPathFromUri(effectiveUri) ?? normalizedLinkPath,
-      isFirstLaunch: _contextManager.isFirstLaunch,
-      isInitialLink: false,
-      occurredAt: _clock.now(),
-    );
-    final completer = Completer<AttriaxDeepLinkResolution?>();
+    final clickedAt = _clock.now();
+    final completer = Completer<AttriaxDeepLinkResolution>();
 
     await _requestManager.enqueue(
       attriaxBuildResolveDeepLinkRequest(
@@ -89,7 +89,7 @@ class AttriaxDeepLinkManager {
         platform: _contextManager.requiredSnapshot.platform,
         source: source,
         isFirstLaunch: _contextManager.isFirstLaunch,
-        rawUrl: uri?.toString(),
+        rawUrl: effectiveUri.toString(),
         linkPath: normalizedLinkPath,
         metadata: metadata,
       ),
@@ -97,18 +97,19 @@ class AttriaxDeepLinkManager {
         if (response is! AttriaxResolveDeepLinkApiResponse) {
           _logger.error('Unexpected response type for deep-link resolution.');
           if (!completer.isCompleted) {
-            completer.complete(null);
+            completer.completeError(
+              StateError('Unexpected response type for deep-link resolution.'),
+            );
           }
           return;
         }
 
-        final event = _resolver.buildResolution(
+        final resolution = _resolver.buildResolution(
           response.result,
-          rawEvent: rawEvent,
-          isDeferred: false,
+          clickedAt: clickedAt,
         );
         if (!completer.isCompleted) {
-          completer.complete(event);
+          completer.complete(resolution);
         }
       },
       onError: (error, stackTrace) {
@@ -118,7 +119,7 @@ class AttriaxDeepLinkManager {
           stackTrace: stackTrace,
         );
         if (!completer.isCompleted) {
-          completer.complete(null);
+          completer.completeError(error, stackTrace);
         }
       },
     );
@@ -126,93 +127,177 @@ class AttriaxDeepLinkManager {
     return completer.future;
   }
 
-  void handleDeferredAppOpen(AttriaxAppOpenResult? result) {
-    final deepLink = result?.deepLink;
+  Future<void> handleDeferredAppOpen(
+    AttriaxAppOpenResult? result, {
+    String? originSessionId,
+  }) async {
+    if (result == null ||
+        result.installState == AttriaxInstallState.appDataClear) {
+      return;
+    }
+
+    final deepLink = result.deepLink;
     if (deepLink == null) {
       return;
     }
 
+    if (!_isCurrentSession(originSessionId)) {
+      _logger.verbose(
+        'Suppressing deferred deep-link event because its originating session is no longer current.',
+      );
+      return;
+    }
+
+    final alreadyHandled = await _preferencesStore
+        .readDeferredAppOpenDeepLinkHandled();
+    if (alreadyHandled) {
+      return;
+    }
+
     _eventHub.emitResolvedDeepLink(
-      resolution: AttriaxDeepLinkResolution(
-        deepLink: deepLink,
-        isFirstLaunch: result!.isFirstLaunch,
-        isDeferred: true,
-        occurredAt: result.acceptedAt ?? _clock.now(),
+      uri: _resolver.buildDeferredUri(result),
+      receivedAt: result.acceptedAt ?? _clock.now(),
+      trigger: AttriaxDeepLinkTrigger.deferred,
+      resolution: _resolver.buildDeferredResolution(
+        result,
+        fallbackTime: _clock.now(),
       ),
+      isAttriaxDomain: true,
     );
+
+    await _preferencesStore.setDeferredAppOpenDeepLinkHandled(value: true);
   }
 
   Future<void> _handleIncomingLink(
     Uri uri, {
     required bool isInitialLink,
   }) async {
-    final rawEvent = AttriaxRawDeepLinkEvent(
+    final receivedAt = _clock.now();
+    final originSessionId = _currentSessionIdProvider();
+    final event = _eventHub.stagePendingDeepLink(
       uri: uri,
-      linkPath: _resolver.extractLinkPathFromUri(uri),
-      isFirstLaunch: _contextManager.isFirstLaunch,
+      receivedAt: receivedAt,
+      trigger: isInitialLink
+          ? AttriaxDeepLinkTrigger.coldStart
+          : AttriaxDeepLinkTrigger.foreground,
       isInitialLink: isInitialLink,
-      occurredAt: _clock.now(),
+      isAttriaxDomain: _resolver.isAttriaxDomain(uri),
     );
-
-    _eventHub.emitPendingDeepLink(rawEvent);
     _logger.verbose(
-      'Received deep link ${rawEvent.linkPath ?? rawEvent.uri.toString()}.',
+      'Received deep link ${_resolver.extractLinkPathFromUri(uri) ?? uri.toString()}.',
     );
 
-    await _requestManager.enqueue(
-      attriaxBuildResolveDeepLinkRequest(
-        appToken: _config.appToken,
-        deviceId: _contextManager.requiredDeviceId,
-        deviceIdSource: _contextManager.requireDeviceIdSource(),
-        platform: _contextManager.requiredSnapshot.platform,
-        source: 'attriax_sdk',
-        isFirstLaunch: _contextManager.isFirstLaunch,
-        rawUrl: uri.toString(),
-        metadata: <String, Object?>{
-          'isInitialLink': isInitialLink,
-          'queryParameters': uri.queryParametersAll,
-        },
-      ),
-      onSuccess: (response) {
-        if (response is! AttriaxResolveDeepLinkApiResponse) {
-          _logger.error('Unexpected response type for deep-link resolution.');
-          return;
-        }
+    try {
+      await _requestManager.enqueue(
+        attriaxBuildResolveDeepLinkRequest(
+          appToken: _config.appToken,
+          deviceId: _contextManager.requiredDeviceId,
+          deviceIdSource: _contextManager.requireDeviceIdSource(),
+          platform: _contextManager.requiredSnapshot.platform,
+          source: 'attriax_sdk',
+          isFirstLaunch: _contextManager.isFirstLaunch,
+          rawUrl: uri.toString(),
+          metadata: <String, Object?>{
+            'isInitialLink': isInitialLink,
+            'queryParameters': uri.queryParametersAll,
+          },
+        ),
+        onSuccess: (response) {
+          if (!_isCurrentSession(originSessionId)) {
+            _logger.verbose(
+              'Suppressing deep-link event because its originating session is no longer current.',
+            );
+            _eventHub.dropPendingDeepLink(event: event);
+            return;
+          }
 
-        final resolution = _resolver.buildResolution(
-          response.result,
-          rawEvent: rawEvent,
-          isDeferred: false,
-        );
-        if (resolution != null) {
+          if (response is! AttriaxResolveDeepLinkApiResponse) {
+            _logger.error('Unexpected response type for deep-link resolution.');
+            _eventHub.failPendingDeepLink(
+              event: event,
+              error: StateError(
+                'Unexpected response type for deep-link resolution.',
+              ),
+            );
+            _eventHub.publishPendingDeepLink(
+              event: event,
+              isInitialLink: isInitialLink,
+            );
+            return;
+          }
+
+          final resolution = _resolver.buildResolution(
+            response.result,
+            clickedAt: receivedAt,
+          );
           _eventHub.resolvePendingDeepLink(
-            rawEvent: rawEvent,
+            event: event,
             resolution: resolution,
           );
-          return;
-        }
+          _eventHub.publishPendingDeepLink(
+            event: event,
+            isInitialLink: isInitialLink,
+          );
+        },
+        onError: (error, stackTrace) {
+          if (!_isCurrentSession(originSessionId)) {
+            _logger.verbose(
+              'Suppressing deep-link error event because its originating session is no longer current.',
+            );
+            _eventHub.dropPendingDeepLink(event: event);
+            return;
+          }
 
-        _eventHub.failPendingDeepLink(
-          rawEvent: rawEvent,
-          failure: _resolver.buildFailure(response.result, rawEvent: rawEvent),
+          _logger.error(
+            'Deep-link resolution request failed.',
+            error: error,
+            stackTrace: stackTrace,
+          );
+          _eventHub.failPendingDeepLink(
+            event: event,
+            error: error,
+            stackTrace: stackTrace,
+          );
+          _eventHub.publishPendingDeepLink(
+            event: event,
+            isInitialLink: isInitialLink,
+          );
+        },
+      );
+    } catch (error, stackTrace) {
+      if (!_isCurrentSession(originSessionId)) {
+        _logger.verbose(
+          'Suppressing deep-link enqueue error because its originating session is no longer current.',
         );
-      },
-      onError: (error, stackTrace) {
-        _logger.error(
-          'Deep-link resolution request failed.',
-          error: error,
-          stackTrace: stackTrace,
-        );
-        _eventHub.failPendingDeepLink(
-          rawEvent: rawEvent,
-          failure: AttriaxDeepLinkResolutionFailure(
-            reason: error.toString(),
-            rawEvent: rawEvent,
-            isFirstLaunch: rawEvent.isFirstLaunch,
-            occurredAt: _clock.now(),
-          ),
-        );
-      },
-    );
+        _eventHub.dropPendingDeepLink(event: event);
+        return;
+      }
+
+      _logger.error(
+        'Deep-link resolution request could not be queued.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _eventHub.failPendingDeepLink(
+        event: event,
+        error: error,
+        stackTrace: stackTrace,
+      );
+      _eventHub.publishPendingDeepLink(
+        event: event,
+        isInitialLink: isInitialLink,
+      );
+    }
+  }
+
+  bool _isCurrentSession(String? originSessionId) {
+    final currentSessionId = _currentSessionIdProvider();
+    if (originSessionId == null || currentSessionId == null) {
+      return true;
+    }
+
+    return originSessionId == currentSessionId;
   }
 }
+
+String? _noSessionId() => null;

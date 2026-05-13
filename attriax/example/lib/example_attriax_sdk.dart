@@ -13,7 +13,7 @@ abstract class ExampleAttriaxSdk {
   bool get isSynchronized;
   Stream<AttriaxSynchronizationState> get synchronizationStates;
   AttriaxDeepLinks get deepLinks;
-  Future<AttriaxInstallReferrerDetails?> get installReferrer;
+  Future<AttriaxInstallReferrerDetails?> getOriginalInstallReferrer();
 
   Future<void> init();
   Future<void> dispose();
@@ -87,8 +87,8 @@ class LiveExampleAttriaxSdk implements ExampleAttriaxSdk {
   AttriaxDeepLinks get deepLinks => _sdk.deepLinks;
 
   @override
-  Future<AttriaxInstallReferrerDetails?> get installReferrer =>
-      _sdk.installReferrer;
+  Future<AttriaxInstallReferrerDetails?> getOriginalInstallReferrer() =>
+      _sdk.referrer.getOriginalInstallReferrer();
 
   @override
   Future<void> init() => _sdk.init();

@@ -47,7 +47,7 @@ void main() {
         await tracker.schedule(
           config: const AttriaxConfig(appToken: 'ax_test_token'),
           context: context,
-          rawPlatformInstallReferrer: null,
+          platformInstallReferrerContext: const AttriaxInstallReferrerContext(),
           deviceIdSource: 'android_ssaid',
           session: null,
           requestManager: requestManager,
@@ -56,7 +56,7 @@ void main() {
         await tracker.schedule(
           config: const AttriaxConfig(appToken: 'ax_test_token'),
           context: context,
-          rawPlatformInstallReferrer: null,
+          platformInstallReferrerContext: const AttriaxInstallReferrerContext(),
           deviceIdSource: 'android_ssaid',
           session: null,
           requestManager: requestManager,
@@ -84,7 +84,7 @@ void main() {
       await tracker.schedule(
         config: const AttriaxConfig(appToken: 'ax_test_token'),
         context: context,
-        rawPlatformInstallReferrer: null,
+        platformInstallReferrerContext: const AttriaxInstallReferrerContext(),
         deviceIdSource: 'android_ssaid',
         session: null,
         requestManager: requestManager,

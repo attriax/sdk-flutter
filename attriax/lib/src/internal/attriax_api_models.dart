@@ -445,10 +445,12 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
   required AttriaxConfig config,
   required AttriaxContextSnapshot context,
   required String deviceIdSource,
-  String? rawPlatformInstallReferrer,
+  AttriaxInstallReferrerContext? platformInstallReferrerContext,
   String? sessionId,
   DateTime? sessionStartedAt,
 }) {
+  final installReferrerMetadata =
+      platformInstallReferrerContext?.metadata ?? const <String, Object?>{};
   final requestDto = sdk.SdkV1OpenDto(
     (builder) => builder
       ..app.replace(_generatedAppVersionContext(context.app))
@@ -456,9 +458,20 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
       ..device.replace(_generatedDeviceContext(context.device))
       ..deviceId = context.deviceId
       ..deviceIdSource = deviceIdSource
-      ..installReferrer = attriaxStringValue(rawPlatformInstallReferrer)
+      ..googlePlayInstantParam = attriaxBoolValue(
+        installReferrerMetadata['googlePlayInstantParam'],
+      )
+      ..installBeginTimestampSeconds = _attriaxIntValue(
+        installReferrerMetadata['installBeginTimestampSeconds'],
+      )
+      ..installReferrer = attriaxStringValue(
+        platformInstallReferrerContext?.installReferrer,
+      )
       ..isFirstLaunch = context.isFirstLaunch
       ..platform = _generatedPlatform(context.platform)
+      ..referrerClickTimestampSeconds = _attriaxIntValue(
+        installReferrerMetadata['referrerClickTimestampSeconds'],
+      )
       ..sessionId = attriaxStringValue(sessionId)
       ..sessionStartedAt = sessionStartedAt?.toUtc()
       ..sdk.replace(_generatedSdkVersionContext(context.sdk)),
@@ -827,6 +840,17 @@ AttriaxOpenApiResponse attriaxOpenResponseFromGenerated(
   sdk.SdkV1OpenResponseEnvelopeDto envelope,
 ) => AttriaxOpenApiResponse(result: _mapOpenResult(envelope.data));
 
+AttriaxOpenApiResponse attriaxOpenResponseFromJsonEnvelope(
+  Map<String, Object?> envelope,
+) {
+  final data = attriaxObjectMap(envelope['data']);
+  if (data == null) {
+    throw const FormatException('Missing or invalid "data".');
+  }
+
+  return AttriaxOpenApiResponse(result: AttriaxAppOpenResult.fromJson(data));
+}
+
 AttriaxResolveDeepLinkApiResponse attriaxResolveDeepLinkResponseFromGenerated(
   sdk.SdkV1DeepLinkResolveResponseEnvelopeDto envelope,
 ) => AttriaxResolveDeepLinkApiResponse(
@@ -947,9 +971,14 @@ AttriaxAppOpenResult _mapOpenResult(sdk.SdkV1OpenResponseDto response) =>
       userId: response.userId,
       isNewUser: response.isNewUser,
       isFirstLaunch: response.isFirstLaunch,
+      installState: _mapInstallState(response.installState),
       requestVersion: response.requestVersion,
       acceptedAt: response.acceptedAt,
       deepLink: _mapDeepLink(response.deepLink),
+      originalInstallReferrer: _mapInstallReferrerDetails(
+        response.originalInstallReferrer,
+      ),
+      reinstallReferrer: _mapInstallReferrerDetails(response.reinstallReferrer),
       installReferrer: _mapInstallReferrerDetails(response.installReferrer),
     );
 
@@ -979,7 +1008,9 @@ AttriaxDeepLink? _mapDeepLink(sdk.SdkJsonDeepLinkDto? deepLink) =>
     ? null
     : AttriaxDeepLink(
         path: deepLink.path,
-        data: _plainJsonObjectMap(deepLink.data),
+        uri: deepLink.uri == null ? null : Uri.tryParse(deepLink.uri!),
+        data: _plainStringObjectMap(deepLink.data),
+        utm: _mapUtmPayload(deepLink.utm),
       );
 
 AttriaxInstallReferrerDetails? _mapInstallReferrerDetails(
@@ -996,9 +1027,43 @@ AttriaxInstallReferrerDetails? _mapInstallReferrerDetails(
         adNetwork: details.adNetwork,
         adClickId: details.adClickId,
         attributionType: _mapAttributionType(details.attributionType),
-        deepLinkData: _plainJsonObjectMap(details.deepLinkData),
+        deepLinkUri: Uri.tryParse(
+          details.deepLinkUri ?? details.deepLinkUrl ?? '',
+        ),
+        deepLinkUrl: details.deepLinkUrl,
+        deepLinkData: _plainStringMap(details.deepLinkData),
+        registeredAt: details.registeredAt,
+        installBeginTimestampSeconds: details.installBeginTimestampSeconds
+            ?.toInt(),
+        referrerClickTimestampSeconds: details.referrerClickTimestampSeconds
+            ?.toInt(),
+        googlePlayInstantParam: details.googlePlayInstantParam,
         precision: details.precision.toDouble(),
       );
+
+AttriaxUtmParameters? _mapUtmPayload(sdk.SdkUtmPayloadDto? utm) {
+  if (utm == null) {
+    return null;
+  }
+
+  final mapped = AttriaxUtmParameters(
+    source: utm.source_,
+    medium: utm.medium,
+    campaign: utm.campaign,
+    term: utm.term,
+    content: utm.content,
+  );
+  return mapped.isEmpty ? null : mapped;
+}
+
+AttriaxInstallState _mapInstallState(sdk.SdkInstallState installState) =>
+    switch (installState) {
+      sdk.SdkInstallState.newInstall => AttriaxInstallState.newInstall,
+      sdk.SdkInstallState.reinstall => AttriaxInstallState.reinstall,
+      sdk.SdkInstallState.appDataClear => AttriaxInstallState.appDataClear,
+      sdk.SdkInstallState.existing => AttriaxInstallState.existing,
+      _ => AttriaxInstallState.existing,
+    };
 
 AttriaxDynamicLinkRecord _mapDynamicLinkRecord(
   sdk.SdkDynamicLinkRecordDto link,
@@ -1113,6 +1178,23 @@ Map<String, Object?>? _plainJsonObjectMap(
     result[entry.key] = _plainJsonValue(entry.value?.value);
   }
   return result;
+}
+
+Map<String, String>? _plainStringMap(BuiltMap<String, String>? value) {
+  if (value == null || value.isEmpty) {
+    return null;
+  }
+
+  return Map<String, String>.from(value.asMap());
+}
+
+Map<String, Object?>? _plainStringObjectMap(BuiltMap<String, String>? value) {
+  final plain = _plainStringMap(value);
+  if (plain == null || plain.isEmpty) {
+    return null;
+  }
+
+  return Map<String, Object?>.from(plain);
 }
 
 Object? _plainJsonValue(Object? value) {

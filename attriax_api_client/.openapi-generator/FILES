@@ -19,6 +19,7 @@ doc/SdkCreateDynamicLinkResponseEnvelopeDto.md
 doc/SdkDynamicLinkRecordDto.md
 doc/SdkEventDto.md
 doc/SdkInstallReferrerResultDto.md
+doc/SdkInstallState.md
 doc/SdkJsonDeepLinkDto.md
 doc/SdkRegisterUninstallTokenDto.md
 doc/SdkRevenueReceiptValidateResponseDto.md
@@ -26,6 +27,7 @@ doc/SdkRevenueReceiptValidateResponseEnvelopeDto.md
 doc/SdkSessionDto.md
 doc/SdkSessionLifecycleKind.md
 doc/SdkUserDto.md
+doc/SdkUtmPayloadDto.md
 doc/SdkV1BatchDto.md
 doc/SdkV1BatchItemDto.md
 doc/SdkV1BatchResponseDto.md
@@ -65,6 +67,7 @@ lib/src/model/sdk_create_dynamic_link_response_envelope_dto.dart
 lib/src/model/sdk_dynamic_link_record_dto.dart
 lib/src/model/sdk_event_dto.dart
 lib/src/model/sdk_install_referrer_result_dto.dart
+lib/src/model/sdk_install_state.dart
 lib/src/model/sdk_json_deep_link_dto.dart
 lib/src/model/sdk_register_uninstall_token_dto.dart
 lib/src/model/sdk_revenue_receipt_validate_response_dto.dart
@@ -72,6 +75,7 @@ lib/src/model/sdk_revenue_receipt_validate_response_envelope_dto.dart
 lib/src/model/sdk_session_dto.dart
 lib/src/model/sdk_session_lifecycle_kind.dart
 lib/src/model/sdk_user_dto.dart
+lib/src/model/sdk_utm_payload_dto.dart
 lib/src/model/sdk_v1_batch_dto.dart
 lib/src/model/sdk_v1_batch_item_dto.dart
 lib/src/model/sdk_v1_batch_response_dto.dart
@@ -103,6 +107,7 @@ test/sdk_create_dynamic_link_response_envelope_dto_test.dart
 test/sdk_dynamic_link_record_dto_test.dart
 test/sdk_event_dto_test.dart
 test/sdk_install_referrer_result_dto_test.dart
+test/sdk_install_state_test.dart
 test/sdk_json_deep_link_dto_test.dart
 test/sdk_register_uninstall_token_dto_test.dart
 test/sdk_revenue_receipt_validate_response_dto_test.dart
@@ -110,6 +115,7 @@ test/sdk_revenue_receipt_validate_response_envelope_dto_test.dart
 test/sdk_session_dto_test.dart
 test/sdk_session_lifecycle_kind_test.dart
 test/sdk_user_dto_test.dart
+test/sdk_utm_payload_dto_test.dart
 test/sdk_v1_batch_dto_test.dart
 test/sdk_v1_batch_item_dto_test.dart
 test/sdk_v1_batch_response_dto_test.dart

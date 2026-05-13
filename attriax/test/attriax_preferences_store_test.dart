@@ -99,6 +99,24 @@ void main() {
       expect(restored?.precision, 1);
     });
 
+    test('round-trips reinstall referrer details', () async {
+      const details = AttriaxInstallReferrerDetails(
+        rawPlatformInstallReferrer: 'utm_source=reattribution',
+        source: 'reattribution',
+        campaign: 'returning_user',
+        attributionType: AttributionType.referrer,
+        precision: 1,
+      );
+
+      await store.setReinstallReferrerDetails(details: details);
+
+      final restored = await store.readReinstallReferrerDetails();
+
+      expect(restored?.rawPlatformInstallReferrer, 'utm_source=reattribution');
+      expect(restored?.campaign, 'returning_user');
+      expect(restored?.precision, 1);
+    });
+
     test(
       'tracks loaded state for a null structured install referrer',
       () async {
@@ -121,6 +139,26 @@ void main() {
 
       expect(restored.isLoaded, isTrue);
       expect(restored.value, isNull);
+    });
+
+    test('tracks loaded state for a null reinstall referrer', () async {
+      await store.setStoredReinstallReferrerDetails(
+        isLoaded: true,
+        details: null,
+      );
+
+      final restored = await store.readStoredReinstallReferrerDetails();
+
+      expect(restored.isLoaded, isTrue);
+      expect(restored.value, isNull);
+    });
+
+    test('tracks deferred app-open deep-link handling', () async {
+      expect(await store.readDeferredAppOpenDeepLinkHandled(), isFalse);
+
+      await store.setDeferredAppOpenDeepLinkHandled(value: true);
+
+      expect(await store.readDeferredAppOpenDeepLinkHandled(), isTrue);
     });
 
     test(

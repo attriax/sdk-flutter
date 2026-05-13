@@ -12,11 +12,21 @@ class _$SdkV1OpenResponseDto extends SdkV1OpenResponseDto {
   @override
   final SdkJsonDeepLinkDto? deepLink;
   @override
+  final DateTime? deepLinkClickedAt;
+  @override
+  final DateTime? deepLinkConsumedAt;
+  @override
   final SdkInstallReferrerResultDto? installReferrer;
+  @override
+  final SdkInstallState installState;
   @override
   final bool isFirstLaunch;
   @override
   final bool isNewUser;
+  @override
+  final SdkInstallReferrerResultDto? originalInstallReferrer;
+  @override
+  final SdkInstallReferrerResultDto? reinstallReferrer;
   @override
   final String requestVersion;
   @override
@@ -29,9 +39,14 @@ class _$SdkV1OpenResponseDto extends SdkV1OpenResponseDto {
   _$SdkV1OpenResponseDto._({
     required this.acceptedAt,
     this.deepLink,
+    this.deepLinkClickedAt,
+    this.deepLinkConsumedAt,
     this.installReferrer,
+    required this.installState,
     required this.isFirstLaunch,
     required this.isNewUser,
+    this.originalInstallReferrer,
+    this.reinstallReferrer,
     required this.requestVersion,
     required this.userId,
   }) : super._();
@@ -50,9 +65,14 @@ class _$SdkV1OpenResponseDto extends SdkV1OpenResponseDto {
     return other is SdkV1OpenResponseDto &&
         acceptedAt == other.acceptedAt &&
         deepLink == other.deepLink &&
+        deepLinkClickedAt == other.deepLinkClickedAt &&
+        deepLinkConsumedAt == other.deepLinkConsumedAt &&
         installReferrer == other.installReferrer &&
+        installState == other.installState &&
         isFirstLaunch == other.isFirstLaunch &&
         isNewUser == other.isNewUser &&
+        originalInstallReferrer == other.originalInstallReferrer &&
+        reinstallReferrer == other.reinstallReferrer &&
         requestVersion == other.requestVersion &&
         userId == other.userId;
   }
@@ -62,9 +82,14 @@ class _$SdkV1OpenResponseDto extends SdkV1OpenResponseDto {
     var _$hash = 0;
     _$hash = $jc(_$hash, acceptedAt.hashCode);
     _$hash = $jc(_$hash, deepLink.hashCode);
+    _$hash = $jc(_$hash, deepLinkClickedAt.hashCode);
+    _$hash = $jc(_$hash, deepLinkConsumedAt.hashCode);
     _$hash = $jc(_$hash, installReferrer.hashCode);
+    _$hash = $jc(_$hash, installState.hashCode);
     _$hash = $jc(_$hash, isFirstLaunch.hashCode);
     _$hash = $jc(_$hash, isNewUser.hashCode);
+    _$hash = $jc(_$hash, originalInstallReferrer.hashCode);
+    _$hash = $jc(_$hash, reinstallReferrer.hashCode);
     _$hash = $jc(_$hash, requestVersion.hashCode);
     _$hash = $jc(_$hash, userId.hashCode);
     _$hash = $jf(_$hash);
@@ -76,9 +101,14 @@ class _$SdkV1OpenResponseDto extends SdkV1OpenResponseDto {
     return (newBuiltValueToStringHelper(r'SdkV1OpenResponseDto')
           ..add('acceptedAt', acceptedAt)
           ..add('deepLink', deepLink)
+          ..add('deepLinkClickedAt', deepLinkClickedAt)
+          ..add('deepLinkConsumedAt', deepLinkConsumedAt)
           ..add('installReferrer', installReferrer)
+          ..add('installState', installState)
           ..add('isFirstLaunch', isFirstLaunch)
           ..add('isNewUser', isNewUser)
+          ..add('originalInstallReferrer', originalInstallReferrer)
+          ..add('reinstallReferrer', reinstallReferrer)
           ..add('requestVersion', requestVersion)
           ..add('userId', userId))
         .toString();
@@ -99,11 +129,26 @@ class SdkV1OpenResponseDtoBuilder
   set deepLink(SdkJsonDeepLinkDtoBuilder? deepLink) =>
       _$this._deepLink = deepLink;
 
+  DateTime? _deepLinkClickedAt;
+  DateTime? get deepLinkClickedAt => _$this._deepLinkClickedAt;
+  set deepLinkClickedAt(DateTime? deepLinkClickedAt) =>
+      _$this._deepLinkClickedAt = deepLinkClickedAt;
+
+  DateTime? _deepLinkConsumedAt;
+  DateTime? get deepLinkConsumedAt => _$this._deepLinkConsumedAt;
+  set deepLinkConsumedAt(DateTime? deepLinkConsumedAt) =>
+      _$this._deepLinkConsumedAt = deepLinkConsumedAt;
+
   SdkInstallReferrerResultDtoBuilder? _installReferrer;
   SdkInstallReferrerResultDtoBuilder get installReferrer =>
       _$this._installReferrer ??= SdkInstallReferrerResultDtoBuilder();
   set installReferrer(SdkInstallReferrerResultDtoBuilder? installReferrer) =>
       _$this._installReferrer = installReferrer;
+
+  SdkInstallState? _installState;
+  SdkInstallState? get installState => _$this._installState;
+  set installState(SdkInstallState? installState) =>
+      _$this._installState = installState;
 
   bool? _isFirstLaunch;
   bool? get isFirstLaunch => _$this._isFirstLaunch;
@@ -113,6 +158,20 @@ class SdkV1OpenResponseDtoBuilder
   bool? _isNewUser;
   bool? get isNewUser => _$this._isNewUser;
   set isNewUser(bool? isNewUser) => _$this._isNewUser = isNewUser;
+
+  SdkInstallReferrerResultDtoBuilder? _originalInstallReferrer;
+  SdkInstallReferrerResultDtoBuilder get originalInstallReferrer =>
+      _$this._originalInstallReferrer ??= SdkInstallReferrerResultDtoBuilder();
+  set originalInstallReferrer(
+    SdkInstallReferrerResultDtoBuilder? originalInstallReferrer,
+  ) => _$this._originalInstallReferrer = originalInstallReferrer;
+
+  SdkInstallReferrerResultDtoBuilder? _reinstallReferrer;
+  SdkInstallReferrerResultDtoBuilder get reinstallReferrer =>
+      _$this._reinstallReferrer ??= SdkInstallReferrerResultDtoBuilder();
+  set reinstallReferrer(
+    SdkInstallReferrerResultDtoBuilder? reinstallReferrer,
+  ) => _$this._reinstallReferrer = reinstallReferrer;
 
   String? _requestVersion;
   String? get requestVersion => _$this._requestVersion;
@@ -132,9 +191,14 @@ class SdkV1OpenResponseDtoBuilder
     if ($v != null) {
       _acceptedAt = $v.acceptedAt;
       _deepLink = $v.deepLink?.toBuilder();
+      _deepLinkClickedAt = $v.deepLinkClickedAt;
+      _deepLinkConsumedAt = $v.deepLinkConsumedAt;
       _installReferrer = $v.installReferrer?.toBuilder();
+      _installState = $v.installState;
       _isFirstLaunch = $v.isFirstLaunch;
       _isNewUser = $v.isNewUser;
+      _originalInstallReferrer = $v.originalInstallReferrer?.toBuilder();
+      _reinstallReferrer = $v.reinstallReferrer?.toBuilder();
       _requestVersion = $v.requestVersion;
       _userId = $v.userId;
       _$v = null;
@@ -167,7 +231,14 @@ class SdkV1OpenResponseDtoBuilder
               'acceptedAt',
             ),
             deepLink: _deepLink?.build(),
+            deepLinkClickedAt: deepLinkClickedAt,
+            deepLinkConsumedAt: deepLinkConsumedAt,
             installReferrer: _installReferrer?.build(),
+            installState: BuiltValueNullFieldError.checkNotNull(
+              installState,
+              r'SdkV1OpenResponseDto',
+              'installState',
+            ),
             isFirstLaunch: BuiltValueNullFieldError.checkNotNull(
               isFirstLaunch,
               r'SdkV1OpenResponseDto',
@@ -178,6 +249,8 @@ class SdkV1OpenResponseDtoBuilder
               r'SdkV1OpenResponseDto',
               'isNewUser',
             ),
+            originalInstallReferrer: _originalInstallReferrer?.build(),
+            reinstallReferrer: _reinstallReferrer?.build(),
             requestVersion: BuiltValueNullFieldError.checkNotNull(
               requestVersion,
               r'SdkV1OpenResponseDto',
@@ -194,8 +267,14 @@ class SdkV1OpenResponseDtoBuilder
       try {
         _$failedField = 'deepLink';
         _deepLink?.build();
+
         _$failedField = 'installReferrer';
         _installReferrer?.build();
+
+        _$failedField = 'originalInstallReferrer';
+        _originalInstallReferrer?.build();
+        _$failedField = 'reinstallReferrer';
+        _reinstallReferrer?.build();
       } catch (e) {
         throw BuiltValueNestedFieldError(
           r'SdkV1OpenResponseDto',

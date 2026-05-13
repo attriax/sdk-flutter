@@ -1,4 +1,4 @@
-package com.attriax.attriax_flutter_example
+package com.attriax.attriax_example
 
 import io.flutter.embedding.android.FlutterActivity
 

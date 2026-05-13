@@ -11,6 +11,23 @@ import 'internal/attriax_logger.dart';
 import 'internal/attriax_runtime.dart';
 import 'attriax_synchronization.dart';
 
+/// Canonical ad lifecycle events tracked by the Attriax SDKs.
+enum AttriaxAdEventType {
+  request('ad_request'),
+  load('ad_load'),
+  loadFailed('ad_load_failed'),
+  show('ad_show'),
+  showFailed('ad_show_failed'),
+  impression('ad_impression'),
+  click('ad_click'),
+  dismiss('ad_dismiss'),
+  reward('ad_reward');
+
+  const AttriaxAdEventType(this.eventName);
+
+  final String eventName;
+}
+
 /// The public entry point for the Attriax mobile attribution SDK.
 ///
 /// Create one application-level instance and initialize it during startup.
@@ -99,6 +116,9 @@ class Attriax {
     _runtime,
   );
 
+  /// Startup and deep-link referrer lookups exposed through a focused facade.
+  late final AttriaxReferrer referrer = AttriaxReferrer._(_runtime);
+
   /// Deep-link state and stream access for immediate, initial, and deferred links.
   ///
   /// Deferred deep links resolved from the app-open flow are surfaced through
@@ -170,18 +190,6 @@ class Attriax {
   /// platform directly and refreshes the SDK's cached ATT status.
   Future<AttriaxTrackingAuthorizationStatus> getTrackingAuthorizationStatus() =>
       _runtime.getTrackingAuthorizationStatus();
-
-  /// Latest structured install-referrer details known for this installation.
-  ///
-  /// If a cached API result exists, this future resolves from local
-  /// preferences. Otherwise it resolves after the first app-open request
-  /// returns an install-referrer payload, or `null` when no such payload is
-  /// available. If [init] runs with `enabled: false`, the platform install
-  /// referrer is not checked and this future resolves to `null`; setting
-  /// [enabled] back to `true` later starts the app-open/referrer request once
-  /// for the current session and exposes that new result through this getter.
-  Future<AttriaxInstallReferrerDetails?> get installReferrer =>
-      _runtime.installReferrer;
 
   /// Initializes the SDK runtime.
   ///
@@ -497,6 +505,64 @@ class Attriax {
     );
   }
 
+  /// Queues a canonical ad lifecycle event for delivery to Attriax.
+  ///
+  /// Use this for ad callbacks such as load, show, click, dismiss, reward,
+  /// and failure paths so Attriax can group ad delivery consistently.
+  Future<void> recordAdEvent(
+    AttriaxAdEventType type, {
+    String? adNetwork,
+    String? mediationNetwork,
+    String? adUnitId,
+    String? adPlacement,
+    String? adFormat,
+    String? adType,
+    String? failureReason,
+    num? loadLatencyMs,
+    String? rewardType,
+    num? rewardAmount,
+    bool? test,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
+  }) {
+    final normalizedLoadLatencyMs = loadLatencyMs?.toDouble();
+    if (normalizedLoadLatencyMs != null && !normalizedLoadLatencyMs.isFinite) {
+      throw ArgumentError.value(
+        loadLatencyMs,
+        'loadLatencyMs',
+        'loadLatencyMs must be finite.',
+      );
+    }
+
+    final normalizedRewardAmount = rewardAmount?.toDouble();
+    if (normalizedRewardAmount != null && !normalizedRewardAmount.isFinite) {
+      throw ArgumentError.value(
+        rewardAmount,
+        'rewardAmount',
+        'rewardAmount must be finite.',
+      );
+    }
+
+    return _runtime.recordEvent(
+      type.eventName,
+      eventData: <String, Object?>{
+        ...?metadata,
+        'adNetwork': ?_trimOrNull(adNetwork),
+        'mediationNetwork': ?_trimOrNull(mediationNetwork),
+        'adUnitId': ?_trimOrNull(adUnitId),
+        'adPlacement': ?_trimOrNull(adPlacement),
+        'adFormat': ?_trimOrNull(adFormat),
+        'adType': ?_trimOrNull(adType),
+        'failureReason': ?_trimOrNull(failureReason),
+        'rewardType': ?_trimOrNull(rewardType),
+        'loadLatencyMs': ?normalizedLoadLatencyMs,
+        'rewardAmount': ?normalizedRewardAmount,
+        'test': ?test,
+      },
+      flushImmediately: flushImmediately,
+    );
+  }
+
   /// Queues a first-class page view event for screen analytics and funnels.
   ///
   /// This is a convenience wrapper over [recordEvent] that standardizes the
@@ -588,8 +654,8 @@ class Attriax {
   ///
   /// Provide either [uri] or [linkPath]. [metadata] accepts regular
   /// JSON-compatible Dart values and is sent with the resolution request.
-  /// Returns the successful resolution when the backend matches a deep link,
-  /// otherwise returns `null`.
+  /// Returns the completed backend resolution. When Attriax does not recognize
+  /// the link, the returned resolution still completes with `found == false`.
   Future<AttriaxDeepLinkResolution?> recordDeepLink({
     Uri? uri,
     String? linkPath,
@@ -640,6 +706,54 @@ class _AttriaxNormalizedRevenue {
   final String currency;
 }
 
+/// Referrer lookups exposed by [Attriax].
+///
+/// These methods cover startup attribution snapshots and runtime deep-link
+/// referrers. All lookups resolve to `null` immediately until [Attriax.init]
+/// completes and while the SDK is disabled.
+class AttriaxReferrer {
+  AttriaxReferrer._(this._runtime);
+
+  final AttriaxRuntime _runtime;
+
+  /// Original install referrer persisted for this installation.
+  ///
+  /// This resolves from local storage on later launches, or after the first
+  /// successful app-open request on a fresh install or reinstall.
+  Future<AttriaxInstallReferrerDetails?> getOriginalInstallReferrer({
+    Duration? timeout,
+    bool safe = false,
+  }) => _runtime.getOriginalInstallReferrer(timeout: timeout, safe: safe);
+
+  /// Reinstall referrer persisted for the current installation, when one exists.
+  ///
+  /// This resolves after the first successful app-open request that classifies
+  /// the launch as a reinstall, or from cached storage on later launches.
+  Future<AttriaxInstallReferrerDetails?> getReinstallReferrer({
+    Duration? timeout,
+    bool safe = false,
+  }) => _runtime.getReinstallReferrer(timeout: timeout, safe: safe);
+
+  /// Deep-link referrer that opened the current session.
+  ///
+  /// This waits for the startup deep-link flow to settle. It resolves to a
+  /// cold-start or deferred deep-link referrer, or `null` when the current
+  /// session started without one.
+  Future<AttriaxDeepLinkReferrerDetails?> getSessionReferrer({
+    Duration? timeout,
+    bool safe = false,
+  }) => _runtime.getSessionReferrer(timeout: timeout, safe: safe);
+
+  /// Most recent deep-link referrer observed in the current session.
+  ///
+  /// If no deep link has been received yet, this waits for the next handled
+  /// deep-link event.
+  Future<AttriaxDeepLinkReferrerDetails?> getLatestDeepLinkReferrer({
+    Duration? timeout,
+    bool safe = false,
+  }) => _runtime.getLatestDeepLinkReferrer(timeout: timeout, safe: safe);
+}
+
 /// Deep-link state and subscriptions exposed by [Attriax].
 ///
 /// This facade covers both regular incoming links and deferred deep links that
@@ -649,34 +763,32 @@ class AttriaxDeepLinks {
 
   final AttriaxRuntime _runtime;
 
-  /// Latest resolved result for the launch deep link that opened this session.
+  /// Launch deep-link event captured during startup, when one was present.
   ///
   /// This stays `null` until the initial-link probe completes. Use
   /// [initialDeepLinkResolved] to distinguish "not resolved yet" from "resolved
   /// and no initial deep link was found".
-  AttriaxDeepLinkResult? get initialDeepLink => _runtime.initialDeepLink;
+  AttriaxDeepLinkEvent? get initialDeepLink => _runtime.initialDeepLink;
 
   /// Whether the initial deep-link probe has completed for this app session.
   bool get initialDeepLinkResolved => _runtime.isInitialDeepLinkResolved;
 
   /// Waits for the initial deep-link probe to finish if it is still pending.
   ///
-  /// This resolves to the matched or failed backend result for the launch deep
-  /// link, or `null` when no initial deep link was present.
-  Future<AttriaxDeepLinkResult?> waitForInitialDeepLink() =>
+  /// This resolves to the launch deep-link event, or `null` when no initial
+  /// deep link was present. Call [AttriaxDeepLinkEvent.resolve] on the returned
+  /// event when you also need the completed backend result.
+  Future<AttriaxDeepLinkEvent?> waitForInitialDeepLink() =>
       _runtime.waitForInitialDeepLink();
 
   /// Broadcast stream of handled deep-link events.
   ///
-  /// Automatic incoming links emit immediately with raw link data, and callers
-  /// can await [AttriaxDeepLinkEvent.resolve] when they also need the
-  /// server-side resolution outcome. Deferred app-open matches are emitted here
-  /// as already-resolved deep-link events.
+  /// Automatic incoming links emit immediately and callers can await
+  /// [AttriaxDeepLinkEvent.resolve] when they also need the server-side
+  /// resolution outcome. Deferred app-open matches are emitted here as
+  /// already-resolved deep-link events.
   Stream<AttriaxDeepLinkEvent> get stream => _runtime.deepLinks;
 
-  /// Most recent handled deep-link result seen by the SDK.
-  ///
-  /// This includes matched, failed, and deferred deep-link outcomes once they
-  /// have completed.
-  AttriaxDeepLinkResult? get latestDeepLink => _runtime.latestDeepLink;
+  /// Most recent handled deep-link event seen by the SDK.
+  AttriaxDeepLinkEvent? get latestDeepLink => _runtime.latestDeepLink;
 }

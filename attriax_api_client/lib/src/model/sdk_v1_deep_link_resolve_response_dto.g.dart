@@ -11,7 +11,7 @@ class _$SdkV1DeepLinkResolveResponseDto
   @override
   final DateTime acceptedAt;
   @override
-  final DateTime? consumedAt;
+  final DateTime consumedAt;
   @override
   final SdkJsonDeepLinkDto? deepLink;
   @override
@@ -31,7 +31,7 @@ class _$SdkV1DeepLinkResolveResponseDto
 
   _$SdkV1DeepLinkResolveResponseDto._({
     required this.acceptedAt,
-    this.consumedAt,
+    required this.consumedAt,
     this.deepLink,
     required this.isFirstLaunch,
     required this.matched,
@@ -180,7 +180,11 @@ class SdkV1DeepLinkResolveResponseDtoBuilder
               r'SdkV1DeepLinkResolveResponseDto',
               'acceptedAt',
             ),
-            consumedAt: consumedAt,
+            consumedAt: BuiltValueNullFieldError.checkNotNull(
+              consumedAt,
+              r'SdkV1DeepLinkResolveResponseDto',
+              'consumedAt',
+            ),
             deepLink: _deepLink?.build(),
             isFirstLaunch: BuiltValueNullFieldError.checkNotNull(
               isFirstLaunch,

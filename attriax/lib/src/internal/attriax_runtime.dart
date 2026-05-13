@@ -17,11 +17,11 @@ import 'attriax_deep_link_manager.dart';
 import 'attriax_deep_link_listener.dart';
 import 'attriax_event_hub.dart';
 import 'attriax_generated_transport.dart';
-import 'attriax_install_referrer_manager.dart';
 import 'attriax_logger.dart';
 import 'attriax_platform_install_referrer_manager.dart';
 import 'attriax_preferences_store.dart';
 import 'attriax_request_manager.dart';
+import 'attriax_referrer_manager.dart';
 import 'attriax_runtime_settings_state.dart';
 import 'attriax_session_manager.dart';
 import 'attriax_synchronizer.dart';
@@ -76,6 +76,8 @@ class AttriaxRuntime {
       contextManager: _contextManager,
       listener: deepLinkListener,
       eventHub: _eventHub,
+      preferencesStore: _preferencesStore,
+      currentSessionIdProvider: () => _sessionManager.currentSession?.id,
       requestManager: _requestManager,
       logger: _logger,
       clock: _clock,
@@ -88,9 +90,11 @@ class AttriaxRuntime {
       requestManager: _requestManager,
       logger: _logger,
     );
-    _installReferrerManager = AttriaxInstallReferrerManager(
+    _referrerManager = AttriaxReferrerManager(
       preferencesStore: _preferencesStore,
       appOpenManager: _appOpenManager,
+      deepLinkManager: _deepLinkManager,
+      currentSessionIdProvider: () => _sessionManager.currentSession?.id,
     );
     _trackingManager = AttriaxTrackingManager(
       config: config,
@@ -116,7 +120,7 @@ class AttriaxRuntime {
   late final AttriaxContextManager _contextManager;
   late final AttriaxDeepLinkManager _deepLinkManager;
   late final AttriaxAppOpenManager _appOpenManager;
-  late final AttriaxInstallReferrerManager _installReferrerManager;
+  late final AttriaxReferrerManager _referrerManager;
   late final AttriaxTrackingManager _trackingManager;
   late final AttriaxSessionManager _sessionManager;
 
@@ -149,13 +153,10 @@ class AttriaxRuntime {
       _synchronizer?.synchronizationState ==
       AttriaxSynchronizationState.synchronized;
   AttriaxSdkSnapshot? get sdkSnapshot => _contextManager.sdkSnapshot;
-  Future<AttriaxInstallReferrerDetails?> get installReferrer =>
-      _installReferrerManager.future;
-  AttriaxDeepLinkResult? get initialDeepLink =>
-      _deepLinkManager.initialDeepLink;
+  AttriaxDeepLinkEvent? get initialDeepLink => _deepLinkManager.initialDeepLink;
   bool get isInitialDeepLinkResolved =>
       _deepLinkManager.isInitialDeepLinkResolved;
-  AttriaxDeepLinkResult? get latestDeepLink => _deepLinkManager.latestDeepLink;
+  AttriaxDeepLinkEvent? get latestDeepLink => _deepLinkManager.latestDeepLink;
   AttriaxSynchronizationState get synchronizationState =>
       _synchronizer?.synchronizationState ??
       AttriaxSynchronizationState.initializing;
@@ -205,7 +206,7 @@ class AttriaxRuntime {
     await _contextManager.setAutomaticCrashReportingEnabled(enabled: false);
     _requestManager.unbindSynchronizer();
     _sessionManager.dispose();
-    _installReferrerManager.dispose();
+    await _referrerManager.dispose();
     await _deepLinkManager.stop();
     await _synchronizer?.reset(
       error: StateError(
@@ -218,7 +219,7 @@ class AttriaxRuntime {
     _eventHub.reset();
     _contextManager.reset();
     await _sessionManager.reset();
-    _installReferrerManager.reset();
+    await _referrerManager.reset();
 
     _settingsState.restore(enabled: true, eventsEnabled: true);
     _appOpenSchedulingFuture = null;
@@ -240,12 +241,12 @@ class AttriaxRuntime {
       enabled: storedRuntimePreferences.isEnabled,
       eventsEnabled: storedRuntimePreferences.areEventsEnabled,
     );
-    await _installReferrerManager.init(enabled: isEnabled);
 
     await _contextManager.init();
     final sessionRestore = await _sessionManager.init(
       enabled: _sessionTrackingEnabled,
     );
+    await _referrerManager.init(enabled: isEnabled);
 
     _transport ??= AttriaxGeneratedTransport(
       apiBaseUrl: _apiBaseUrlConfig.apiBaseUrl,
@@ -271,7 +272,6 @@ class AttriaxRuntime {
     );
 
     if (!isEnabled) {
-      _installReferrerManager.completeDisabled();
       _deepLinkManager.completeInitialLinkIfAbsent();
       _synchronizer!.setState(AttriaxSynchronizationState.disabled);
       _logger.warning('Attriax SDK initialized in disabled mode.');
@@ -534,7 +534,7 @@ class AttriaxRuntime {
     );
   }
 
-  Future<AttriaxDeepLinkResult?> waitForInitialDeepLink() =>
+  Future<AttriaxDeepLinkEvent?> waitForInitialDeepLink() =>
       _deepLinkManager.waitForInitialDeepLink();
 
   Future<AttriaxTrackingAuthorizationStatus> requestTrackingAuthorization({
@@ -544,15 +544,49 @@ class AttriaxRuntime {
   Future<AttriaxTrackingAuthorizationStatus> getTrackingAuthorizationStatus() =>
       _contextManager.getTrackingAuthorizationStatus();
 
+  Future<AttriaxInstallReferrerDetails?> getOriginalInstallReferrer({
+    Duration? timeout,
+    bool safe = false,
+  }) => _readReferrer(
+    timeout: timeout,
+    safe: safe,
+    reader: _referrerManager.waitForOriginalInstallReferrer,
+  );
+
+  Future<AttriaxInstallReferrerDetails?> getReinstallReferrer({
+    Duration? timeout,
+    bool safe = false,
+  }) => _readReferrer(
+    timeout: timeout,
+    safe: safe,
+    reader: _referrerManager.waitForReinstallReferrer,
+  );
+
+  Future<AttriaxDeepLinkReferrerDetails?> getSessionReferrer({
+    Duration? timeout,
+    bool safe = false,
+  }) => _readReferrer(
+    timeout: timeout,
+    safe: safe,
+    reader: _referrerManager.waitForSessionReferrer,
+  );
+
+  Future<AttriaxDeepLinkReferrerDetails?> getLatestDeepLinkReferrer({
+    Duration? timeout,
+    bool safe = false,
+  }) => _readReferrer(
+    timeout: timeout,
+    safe: safe,
+    reader: _referrerManager.waitForLatestDeepLinkReferrer,
+  );
+
   // ---------- enable / disable ---------------------------------------------- //
 
   void setEnabled({required bool enabled}) => _settingsState.setEnabled(
     enabled: enabled,
     initialized: _initialized,
     applyState: _applyEnabledState,
-    onPreparingToEnable: enabled
-        ? _prepareInstallReferrerCompleterForReenable
-        : null,
+    onPreparingToEnable: enabled ? _prepareReferrerWaitersForReenable : null,
   );
 
   void setEventsEnabled({required bool enabled}) =>
@@ -568,7 +602,7 @@ class AttriaxRuntime {
     await _contextManager.setAutomaticCrashReportingEnabled(enabled: false);
     _requestManager.unbindSynchronizer();
     _sessionManager.dispose();
-    _installReferrerManager.dispose();
+    await _referrerManager.dispose();
     await _deepLinkManager.stop();
     await _synchronizer?.dispose();
     await _appOpenManager.dispose();
@@ -611,6 +645,7 @@ class AttriaxRuntime {
 
   Future<void> _applyEnabledState(bool enabled) async {
     if (!enabled) {
+      _referrerManager.handleDisabled();
       _restoreCrashHandlers();
       await _contextManager.setAutomaticCrashReportingEnabled(enabled: false);
       _sessionManager.deactivate();
@@ -637,7 +672,7 @@ class AttriaxRuntime {
       _synchronizer!.startConnectivitySubscription(
         onRestored: _synchronizer!.scheduleFlush,
       );
-      await _prepareInstallReferrerFutureForEnabledState();
+      await _prepareReferrersForEnabledState();
       unawaited(_scheduleAppOpenIfNeeded());
       await _deepLinkManager.start();
       _sessionManager.activate();
@@ -645,12 +680,12 @@ class AttriaxRuntime {
     }
   }
 
-  Future<void> _prepareInstallReferrerFutureForEnabledState() async {
-    await _installReferrerManager.prepareForEnabledState();
+  Future<void> _prepareReferrersForEnabledState() async {
+    await _referrerManager.prepareForEnabledState();
   }
 
-  void _prepareInstallReferrerCompleterForReenable() {
-    _installReferrerManager.prepareForReenable();
+  void _prepareReferrerWaitersForReenable() {
+    _referrerManager.prepareForReenable();
   }
 
   Future<void> _scheduleAppOpenIfNeeded() {
@@ -676,11 +711,40 @@ class AttriaxRuntime {
   }
 
   Future<void> _scheduleAppOpen() async {
+    final originSessionId = _sessionManager.currentSession?.id;
     await _appOpenManager.schedule(
       onCompleted: (result) async {
-        _deepLinkManager.handleDeferredAppOpen(result);
+        await _deepLinkManager.handleDeferredAppOpen(
+          result,
+          originSessionId: originSessionId,
+        );
       },
     );
+  }
+
+  Future<T?> _readReferrer<T>({
+    required Future<T?> Function() reader,
+    Duration? timeout,
+    required bool safe,
+  }) async {
+    if (!_initialized || !isEnabled) {
+      return null;
+    }
+
+    try {
+      final future = reader();
+      if (timeout == null) {
+        return await future;
+      }
+
+      return await future.timeout(timeout);
+    } catch (_) {
+      if (safe) {
+        return null;
+      }
+
+      rethrow;
+    }
   }
 
   void _installCrashHandlers() {

@@ -496,6 +496,10 @@ class AttriaxRequestDispatcher {
   };
 
   String? _terminalDropReason(AttriaxQueuedRequest queuedRequest) {
+    if (!_shouldApplyTerminalRetryPolicy(queuedRequest.request)) {
+      return null;
+    }
+
     if (queuedRequest.attemptCount >= _attriaxMaxRetryAttempts) {
       return 'max_attempts_exceeded';
     }
@@ -507,6 +511,9 @@ class AttriaxRequestDispatcher {
 
     return null;
   }
+
+  bool _shouldApplyTerminalRetryPolicy(AttriaxApiRequest request) =>
+      request is! AttriaxResolveDeepLinkRequest;
 
   DateTime? _retryAfterAt(Object error, DateTime attemptedAt) {
     switch (error) {

@@ -24,6 +24,7 @@ Serializers _$serializers =
           ..add(SdkDynamicLinkRecordDto.serializer)
           ..add(SdkEventDto.serializer)
           ..add(SdkInstallReferrerResultDto.serializer)
+          ..add(SdkInstallState.serializer)
           ..add(SdkJsonDeepLinkDto.serializer)
           ..add(SdkRegisterUninstallTokenDto.serializer)
           ..add(SdkRevenueReceiptValidateResponseDto.serializer)
@@ -32,6 +33,7 @@ Serializers _$serializers =
           ..add(SdkSessionDto.serializer)
           ..add(SdkSessionLifecycleKind.serializer)
           ..add(SdkUserDto.serializer)
+          ..add(SdkUtmPayloadDto.serializer)
           ..add(SdkV1BatchDto.serializer)
           ..add(SdkV1BatchItemDto.serializer)
           ..add(SdkV1BatchResponseDto.serializer)
@@ -64,16 +66,16 @@ Serializers _$serializers =
           ..addBuilderFactory(
             const FullType(BuiltMap, const [
               const FullType(String),
-              const FullType.nullable(JsonObject),
+              const FullType(String),
             ]),
-            () => MapBuilder<String, JsonObject?>(),
+            () => MapBuilder<String, String>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltMap, const [
               const FullType(String),
-              const FullType.nullable(JsonObject),
+              const FullType(String),
             ]),
-            () => MapBuilder<String, JsonObject?>(),
+            () => MapBuilder<String, String>(),
           )
           ..addBuilderFactory(
             const FullType(BuiltMap, const [

@@ -6,7 +6,7 @@ Minimal public example app for the Attriax Flutter SDK.
 
 - constructing `Attriax` with a `AttriaxConfig`
 - a first-run setup screen that stores the app token and optional API base URL locally
-- awaited `init()` as the recommended startup path, plus background startup attribution via `installReferrer` and `deepLinks.waitForInitialDeepLink()`
+- awaited `init()` as the recommended startup path, plus background startup attribution via `referrer.getOriginalInstallReferrer()` and `deepLinks.waitForInitialDeepLink()`
 - synchronization state with a clear ready / not-ready signal via `attriax.synchronization`
 - listening to the unified `deepLinks` stream and routing matched resolutions into app screens
 - reading `deepLinks.initialDeepLink`, `deepLinks.initialDeepLinkResolved`, and `deepLinks.latestDeepLink`

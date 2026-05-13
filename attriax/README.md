@@ -12,7 +12,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  attriax_flutter: ^0.0.2
+  attriax_flutter: ^0.1.0
 ```
 
 For local workspace development inside this repository, keep using the existing path-based workspace setup instead of a hosted dependency.
@@ -49,11 +49,20 @@ unawaited(processAttriaxStartup(attriax));
 
 Future<void> processAttriaxStartup(Attriax attriax) async {
   final initialDeepLink = await attriax.deepLinks.waitForInitialDeepLink();
-  final installReferrer = await attriax.installReferrer;
+  final originalInstallReferrer = await attriax.referrer
+      .getOriginalInstallReferrer();
+  final sessionReferrer = await attriax.referrer.getSessionReferrer(
+    timeout: const Duration(seconds: 5),
+    safe: true,
+  );
+  final initialResolution = await initialDeepLink?.resolve();
 
-  debugPrint('Install referrer: ${installReferrer?.campaign}');
   debugPrint(
-    'Initial deep link: ${initialDeepLink?.resolution?.deepLink.path ?? initialDeepLink?.rawEvent?.linkPath ?? 'none'}',
+    'Original install referrer: ${originalInstallReferrer?.campaign}',
+  );
+  debugPrint('Session referrer: ${sessionReferrer?.uri.toString() ?? 'none'}');
+  debugPrint(
+    'Initial deep link: ${initialDeepLink?.uri.toString() ?? 'none'} (found: ${initialResolution?.found ?? false})',
   );
 }
 
@@ -83,15 +92,17 @@ final createdDynamicLink = await attriax.createDynamicLink(
 debugPrint('Share this short URL: ${createdDynamicLink.link.shortUrl}');
 
 attriax.deepLinks.stream.listen((event) async {
-  final result = await event.resolve();
-  final resolution = result.resolution;
-  if (resolution == null) {
+  final resolution = await event.resolve();
+  if (!resolution.found) {
     return;
   }
 
   navigatorKey.currentState?.pushNamed(
     '/deep-link',
-    arguments: resolution.deepLink,
+    arguments: <String, Object?>{
+      'uri': event.uri.toString(),
+      'data': resolution.data,
+    },
   );
 });
 
@@ -106,7 +117,9 @@ MaterialApp(
 
 `await attriax.init()` only waits for local SDK startup work such as restoring persisted state, registering listeners, and starting the queue. It does not wait for the network-backed app-open request to finish.
 
-Do not block your splash screen, router construction, `runApp()`, or other first-frame startup work on `installReferrer` or `deepLinks.waitForInitialDeepLink()`. Those results may wait on cached or network-backed attribution work and should normally be handled in background tasks after `init()` resolves.
+Do not block your splash screen, router construction, `runApp()`, or other first-frame startup work on `referrer.getOriginalInstallReferrer()` or `deepLinks.waitForInitialDeepLink()`. Those results may wait on cached or network-backed attribution work and should normally be handled in background tasks after `init()` resolves.
+
+Use `attriax.referrer.getReinstallReferrer()` when you specifically need reinstall attribution, `getSessionReferrer()` for the deep link that opened the current session, and `getLatestDeepLinkReferrer()` for the most recent handled deep-link event.
 
 If you truly need a fire-and-forget local startup path, you can still intentionally call `unawaited(attriax.init())`, but that is separate from deferred deep-link and install-referrer handling. The recommended baseline is still: await `init()`, then process startup attribution asynchronously.
 
@@ -172,13 +185,70 @@ await attriax.recordPageView(
 );
 ```
 
+## Ad Events
+
+Use the standardized ad lifecycle methods when you want ad delivery,
+engagement, failures, rewards, and paid callbacks to show up in the same
+analytics vocabulary across SDKs.
+
+```dart
+await attriax.recordAdEvent(
+  AttriaxAdEventType.load,
+  adNetwork: 'admob',
+  adUnitId: rewardedAdUnitId,
+  adPlacement: 'level_complete',
+  adFormat: 'rewarded',
+);
+
+await attriax.recordAdEvent(
+  AttriaxAdEventType.show,
+  adNetwork: 'admob',
+  adUnitId: rewardedAdUnitId,
+  adPlacement: 'level_complete',
+  adFormat: 'rewarded',
+);
+
+await attriax.recordAdEvent(
+  AttriaxAdEventType.impression,
+  adNetwork: 'admob',
+  adUnitId: rewardedAdUnitId,
+  adPlacement: 'level_complete',
+  adFormat: 'rewarded',
+);
+
+await attriax.recordAdEvent(
+  AttriaxAdEventType.reward,
+  adNetwork: 'admob',
+  adUnitId: rewardedAdUnitId,
+  adPlacement: 'level_complete',
+  adFormat: 'rewarded',
+  rewardType: 'coins',
+  rewardAmount: 50,
+);
+
+await attriax.recordAdRevenue(
+  revenue: 125000,
+  currency: 'USD',
+  revenueInMicros: true,
+  adNetwork: 'admob',
+  adPlacement: 'level_complete',
+  adFormat: 'rewarded',
+  adType: 'paid_event',
+);
+```
+
+When an ad SDK exposes failures, clicks, dismissals, or mediation metadata,
+send them through `recordAdEvent(...)` with the matching
+`AttriaxAdEventType`, `failureReason`, and `metadata` so the ad-events
+analytics page can group the callbacks cleanly.
+
 ## Host Deep Link Setup
 
 `attriax_flutter` uses an internal Attriax deep-link bridge on Android and iOS, but the
 host app still owns the platform registration files and most runner hooks.
 
 - Android: add the intent filter to your launcher activity and keep your SHA-256 fingerprints current. The `attriax_flutter_android` plugin already injects `flutter_deeplinking_enabled=false` so Flutter's built-in handler does not compete with Attriax.
-- iOS: add `<key>FlutterDeepLinkingEnabled</key><false/>` to `ios/Runner/Info.plist`, add the Associated Domains entitlement, and test on a physical device after reinstalling. This plist change still belongs to the consuming app.
+- iOS: add `<key>FlutterDeepLinkingEnabled</key><false/>` to `ios/Runner/Info.plist`, add the Associated Domains entitlement, and test on a physical device after reinstalling. If your app requests ATT through Attriax or its own consent flow, the same plist must also include `NSUserTrackingUsageDescription` before `requestTrackingAuthorizationOnInit` or `requestTrackingAuthorization()` runs. These plist changes still belong to the consuming app.
 - Web: the SDK reads the initial URL automatically. If your router consumes the incoming URL first, forward it with `recordDeepLink(uri: Uri.base, source: 'web_router')`. The Attriax app configuration must also allow every browser origin that will call the SDK, including local dev origins such as `http://localhost:3000`, in the dashboard setup page's Web allowed browser origins list.
 - macOS, Linux, Windows: automatic deep-link capture is not bundled yet. Accept the URI in your runner or activation handler and forward it with `recordDeepLink(uri: incomingUri, source: 'desktop_router')`.
 
@@ -293,10 +363,12 @@ final attriax = Attriax(
 - `collectAdvertisingId` controls GAID collection on Android and IDFA collection on Apple platforms.
 - When `collectAdvertisingId` is `false`, the SDK stops using ATT and advertising IDs for its own native context collection, but host apps can still call `getTrackingAuthorizationStatus()` and `requestTrackingAuthorization()` for their own consent flow.
 - `automaticCrashReportingEnabled` controls automatic Flutter/native crash handlers. Manual `recordError()` calls remain available when automatic handlers are disabled.
-- `requestTrackingAuthorizationOnInit` requests ATT during SDK startup when advertising ID collection is enabled, then waits for the user-driven result before iOS context collection continues.
+- `requestTrackingAuthorizationOnInit` requests ATT during SDK startup when advertising ID collection is enabled, then waits for the user-driven result before iOS context collection continues. Add `NSUserTrackingUsageDescription` to `ios/Runner/Info.plist` before enabling this on iOS.
 - `trackingAuthorizationStatusTimeout` only applies when `requestTrackingAuthorizationOnInit` is `false`. During startup, the SDK polls ATT status for up to that duration so an app-managed consent flow can still call `requestTrackingAuthorization()` without being raced by SDK initialization.
 
 To check ATT state or request ATT manually after your own consent or onboarding UI:
+
+Add `NSUserTrackingUsageDescription` to `ios/Runner/Info.plist` before shipping or testing the manual ATT prompt.
 
 ```dart
 final currentStatus = await attriax.getTrackingAuthorizationStatus();
@@ -316,32 +388,38 @@ Android apps that allow advertising ID collection must account for the AD_ID per
 
 - Read `attriax.deepLinks.stream` as a broadcast stream with no buffering.
 - Use `attriax.deepLinks.initialDeepLink`, `initialDeepLinkResolved`, and `waitForInitialDeepLink()` when you need synchronous initial-link state plus an awaitable completion handle.
-- Read `attriax.deepLinks.latestDeepLink` when you need the most recent handled deep-link result, including deferred deep links.
-- Each `AttriaxDeepLinkEvent` exposes raw link data immediately.
-- Call `resolve()` on the event when you need the matched or failed backend resolution result for that specific link.
+- Read `attriax.deepLinks.latestDeepLink` when you need the most recent handled deep-link event, including deferred deep links.
+- Each `AttriaxDeepLinkEvent` exposes `uri`, `receivedAt`, `trigger`, and `isAttriaxDomain` immediately.
+- Call `resolve()` on the event when you need the backend result for that specific link. Unmatched or external links still resolve successfully with `found == false`.
 
 Startup handling:
 
 ```dart
 final initialDeepLink = await attriax.deepLinks.waitForInitialDeepLink();
-final path =
-    initialDeepLink?.resolution?.deepLink.path ??
-    initialDeepLink?.rawEvent?.linkPath;
+final resolution = await initialDeepLink?.resolve();
+final path = initialDeepLink?.uri.path;
 
-debugPrint('Initial deep link path: ${path ?? 'none'}');
+debugPrint(
+  'Initial deep link path: ${path ?? 'none'} (found: ${resolution?.found ?? false})',
+);
 ```
 
 Stream handling:
 
 ```dart
 attriax.deepLinks.stream.listen((event) async {
-  final result = await event.resolve();
-  final deepLink = result.resolution?.deepLink;
-  if (deepLink == null) {
+  final resolution = await event.resolve();
+  if (!resolution.found) {
     return;
   }
 
-  navigatorKey.currentState?.pushNamed('/deep-link', arguments: deepLink);
+  navigatorKey.currentState?.pushNamed(
+    '/deep-link',
+    arguments: <String, Object?>{
+      'uri': event.uri.toString(),
+      'data': resolution.data,
+    },
+  );
 });
 ```
 

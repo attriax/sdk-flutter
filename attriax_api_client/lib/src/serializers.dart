@@ -30,6 +30,7 @@ import 'package:attriax_api_client/src/model/sdk_create_dynamic_link_response_en
 import 'package:attriax_api_client/src/model/sdk_dynamic_link_record_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_event_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_install_referrer_result_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_install_state.dart';
 import 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_register_uninstall_token_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_revenue_receipt_validate_response_dto.dart';
@@ -37,6 +38,7 @@ import 'package:attriax_api_client/src/model/sdk_revenue_receipt_validate_respon
 import 'package:attriax_api_client/src/model/sdk_session_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_session_lifecycle_kind.dart';
 import 'package:attriax_api_client/src/model/sdk_user_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_utm_payload_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_batch_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_batch_item_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_batch_response_dto.dart';
@@ -69,6 +71,7 @@ part 'serializers.g.dart';
   SdkDynamicLinkRecordDto,
   SdkEventDto,
   SdkInstallReferrerResultDto,
+  SdkInstallState,
   SdkJsonDeepLinkDto,
   SdkRegisterUninstallTokenDto,
   SdkRevenueReceiptValidateResponseDto,
@@ -76,6 +79,7 @@ part 'serializers.g.dart';
   SdkSessionDto,
   SdkSessionLifecycleKind,
   SdkUserDto,
+  SdkUtmPayloadDto,
   SdkV1BatchDto,
   SdkV1BatchItemDto,
   SdkV1BatchResponseDto,

@@ -7,13 +7,23 @@ void main() {
   // TODO add properties to the builder and call build()
 
   group(SdkJsonDeepLinkDto, () {
-    // BuiltMap<String, JsonObject> data
+    // BuiltMap<String, String> data
     test('to test the property `data`', () async {
       // TODO
     });
 
     // String path
     test('to test the property `path`', () async {
+      // TODO
+    });
+
+    // String uri
+    test('to test the property `uri`', () async {
+      // TODO
+    });
+
+    // SdkUtmPayloadDto utm
+    test('to test the property `utm`', () async {
       // TODO
     });
   });

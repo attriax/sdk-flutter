@@ -1,5 +1,5 @@
 const String attriaxSdkApiVersion = 'v1';
-const String attriaxSdkPackageVersion = '0.0.1';
+const String attriaxSdkPackageVersion = '0.1.0';
 
 /// Attribution classification returned by Attriax.
 enum AttributionType {
@@ -19,6 +19,20 @@ enum AttributionType {
 enum AttriaxPlatformType { ios, android, web, windows, macos, linux, unknown }
 
 enum AttriaxDeepLinkResolutionStatus { matched, unmatched, invalid }
+
+/// Describes what caused a deep-link event to be emitted.
+enum AttriaxDeepLinkTrigger {
+  /// The app launched from a fully stopped state because of this link.
+  coldStart,
+
+  /// The link arrived while the app was already running.
+  foreground,
+
+  /// The link click happened before install and resolved on first launch.
+  deferred,
+}
+
+enum AttriaxInstallState { existing, newInstall, reinstall, appDataClear }
 
 enum AttriaxSynchronizationState {
   initializing,
@@ -310,21 +324,70 @@ class AttriaxContextSnapshot {
   final AttriaxDeviceSnapshot device;
 }
 
-class AttriaxDeepLink {
-  const AttriaxDeepLink({required this.path, this.data});
+class AttriaxUtmParameters {
+  const AttriaxUtmParameters({
+    this.source,
+    this.medium,
+    this.campaign,
+    this.term,
+    this.content,
+  });
 
-  factory AttriaxDeepLink.fromJson(Map<String, Object?> json) =>
-      AttriaxDeepLink(
-        path: _requireJsonString(json, 'path'),
-        data: _jsonObject(json['data']),
+  factory AttriaxUtmParameters.fromJson(Map<String, Object?> json) =>
+      AttriaxUtmParameters(
+        source: _jsonString(json['source']),
+        medium: _jsonString(json['medium']),
+        campaign: _jsonString(json['campaign']),
+        term: _jsonString(json['term']),
+        content: _jsonString(json['content']),
       );
+
+  final String? source;
+  final String? medium;
+  final String? campaign;
+  final String? term;
+  final String? content;
+
+  bool get isEmpty =>
+      source == null &&
+      medium == null &&
+      campaign == null &&
+      term == null &&
+      content == null;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    if (source != null) 'source': source,
+    if (medium != null) 'medium': medium,
+    if (campaign != null) 'campaign': campaign,
+    if (term != null) 'term': term,
+    if (content != null) 'content': content,
+  };
+}
+
+class AttriaxDeepLink {
+  const AttriaxDeepLink({required this.path, this.data, this.uri, this.utm});
+
+  factory AttriaxDeepLink.fromJson(Map<String, Object?> json) {
+    final utmJson = _jsonObject(json['utm']);
+
+    return AttriaxDeepLink(
+      path: _requireJsonString(json, 'path'),
+      data: _jsonObject(json['data']),
+      uri: _jsonUri(json['uri']),
+      utm: utmJson == null ? null : AttriaxUtmParameters.fromJson(utmJson),
+    );
+  }
 
   final String path;
   final Map<String, Object?>? data;
+  final Uri? uri;
+  final AttriaxUtmParameters? utm;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'path': path,
     if (data != null && data!.isNotEmpty) 'data': _normalizeJsonMap(data!),
+    if (uri != null) 'uri': uri.toString(),
+    if (utm != null && !utm!.isEmpty) 'utm': utm!.toJson(),
   };
 }
 
@@ -342,11 +405,16 @@ class AttriaxInstallReferrerDetails {
     this.adNetwork,
     this.adClickId,
     this.deepLinkUrl,
+    this.deepLinkUri,
     this.deepLinkData,
+    this.registeredAt,
+    this.installBeginTimestampSeconds,
+    this.referrerClickTimestampSeconds,
+    this.googlePlayInstantParam,
   });
 
   factory AttriaxInstallReferrerDetails.fromJson(Map<String, Object?> json) {
-    final deepLinkDataJson = _jsonObject(json['deepLinkData']);
+    final deepLinkDataJson = _jsonStringMap(json['deepLinkData']);
 
     return AttriaxInstallReferrerDetails(
       rawPlatformInstallReferrer: _jsonString(
@@ -363,7 +431,16 @@ class AttriaxInstallReferrerDetails {
         _jsonString(json['attributionType']),
       ),
       deepLinkUrl: _jsonString(json['deepLinkUrl']),
+      deepLinkUri: _jsonUri(json['deepLinkUri']),
       deepLinkData: deepLinkDataJson,
+      registeredAt: _jsonDateTime(json['registeredAt']),
+      installBeginTimestampSeconds: _jsonInt(
+        json['installBeginTimestampSeconds'],
+      ),
+      referrerClickTimestampSeconds: _jsonInt(
+        json['referrerClickTimestampSeconds'],
+      ),
+      googlePlayInstantParam: _jsonBool(json['googlePlayInstantParam']),
       precision: _jsonDouble(json['precision']) ?? 0,
     );
   }
@@ -400,10 +477,37 @@ class AttriaxInstallReferrerDetails {
   final AttributionType attributionType;
 
   /// Full tracked short-link URL associated with the resolved deep link.
+  @Deprecated('Use deepLinkUri instead.')
   final String? deepLinkUrl;
 
-  /// Resolved deep-link payload data associated with the install referrer.
-  final Map<String, Object?>? deepLinkData;
+  /// Full tracked short-link URI associated with the resolved deep link.
+  final Uri? deepLinkUri;
+
+  /// Resolved deep-link payload data associated with the startup referrer.
+  final Map<String, String>? deepLinkData;
+
+  /// When the backend registered this startup referrer snapshot.
+  final DateTime? registeredAt;
+
+  /// Play install begin timestamp, when the current platform reports one.
+  final int? installBeginTimestampSeconds;
+
+  /// Play referrer click timestamp, when the current platform reports one.
+  final int? referrerClickTimestampSeconds;
+
+  /// Google Play instant-app flag, when the current platform reports one.
+  final bool? googlePlayInstantParam;
+
+  AttriaxUtmParameters? get utm {
+    final value = AttriaxUtmParameters(
+      source: source,
+      medium: medium,
+      campaign: campaign,
+      term: term,
+      content: content,
+    );
+    return value.isEmpty ? null : value;
+  }
 
   /// Confidence score from `0.0` to `1.0` for the resolved install referrer.
   ///
@@ -422,9 +526,17 @@ class AttriaxInstallReferrerDetails {
     if (adNetwork != null) 'adNetwork': adNetwork,
     if (adClickId != null) 'adClickId': adClickId,
     'attributionType': attributionType.name,
+    if (deepLinkUri != null) 'deepLinkUri': deepLinkUri.toString(),
     if (deepLinkUrl != null) 'deepLinkUrl': deepLinkUrl,
     if (deepLinkData != null && deepLinkData!.isNotEmpty)
-      'deepLinkData': _normalizeJsonMap(deepLinkData!),
+      'deepLinkData': Map<String, String>.from(deepLinkData!),
+    if (registeredAt != null) 'registeredAt': registeredAt!.toIso8601String(),
+    if (installBeginTimestampSeconds != null)
+      'installBeginTimestampSeconds': installBeginTimestampSeconds,
+    if (referrerClickTimestampSeconds != null)
+      'referrerClickTimestampSeconds': referrerClickTimestampSeconds,
+    if (googlePlayInstantParam != null)
+      'googlePlayInstantParam': googlePlayInstantParam,
     'precision': precision,
   };
 }
@@ -607,130 +719,131 @@ class AttriaxRevenueReceiptValidationResult {
   final Map<String, Object?> publicReceipt;
 }
 
-/// Raw deep-link activation captured by the SDK before backend resolution.
-class AttriaxRawDeepLinkEvent {
-  const AttriaxRawDeepLinkEvent({
-    required this.uri,
-    required this.isFirstLaunch,
-    required this.isInitialLink,
-    required this.occurredAt,
-    this.linkPath,
-  });
-
-  /// Full incoming URI observed by the SDK.
-  final Uri uri;
-
-  /// Normalized Attriax link path extracted from [uri], when available.
-  final String? linkPath;
-
-  /// Whether this deep link belongs to the installation's first launch.
-  final bool isFirstLaunch;
-
-  /// Whether this deep link was captured during [Attriax.init].
-  final bool isInitialLink;
-
-  /// Local timestamp when the SDK captured the incoming deep link.
-  final DateTime occurredAt;
-}
-
-/// Successful deep-link resolution emitted by the SDK.
 class AttriaxDeepLinkResolution {
   const AttriaxDeepLinkResolution({
-    required this.deepLink,
-    required this.isFirstLaunch,
-    required this.isDeferred,
-    required this.occurredAt,
-    this.rawEvent,
-    this.consumedAt,
+    required this.uri,
+    required this.clickedAt,
+    required this.consumedAt,
+    required this.found,
+    this.data,
+    this.utm,
   });
 
-  /// Deep-link payload matched by Attriax.
-  final AttriaxDeepLink deepLink;
+  factory AttriaxDeepLinkResolution.fromJson(Map<String, Object?> json) {
+    final utmJson = _jsonObject(json['utm']);
 
-  /// Original raw event that led to this resolution, when available.
-  final AttriaxRawDeepLinkEvent? rawEvent;
-
-  /// Whether this resolution belongs to the installation's first launch.
-  final bool isFirstLaunch;
-
-  /// Whether the resolution came from deferred app-open processing.
-  final bool isDeferred;
-
-  /// Timestamp when the deep link was marked as consumed by the backend.
-  final DateTime? consumedAt;
-
-  /// Timestamp when this resolution became visible to the SDK caller.
-  final DateTime occurredAt;
-}
-
-/// Failed deep-link resolution emitted by the SDK.
-class AttriaxDeepLinkResolutionFailure {
-  const AttriaxDeepLinkResolutionFailure({
-    required this.reason,
-    required this.isFirstLaunch,
-    required this.occurredAt,
-    this.rawEvent,
-    this.status,
-    this.requestVersion,
-    this.acceptedAt,
-  });
-
-  /// Machine-readable failure reason returned by Attriax or generated locally.
-  final String reason;
-
-  /// Original raw event that led to this failure, when available.
-  final AttriaxRawDeepLinkEvent? rawEvent;
-
-  /// Whether this failure belongs to the installation's first launch.
-  final bool isFirstLaunch;
-
-  /// Optional backend resolution status for the failed request.
-  final AttriaxDeepLinkResolutionStatus? status;
-
-  /// Backend API version that handled the failed resolution, when returned.
-  final String? requestVersion;
-
-  /// Backend acceptance timestamp for the failed resolution, when returned.
-  final DateTime? acceptedAt;
-
-  /// Timestamp when this failure became visible to the SDK caller.
-  final DateTime occurredAt;
-}
-
-/// Deferred or in-flight deep-link event emitted to subscribers.
-class AttriaxDeepLinkEvent {
-  const AttriaxDeepLinkEvent({required this.resultFuture, this.rawEvent});
-
-  final AttriaxRawDeepLinkEvent? rawEvent;
-  final Future<AttriaxDeepLinkResult> resultFuture;
-
-  bool get hasRawEvent => rawEvent != null;
-
-  /// Whether the captured raw URL belongs to an Attriax-managed subdomain.
-  bool get isAttriax {
-    final host = rawEvent?.uri.host.trim().toLowerCase();
-    return host != null && host.endsWith('.attriax.com');
+    return AttriaxDeepLinkResolution(
+      uri: _jsonUri(json['uri']) ?? Uri(path: _jsonString(json['path']) ?? '/'),
+      clickedAt: _requireJsonDateTime(json, 'clickedAt'),
+      consumedAt: _requireJsonDateTime(json, 'consumedAt'),
+      found: _jsonBool(json['found']) ?? false,
+      data: _jsonStringMap(json['data']),
+      utm: utmJson == null ? null : AttriaxUtmParameters.fromJson(utmJson),
+    );
   }
 
-  /// Waits for the backend resolution corresponding to this deep link.
-  Future<AttriaxDeepLinkResult> resolve() => resultFuture;
+  /// Canonical referrer URI when Attriax resolved one, or the incoming URI.
+  final Uri uri;
+
+  /// The original click timestamp.
+  final DateTime clickedAt;
+
+  /// The timestamp when Attriax processed and consumed the deep-link event.
+  final DateTime consumedAt;
+
+  /// Whether Attriax matched this event to a registered link.
+  final bool found;
+
+  /// Dashboard-configured key-value payload for matched links.
+  final Map<String, String>? data;
+
+  /// Resolved UTM parameters associated with the matched link.
+  final AttriaxUtmParameters? utm;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'uri': uri.toString(),
+    'clickedAt': clickedAt.toIso8601String(),
+    'consumedAt': consumedAt.toIso8601String(),
+    'found': found,
+    if (data != null && data!.isNotEmpty)
+      'data': Map<String, String>.from(data!),
+    if (utm != null && !utm!.isEmpty) 'utm': utm!.toJson(),
+  };
 }
 
-/// Final deep-link result produced for one incoming or recorded link.
-class AttriaxDeepLinkResult {
-  const AttriaxDeepLinkResult({this.rawEvent, this.resolution, this.failure})
-    : assert(
-        resolution != null || failure != null,
-        'Either resolution or failure must be provided.',
-      );
+class AttriaxDeepLinkReferrerDetails {
+  const AttriaxDeepLinkReferrerDetails({
+    required this.uri,
+    required this.receivedAt,
+    required this.clickedAt,
+    required this.consumedAt,
+    required this.trigger,
+    required this.isAttriaxDomain,
+    required this.found,
+    this.data,
+    this.utm,
+  });
 
-  final AttriaxRawDeepLinkEvent? rawEvent;
-  final AttriaxDeepLinkResolution? resolution;
-  final AttriaxDeepLinkResolutionFailure? failure;
+  final Uri uri;
+  final DateTime receivedAt;
+  final DateTime clickedAt;
+  final DateTime consumedAt;
+  final AttriaxDeepLinkTrigger trigger;
+  final bool isAttriaxDomain;
+  final bool found;
+  final Map<String, String>? data;
+  final AttriaxUtmParameters? utm;
 
-  bool get isMatched => resolution != null;
-  bool get isFailure => failure != null;
-  bool get isDeferred => resolution?.isDeferred ?? false;
+  Map<String, Object?> toJson() => <String, Object?>{
+    'uri': uri.toString(),
+    'receivedAt': receivedAt.toIso8601String(),
+    'clickedAt': clickedAt.toIso8601String(),
+    'consumedAt': consumedAt.toIso8601String(),
+    'trigger': trigger.name,
+    'isAttriaxDomain': isAttriaxDomain,
+    'found': found,
+    if (data != null && data!.isNotEmpty)
+      'data': Map<String, String>.from(data!),
+    if (utm != null && !utm!.isEmpty) 'utm': utm!.toJson(),
+  };
+}
+
+class AttriaxDeepLinkEvent {
+  AttriaxDeepLinkEvent({
+    required this.uri,
+    required this.receivedAt,
+    required this.trigger,
+    required this.isAttriaxDomain,
+    required Future<AttriaxDeepLinkResolution> resolutionFuture,
+  }) : _resolutionFuture = resolutionFuture;
+
+  /// The full URI that triggered this event.
+  final Uri uri;
+
+  /// Local timestamp when the SDK received the event.
+  final DateTime receivedAt;
+
+  /// Describes how this deep-link event was triggered.
+  final AttriaxDeepLinkTrigger trigger;
+
+  /// Whether the SDK knows this URI belongs to an Attriax-managed domain.
+  final bool isAttriaxDomain;
+
+  final Future<AttriaxDeepLinkResolution> _resolutionFuture;
+
+  bool get isDeferred => trigger == AttriaxDeepLinkTrigger.deferred;
+
+  bool get isColdStart => trigger == AttriaxDeepLinkTrigger.coldStart;
+
+  bool get isForeground => trigger == AttriaxDeepLinkTrigger.foreground;
+
+  /// Waits for backend processing of this deep-link event.
+  ///
+  /// Retryable transport failures and HTTP 5xx responses stay pending until
+  /// delivery eventually succeeds. The future completes with an error if the
+  /// backend returns a non-retryable HTTP 4xx response, or if the SDK is reset
+  /// or disposed before resolution finishes.
+  Future<AttriaxDeepLinkResolution> resolve() => _resolutionFuture;
 }
 
 class AttriaxDeepLinkResolutionResult {
@@ -778,24 +891,42 @@ class AttriaxAppOpenResult {
     required this.userId,
     required this.isNewUser,
     required this.isFirstLaunch,
+    this.installState = AttriaxInstallState.existing,
     this.requestVersion,
     this.acceptedAt,
     this.deepLink,
+    this.deepLinkClickedAt,
+    this.deepLinkConsumedAt,
+    this.originalInstallReferrer,
+    this.reinstallReferrer,
     this.installReferrer,
   });
 
   factory AttriaxAppOpenResult.fromJson(Map<String, Object?> json) {
     final deepLinkJson = _jsonObject(json['deepLink']);
     final installReferrerJson = _jsonObject(json['installReferrer']);
+    final originalInstallReferrerJson = _jsonObject(
+      json['originalInstallReferrer'],
+    );
+    final reinstallReferrerJson = _jsonObject(json['reinstallReferrer']);
 
     return AttriaxAppOpenResult(
       userId: _requireJsonString(json, 'userId'),
       isNewUser: _jsonBool(json['isNewUser']) ?? false,
       isFirstLaunch: _jsonBool(json['isFirstLaunch']) ?? false,
+      installState: _parseInstallState(_jsonString(json['installState'])),
       requestVersion: _jsonString(json['requestVersion']),
       acceptedAt: _jsonDateTime(json['acceptedAt']),
       deepLink: deepLinkJson != null
           ? AttriaxDeepLink.fromJson(deepLinkJson)
+          : null,
+      deepLinkClickedAt: _jsonDateTime(json['deepLinkClickedAt']),
+      deepLinkConsumedAt: _jsonDateTime(json['deepLinkConsumedAt']),
+      originalInstallReferrer: originalInstallReferrerJson != null
+          ? AttriaxInstallReferrerDetails.fromJson(originalInstallReferrerJson)
+          : null,
+      reinstallReferrer: reinstallReferrerJson != null
+          ? AttriaxInstallReferrerDetails.fromJson(reinstallReferrerJson)
           : null,
       installReferrer: installReferrerJson != null
           ? AttriaxInstallReferrerDetails.fromJson(installReferrerJson)
@@ -806,9 +937,14 @@ class AttriaxAppOpenResult {
   final String userId;
   final bool isNewUser;
   final bool isFirstLaunch;
+  final AttriaxInstallState installState;
   final String? requestVersion;
   final DateTime? acceptedAt;
   final AttriaxDeepLink? deepLink;
+  final DateTime? deepLinkClickedAt;
+  final DateTime? deepLinkConsumedAt;
+  final AttriaxInstallReferrerDetails? originalInstallReferrer;
+  final AttriaxInstallReferrerDetails? reinstallReferrer;
   final AttriaxInstallReferrerDetails? installReferrer;
 }
 
@@ -1115,6 +1251,27 @@ double? _jsonDouble(Object? value) => value is num ? value.toDouble() : null;
 DateTime? _jsonDateTime(Object? value) =>
     value is String ? DateTime.tryParse(value) : null;
 
+Uri? _jsonUri(Object? value) {
+  final stringValue = _jsonString(value);
+  if (stringValue == null) {
+    return null;
+  }
+
+  return Uri.tryParse(stringValue);
+}
+
+Map<String, String>? _jsonStringMap(Object? value) {
+  final json = _jsonObject(value);
+  if (json == null || json.isEmpty) {
+    return null;
+  }
+
+  return <String, String>{
+    for (final entry in json.entries)
+      entry.key: entry.value == null ? '' : entry.value.toString(),
+  };
+}
+
 DateTime _requireJsonDateTime(Map<String, Object?> json, String key) {
   final value = _jsonDateTime(json[key]);
   if (value == null) {
@@ -1142,6 +1299,20 @@ AttributionType _parseAttributionType(String? value) {
     case 'organic':
     default:
       return AttributionType.organic;
+  }
+}
+
+AttriaxInstallState _parseInstallState(String? value) {
+  switch (value) {
+    case 'new_install':
+      return AttriaxInstallState.newInstall;
+    case 'reinstall':
+      return AttriaxInstallState.reinstall;
+    case 'app_data_clear':
+      return AttriaxInstallState.appDataClear;
+    case 'existing':
+    default:
+      return AttriaxInstallState.existing;
   }
 }
 

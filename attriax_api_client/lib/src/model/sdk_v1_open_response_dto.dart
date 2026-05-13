@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:attriax_api_client/src/model/sdk_install_referrer_result_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_install_state.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -15,9 +16,14 @@ part 'sdk_v1_open_response_dto.g.dart';
 /// Properties:
 /// * [acceptedAt]
 /// * [deepLink]
+/// * [deepLinkClickedAt]
+/// * [deepLinkConsumedAt]
 /// * [installReferrer]
+/// * [installState]
 /// * [isFirstLaunch]
 /// * [isNewUser]
+/// * [originalInstallReferrer]
+/// * [reinstallReferrer]
 /// * [requestVersion]
 /// * [userId]
 @BuiltValue()
@@ -29,14 +35,30 @@ abstract class SdkV1OpenResponseDto
   @BuiltValueField(wireName: r'deepLink')
   SdkJsonDeepLinkDto? get deepLink;
 
+  @BuiltValueField(wireName: r'deepLinkClickedAt')
+  DateTime? get deepLinkClickedAt;
+
+  @BuiltValueField(wireName: r'deepLinkConsumedAt')
+  DateTime? get deepLinkConsumedAt;
+
   @BuiltValueField(wireName: r'installReferrer')
   SdkInstallReferrerResultDto? get installReferrer;
+
+  @BuiltValueField(wireName: r'installState')
+  SdkInstallState get installState;
+  // enum installStateEnum {  existing,  new_install,  reinstall,  app_data_clear,  };
 
   @BuiltValueField(wireName: r'isFirstLaunch')
   bool get isFirstLaunch;
 
   @BuiltValueField(wireName: r'isNewUser')
   bool get isNewUser;
+
+  @BuiltValueField(wireName: r'originalInstallReferrer')
+  SdkInstallReferrerResultDto? get originalInstallReferrer;
+
+  @BuiltValueField(wireName: r'reinstallReferrer')
+  SdkInstallReferrerResultDto? get reinstallReferrer;
 
   @BuiltValueField(wireName: r'requestVersion')
   String get requestVersion;
@@ -85,6 +107,20 @@ class _$SdkV1OpenResponseDtoSerializer
         specifiedType: const FullType.nullable(SdkJsonDeepLinkDto),
       );
     }
+    if (object.deepLinkClickedAt != null) {
+      yield r'deepLinkClickedAt';
+      yield serializers.serialize(
+        object.deepLinkClickedAt,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
+    if (object.deepLinkConsumedAt != null) {
+      yield r'deepLinkConsumedAt';
+      yield serializers.serialize(
+        object.deepLinkConsumedAt,
+        specifiedType: const FullType.nullable(DateTime),
+      );
+    }
     if (object.installReferrer != null) {
       yield r'installReferrer';
       yield serializers.serialize(
@@ -92,6 +128,11 @@ class _$SdkV1OpenResponseDtoSerializer
         specifiedType: const FullType.nullable(SdkInstallReferrerResultDto),
       );
     }
+    yield r'installState';
+    yield serializers.serialize(
+      object.installState,
+      specifiedType: const FullType(SdkInstallState),
+    );
     yield r'isFirstLaunch';
     yield serializers.serialize(
       object.isFirstLaunch,
@@ -102,6 +143,20 @@ class _$SdkV1OpenResponseDtoSerializer
       object.isNewUser,
       specifiedType: const FullType(bool),
     );
+    if (object.originalInstallReferrer != null) {
+      yield r'originalInstallReferrer';
+      yield serializers.serialize(
+        object.originalInstallReferrer,
+        specifiedType: const FullType.nullable(SdkInstallReferrerResultDto),
+      );
+    }
+    if (object.reinstallReferrer != null) {
+      yield r'reinstallReferrer';
+      yield serializers.serialize(
+        object.reinstallReferrer,
+        specifiedType: const FullType.nullable(SdkInstallReferrerResultDto),
+      );
+    }
     yield r'requestVersion';
     yield serializers.serialize(
       object.requestVersion,
@@ -158,6 +213,26 @@ class _$SdkV1OpenResponseDtoSerializer
           if (valueDes == null) continue;
           result.deepLink.replace(valueDes);
           break;
+        case r'deepLinkClickedAt':
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType.nullable(DateTime),
+                  )
+                  as DateTime?;
+          if (valueDes == null) continue;
+          result.deepLinkClickedAt = valueDes;
+          break;
+        case r'deepLinkConsumedAt':
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType.nullable(DateTime),
+                  )
+                  as DateTime?;
+          if (valueDes == null) continue;
+          result.deepLinkConsumedAt = valueDes;
+          break;
         case r'installReferrer':
           final valueDes =
               serializers.deserialize(
@@ -169,6 +244,15 @@ class _$SdkV1OpenResponseDtoSerializer
                   as SdkInstallReferrerResultDto?;
           if (valueDes == null) continue;
           result.installReferrer.replace(valueDes);
+          break;
+        case r'installState':
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(SdkInstallState),
+                  )
+                  as SdkInstallState;
+          result.installState = valueDes;
           break;
         case r'isFirstLaunch':
           final valueDes =
@@ -187,6 +271,30 @@ class _$SdkV1OpenResponseDtoSerializer
                   )
                   as bool;
           result.isNewUser = valueDes;
+          break;
+        case r'originalInstallReferrer':
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType.nullable(
+                      SdkInstallReferrerResultDto,
+                    ),
+                  )
+                  as SdkInstallReferrerResultDto?;
+          if (valueDes == null) continue;
+          result.originalInstallReferrer.replace(valueDes);
+          break;
+        case r'reinstallReferrer':
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType.nullable(
+                      SdkInstallReferrerResultDto,
+                    ),
+                  )
+                  as SdkInstallReferrerResultDto?;
+          if (valueDes == null) continue;
+          result.reinstallReferrer.replace(valueDes);
           break;
         case r'requestVersion':
           final valueDes =

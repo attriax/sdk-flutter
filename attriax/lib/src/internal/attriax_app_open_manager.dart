@@ -45,10 +45,10 @@ class AttriaxAppOpenManager {
     Future<void> Function(AttriaxAppOpenResult? result)? onCompleted,
   }) async {
     final context = _contextManager.requiredSnapshot;
-    late final String? rawPlatformInstallReferrer;
+    late final AttriaxInstallReferrerContext platformInstallReferrerContext;
     try {
-      rawPlatformInstallReferrer =
-          (await _platformInstallReferrerManager.load()).installReferrer;
+      platformInstallReferrerContext = await _platformInstallReferrerManager
+          .load();
     } catch (error, stackTrace) {
       _logger.error(
         'App-open request could not start because context resolution failed.',
@@ -65,7 +65,7 @@ class AttriaxAppOpenManager {
     await _tracker.schedule(
       config: _config,
       context: context,
-      rawPlatformInstallReferrer: rawPlatformInstallReferrer,
+      platformInstallReferrerContext: platformInstallReferrerContext,
       deviceIdSource: _contextManager.requireDeviceIdSource(),
       session: _sessionManager.currentSession,
       requestManager: _requestManager,

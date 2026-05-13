@@ -103,14 +103,7 @@ class AttriaxGeneratedTransport {
 
     try {
       return switch (request) {
-        AttriaxOpenRequest(:final payload) => await _sendGeneratedRequest(
-          label: label,
-          invoke: () => _sdkApi.sdkControllerOpenV1(
-            sdkV1OpenDto: payload,
-            validateStatus: _allowAnyStatus,
-          ),
-          mapper: attriaxOpenResponseFromGenerated,
-        ),
+        AttriaxOpenRequest() => await _sendJsonOpenRequest(request),
         AttriaxTrackEventRequest(:final payload) => await _sendGeneratedRequest(
           label: label,
           invoke: () => _sdkApi.sdkControllerRecordEventV1(
@@ -302,6 +295,22 @@ class AttriaxGeneratedTransport {
     );
 
     return _unwrapAckLikeResponse(label: 'crash report', response: response);
+  }
+
+  Future<AttriaxTransportSuccess> _sendJsonOpenRequest(
+    AttriaxOpenRequest request,
+  ) async {
+    final response = await _dio.post<Object?>(
+      '/api/sdk/v1/open',
+      data: attriaxNormalizeJsonMap(request.toQueueBody()),
+      options: Options(validateStatus: _allowAnyStatus),
+    );
+
+    return _unwrapJsonEnvelope(
+      label: 'open',
+      response: response,
+      mapper: attriaxOpenResponseFromJsonEnvelope,
+    );
   }
 
   Future<AttriaxTransportSuccess> _sendGeneratedRequest<T>({

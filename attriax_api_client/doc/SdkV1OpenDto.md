@@ -13,9 +13,12 @@ Name | Type | Description | Notes
 **device** | [**DeviceContextDto**](DeviceContextDto.md) |  | 
 **deviceId** | **String** |  | 
 **deviceIdSource** | **String** |  | [optional] 
+**googlePlayInstantParam** | **bool** |  | [optional] 
+**installBeginTimestampSeconds** | **num** |  | [optional] 
 **installReferrer** | **String** |  | [optional] 
 **isFirstLaunch** | **bool** |  | [optional] 
 **platform** | [**Platform**](Platform.md) |  | 
+**referrerClickTimestampSeconds** | **num** |  | [optional] 
 **sdk** | [**SdkVersionContextDto**](SdkVersionContextDto.md) |  | 
 **sessionId** | **String** |  | [optional] 
 **sessionStartedAt** | [**DateTime**](DateTime.md) |  | [optional] 

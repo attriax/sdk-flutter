@@ -80,7 +80,7 @@ void main() {
   testWidgets(
     'shows install-referrer state after loading startup attribution',
     (tester) async {
-      sdk.installReferrerResult = const AttriaxInstallReferrerDetails(
+      sdk.originalInstallReferrerResult = const AttriaxInstallReferrerDetails(
         attributionType: AttributionType.referrer,
         precision: 1,
         campaign: 'spring-launch',
@@ -119,30 +119,21 @@ void main() {
       ),
     );
 
-    final rawEvent = AttriaxRawDeepLinkEvent(
-      uri: Uri.parse('https://links.attriax.com/promo/spring-launch'),
-      linkPath: 'promo/spring-launch',
-      isFirstLaunch: true,
-      isInitialLink: true,
-      occurredAt: DateTime.utc(2026, 4, 27, 8),
-    );
     final resolution = AttriaxDeepLinkResolution(
-      deepLink: const AttriaxDeepLink(
-        path: 'promo/spring-launch',
-        data: <String, Object?>{'campaign': 'spring-launch'},
-      ),
-      rawEvent: rawEvent,
-      isFirstLaunch: true,
-      isDeferred: false,
-      occurredAt: DateTime.utc(2026, 4, 27, 8, 0, 1),
+      uri: Uri.parse('https://links.attriax.com/promo/spring-launch'),
+      clickedAt: DateTime.utc(2026, 4, 27, 8),
+      consumedAt: DateTime.utc(2026, 4, 27, 8, 0, 1),
+      found: true,
+      data: const <String, String>{'campaign': 'spring-launch'},
     );
 
     sdk.emitDeepLink(
       AttriaxDeepLinkEvent(
-        rawEvent: rawEvent,
-        resultFuture: Future<AttriaxDeepLinkResult>.value(
-          AttriaxDeepLinkResult(rawEvent: rawEvent, resolution: resolution),
-        ),
+        uri: Uri.parse('https://links.attriax.com/promo/spring-launch'),
+        receivedAt: DateTime.utc(2026, 4, 27, 8),
+        trigger: AttriaxDeepLinkTrigger.coldStart,
+        isAttriaxDomain: true,
+        resolutionFuture: Future<AttriaxDeepLinkResolution>.value(resolution),
       ),
     );
 
@@ -203,8 +194,14 @@ void main() {
 
     expect(sdk.lastRegisteredFirebaseToken, 'firebase_token_demo');
     expect(sdk.lastRegisteredApplePushToken, 'apns_token_demo');
-    expect(find.text('Firebase status: Firebase token sent to Attriax.'), findsOneWidget);
-    expect(find.text('APNs status: APNs token sent to Attriax.'), findsOneWidget);
+    expect(
+      find.text('Firebase status: Firebase token sent to Attriax.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text('APNs status: APNs token sent to Attriax.'),
+      findsOneWidget,
+    );
   });
 }
 
@@ -220,8 +217,8 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
   final AttriaxSynchronizationState _synchronizationState =
       AttriaxSynchronizationState.synchronized;
 
-  AttriaxInstallReferrerDetails? installReferrerResult;
-  AttriaxDeepLinkResult? initialDeepLinkResult;
+  AttriaxInstallReferrerDetails? originalInstallReferrerResult;
+  AttriaxDeepLinkEvent? initialDeepLinkResult;
   String? lastRegisteredFirebaseToken;
   String? lastRegisteredApplePushToken;
   @override
@@ -264,8 +261,8 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
       _synchronizationController.stream;
 
   @override
-  Future<AttriaxInstallReferrerDetails?> get installReferrer async =>
-      installReferrerResult;
+  Future<AttriaxInstallReferrerDetails?> getOriginalInstallReferrer() async =>
+      originalInstallReferrerResult;
 
   @override
   Future<void> init() async {}
@@ -342,18 +339,18 @@ class _FakeAttriaxDeepLinks implements AttriaxDeepLinks {
   final FakeExampleAttriaxSdk _sdk;
 
   @override
-  AttriaxDeepLinkResult? get initialDeepLink => _sdk.initialDeepLinkResult;
+  AttriaxDeepLinkEvent? get initialDeepLink => _sdk.initialDeepLinkResult;
 
   @override
   bool get initialDeepLinkResolved => true;
 
   @override
-  AttriaxDeepLinkResult? get latestDeepLink => null;
+  AttriaxDeepLinkEvent? get latestDeepLink => null;
 
   @override
   Stream<AttriaxDeepLinkEvent> get stream => _sdk._deepLinksController.stream;
 
   @override
-  Future<AttriaxDeepLinkResult?> waitForInitialDeepLink() =>
-      Future<AttriaxDeepLinkResult?>.value(_sdk.initialDeepLinkResult);
+  Future<AttriaxDeepLinkEvent?> waitForInitialDeepLink() =>
+      Future<AttriaxDeepLinkEvent?>.value(_sdk.initialDeepLinkResult);
 }

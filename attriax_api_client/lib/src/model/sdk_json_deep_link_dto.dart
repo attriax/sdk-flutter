@@ -4,7 +4,7 @@
 
 // ignore_for_file: unused_element
 import 'package:built_collection/built_collection.dart';
-import 'package:built_value/json_object.dart';
+import 'package:attriax_api_client/src/model/sdk_utm_payload_dto.dart';
 import 'package:built_value/built_value.dart';
 import 'package:built_value/serializer.dart';
 
@@ -15,14 +15,22 @@ part 'sdk_json_deep_link_dto.g.dart';
 /// Properties:
 /// * [data]
 /// * [path]
+/// * [uri]
+/// * [utm]
 @BuiltValue()
 abstract class SdkJsonDeepLinkDto
     implements Built<SdkJsonDeepLinkDto, SdkJsonDeepLinkDtoBuilder> {
   @BuiltValueField(wireName: r'data')
-  BuiltMap<String, JsonObject?>? get data;
+  BuiltMap<String, String>? get data;
 
   @BuiltValueField(wireName: r'path')
   String get path;
+
+  @BuiltValueField(wireName: r'uri')
+  String? get uri;
+
+  @BuiltValueField(wireName: r'utm')
+  SdkUtmPayloadDto? get utm;
 
   SdkJsonDeepLinkDto._();
 
@@ -56,7 +64,7 @@ class _$SdkJsonDeepLinkDtoSerializer
         object.data,
         specifiedType: const FullType(BuiltMap, [
           FullType(String),
-          FullType.nullable(JsonObject),
+          FullType(String),
         ]),
       );
     }
@@ -65,6 +73,20 @@ class _$SdkJsonDeepLinkDtoSerializer
       object.path,
       specifiedType: const FullType(String),
     );
+    if (object.uri != null) {
+      yield r'uri';
+      yield serializers.serialize(
+        object.uri,
+        specifiedType: const FullType(String),
+      );
+    }
+    if (object.utm != null) {
+      yield r'utm';
+      yield serializers.serialize(
+        object.utm,
+        specifiedType: const FullType(SdkUtmPayloadDto),
+      );
+    }
   }
 
   @override
@@ -98,10 +120,10 @@ class _$SdkJsonDeepLinkDtoSerializer
                     value,
                     specifiedType: const FullType(BuiltMap, [
                       FullType(String),
-                      FullType.nullable(JsonObject),
+                      FullType(String),
                     ]),
                   )
-                  as BuiltMap<String, JsonObject?>;
+                  as BuiltMap<String, String>;
           result.data.replace(valueDes);
           break;
         case r'path':
@@ -112,6 +134,24 @@ class _$SdkJsonDeepLinkDtoSerializer
                   )
                   as String;
           result.path = valueDes;
+          break;
+        case r'uri':
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(String),
+                  )
+                  as String;
+          result.uri = valueDes;
+          break;
+        case r'utm':
+          final valueDes =
+              serializers.deserialize(
+                    value,
+                    specifiedType: const FullType(SdkUtmPayloadDto),
+                  )
+                  as SdkUtmPayloadDto;
+          result.utm.replace(valueDes);
           break;
         default:
           unhandled.add(key);

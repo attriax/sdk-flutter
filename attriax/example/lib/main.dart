@@ -6,12 +6,14 @@ import 'package:flutter/material.dart';
 import 'example_app_configuration.dart';
 import 'example_attriax_sdk.dart';
 
-const String exampleDefaultAppToken = 'ax_your_app_token';
+const String exampleDefaultAppToken = 'ax_b62ee57056374b76aa09b26fa071e561';
 
 const String exampleAppToken = String.fromEnvironment(
   'ATTRIAX_APP_TOKEN',
   defaultValue: exampleDefaultAppToken,
 );
+
+const String exampleApiBaseUrl = String.fromEnvironment('ATTRIAX_API_BASE_URL');
 
 bool isExampleAppConfigured({required String appToken}) =>
     !appToken.startsWith('ax_your_');
@@ -79,6 +81,47 @@ class _ExampleDeepLinkPageArgs {
   final String navigationSource;
   final String title;
   final String description;
+}
+
+String _normalizedExampleDeepLinkPath(Uri uri) {
+  final candidate = uri.path.isNotEmpty && uri.path != '/'
+      ? uri.path
+      : uri.host;
+  final trimmed = candidate.trim();
+  if (trimmed.isEmpty) {
+    return '';
+  }
+
+  return trimmed
+      .replaceFirst(RegExp(r'^/+'), '')
+      .replaceFirst(RegExp(r'/+$'), '');
+}
+
+AttriaxDeepLink _buildExampleDeepLink(Uri uri, Map<String, String>? data) =>
+    AttriaxDeepLink(path: _normalizedExampleDeepLinkPath(uri), data: data);
+
+String _describeExampleDeepLink(Uri? uri) {
+  if (uri == null) {
+    return 'none';
+  }
+
+  final normalizedPath = _normalizedExampleDeepLinkPath(uri);
+  return normalizedPath.isEmpty ? uri.toString() : normalizedPath;
+}
+
+String _describeExampleResolution(
+  Uri? uri,
+  AttriaxDeepLinkResolution? resolution,
+) {
+  if (resolution == null) {
+    return 'none';
+  }
+
+  if (!resolution.found) {
+    return 'external or unmatched';
+  }
+
+  return _describeExampleDeepLink(uri);
 }
 
 _ExampleRouteDestination _resolveExampleRoute(AttriaxDeepLink deepLink) {
@@ -190,7 +233,10 @@ void main() async {
   final initialConfiguration =
       storedConfiguration ??
       (isExampleAppConfigured(appToken: exampleAppToken)
-          ? ExampleAppConfiguration(appToken: exampleAppToken)
+          ? ExampleAppConfiguration(
+              appToken: exampleAppToken,
+              apiBaseUrl: exampleApiBaseUrl.isEmpty ? null : exampleApiBaseUrl,
+            )
           : null);
 
   ExampleAttriaxSdk? initialSdk;
@@ -556,11 +602,10 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   String _firebaseTokenStatus = 'Not sent to Attriax yet.';
   String _apnsTokenStatus = 'Not sent to Attriax yet.';
   AttriaxInstallReferrerDetails? _startupInstallReferrer;
-  AttriaxDeepLinkResult? _startupInitialDeepLink;
+  AttriaxDeepLinkEvent? _startupInitialDeepLink;
   AttriaxDynamicLinkRecord? _lastCreatedDynamicLink;
-  AttriaxRawDeepLinkEvent? _lastRawDeepLink;
+  Uri? _lastDeepLinkUri;
   AttriaxDeepLinkResolution? _lastResolution;
-  AttriaxDeepLinkResolutionFailure? _lastFailure;
 
   @override
   void initState() {
@@ -596,50 +641,37 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
       _sdkEnabled = widget.sdk.enabled;
       _eventsEnabled = widget.sdk.eventsEnabled;
       _status = widget.sdk.enabled
-          ? 'Initialized. Startup attribution is available via installReferrer and deepLinks.'
+          ? 'Initialized. Startup attribution is available via referrer and deepLinks.'
           : 'Initialized in disabled mode.';
     });
   }
 
   Future<void> _handleDeepLinkEvent(AttriaxDeepLinkEvent event) async {
-    final rawEvent = event.rawEvent;
-    if (rawEvent != null && mounted) {
+    if (mounted) {
       setState(() {
-        _lastRawDeepLink = rawEvent;
-        _status =
-            'Received raw deep link: ${rawEvent.linkPath ?? rawEvent.uri}';
+        _lastDeepLinkUri = event.uri;
+        _status = 'Received deep link: ${_describeExampleDeepLink(event.uri)}';
       });
     }
 
     try {
-      final result = await event.resolve();
+      final resolution = await event.resolve();
       if (!mounted) {
         return;
       }
 
-      final resolution = result.resolution;
-      if (resolution != null) {
-        setState(() {
-          _lastResolution = resolution;
-          _lastFailure = null;
-          _status = 'Matched deep link: ${resolution.deepLink.path}';
-        });
+      setState(() {
+        _lastResolution = resolution;
+        _status = resolution.found
+            ? 'Matched deep link: ${_describeExampleDeepLink(event.uri)}'
+            : 'Recorded external deep link: ${_describeExampleDeepLink(event.uri)}';
+      });
 
+      if (resolution.found) {
         _openExampleDeepLink(
-          resolution.deepLink,
-          source: resolution.isDeferred
-              ? 'deferred_app_open'
-              : 'matched_conversion',
+          _buildExampleDeepLink(event.uri, resolution.data),
+          source: event.isDeferred ? 'deferred_app_open' : 'matched_conversion',
         );
-        return;
-      }
-
-      final failure = result.failure;
-      if (failure != null) {
-        setState(() {
-          _lastFailure = failure;
-          _status = 'Deep link resolution failed: ${failure.reason}';
-        });
       }
     } catch (error) {
       if (!mounted) {
@@ -656,16 +688,18 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
     try {
       final initialDeepLink = await widget.sdk.deepLinks
           .waitForInitialDeepLink();
-      final installReferrer = await widget.sdk.installReferrer;
+      final initialResolution = initialDeepLink == null
+          ? null
+          : await initialDeepLink.resolve();
+      final installReferrer = await widget.sdk.getOriginalInstallReferrer();
       if (!mounted) return;
       setState(() {
         _startupInstallReferrer = installReferrer;
         _startupInitialDeepLink = initialDeepLink;
-        _lastRawDeepLink = initialDeepLink?.rawEvent ?? _lastRawDeepLink;
-        _lastResolution = initialDeepLink?.resolution ?? _lastResolution;
-        _lastFailure = initialDeepLink?.failure;
+        _lastDeepLinkUri = initialDeepLink?.uri ?? _lastDeepLinkUri;
+        _lastResolution = initialResolution ?? _lastResolution;
         _status = installReferrer == null && initialDeepLink == null
-            ? 'Startup attribution loaded. No install referrer or initial deep link found.'
+            ? 'Startup attribution loaded. No original install referrer or initial deep link found.'
             : 'Startup attribution loaded.';
       });
     } catch (error) {
@@ -771,22 +805,34 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
   }
 
   Future<void> _recordManualDeepLink() async {
-    final event = await widget.sdk.recordDeepLink(
-      linkPath: _manualPathController.text,
+    final normalizedPath = _manualPathController.text.trim();
+    final manualUri = Uri(
+      path: normalizedPath.startsWith('/')
+          ? normalizedPath
+          : '/$normalizedPath',
+    );
+    final resolution = await widget.sdk.recordDeepLink(
+      linkPath: normalizedPath,
       source: 'package_example_manual',
       metadata: const <String, Object?>{'acceptedBy': 'example_button'},
     );
     if (!mounted) return;
     setState(() {
-      _lastRawDeepLink = event?.rawEvent ?? _lastRawDeepLink;
-      _lastResolution = event ?? _lastResolution;
-      if (event != null) {
-        _lastFailure = null;
-      }
-      _status = event == null
-          ? 'Manual deep-link resolution sent. No immediate match.'
-          : 'Manual deep-link resolution matched ${event.deepLink.path}.';
+      _lastDeepLinkUri = manualUri;
+      _lastResolution = resolution ?? _lastResolution;
+      _status = resolution == null
+          ? 'Manual deep-link report sent.'
+          : resolution.found
+          ? 'Manual deep-link resolution matched ${_describeExampleDeepLink(manualUri)}.'
+          : 'Manual deep-link recorded as external or unmatched.';
     });
+
+    if (resolution != null && resolution.found) {
+      _openExampleDeepLink(
+        _buildExampleDeepLink(manualUri, resolution.data),
+        source: 'manual_report',
+      );
+    }
   }
 
   void _toggleSdk(bool value) {
@@ -946,7 +992,7 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                         'Install referrer campaign: ${_startupInstallReferrer?.campaign ?? 'none'}',
                       ),
                       Text(
-                        'Initial deep link: ${_startupInitialDeepLink?.resolution?.deepLink.path ?? _startupInitialDeepLink?.rawEvent?.linkPath ?? _startupInitialDeepLink?.rawEvent?.uri.toString() ?? 'none'}',
+                        'Initial deep link: ${_describeExampleDeepLink(_startupInitialDeepLink?.uri)}',
                       ),
                     ],
                   ),
@@ -1180,15 +1226,17 @@ class _ExampleHomePageState extends State<ExampleHomePage> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'Last raw link: ${_lastRawDeepLink?.linkPath ?? _lastRawDeepLink?.uri.toString() ?? 'none'}',
+                        'Last deep link: ${_describeExampleDeepLink(_lastDeepLinkUri)}',
                       ),
                       Text(
-                        'Last resolution: ${_lastResolution?.deepLink.path ?? 'none'}',
+                        'Last resolution: ${_describeExampleResolution(_lastDeepLinkUri, _lastResolution)}',
                       ),
                       Text(
                         'Last created short URL: ${_lastCreatedDynamicLink?.shortUrl ?? 'none'}',
                       ),
-                      Text('Last failure: ${_lastFailure?.reason ?? 'none'}'),
+                      Text(
+                        'Last resolution found: ${_lastResolution?.found.toString() ?? 'none'}',
+                      ),
                     ],
                   ),
                 ),

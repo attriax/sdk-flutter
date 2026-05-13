@@ -13,7 +13,8 @@ sdk-flutter/
 ├── attriax_api_client/         # Generated internal transport client
 ├── attriax_flutter_platform_interface/ # Shared contracts and types
 ├── attriax_flutter_android/            # Android implementation
-└── attriax_flutter_ios/                # iOS and macOS implementation
+├── attriax_flutter_ios/                # iOS and macOS implementation
+└── attriax_flutter_windows/            # Windows implementation
 ```
 
 The internal QA app is intentionally kept outside this repository at `../flutter-internal-tester/` so it can evolve independently from the publishable SDK packages.
@@ -31,6 +32,7 @@ cd ..\attriax\example && flutter test
 cd ..\..\attriax_flutter_platform_interface && flutter test
 cd ..\attriax_flutter_android && flutter test
 cd ..\attriax_flutter_ios && flutter test
+cd ..\attriax_flutter_windows && flutter test
 ```
 
 The workspace root does not own a top-level `test/` directory, so `flutter test` should be run from the package directories that contain tests.

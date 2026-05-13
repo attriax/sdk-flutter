@@ -71,6 +71,8 @@
 	<true/>
 	<key>FlutterDeepLinkingEnabled</key>
 	<false/>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>We track this data to measure advertising performance and improve your user experience</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

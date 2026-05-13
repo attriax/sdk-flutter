@@ -565,6 +565,7 @@ sdk.SdkV1OpenResponseEnvelopeDto _openEnvelope() =>
                   (builder) => builder..path = '/offers/spring',
                 ),
               )
+              ..installState = sdk.SdkInstallState.newInstall
               ..isFirstLaunch = true
               ..isNewUser = true
               ..requestVersion = 'req_v1'
@@ -609,6 +610,7 @@ sdk.SdkV1DeepLinkResolveResponseEnvelopeDto _resolveEnvelope() =>
           sdk.SdkV1DeepLinkResolveResponseDto(
             (builder) => builder
               ..acceptedAt = DateTime.utc(2026, 1)
+              ..consumedAt = DateTime.utc(2026, 1, 1, 0, 0, 5)
               ..deepLink.replace(
                 sdk.SdkJsonDeepLinkDto(
                   (builder) => builder..path = '/offers/spring',

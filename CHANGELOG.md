@@ -5,28 +5,25 @@ All notable changes to the Attriax Flutter SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.0] - 2026-05-13
 
 ### Added
-- Versioned SDK request contract for app opens, deep-link resolution, events, and identify calls
-- Cross-platform context collection for Android, iOS, web, Windows, macOS, and Linux
-- Offline queueing, raw deep-link callbacks, conversion callbacks, and runtime enable toggles
-- Package example app in `attriax/example/` and internal tester in `../flutter-internal-tester/`
+- Reinstall attribution and app-data-clear classification in the Flutter SDK app-open flow.
+- A dedicated `referrer` facade with original-install, reinstall, session, and latest deep-link lookups.
+- Richer deep-link and startup-referrer payloads with canonical URIs, UTM data, and Android install-referrer timestamps.
 
 ### Changed
-- Flutter package versions moved to `1.0.0` before first publication
-- Public docs now point to the package example and document app-version overrides
+- Breaking: removed the public `Attriax.installReferrer` getter in favor of `Attriax.referrer.*` async methods.
+- Startup deep-link handling now exposes the initial event first and lets callers resolve it explicitly, matching the foreground stream flow.
+- Deferred deep-link startup handling now suppresses app-data-clear launches while still surfacing reinstall attribution.
+- Federated Flutter packages and the generated Dart API client now release as `0.1.0` together.
 
-### Deprecated
+## [0.0.2] - 2026-05-10
 
-### Removed
+### Added
+- Windows support through the new federated `attriax_flutter_windows` package.
 
-### Fixed
-- SDK endpoints now answer browser CORS preflights for web integrations
-
-### Security
-
-## [1.0.0] - 2026-04-21
+## [0.0.1] - 2026-05-08
 
 ### Added
 - First public-ready Attriax Flutter SDK release
@@ -34,6 +31,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dart-side support for web and desktop collection paths
 - Versioned SDK request payloads with app and package version reporting
 - Public example app and internal tester app
-
-[Unreleased]: https://github.com/yourusername/attriax/compare/v1.0.0...main
-[1.0.0]: https://github.com/yourusername/attriax/releases/tag/v1.0.0

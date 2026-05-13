@@ -77,6 +77,12 @@ class AttriaxPreferencesStore {
       'attriax.install_referrer.details';
   static const String installReferrerDetailsLoadedStorageKey =
       'attriax.install_referrer.details.loaded';
+  static const String reinstallReferrerDetailsStorageKey =
+      'attriax.referrer.reinstall.details';
+  static const String reinstallReferrerDetailsLoadedStorageKey =
+      'attriax.referrer.reinstall.details.loaded';
+  static const String deferredAppOpenDeepLinkHandledStorageKey =
+      'attriax.deep_link.deferred_app_open_handled';
   static const String sessionSnapshotStorageKey = 'attriax.session.current';
   static const String queueStorageKey = 'attriax.queue.v1';
   static const String queueDiagnosticsStorageKey =
@@ -205,6 +211,17 @@ class AttriaxPreferencesStore {
 
   Future<AttriaxInstallReferrerDetails?> readInstallReferrerDetails() async {
     final rawValue = await _readString(installReferrerDetailsStorageKey);
+    return _readInstallReferrerDetailsFromRawValue(rawValue);
+  }
+
+  Future<AttriaxInstallReferrerDetails?> readReinstallReferrerDetails() async {
+    final rawValue = await _readString(reinstallReferrerDetailsStorageKey);
+    return _readInstallReferrerDetailsFromRawValue(rawValue);
+  }
+
+  AttriaxInstallReferrerDetails? _readInstallReferrerDetailsFromRawValue(
+    String? rawValue,
+  ) {
     if (rawValue == null || rawValue.isEmpty) {
       return null;
     }
@@ -226,15 +243,31 @@ class AttriaxPreferencesStore {
   Future<void> setInstallReferrerDetails({
     required AttriaxInstallReferrerDetails? details,
   }) async {
+    await _writeInstallReferrerDetails(
+      storageKey: installReferrerDetailsStorageKey,
+      details: details,
+    );
+  }
+
+  Future<void> setReinstallReferrerDetails({
+    required AttriaxInstallReferrerDetails? details,
+  }) async {
+    await _writeInstallReferrerDetails(
+      storageKey: reinstallReferrerDetailsStorageKey,
+      details: details,
+    );
+  }
+
+  Future<void> _writeInstallReferrerDetails({
+    required String storageKey,
+    required AttriaxInstallReferrerDetails? details,
+  }) async {
     if (details == null) {
-      await _remove(installReferrerDetailsStorageKey);
+      await _remove(storageKey);
       return;
     }
 
-    await _writeString(
-      installReferrerDetailsStorageKey,
-      jsonEncode(details.toJson()),
-    );
+    await _writeString(storageKey, jsonEncode(details.toJson()));
   }
 
   Future<AttriaxStoredInstallReferrerDetails>
@@ -251,6 +284,29 @@ class AttriaxPreferencesStore {
   }) async {
     await _writeBool(installReferrerDetailsLoadedStorageKey, isLoaded);
     await setInstallReferrerDetails(details: details);
+  }
+
+  Future<AttriaxStoredInstallReferrerDetails>
+  readStoredReinstallReferrerDetails() async =>
+      AttriaxStoredInstallReferrerDetails(
+        isLoaded:
+            await _readBool(reinstallReferrerDetailsLoadedStorageKey) ?? false,
+        value: await readReinstallReferrerDetails(),
+      );
+
+  Future<void> setStoredReinstallReferrerDetails({
+    required bool isLoaded,
+    required AttriaxInstallReferrerDetails? details,
+  }) async {
+    await _writeBool(reinstallReferrerDetailsLoadedStorageKey, isLoaded);
+    await setReinstallReferrerDetails(details: details);
+  }
+
+  Future<bool> readDeferredAppOpenDeepLinkHandled() async =>
+      await _readBool(deferredAppOpenDeepLinkHandledStorageKey) ?? false;
+
+  Future<void> setDeferredAppOpenDeepLinkHandled({required bool value}) async {
+    await _writeBool(deferredAppOpenDeepLinkHandledStorageKey, value);
   }
 
   Future<AttriaxSessionSnapshot?> readSessionSnapshot() async {
@@ -332,6 +388,8 @@ class AttriaxPreferencesStore {
       platformInstallReferrerLoadedStorageKey,
       installReferrerDetailsStorageKey,
       installReferrerDetailsLoadedStorageKey,
+      reinstallReferrerDetailsStorageKey,
+      reinstallReferrerDetailsLoadedStorageKey,
       sessionSnapshotStorageKey,
       queueStorageKey,
       queueDiagnosticsStorageKey,

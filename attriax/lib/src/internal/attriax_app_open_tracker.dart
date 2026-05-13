@@ -22,7 +22,7 @@ class AttriaxAppOpenTracker {
   Future<void> schedule({
     required AttriaxConfig config,
     required AttriaxContextSnapshot context,
-    required String? rawPlatformInstallReferrer,
+    required AttriaxInstallReferrerContext platformInstallReferrerContext,
     required String deviceIdSource,
     required AttriaxSessionSnapshot? session,
     required AttriaxRequestManager requestManager,
@@ -39,7 +39,7 @@ class AttriaxAppOpenTracker {
         config: config,
         context: context,
         deviceIdSource: deviceIdSource,
-        rawPlatformInstallReferrer: rawPlatformInstallReferrer,
+        platformInstallReferrerContext: platformInstallReferrerContext,
         sessionId: session?.id,
         sessionStartedAt: session?.startedAt,
       ),

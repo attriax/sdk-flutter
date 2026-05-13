@@ -10,9 +10,14 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **acceptedAt** | [**DateTime**](DateTime.md) |  | 
 **deepLink** | [**SdkJsonDeepLinkDto**](SdkJsonDeepLinkDto.md) |  | [optional] 
+**deepLinkClickedAt** | [**DateTime**](DateTime.md) |  | [optional] 
+**deepLinkConsumedAt** | [**DateTime**](DateTime.md) |  | [optional] 
 **installReferrer** | [**SdkInstallReferrerResultDto**](SdkInstallReferrerResultDto.md) |  | [optional] 
+**installState** | [**SdkInstallState**](SdkInstallState.md) |  | 
 **isFirstLaunch** | **bool** |  | 
 **isNewUser** | **bool** |  | 
+**originalInstallReferrer** | [**SdkInstallReferrerResultDto**](SdkInstallReferrerResultDto.md) |  | [optional] 
+**reinstallReferrer** | [**SdkInstallReferrerResultDto**](SdkInstallReferrerResultDto.md) |  | [optional] 
 **requestVersion** | **String** |  | 
 **userId** | **String** |  | 
 
