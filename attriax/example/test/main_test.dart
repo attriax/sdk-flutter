@@ -1,211 +1,254 @@
 import 'dart:async';
 
 import 'package:attriax_flutter/attriax_flutter.dart';
-import 'package:attriax_flutter_example/example_app_configuration.dart';
-import 'package:attriax_flutter_example/example_attriax_sdk.dart';
+import 'package:attriax_flutter_example/example_platform_bridge.dart';
+import 'package:attriax_flutter_example/example_push_tokens.dart';
 import 'package:attriax_flutter_example/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
-const configuredExampleAppToken = 'ax_live_demo_token';
 
 void main() {
-  late FakeExampleAttriaxSdk sdk;
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-  test('detects whether the example app token is configured', () {
-    expect(isExampleAppConfigured(appToken: 'ax_your_app_token'), isFalse);
-    expect(isExampleAppConfigured(appToken: configuredExampleAppToken), isTrue);
-
-    expect(
-      () => ensureExampleAppConfigured(appToken: 'ax_your_app_token'),
-      throwsA(isA<StateError>()),
-    );
-    expect(
-      () => ensureExampleAppConfigured(appToken: configuredExampleAppToken),
-      returnsNormally,
-    );
-  });
+  late FakeAttriax sdk;
+  late FakePushTokenService pushTokens;
+  late FakePlatformBridge platformBridge;
 
   setUp(() {
-    sdk = FakeExampleAttriaxSdk();
-  });
-
-  tearDown(() async {
-    await sdk.dispose();
-  });
-
-  testWidgets('shows the setup screen when no SDK is configured', (
-    tester,
-  ) async {
-    SharedPreferences.setMockInitialValues(<String, Object>{});
-
-    await tester.pumpWidget(const AttriaxPackageExampleApp());
-    await tester.pumpAndSettle();
-
-    expect(find.text('Attriax Example Setup'), findsOneWidget);
-    expect(find.text('Save configuration and initialize'), findsOneWidget);
-  });
-
-  testWidgets('shows inline validation for an invalid API base URL', (
-    tester,
-  ) async {
-    var applyCalls = 0;
-
-    await tester.pumpWidget(
-      MaterialApp(
-        home: ExampleSetupPage(
-          onApplyConfiguration: (_) async {
-            applyCalls += 1;
-          },
-        ),
+    sdk = FakeAttriax();
+    pushTokens = FakePushTokenService(
+      ExamplePushTokenSnapshot(
+        phase: ExamplePushTokenPhase.ready,
+        summary: 'FCM token synced with Attriax.',
+        permissionStatus: 'Authorized',
+        setupHint: 'Firebase is configured for tests.',
+        fcmToken: 'fcm_token_12345',
+        lastUpdatedAt: DateTime.utc(2026, 5, 14, 9),
+        firebaseConfigured: true,
+        listeningForRefresh: true,
       ),
     );
-
-    await tester.enterText(find.byType(TextField).at(0), 'ax_live_demo_token');
-    await tester.enterText(
-      find.byType(TextField).at(1),
-      'http://api.attriax.com',
+    platformBridge = FakePlatformBridge(
+      const ExampleAppLinkDomainStatus(
+        host: 'example-test.attriax.com',
+        state: ExampleAppLinkDomainState.verified,
+        details: 'Android verified the host for this app.',
+        linkHandlingAllowed: true,
+        canOpenSettings: true,
+      ),
     );
-    await tester.tap(find.text('Save configuration and initialize'));
-    await tester.pumpAndSettle();
-
-    expect(
-      find.text('API base URL must use HTTPS unless it targets localhost.'),
-      findsOneWidget,
-    );
-    expect(applyCalls, 0);
   });
 
-  testWidgets(
-    'shows install-referrer state after loading startup attribution',
-    (tester) async {
-      sdk.originalInstallReferrerResult = const AttriaxInstallReferrerDetails(
-        attributionType: AttributionType.referrer,
-        precision: 1,
-        campaign: 'spring-launch',
-      );
+  Future<void> pumpExampleApp(WidgetTester tester) async {
+    addTearDown(() async {
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+      await sdk.dispose();
+      await pushTokens.dispose();
+    });
 
-      await tester.pumpWidget(
-        AttriaxPackageExampleApp(
-          sdk: sdk,
-          initialConfiguration: const ExampleAppConfiguration(
-            appToken: configuredExampleAppToken,
-          ),
-        ),
-      );
-      await tester.ensureVisible(find.text('Load startup attribution result'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Load startup attribution result'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Startup attribution loaded.'), findsOneWidget);
-      expect(
-        find.text('Install referrer campaign: spring-launch'),
-        findsOneWidget,
-      );
-    },
-  );
-
-  testWidgets('navigates to the promo route when a deep link match arrives', (
-    tester,
-  ) async {
     await tester.pumpWidget(
       AttriaxPackageExampleApp(
         sdk: sdk,
-        initialConfiguration: const ExampleAppConfiguration(
-          appToken: configuredExampleAppToken,
-        ),
+        pushTokenService: pushTokens,
+        platformBridge: platformBridge,
       ),
     );
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
+  Future<void> pumpRouteTransition(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
+  Future<void> tapVisibleText(WidgetTester tester, String label) async {
+    final finder = find.text(label);
+    await tester.scrollUntilVisible(
+      finder,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(finder, warnIfMissed: false);
+  }
+
+  Future<void> tapNavigationTile(WidgetTester tester, String label) async {
+    await tapVisibleText(tester, label);
+    await pumpRouteTransition(tester);
+  }
+
+  testWidgets('shows the rewritten home surface with status and page links', (
+    tester,
+  ) async {
+    await pumpExampleApp(tester);
+
+    expect(find.text('Current SDK state'), findsOneWidget);
+    expect(find.text('Deep links'), findsOneWidget);
+    expect(find.text('Token registration'), findsOneWidget);
+    expect(find.text('Events'), findsOneWidget);
+    expect(find.text('Controls'), findsOneWidget);
+    expect(find.text('Mini games'), findsOneWidget);
+    expect(find.text('Recent activity'), findsOneWidget);
+    expect(find.textContaining('FCM token synced with Attriax.'), findsWidgets);
+  });
+
+  testWidgets('deep link events navigate to the result page', (tester) async {
+    await pumpExampleApp(tester);
 
     final resolution = AttriaxDeepLinkResolution(
-      uri: Uri.parse('https://links.attriax.com/promo/spring-launch'),
-      clickedAt: DateTime.utc(2026, 4, 27, 8),
-      consumedAt: DateTime.utc(2026, 4, 27, 8, 0, 1),
+      uri: Uri.parse(
+        'https://example-test.attriax.com/example/deep-link-success',
+      ),
+      clickedAt: DateTime.utc(2026, 5, 14, 10),
+      consumedAt: DateTime.utc(2026, 5, 14, 10, 0, 1),
       found: true,
       data: const <String, String>{'campaign': 'spring-launch'},
     );
 
     sdk.emitDeepLink(
       AttriaxDeepLinkEvent(
-        uri: Uri.parse('https://links.attriax.com/promo/spring-launch'),
-        receivedAt: DateTime.utc(2026, 4, 27, 8),
-        trigger: AttriaxDeepLinkTrigger.coldStart,
+        uri: Uri.parse(
+          'https://example-test.attriax.com/example/deep-link-success',
+        ),
+        receivedAt: DateTime.utc(2026, 5, 14, 10),
+        trigger: AttriaxDeepLinkTrigger.foreground,
         isAttriaxDomain: true,
         resolutionFuture: Future<AttriaxDeepLinkResolution>.value(resolution),
       ),
     );
 
-    await tester.pumpAndSettle();
+    await pumpRouteTransition(tester);
+    await tester.pump();
 
-    expect(find.text('Promo Screen'), findsWidgets);
-    expect(find.text('Matched path: promo/spring-launch'), findsOneWidget);
-    expect(find.text('Navigation source: matched_conversion'), findsOneWidget);
-    expect(find.text('campaign: spring-launch'), findsOneWidget);
+    expect(find.text('Deep Link Result'), findsWidgets);
+    expect(find.text('Deep link matched successfully'), findsOneWidget);
+    expect(find.textContaining('spring-launch'), findsWidgets);
   });
 
-  testWidgets('shows the setup form with a placeholder initial token', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const AttriaxPackageExampleApp(
-        initialConfiguration: ExampleAppConfiguration(
-          appToken: 'ax_your_app_token',
-        ),
-      ),
+  testWidgets(
+    'token page refreshes live token status without manual send fields',
+    (tester) async {
+      await pumpExampleApp(tester);
+
+      await tapNavigationTile(tester, 'Token registration');
+
+      expect(find.text('Current token state'), findsOneWidget);
+      expect(find.text('Request permission and sync'), findsOneWidget);
+      expect(find.text('Refresh status'), findsOneWidget);
+      expect(find.text('Send Firebase token'), findsNothing);
+      expect(find.text('Send APNs token'), findsNothing);
+
+      await tapVisibleText(tester, 'Request permission and sync');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(pushTokens.refreshCalls, 2);
+      expect(pushTokens.lastRequestPermission, isTrue);
+    },
+  );
+
+  testWidgets('events page buttons call standardized helpers', (tester) async {
+    await pumpExampleApp(tester);
+
+    await tapNavigationTile(tester, 'Events');
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('purchase_revenue_field')),
+      '12.49',
     );
-    await tester.pumpAndSettle();
+    await tapVisibleText(tester, 'recordPurchase');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
-    expect(find.text('Attriax Example Setup'), findsOneWidget);
-    expect(find.text('Save configuration and initialize'), findsOneWidget);
-    expect(find.text('ax_your_app_token'), findsOneWidget);
-  });
-
-  testWidgets('sends Firebase and APNs token examples to Attriax', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      AttriaxPackageExampleApp(
-        sdk: sdk,
-        initialConfiguration: const ExampleAppConfiguration(
-          appToken: configuredExampleAppToken,
-        ),
-      ),
+    expect(
+      find.textContaining('open the Attriax dashboard now'),
+      findsOneWidget,
     );
 
     await tester.enterText(
-      find.widgetWithText(TextField, 'Firebase registration token'),
-      'firebase_token_demo',
+      find.byKey(const ValueKey<String>('ad_revenue_micros_field')),
+      '4200',
     );
-    await tester.ensureVisible(find.text('Send Firebase token'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Send Firebase token'));
-    await tester.pumpAndSettle();
+    await tapVisibleText(tester, 'ad_revenue');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tapVisibleText(tester, 'validateReceipt');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(sdk.recordedPurchases, hasLength(1));
+    expect(sdk.recordedAdRevenue, hasLength(1));
+    expect(sdk.recordedPurchases.single['revenue'], 12.49);
+    expect(sdk.recordedAdRevenue.single['revenue'], 4200);
+    expect(find.textContaining('Fake Unity-style validation'), findsOneWidget);
+  });
+
+  testWidgets('deep links page uses the typed prefix for new links', (
+    tester,
+  ) async {
+    await pumpExampleApp(tester);
+
+    await tapNavigationTile(tester, 'Deep links');
 
     await tester.enterText(
-      find.widgetWithText(TextField, 'Apple APNs device token'),
-      'apns_token_demo',
+      find.byKey(const ValueKey<String>('dynamic_link_prefix_field')),
+      'campaigns/spring',
     );
-    await tester.ensureVisible(find.text('Send APNs token'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Send APNs token'));
-    await tester.pumpAndSettle();
+    await tapVisibleText(tester, 'Create tracked link');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
 
-    expect(sdk.lastRegisteredFirebaseToken, 'firebase_token_demo');
-    expect(sdk.lastRegisteredApplePushToken, 'apns_token_demo');
-    expect(
-      find.text('Firebase status: Firebase token sent to Attriax.'),
-      findsOneWidget,
+    expect(find.textContaining('campaigns/spring'), findsWidgets);
+  });
+
+  testWidgets('recent activity opens on its own page', (tester) async {
+    await pumpExampleApp(tester);
+
+    await tapNavigationTile(tester, 'Recent activity');
+
+    expect(find.text('Recent Activity'), findsWidgets);
+    expect(find.text('Recent activity'), findsWidgets);
+  });
+
+  testWidgets('controls page crash button uses the platform bridge', (
+    tester,
+  ) async {
+    await pumpExampleApp(tester);
+
+    await tapNavigationTile(tester, 'Controls');
+    await tapVisibleText(tester, 'Trigger native crash');
+    await tester.pump();
+
+    expect(platformBridge.didTriggerNativeCrash, isTrue);
+  });
+
+  testWidgets('mini games open dedicated full-screen routes on phone layouts', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(393, 851));
+    addTearDown(() async {
+      await tester.binding.setSurfaceSize(null);
+    });
+
+    await pumpExampleApp(tester);
+
+    await tapNavigationTile(tester, 'Mini games');
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('game_player_name_field')),
+      'Taylor',
     );
-    expect(
-      find.text('APNs status: APNs token sent to Attriax.'),
-      findsOneWidget,
-    );
+    await tester.pump();
+    await tapVisibleText(tester, 'Pulse Sprint');
+    await pumpRouteTransition(tester);
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.text('Pulse Sprint'), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 }
 
-class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
+class FakeAttriax extends Fake implements Attriax {
   final StreamController<AttriaxDeepLinkEvent> _deepLinksController =
       StreamController<AttriaxDeepLinkEvent>.broadcast();
   final StreamController<AttriaxSynchronizationState>
@@ -214,15 +257,31 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
 
   bool _enabled = true;
   bool _eventsEnabled = true;
-  final AttriaxSynchronizationState _synchronizationState =
-      AttriaxSynchronizationState.synchronized;
 
-  AttriaxInstallReferrerDetails? originalInstallReferrerResult;
+  final List<Map<String, Object?>> recordedEvents = <Map<String, Object?>>[];
+  final List<Map<String, Object?>> recordedPurchases = <Map<String, Object?>>[];
+  final List<Map<String, Object?>> recordedAdRevenue = <Map<String, Object?>>[];
+
+  AttriaxInstallReferrerDetails? originalInstallReferrerResult =
+      const AttriaxInstallReferrerDetails(
+        attributionType: AttributionType.referrer,
+        precision: 1,
+        campaign: 'spring-launch',
+        source: 'attriax',
+      );
+  AttriaxInstallReferrerDetails? reinstallReferrerResult;
   AttriaxDeepLinkEvent? initialDeepLinkResult;
-  String? lastRegisteredFirebaseToken;
-  String? lastRegisteredApplePushToken;
+  AttriaxDeepLinkEvent? latestDeepLinkResult;
+
   @override
   late final AttriaxDeepLinks deepLinks = _FakeAttriaxDeepLinks(this);
+
+  @override
+  late final AttriaxSynchronization synchronization =
+      _FakeAttriaxSynchronization(this);
+
+  @override
+  late final AttriaxReferrer referrer = _FakeAttriaxReferrer(this);
 
   @override
   bool get isInitialized => true;
@@ -250,53 +309,198 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
   String? get deviceId => 'device_example_123';
 
   @override
-  AttriaxSynchronizationState get synchronizationState => _synchronizationState;
+  AttriaxSdkSnapshot? get sdkSnapshot =>
+      const AttriaxSdkSnapshot(apiVersion: 'v1', packageVersion: '0.1.0');
 
   @override
-  bool get isSynchronized =>
-      _synchronizationState == AttriaxSynchronizationState.synchronized;
+  Future<void> init({bool? enabled, bool? eventsEnabled}) async {}
 
   @override
-  Stream<AttriaxSynchronizationState> get synchronizationStates =>
-      _synchronizationController.stream;
-
-  @override
-  Future<AttriaxInstallReferrerDetails?> getOriginalInstallReferrer() async =>
-      originalInstallReferrerResult;
-
-  @override
-  Future<void> init() async {}
+  Future<void> reset() async {}
 
   @override
   Future<void> dispose() async {
-    await _deepLinksController.close();
-    await _synchronizationController.close();
+    if (!_deepLinksController.isClosed) {
+      await _deepLinksController.close();
+    }
+    if (!_synchronizationController.isClosed) {
+      await _synchronizationController.close();
+    }
   }
 
   @override
   Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
+    bool flushImmediately = false,
+  }) async {
+    recordedEvents.add(<String, Object?>{
+      'eventName': eventName,
+      'eventData': eventData,
+      'flushImmediately': flushImmediately,
+    });
+  }
+
+  @override
+  Future<void> recordPageView(
+    String pageName, {
+    String? pageClass,
+    String? pageTitle,
+    String? previousPageName,
+    Map<String, Object?>? parameters,
+    String source = 'manual',
+    bool flushImmediately = false,
+  }) async {
+    recordedEvents.add(<String, Object?>{
+      'eventName': 'page_view',
+      'pageName': pageName,
+      'pageClass': pageClass,
+      'pageTitle': pageTitle,
+      'previousPageName': previousPageName,
+      'parameters': parameters,
+      'source': source,
+    });
+  }
+
+  @override
+  Future<void> recordAdEvent(
+    AttriaxAdEventType type, {
+    String? adNetwork,
+    String? mediationNetwork,
+    String? adUnitId,
+    String? adPlacement,
+    String? adFormat,
+    String? adType,
+    String? failureReason,
+    num? loadLatencyMs,
+    String? rewardType,
+    num? rewardAmount,
+    bool? test,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
+  }) async {
+    recordedEvents.add(<String, Object?>{
+      'eventName': type.eventName,
+      'adPlacement': adPlacement,
+    });
+  }
+
+  @override
+  Future<void> recordAdRevenue({
+    required num revenue,
+    String currency = 'USD',
+    bool revenueInMicros = false,
+    String? adNetwork,
+    String? adFormat,
+    String? adType,
+    String? adPlacement,
+    bool? test,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
+  }) async {
+    recordedAdRevenue.add(<String, Object?>{
+      'revenue': revenue,
+      'currency': currency,
+      'adPlacement': adPlacement,
+    });
+  }
+
+  @override
+  Future<void> recordPurchase({
+    required num revenue,
+    String currency = 'USD',
+    bool revenueInMicros = false,
+    String? purchaseType,
+    String? productId,
+    String? transactionId,
+    String? originalTransactionId,
+    String? validationProvider,
+    String? validationEnvironment,
+    String? purchaseToken,
+    String? receiptData,
+    String? signedPayload,
+    String? receiptSignature,
+    bool? isRenewal,
+    int quantity = 1,
+    String? store,
+    String? packageName,
+    bool? voided,
+    bool? test,
+    String? validationId,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
+  }) async {
+    recordedPurchases.add(<String, Object?>{
+      'revenue': revenue,
+      'currency': currency,
+      'productId': productId,
+    });
+  }
+
+  @override
+  Future<void> recordRefund({
+    required num revenue,
+    String currency = 'USD',
+    bool revenueInMicros = false,
+    String? purchaseType,
+    String? productId,
+    String? transactionId,
+    String? originalTransactionId,
+    int quantity = 1,
+    String? store,
+    String? packageName,
+    bool? voided,
+    bool? test,
+    String? reason,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
   }) async {}
+
+  @override
+  Future<AttriaxRevenueReceiptValidationResult> validateReceipt({
+    String? provider,
+    String? environment,
+    String? transactionId,
+    String? originalTransactionId,
+    String? productId,
+    String? store,
+    String? packageName,
+    String? purchaseToken,
+    String? receiptData,
+    String? signedPayload,
+    String? receiptSignature,
+    bool? test,
+  }) async {
+    return const AttriaxRevenueReceiptValidationResult(
+      validationId: 'validation_demo',
+      status: AttriaxRevenueReceiptValidationStatus.pending,
+      publicReceipt: <String, Object?>{},
+    );
+  }
 
   @override
   Future<void> registerFirebaseMessagingToken(
     String? token, {
     Map<String, Object?>? metadata,
-  }) async {
-    lastRegisteredFirebaseToken = token;
-  }
+  }) async {}
 
   @override
   Future<void> registerApplePushToken(
     String? token, {
     Map<String, Object?>? metadata,
-  }) async {
-    lastRegisteredApplePushToken = token;
-  }
+  }) async {}
 
   @override
   Future<void> setUser(String? userId, {String? userName}) async {}
+
+  @override
+  Future<void> setUserProperty(String name, Object? value) async {}
+
+  @override
+  Future<void> setUserProperties(Map<String, Object?> properties) async {}
+
+  @override
+  Future<void> clearUserProperties({List<String>? propertyNames}) async {}
 
   @override
   Future<AttriaxCreateDynamicLinkResult> createDynamicLink({
@@ -308,13 +512,23 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
     AttriaxDynamicLinkSocialPreview? socialPreview,
     AttriaxDynamicLinkUtms? utms,
     Map<String, Object?>? data,
-  }) async => const AttriaxCreateDynamicLinkResult(
-    link: AttriaxDynamicLinkRecord(
-      id: 'link_123',
-      path: 'promo/example',
-      shortUrl: 'https://ax.example/link_123',
-    ),
-  );
+  }) async {
+    final normalizedPrefix = prefix?.trim();
+    final prefixPath = normalizedPrefix == null || normalizedPrefix.isEmpty
+        ? ''
+        : '${normalizedPrefix.replaceAll(RegExp(r'^/+|/+$'), '')}/';
+    return AttriaxCreateDynamicLinkResult(
+      link: AttriaxDynamicLinkRecord(
+        id: 'link_demo_1',
+        path: '${prefixPath}example/deep-link-success',
+        shortUrl:
+            'https://example-test.attriax.com/${prefixPath}example/deep-link-success',
+        group: group,
+        data: data,
+        createdAt: DateTime.utc(2026, 5, 14, 10),
+      ),
+    );
+  }
 
   @override
   Future<AttriaxDeepLinkResolution?> recordDeepLink({
@@ -322,13 +536,20 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
     String? linkPath,
     Map<String, Object?>? metadata,
     String source = 'manual',
-  }) async => null;
-
-  @override
-  List<NavigatorObserver> buildNavigatorObservers() =>
-      const <NavigatorObserver>[];
+  }) async {
+    return AttriaxDeepLinkResolution(
+      uri:
+          uri ??
+          Uri.parse('https://example-test.attriax.com/${linkPath ?? ''}'),
+      clickedAt: DateTime.utc(2026, 5, 14, 10),
+      consumedAt: DateTime.utc(2026, 5, 14, 10, 0, 1),
+      found: true,
+      data: const <String, String>{'source': 'manual'},
+    );
+  }
 
   void emitDeepLink(AttriaxDeepLinkEvent event) {
+    latestDeepLinkResult = event;
     _deepLinksController.add(event);
   }
 }
@@ -336,7 +557,7 @@ class FakeExampleAttriaxSdk implements ExampleAttriaxSdk {
 class _FakeAttriaxDeepLinks implements AttriaxDeepLinks {
   _FakeAttriaxDeepLinks(this._sdk);
 
-  final FakeExampleAttriaxSdk _sdk;
+  final FakeAttriax _sdk;
 
   @override
   AttriaxDeepLinkEvent? get initialDeepLink => _sdk.initialDeepLinkResult;
@@ -345,12 +566,104 @@ class _FakeAttriaxDeepLinks implements AttriaxDeepLinks {
   bool get initialDeepLinkResolved => true;
 
   @override
-  AttriaxDeepLinkEvent? get latestDeepLink => null;
+  Future<AttriaxDeepLinkEvent?> waitForInitialDeepLink() async =>
+      _sdk.initialDeepLinkResult;
 
   @override
   Stream<AttriaxDeepLinkEvent> get stream => _sdk._deepLinksController.stream;
 
   @override
-  Future<AttriaxDeepLinkEvent?> waitForInitialDeepLink() =>
-      Future<AttriaxDeepLinkEvent?>.value(_sdk.initialDeepLinkResult);
+  AttriaxDeepLinkEvent? get latestDeepLink => _sdk.latestDeepLinkResult;
+}
+
+class _FakeAttriaxSynchronization extends Fake
+    implements AttriaxSynchronization {
+  _FakeAttriaxSynchronization(this._sdk);
+
+  final FakeAttriax _sdk;
+
+  @override
+  AttriaxSynchronizationState get state =>
+      AttriaxSynchronizationState.synchronized;
+
+  @override
+  bool get isSynchronized => true;
+
+  @override
+  Stream<AttriaxSynchronizationState> get states =>
+      _sdk._synchronizationController.stream;
+}
+
+class _FakeAttriaxReferrer extends Fake implements AttriaxReferrer {
+  _FakeAttriaxReferrer(this._sdk);
+
+  final FakeAttriax _sdk;
+
+  @override
+  Future<AttriaxInstallReferrerDetails?> getOriginalInstallReferrer({
+    Duration? timeout,
+    bool safe = false,
+  }) async => _sdk.originalInstallReferrerResult;
+
+  @override
+  Future<AttriaxInstallReferrerDetails?> getReinstallReferrer({
+    Duration? timeout,
+    bool safe = false,
+  }) async => _sdk.reinstallReferrerResult;
+}
+
+class FakePushTokenService implements ExamplePushTokenService {
+  FakePushTokenService(this._snapshot);
+
+  final ExamplePushTokenSnapshot _snapshot;
+  final StreamController<ExamplePushTokenSnapshot> _controller =
+      StreamController<ExamplePushTokenSnapshot>.broadcast();
+
+  int refreshCalls = 0;
+  bool lastRequestPermission = false;
+
+  @override
+  ExamplePushTokenSnapshot get snapshot => _snapshot;
+
+  @override
+  Stream<ExamplePushTokenSnapshot> get snapshots => _controller.stream;
+
+  @override
+  Future<void> refresh({bool requestPermission = false}) async {
+    refreshCalls += 1;
+    lastRequestPermission = requestPermission;
+    _controller.add(_snapshot);
+  }
+
+  @override
+  Future<void> dispose() async {
+    if (!_controller.isClosed) {
+      await _controller.close();
+    }
+  }
+}
+
+class FakePlatformBridge implements ExamplePlatformBridge {
+  FakePlatformBridge(this.status);
+
+  ExampleAppLinkDomainStatus status;
+  bool didOpenSettings = false;
+  bool didTriggerNativeCrash = false;
+
+  @override
+  Future<ExampleAppLinkDomainStatus> getAppLinkStatus({
+    required String host,
+  }) async => status;
+
+  @override
+  Future<bool> openAppLinkSettings() async {
+    didOpenSettings = true;
+    return true;
+  }
+
+  @override
+  Future<bool> triggerNativeCrash() async {
+    didTriggerNativeCrash = true;
+    return true;
+  }
 }

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "506992298122",
+    "project_id": "attriax-example",
+    "storage_bucket": "attriax-example.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:506992298122:android:d240247c31ef56a0e3c573",
+        "android_client_info": {
+          "package_name": "com.attriax.attriax_example"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA-Cq2C6XiLQuipNo4K39WbTfIWI0u7sMA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

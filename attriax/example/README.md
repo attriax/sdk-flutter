@@ -1,50 +1,122 @@
 # attriax_flutter_example
 
-Minimal public example app for the Attriax Flutter SDK.
+Polished public example app for the Attriax Flutter SDK.
 
-## What It Shows
+This example now follows the recommended integration shape for real apps:
 
-- constructing `Attriax` with a `AttriaxConfig`
-- a first-run setup screen that stores the app token and optional API base URL locally
-- awaited `init()` as the recommended startup path, plus background startup attribution via `referrer.getOriginalInstallReferrer()` and `deepLinks.waitForInitialDeepLink()`
-- synchronization state with a clear ready / not-ready signal via `attriax.synchronization`
-- listening to the unified `deepLinks` stream and routing matched resolutions into app screens
-- reading `deepLinks.initialDeepLink`, `deepLinks.initialDeepLinkResolved`, and `deepLinks.latestDeepLink`
-- runtime SDK enable and custom-event enable toggles
-- manual examples for sending Firebase and APNs uninstall tokens into Attriax
-- manual deep-link resolution reporting
+- one global Attriax instance
+- awaited `init()` in `main()`
+- app token configured directly in source
+- page-based UI for diagnostics and demo flows instead of a setup wizard
+
+## Configuration
+
+Set the example app token in `lib/example_app_configuration.dart`.
+
+The example intentionally does not store the token in local device storage and
+does not expose a UI to edit it at runtime. Update the source file when you
+want to point the example at a different Attriax app.
+
+The same file also defines the default deep-link host used by the demo:
+
+- host: `example-test.attriax.com`
+- path: `example/deep-link-success`
+
+## What The App Shows
+
+### Home
+
+- current SDK synchronization state
+- first-launch and device identity details
+- latest install referrer details
+- latest deep-link and token-registration summaries
+- direct navigation to each focused demo page
+
+### Deep Links
+
+- current initial and latest deep-link state
+- create, copy, and share a demo Attriax link
+- manual deep-link recording helper for desktop/manual routing flows
+- dedicated result route that shows the incoming event and resolved payload
+- Android app-link verification status for `example-test.attriax.com`
+- button to open Android's “Open by default” settings when verification or user approval is missing
+
+### Token Registration
+
+- live Firebase Messaging permission and token status
+- FCM token registration into Attriax when Firebase is configured
+- APNs token status on Apple platforms when available
+- diagnostic setup hints instead of fake manual send / clear buttons
+
+### Events
+
+- custom events
+- page-view tracking
+- ad lifecycle and ad-revenue examples
+- purchase and refund examples
+- receipt validation example
+
+### Controls
+
+- SDK enabled toggle
+- custom-events enabled toggle
+- demo user identity actions
+- demo user-property actions
+- reset flow for the running example app
+
+### Mini Game
+
+- small Flutter-only reflex game
+- start, milestone, and finish gameplay events sent through Attriax
+
+## Native Host Setup Included
+
+The example host apps are wired for the demo deep-link domain:
+
+- Android manifest host: `example-test.attriax.com`
+- Android method channel: app-link verification status + open-settings action
+- iOS associated domains entitlement: `applinks:example-test.attriax.com`
+
+Important caveats still apply:
+
+- Android verification only succeeds when the domain serves a valid `assetlinks.json` for the example app signing identity.
+- iOS universal links only work when the domain serves a valid Apple App Site Association file and the app is signed with the entitlement in place.
+- The in-app domain status surface is Android-specific. iOS still relies on system behavior rather than an exposed verification API.
+
+## Firebase Messaging Caveat
+
+The token-registration page expects real Firebase app setup.
+
+Add the normal platform configuration files before expecting live push-token
+registration to succeed:
+
+- Android: `google-services.json`
+- Apple platforms: `GoogleService-Info.plist`
+
+If Firebase is not configured, the example shows a diagnostic status and setup
+hint instead of pretending token registration succeeded.
+
+## Web Note
+
+When running the example on web, allow the serving origin in the Attriax app
+configuration. For local development, that usually means allowing the Flutter
+dev-server origin you are using, for example `http://localhost:3000`.
 
 ## Run It
 
 ```bash
 cd attriax/example
 flutter run
-flutter test
 ```
 
-On first launch, enter a real Attriax app token in the setup screen. The
-example stores that token locally on the device so later runs do not require
-dart-defines or source edits. You can also override the API base URL there
-when testing against a non-production backend.
+## Validate It
 
-When you run the example on web, the Attriax app configuration must allow the
-browser origin you are serving from. Add each dev or production origin in the
-Attriax dashboard setup page under the Web section's allowed browser origins,
-for example `http://localhost:3000` for local Flutter web runs. Without that,
-browser requests will fail CORS even when the app token itself is valid.
+```bash
+cd attriax/example
+flutter analyze .
+flutter test test/main_test.dart
+```
 
-The example runner files include the Android and iOS host-side deep-link setup
-used by Attriax. Desktop platforms are still manual: if your app accepts a URL
-on macOS, Linux, or Windows, forward it into the SDK with
-`recordDeepLink(...)`.
-
-The home screen also includes an uninstall-token demo card. It does not fetch
-real Firebase or APNs tokens itself; instead it shows the exact Attriax SDK
-methods to call and lets you manually send placeholder values so you can verify
-the request flow without adding Firebase setup to the public example.
-
-The widget tests in `test/main_test.dart` cover the first-run setup shell plus
-the two most important demo flows: loading startup attribution state and
-routing a matched deep link into the demo screens.
-
-If you need to validate a non-blocking startup flow, switch the example app's `main()` to use `unawaited(attriax.init())` intentionally.
+If you intentionally want to demo a fire-and-forget startup path instead, make
+that change explicitly in `main()`; the example defaults to awaited
+initialization on purpose.

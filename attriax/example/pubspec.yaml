@@ -13,7 +13,9 @@ dependencies:
     sdk: flutter
   attriax_flutter:
     path: ..
-  shared_preferences: ^2.5.3
+  firebase_core: ^4.8.0
+  firebase_messaging: ^16.2.1
+  share_plus: ^13.1.0
 
 dev_dependencies:
   flutter_lints: ^6.0.0
