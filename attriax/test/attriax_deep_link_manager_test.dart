@@ -354,6 +354,41 @@ void main() {
         expect(manager.latestDeepLink, isNull);
       },
     );
+
+    test(
+      'forwards normalized linkPath when automatic deep links are received',
+      () async {
+        final source = _InitialDeepLinkSource(
+          Uri.parse('myapp://promo/launch?utm_source=test'),
+        );
+        final manager = AttriaxDeepLinkManager(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          contextManager: contextManager,
+          listener: AttriaxDeepLinkListener(deepLinkSource: source),
+          eventHub: eventHub,
+          preferencesStore: AttriaxPreferencesStore(prefsOverride: prefs),
+          requestManager: requestManager,
+          logger: AttriaxLogger(enableDebugLogs: false),
+        );
+        addTearDown(manager.stop);
+
+        await manager.start();
+        await pumpEventQueue();
+
+        expect(
+          requestManager.lastRequest,
+          isA<AttriaxResolveDeepLinkRequest>(),
+        );
+        expect(
+          requestManager.lastRequest?.toQueueBody()['linkPath'],
+          'promo/launch',
+        );
+        expect(
+          requestManager.lastRequest?.toQueueBody()['rawUrl'],
+          'myapp://promo/launch?utm_source=test',
+        );
+      },
+    );
   });
 }
 

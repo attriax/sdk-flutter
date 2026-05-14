@@ -2,23 +2,23 @@ import 'dart:async';
 
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 
-import 'attriax_app_open_manager.dart';
+import 'attriax_app_open_monitor.dart';
 import 'attriax_deep_link_manager.dart';
 import 'attriax_preferences_store.dart';
 
 class AttriaxReferrerManager {
   AttriaxReferrerManager({
     required AttriaxPreferencesStore preferencesStore,
-    required AttriaxAppOpenManager appOpenManager,
+    required AttriaxAppOpenMonitor appOpenMonitor,
     required AttriaxDeepLinkManager deepLinkManager,
     String? Function()? currentSessionIdProvider,
   }) : _preferencesStore = preferencesStore,
-       _appOpenManager = appOpenManager,
+       _appOpenMonitor = appOpenMonitor,
        _deepLinkManager = deepLinkManager,
        _currentSessionIdProvider = currentSessionIdProvider ?? _noSessionId;
 
   final AttriaxPreferencesStore _preferencesStore;
-  final AttriaxAppOpenManager _appOpenManager;
+  final AttriaxAppOpenMonitor _appOpenMonitor;
   final AttriaxDeepLinkManager _deepLinkManager;
   final String? Function() _currentSessionIdProvider;
 
@@ -247,7 +247,7 @@ class AttriaxReferrerManager {
 
   Future<void> _observeInstallReferrers(int generation) async {
     try {
-      final result = await _appOpenManager.waitForScheduledResult();
+      final result = await _appOpenMonitor.waitForTrackedResult();
       if (generation != _installObservationGeneration) {
         return;
       }
@@ -290,7 +290,7 @@ class AttriaxReferrerManager {
         return;
       }
 
-      await _appOpenManager.waitForScheduledResult();
+      await _appOpenMonitor.waitForTrackedResult();
       if (!_isSessionObservationCurrent(generation, sessionId) ||
           _sessionReferrerResolved) {
         return;

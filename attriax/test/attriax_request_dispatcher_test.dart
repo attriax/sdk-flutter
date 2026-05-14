@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
+import 'package:attriax_flutter/src/internal/attriax_app_open_monitor.dart';
 import 'package:attriax_flutter/src/internal/attriax_generated_transport.dart';
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
@@ -22,6 +23,7 @@ void main() {
     late FakeConnectivityPlatform connectivityPlatform;
     late Connectivity connectivity;
     late FakeTransport transport;
+    late FakeAppOpenMonitor appOpenMonitor;
     late AttriaxRequestDispatcher dispatcher;
     late AttriaxQueuedRequest queuedRequest;
     late DateTime now;
@@ -38,9 +40,11 @@ void main() {
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
       transport = FakeTransport();
+      appOpenMonitor = FakeAppOpenMonitor();
       dispatcher = AttriaxRequestDispatcher(
         transport: transport,
         connectivity: connectivity,
+        appOpenMonitor: appOpenMonitor,
         queueManager: queueManager,
         logger: AttriaxLogger(enableDebugLogs: false),
       );
@@ -410,15 +414,15 @@ void main() {
     });
 
     test(
-      'waits for app-open scheduling and sends app-open before cached batchable requests',
+      'waits for a successful app-open before cached batchable requests',
       () async {
-        var isAppOpenScheduled = false;
+        appOpenMonitor.hasSuccessfulResult = false;
         dispatcher = AttriaxRequestDispatcher(
           transport: transport,
           connectivity: connectivity,
+          appOpenMonitor: appOpenMonitor,
           queueManager: queueManager,
           logger: AttriaxLogger(enableDebugLogs: false),
-          isAppOpenScheduled: () => isAppOpenScheduled,
         );
         final openRequest = AttriaxQueuedRequest(
           id: 'req_open',
@@ -451,7 +455,6 @@ void main() {
         expect(await queueManager.readAll(), hasLength(1));
 
         await queueManager.enqueue(openRequest);
-        isAppOpenScheduled = true;
         transport.sendResult = AttriaxTransportSuccess(
           statusCode: 200,
           response: AttriaxOpenApiResponse(
@@ -469,6 +472,7 @@ void main() {
           response: AttriaxAckResponse(success: true),
         );
 
+        appOpenMonitor.hasSuccessfulResult = true;
         await dispatcher.flush();
 
         expect(transport.sentRequests, hasLength(1));
@@ -478,6 +482,141 @@ void main() {
           transport.sentBatches.single.map((request) => request.id).toList(),
           <String>['req_1'],
         );
+        expect(await queueManager.readAll(), isEmpty);
+      },
+    );
+
+    test(
+      'keeps later requests queued until an app-open succeeds after a retryable failure',
+      () async {
+        appOpenMonitor.hasSuccessfulResult = false;
+        dispatcher = AttriaxRequestDispatcher(
+          transport: transport,
+          connectivity: connectivity,
+          appOpenMonitor: appOpenMonitor,
+          queueManager: queueManager,
+          logger: AttriaxLogger(enableDebugLogs: false),
+        );
+
+        final openRequest = AttriaxQueuedRequest(
+          id: 'req_open',
+          request: attriaxBuildOpenRequest(
+            config: const AttriaxConfig(appToken: 'ax_test_token'),
+            context: const AttriaxContextSnapshot(
+              platform: AttriaxPlatformType.android,
+              deviceId: 'device_1',
+              isFirstLaunch: true,
+              sdk: AttriaxSdkSnapshot(
+                apiVersion: attriaxSdkApiVersion,
+                packageVersion: attriaxSdkPackageVersion,
+              ),
+              app: AttriaxAppSnapshot(
+                version: '1.0.0',
+                buildNumber: '1',
+                packageName: 'com.attriax.test',
+              ),
+              device: AttriaxDeviceSnapshot(model: 'Pixel', osVersion: '14'),
+            ),
+            deviceIdSource: 'android_ssaid',
+          ),
+          createdAt: now.subtract(const Duration(seconds: 31)),
+        );
+
+        await queueManager.writeAll(<AttriaxQueuedRequest>[
+          openRequest,
+          queuedRequest,
+        ]);
+
+        transport.sendError = const AttriaxTransportHttpException(
+          statusCode: 500,
+        );
+
+        await dispatcher.flush();
+
+        expect(transport.sentRequests, hasLength(1));
+        expect(transport.sentBatches, isEmpty);
+
+        final queuedAfterFailure = await queueManager.readAll();
+        expect(queuedAfterFailure, hasLength(2));
+        expect(queuedAfterFailure.first.request, isA<AttriaxOpenRequest>());
+        expect(queuedAfterFailure.first.attemptCount, 1);
+        expect(queuedAfterFailure.last.id, queuedRequest.id);
+
+        transport.sendError = null;
+        transport.sendResult = AttriaxTransportSuccess(
+          statusCode: 200,
+          response: AttriaxOpenApiResponse(
+            result: AttriaxAppOpenResult(
+              userId: 'user_1',
+              isNewUser: true,
+              isFirstLaunch: true,
+              requestVersion: 'v1',
+              acceptedAt: now,
+            ),
+          ),
+        );
+        transport.sendBatchResult = const AttriaxTransportSuccess(
+          statusCode: 202,
+          response: AttriaxAckResponse(success: true),
+        );
+
+        appOpenMonitor.hasSuccessfulResult = true;
+        await dispatcher.flush();
+
+        expect(transport.sentRequests, hasLength(2));
+        expect(transport.sentBatches, hasLength(1));
+        expect(await queueManager.readAll(), isEmpty);
+      },
+    );
+
+    test(
+      'sends deep-link resolution requests before app-open succeeds',
+      () async {
+        appOpenMonitor.hasSuccessfulResult = false;
+        dispatcher = AttriaxRequestDispatcher(
+          transport: transport,
+          connectivity: connectivity,
+          appOpenMonitor: appOpenMonitor,
+          queueManager: queueManager,
+          logger: AttriaxLogger(enableDebugLogs: false),
+        );
+
+        final resolveRequest = AttriaxQueuedRequest(
+          id: 'req_resolve',
+          request: attriaxBuildResolveDeepLinkRequest(
+            appToken: 'ax_test_token',
+            deviceId: 'device_1',
+            deviceIdSource: 'android_ssaid',
+            platform: AttriaxPlatformType.android,
+            source: 'attriax_sdk',
+            isFirstLaunch: true,
+            rawUrl: 'https://example.com/promo/launch',
+            linkPath: 'promo/launch',
+          ),
+          createdAt: now.subtract(const Duration(seconds: 30)),
+        );
+
+        await queueManager.writeAll(<AttriaxQueuedRequest>[resolveRequest]);
+        transport.sendResult = const AttriaxTransportSuccess(
+          statusCode: 200,
+          response: AttriaxResolveDeepLinkApiResponse(
+            result: AttriaxDeepLinkResolutionResult(
+              matched: true,
+              status: AttriaxDeepLinkResolutionStatus.matched,
+              isFirstLaunch: true,
+              deepLink: AttriaxDeepLink(path: 'promo/launch'),
+            ),
+          ),
+        );
+
+        await dispatcher.flush();
+
+        expect(transport.sentRequests, hasLength(1));
+        expect(
+          transport.sentRequests.single,
+          isA<AttriaxResolveDeepLinkRequest>(),
+        );
+        expect(transport.sentBatches, isEmpty);
         expect(await queueManager.readAll(), isEmpty);
       },
     );
@@ -551,4 +690,14 @@ class FakeConnectivityPlatform extends ConnectivityPlatform {
       const Stream<List<ConnectivityResult>>.empty();
 
   Future<void> dispose() async {}
+}
+
+class FakeAppOpenMonitor implements AttriaxAppOpenMonitor {
+  FakeAppOpenMonitor({this.hasSuccessfulResult = true});
+
+  @override
+  bool hasSuccessfulResult;
+
+  @override
+  Future<AttriaxAppOpenResult?> waitForTrackedResult() async => null;
 }

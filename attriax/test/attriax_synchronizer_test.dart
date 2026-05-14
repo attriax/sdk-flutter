@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
+import 'package:attriax_flutter/src/internal/attriax_app_open_monitor.dart';
 import 'package:attriax_flutter/src/internal/attriax_generated_transport.dart';
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
@@ -20,6 +21,7 @@ void main() {
     late Connectivity connectivity;
     late AttriaxPreferencesStore preferencesStore;
     late FakeTransport transport;
+    late FakeAppOpenMonitor appOpenMonitor;
     late AttriaxSynchronizer synchronizer;
 
     setUp(() async {
@@ -30,9 +32,11 @@ void main() {
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
       transport = FakeTransport();
+      appOpenMonitor = FakeAppOpenMonitor();
       synchronizer = AttriaxSynchronizer(
         transport: transport,
         connectivity: connectivity,
+        appOpenMonitor: appOpenMonitor,
         preferencesStore: preferencesStore,
         maxQueueSize: 10,
         eventFlushInterval: const Duration(milliseconds: 40),
@@ -167,4 +171,12 @@ class FakeConnectivityPlatform extends ConnectivityPlatform {
       const Stream<List<ConnectivityResult>>.empty();
 
   Future<void> dispose() async {}
+}
+
+class FakeAppOpenMonitor implements AttriaxAppOpenMonitor {
+  @override
+  bool get hasSuccessfulResult => true;
+
+  @override
+  Future<AttriaxAppOpenResult?> waitForTrackedResult() async => null;
 }

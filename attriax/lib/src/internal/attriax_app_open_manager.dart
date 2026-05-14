@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 
+import 'attriax_app_open_monitor.dart';
 import 'attriax_app_open_tracker.dart';
 import 'attriax_context_manager.dart';
 import 'attriax_logger.dart';
@@ -10,7 +11,7 @@ import 'attriax_request_manager.dart';
 import 'attriax_session_manager.dart';
 
 /// Owns app-open scheduling, result access, and app-open side effects.
-class AttriaxAppOpenManager {
+class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
   AttriaxAppOpenManager({
     required AttriaxConfig config,
     required AttriaxContextManager contextManager,
@@ -39,6 +40,8 @@ class AttriaxAppOpenManager {
   bool _isResultObservationScheduled = false;
 
   bool get didSchedule => _tracker.didSchedule;
+  @override
+  bool get hasSuccessfulResult => _tracker.lastResult != null;
   AttriaxAppOpenResult? get lastResult => _tracker.lastResult;
 
   Future<void> schedule({
@@ -81,7 +84,8 @@ class AttriaxAppOpenManager {
 
   Future<AttriaxAppOpenResult?> waitForResult() => _tracker.waitForResult();
 
-  Future<AttriaxAppOpenResult?> waitForScheduledResult() async {
+  @override
+  Future<AttriaxAppOpenResult?> waitForTrackedResult() async {
     if (!_tracker.didSchedule) {
       final scheduledCompleter = _scheduledCompleter ??= Completer<void>();
       await scheduledCompleter.future;
@@ -93,6 +97,9 @@ class AttriaxAppOpenManager {
 
     return _tracker.waitForResult();
   }
+
+  Future<AttriaxAppOpenResult?> waitForScheduledResult() =>
+      waitForTrackedResult();
 
   Future<void> reset() async {
     _completeScheduled();

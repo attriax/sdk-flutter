@@ -197,6 +197,7 @@ class AttriaxDeepLinkManager {
           source: 'attriax_sdk',
           isFirstLaunch: _contextManager.isFirstLaunch,
           rawUrl: uri.toString(),
+          linkPath: _resolver.extractLinkPathFromUri(uri),
           metadata: <String, Object?>{
             'isInitialLink': isInitialLink,
             'queryParameters': uri.queryParametersAll,

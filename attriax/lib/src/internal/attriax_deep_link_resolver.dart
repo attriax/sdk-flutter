@@ -37,10 +37,18 @@ class AttriaxDeepLinkResolver {
   }
 
   String? extractLinkPathFromUri(Uri uri) {
-    final candidate = uri.path.isNotEmpty && uri.path != '/'
-        ? uri.path
-        : uri.host;
-    return normalizeLinkPath(candidate);
+    final normalizedPath = normalizeLinkPath(uri.path);
+
+    if (uri.isScheme('http') || uri.isScheme('https')) {
+      return normalizedPath ?? normalizeLinkPath(uri.host);
+    }
+
+    final normalizedHost = normalizeLinkPath(uri.host);
+    if (normalizedHost != null && normalizedPath != null) {
+      return normalizeLinkPath('$normalizedHost/$normalizedPath');
+    }
+
+    return normalizedPath ?? normalizedHost;
   }
 
   bool isAttriaxDomain(Uri uri) {

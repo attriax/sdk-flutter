@@ -13,15 +13,24 @@ dependencies:
     sdk: flutter
   attriax_flutter:
     path: ..
+  attriax_flutter_platform_interface:
+    path: ../../attriax_flutter_platform_interface
   firebase_core: ^4.8.0
   firebase_messaging: ^16.2.1
   share_plus: ^13.1.0
 
 dev_dependencies:
+  attriax_api_client:
+    path: ../../attriax_api_client
+  connectivity_plus: ^7.1.1
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
   flutter_test:
     sdk: flutter
+  http: ^1.3.0
+  integration_test:
+    sdk: flutter
+  shared_preferences: ^2.5.5
 
 flutter_launcher_icons:
   android: true

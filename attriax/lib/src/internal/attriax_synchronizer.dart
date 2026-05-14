@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 
 import 'attriax_api_models.dart';
+import 'attriax_app_open_monitor.dart';
 import 'attriax_generated_transport.dart';
 import 'attriax_id_generator.dart';
 import 'attriax_logger.dart';
@@ -17,11 +18,11 @@ class AttriaxSynchronizer {
   AttriaxSynchronizer({
     required AttriaxGeneratedTransport transport,
     required Connectivity connectivity,
+    required AttriaxAppOpenMonitor appOpenMonitor,
     required AttriaxPreferencesStore preferencesStore,
     required int maxQueueSize,
     required Duration eventFlushInterval,
     required AttriaxLogger logger,
-    bool Function()? isAppOpenScheduled,
     void Function(AttriaxApiRequest request, int statusCode)?
     onRequestDelivered,
     void Function(AttriaxApiRequest request, Object error)? onRequestFailed,
@@ -35,9 +36,9 @@ class AttriaxSynchronizer {
     _dispatcher = AttriaxRequestDispatcher(
       transport: transport,
       connectivity: connectivity,
+      appOpenMonitor: appOpenMonitor,
       queueManager: _queueManager,
       logger: logger,
-      isAppOpenScheduled: isAppOpenScheduled,
       onDelivered: onRequestDelivered,
       onFailed: (kind, error) {
         _lastFlushHadFailure = true;

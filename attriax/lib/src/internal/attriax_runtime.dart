@@ -92,7 +92,7 @@ class AttriaxRuntime {
     );
     _referrerManager = AttriaxReferrerManager(
       preferencesStore: _preferencesStore,
-      appOpenManager: _appOpenManager,
+      appOpenMonitor: _appOpenManager,
       deepLinkManager: _deepLinkManager,
       currentSessionIdProvider: () => _sessionManager.currentSession?.id,
     );
@@ -257,11 +257,11 @@ class AttriaxRuntime {
     _synchronizer ??= AttriaxSynchronizer(
       transport: _transport!,
       connectivity: _connectivity,
+      appOpenMonitor: _appOpenManager,
       preferencesStore: _preferencesStore,
       maxQueueSize: config.maxQueueSize,
       eventFlushInterval: config.eventFlushInterval,
       logger: _logger,
-      isAppOpenScheduled: () => _appOpenManager.didSchedule,
     );
     _requestManager.bindSynchronizer(_synchronizer!);
     _synchronizer!.onStateChanged = _eventHub.emitSynchronizationState;

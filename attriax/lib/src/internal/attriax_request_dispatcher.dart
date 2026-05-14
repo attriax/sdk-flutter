@@ -4,6 +4,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 
 import 'attriax_api_models.dart';
+import 'attriax_app_open_monitor.dart';
 import 'attriax_generated_transport.dart';
 import 'attriax_logger.dart';
 import 'attriax_queue.dart';
@@ -43,22 +44,22 @@ class AttriaxRequestDispatcher {
   AttriaxRequestDispatcher({
     required AttriaxGeneratedTransport transport,
     required Connectivity connectivity,
+    required AttriaxAppOpenMonitor appOpenMonitor,
     required AttriaxQueueManager queueManager,
     required AttriaxLogger logger,
-    bool Function()? isAppOpenScheduled,
     this.onDelivered,
     this.onFailed,
   }) : _transport = transport,
        _connectivity = connectivity,
+       _appOpenMonitor = appOpenMonitor,
        _queueManager = queueManager,
-       _logger = logger,
-       _isAppOpenScheduled = isAppOpenScheduled ?? _appOpenScheduledByDefault;
+       _logger = logger;
 
   final AttriaxGeneratedTransport _transport;
   final Connectivity _connectivity;
+  final AttriaxAppOpenMonitor _appOpenMonitor;
   final AttriaxQueueManager _queueManager;
   final AttriaxLogger _logger;
-  final bool Function() _isAppOpenScheduled;
 
   /// Called after a request is successfully delivered to the server.
   /// Receives the request kind and the HTTP status code.
@@ -151,7 +152,7 @@ class AttriaxRequestDispatcher {
 
         if (!_canDispatchRequest(request)) {
           _logger.verbose(
-            'Deferring queued ${attriaxApiRequestLabel(request)} request until app-open is scheduled.',
+            'Deferring queued ${attriaxApiRequestLabel(request)} request until app-open succeeds.',
           );
           remaining.add(queuedRequest);
           i += 1;
@@ -418,11 +419,11 @@ class AttriaxRequestDispatcher {
   };
 
   bool _canDispatchRequest(AttriaxApiRequest request) {
-    if (_isAppOpenRequest(request)) {
+    if (_isAppOpenRequest(request) || _isDeepLinkResolveRequest(request)) {
       return true;
     }
 
-    return _isAppOpenScheduled();
+    return _appOpenMonitor.hasSuccessfulResult;
   }
 
   bool _isWaitingForRetryWindow(AttriaxQueuedRequest queuedRequest) {
@@ -550,6 +551,9 @@ class AttriaxRequestDispatcher {
   bool _isAppOpenRequest(AttriaxApiRequest request) =>
       request is AttriaxOpenRequest;
 
+  bool _isDeepLinkResolveRequest(AttriaxApiRequest request) =>
+      request is AttriaxResolveDeepLinkRequest;
+
   void _clearHandlers(
     String requestId, {
     required Object error,
@@ -559,5 +563,3 @@ class AttriaxRequestDispatcher {
     _errorHandlers.remove(requestId)?.call(error, stackTrace);
   }
 }
-
-bool _appOpenScheduledByDefault() => true;

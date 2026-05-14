@@ -117,6 +117,8 @@ MaterialApp(
 
 `await attriax.init()` only waits for local SDK startup work such as restoring persisted state, registering listeners, and starting the queue. It does not wait for the network-backed app-open request to finish.
 
+The SDK still enforces app-open-first delivery behind the scenes: it sends the app-open request before any other queued SDK request, and if app-open fails, later queued requests stay deferred until an app-open request succeeds.
+
 Do not block your splash screen, router construction, `runApp()`, or other first-frame startup work on `referrer.getOriginalInstallReferrer()` or `deepLinks.waitForInitialDeepLink()`. Those results may wait on cached or network-backed attribution work and should normally be handled in background tasks after `init()` resolves.
 
 Use `attriax.referrer.getReinstallReferrer()` when you specifically need reinstall attribution, `getSessionReferrer()` for the deep link that opened the current session, and `getLatestDeepLinkReferrer()` for the most recent handled deep-link event.
