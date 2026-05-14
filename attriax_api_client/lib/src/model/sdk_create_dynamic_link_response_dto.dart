@@ -4,157 +4,55 @@
 
 // ignore_for_file: unused_element
 import 'package:attriax_api_client/src/model/sdk_dynamic_link_record_dto.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'sdk_create_dynamic_link_response_dto.g.dart';
 
-/// SdkCreateDynamicLinkResponseDto
-///
-/// Properties:
-/// * [acceptedAt]
-/// * [link]
-/// * [requestVersion]
-@BuiltValue()
-abstract class SdkCreateDynamicLinkResponseDto
-    implements
-        Built<
-          SdkCreateDynamicLinkResponseDto,
-          SdkCreateDynamicLinkResponseDtoBuilder
-        > {
-  @BuiltValueField(wireName: r'acceptedAt')
-  DateTime get acceptedAt;
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class SdkCreateDynamicLinkResponseDto {
+  /// Returns a new [SdkCreateDynamicLinkResponseDto] instance.
+  SdkCreateDynamicLinkResponseDto({
+    required this.acceptedAt,
 
-  @BuiltValueField(wireName: r'link')
-  SdkDynamicLinkRecordDto get link;
+    required this.link,
 
-  @BuiltValueField(wireName: r'requestVersion')
-  String get requestVersion;
+    required this.requestVersion,
+  });
 
-  SdkCreateDynamicLinkResponseDto._();
+  @JsonKey(name: r'acceptedAt', required: true, includeIfNull: false)
+  final DateTime acceptedAt;
 
-  factory SdkCreateDynamicLinkResponseDto([
-    void updates(SdkCreateDynamicLinkResponseDtoBuilder b),
-  ]) = _$SdkCreateDynamicLinkResponseDto;
+  @JsonKey(name: r'link', required: true, includeIfNull: false)
+  final SdkDynamicLinkRecordDto link;
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(SdkCreateDynamicLinkResponseDtoBuilder b) => b;
-
-  @BuiltValueSerializer(custom: true)
-  static Serializer<SdkCreateDynamicLinkResponseDto> get serializer =>
-      _$SdkCreateDynamicLinkResponseDtoSerializer();
-}
-
-class _$SdkCreateDynamicLinkResponseDtoSerializer
-    implements PrimitiveSerializer<SdkCreateDynamicLinkResponseDto> {
-  @override
-  final Iterable<Type> types = const [
-    SdkCreateDynamicLinkResponseDto,
-    _$SdkCreateDynamicLinkResponseDto,
-  ];
+  @JsonKey(name: r'requestVersion', required: true, includeIfNull: false)
+  final String requestVersion;
 
   @override
-  final String wireName = r'SdkCreateDynamicLinkResponseDto';
-
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    SdkCreateDynamicLinkResponseDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'acceptedAt';
-    yield serializers.serialize(
-      object.acceptedAt,
-      specifiedType: const FullType(DateTime),
-    );
-    yield r'link';
-    yield serializers.serialize(
-      object.link,
-      specifiedType: const FullType(SdkDynamicLinkRecordDto),
-    );
-    yield r'requestVersion';
-    yield serializers.serialize(
-      object.requestVersion,
-      specifiedType: const FullType(String),
-    );
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SdkCreateDynamicLinkResponseDto &&
+          other.acceptedAt == acceptedAt &&
+          other.link == link &&
+          other.requestVersion == requestVersion;
 
   @override
-  Object serialize(
-    Serializers serializers,
-    SdkCreateDynamicLinkResponseDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
-  }
+  int get hashCode =>
+      acceptedAt.hashCode + link.hashCode + requestVersion.hashCode;
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required SdkCreateDynamicLinkResponseDtoBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'acceptedAt':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(DateTime),
-                  )
-                  as DateTime;
-          result.acceptedAt = valueDes;
-          break;
-        case r'link':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(SdkDynamicLinkRecordDto),
-                  )
-                  as SdkDynamicLinkRecordDto;
-          result.link.replace(valueDes);
-          break;
-        case r'requestVersion':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.requestVersion = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+  factory SdkCreateDynamicLinkResponseDto.fromJson(Map<String, dynamic> json) =>
+      _$SdkCreateDynamicLinkResponseDtoFromJson(json);
+
+  Map<String, dynamic> toJson() =>
+      _$SdkCreateDynamicLinkResponseDtoToJson(this);
 
   @override
-  SdkCreateDynamicLinkResponseDto deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = SdkCreateDynamicLinkResponseDtoBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
 }

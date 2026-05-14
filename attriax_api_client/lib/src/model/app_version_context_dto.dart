@@ -3,158 +3,48 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'app_version_context_dto.g.dart';
 
-/// AppVersionContextDto
-///
-/// Properties:
-/// * [buildNumber]
-/// * [packageName]
-/// * [version]
-@BuiltValue()
-abstract class AppVersionContextDto
-    implements Built<AppVersionContextDto, AppVersionContextDtoBuilder> {
-  @BuiltValueField(wireName: r'buildNumber')
-  String? get buildNumber;
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class AppVersionContextDto {
+  /// Returns a new [AppVersionContextDto] instance.
+  AppVersionContextDto({this.buildNumber, this.packageName, this.version});
 
-  @BuiltValueField(wireName: r'packageName')
-  String? get packageName;
+  @JsonKey(name: r'buildNumber', required: false, includeIfNull: false)
+  final String? buildNumber;
 
-  @BuiltValueField(wireName: r'version')
-  String? get version;
+  @JsonKey(name: r'packageName', required: false, includeIfNull: false)
+  final String? packageName;
 
-  AppVersionContextDto._();
-
-  factory AppVersionContextDto([void updates(AppVersionContextDtoBuilder b)]) =
-      _$AppVersionContextDto;
-
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(AppVersionContextDtoBuilder b) => b;
-
-  @BuiltValueSerializer(custom: true)
-  static Serializer<AppVersionContextDto> get serializer =>
-      _$AppVersionContextDtoSerializer();
-}
-
-class _$AppVersionContextDtoSerializer
-    implements PrimitiveSerializer<AppVersionContextDto> {
-  @override
-  final Iterable<Type> types = const [
-    AppVersionContextDto,
-    _$AppVersionContextDto,
-  ];
+  @JsonKey(name: r'version', required: false, includeIfNull: false)
+  final String? version;
 
   @override
-  final String wireName = r'AppVersionContextDto';
-
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    AppVersionContextDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    if (object.buildNumber != null) {
-      yield r'buildNumber';
-      yield serializers.serialize(
-        object.buildNumber,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.packageName != null) {
-      yield r'packageName';
-      yield serializers.serialize(
-        object.packageName,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.version != null) {
-      yield r'version';
-      yield serializers.serialize(
-        object.version,
-        specifiedType: const FullType(String),
-      );
-    }
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is AppVersionContextDto &&
+          other.buildNumber == buildNumber &&
+          other.packageName == packageName &&
+          other.version == version;
 
   @override
-  Object serialize(
-    Serializers serializers,
-    AppVersionContextDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
-  }
+  int get hashCode =>
+      buildNumber.hashCode + packageName.hashCode + version.hashCode;
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required AppVersionContextDtoBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'buildNumber':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.buildNumber = valueDes;
-          break;
-        case r'packageName':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.packageName = valueDes;
-          break;
-        case r'version':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.version = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+  factory AppVersionContextDto.fromJson(Map<String, dynamic> json) =>
+      _$AppVersionContextDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$AppVersionContextDtoToJson(this);
 
   @override
-  AppVersionContextDto deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = AppVersionContextDtoBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
 }

@@ -3,118 +3,38 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'sdk_acknowledge_response_dto.g.dart';
 
-/// SdkAcknowledgeResponseDto
-///
-/// Properties:
-/// * [success]
-@BuiltValue()
-abstract class SdkAcknowledgeResponseDto
-    implements
-        Built<SdkAcknowledgeResponseDto, SdkAcknowledgeResponseDtoBuilder> {
-  @BuiltValueField(wireName: r'success')
-  bool get success;
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class SdkAcknowledgeResponseDto {
+  /// Returns a new [SdkAcknowledgeResponseDto] instance.
+  SdkAcknowledgeResponseDto({required this.success});
 
-  SdkAcknowledgeResponseDto._();
-
-  factory SdkAcknowledgeResponseDto([
-    void updates(SdkAcknowledgeResponseDtoBuilder b),
-  ]) = _$SdkAcknowledgeResponseDto;
-
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(SdkAcknowledgeResponseDtoBuilder b) => b;
-
-  @BuiltValueSerializer(custom: true)
-  static Serializer<SdkAcknowledgeResponseDto> get serializer =>
-      _$SdkAcknowledgeResponseDtoSerializer();
-}
-
-class _$SdkAcknowledgeResponseDtoSerializer
-    implements PrimitiveSerializer<SdkAcknowledgeResponseDto> {
-  @override
-  final Iterable<Type> types = const [
-    SdkAcknowledgeResponseDto,
-    _$SdkAcknowledgeResponseDto,
-  ];
+  @JsonKey(name: r'success', required: true, includeIfNull: false)
+  final bool success;
 
   @override
-  final String wireName = r'SdkAcknowledgeResponseDto';
-
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    SdkAcknowledgeResponseDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'success';
-    yield serializers.serialize(
-      object.success,
-      specifiedType: const FullType(bool),
-    );
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SdkAcknowledgeResponseDto && other.success == success;
 
   @override
-  Object serialize(
-    Serializers serializers,
-    SdkAcknowledgeResponseDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
-  }
+  int get hashCode => success.hashCode;
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required SdkAcknowledgeResponseDtoBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'success':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(bool),
-                  )
-                  as bool;
-          result.success = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+  factory SdkAcknowledgeResponseDto.fromJson(Map<String, dynamic> json) =>
+      _$SdkAcknowledgeResponseDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SdkAcknowledgeResponseDtoToJson(this);
 
   @override
-  SdkAcknowledgeResponseDto deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = SdkAcknowledgeResponseDtoBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
 }

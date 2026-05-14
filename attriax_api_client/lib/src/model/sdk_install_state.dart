@@ -3,27 +3,22 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
-part 'sdk_install_state.g.dart';
+enum SdkInstallState {
+  @JsonValue(r'existing')
+  existing(r'existing'),
+  @JsonValue(r'new_install')
+  newInstall(r'new_install'),
+  @JsonValue(r'reinstall')
+  reinstall(r'reinstall'),
+  @JsonValue(r'app_data_clear')
+  appDataClear(r'app_data_clear');
 
-class SdkInstallState extends EnumClass {
-  @BuiltValueEnumConst(wireName: r'existing')
-  static const SdkInstallState existing = _$existing;
-  @BuiltValueEnumConst(wireName: r'new_install')
-  static const SdkInstallState newInstall = _$newInstall;
-  @BuiltValueEnumConst(wireName: r'reinstall')
-  static const SdkInstallState reinstall = _$reinstall;
-  @BuiltValueEnumConst(wireName: r'app_data_clear')
-  static const SdkInstallState appDataClear = _$appDataClear;
+  const SdkInstallState(this.value);
 
-  static Serializer<SdkInstallState> get serializer =>
-      _$sdkInstallStateSerializer;
+  final String value;
 
-  const SdkInstallState._(String name) : super(name);
-
-  static BuiltSet<SdkInstallState> get values => _$values;
-  static SdkInstallState valueOf(String name) => _$valueOf(name);
+  @override
+  String toString() => value;
 }

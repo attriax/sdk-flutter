@@ -3,180 +3,70 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'sdk_v1_batch_response_dto.g.dart';
 
-/// SdkV1BatchResponseDto
-///
-/// Properties:
-/// * [acceptedAt]
-/// * [duplicateCount]
-/// * [itemCount]
-/// * [processedCount]
-/// * [requestVersion]
-@BuiltValue()
-abstract class SdkV1BatchResponseDto
-    implements Built<SdkV1BatchResponseDto, SdkV1BatchResponseDtoBuilder> {
-  @BuiltValueField(wireName: r'acceptedAt')
-  DateTime get acceptedAt;
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class SdkV1BatchResponseDto {
+  /// Returns a new [SdkV1BatchResponseDto] instance.
+  SdkV1BatchResponseDto({
+    required this.acceptedAt,
 
-  @BuiltValueField(wireName: r'duplicateCount')
-  num get duplicateCount;
+    required this.duplicateCount,
 
-  @BuiltValueField(wireName: r'itemCount')
-  num get itemCount;
+    required this.itemCount,
 
-  @BuiltValueField(wireName: r'processedCount')
-  num get processedCount;
+    required this.processedCount,
 
-  @BuiltValueField(wireName: r'requestVersion')
-  String get requestVersion;
+    required this.requestVersion,
+  });
 
-  SdkV1BatchResponseDto._();
+  @JsonKey(name: r'acceptedAt', required: true, includeIfNull: false)
+  final DateTime acceptedAt;
 
-  factory SdkV1BatchResponseDto([
-    void updates(SdkV1BatchResponseDtoBuilder b),
-  ]) = _$SdkV1BatchResponseDto;
+  @JsonKey(name: r'duplicateCount', required: true, includeIfNull: false)
+  final num duplicateCount;
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(SdkV1BatchResponseDtoBuilder b) => b;
+  @JsonKey(name: r'itemCount', required: true, includeIfNull: false)
+  final num itemCount;
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<SdkV1BatchResponseDto> get serializer =>
-      _$SdkV1BatchResponseDtoSerializer();
-}
+  @JsonKey(name: r'processedCount', required: true, includeIfNull: false)
+  final num processedCount;
 
-class _$SdkV1BatchResponseDtoSerializer
-    implements PrimitiveSerializer<SdkV1BatchResponseDto> {
-  @override
-  final Iterable<Type> types = const [
-    SdkV1BatchResponseDto,
-    _$SdkV1BatchResponseDto,
-  ];
+  @JsonKey(name: r'requestVersion', required: true, includeIfNull: false)
+  final String requestVersion;
 
   @override
-  final String wireName = r'SdkV1BatchResponseDto';
-
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    SdkV1BatchResponseDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'acceptedAt';
-    yield serializers.serialize(
-      object.acceptedAt,
-      specifiedType: const FullType(DateTime),
-    );
-    yield r'duplicateCount';
-    yield serializers.serialize(
-      object.duplicateCount,
-      specifiedType: const FullType(num),
-    );
-    yield r'itemCount';
-    yield serializers.serialize(
-      object.itemCount,
-      specifiedType: const FullType(num),
-    );
-    yield r'processedCount';
-    yield serializers.serialize(
-      object.processedCount,
-      specifiedType: const FullType(num),
-    );
-    yield r'requestVersion';
-    yield serializers.serialize(
-      object.requestVersion,
-      specifiedType: const FullType(String),
-    );
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SdkV1BatchResponseDto &&
+          other.acceptedAt == acceptedAt &&
+          other.duplicateCount == duplicateCount &&
+          other.itemCount == itemCount &&
+          other.processedCount == processedCount &&
+          other.requestVersion == requestVersion;
 
   @override
-  Object serialize(
-    Serializers serializers,
-    SdkV1BatchResponseDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
-  }
+  int get hashCode =>
+      acceptedAt.hashCode +
+      duplicateCount.hashCode +
+      itemCount.hashCode +
+      processedCount.hashCode +
+      requestVersion.hashCode;
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required SdkV1BatchResponseDtoBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'acceptedAt':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(DateTime),
-                  )
-                  as DateTime;
-          result.acceptedAt = valueDes;
-          break;
-        case r'duplicateCount':
-          final valueDes =
-              serializers.deserialize(value, specifiedType: const FullType(num))
-                  as num;
-          result.duplicateCount = valueDes;
-          break;
-        case r'itemCount':
-          final valueDes =
-              serializers.deserialize(value, specifiedType: const FullType(num))
-                  as num;
-          result.itemCount = valueDes;
-          break;
-        case r'processedCount':
-          final valueDes =
-              serializers.deserialize(value, specifiedType: const FullType(num))
-                  as num;
-          result.processedCount = valueDes;
-          break;
-        case r'requestVersion':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.requestVersion = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+  factory SdkV1BatchResponseDto.fromJson(Map<String, dynamic> json) =>
+      _$SdkV1BatchResponseDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SdkV1BatchResponseDtoToJson(this);
 
   @override
-  SdkV1BatchResponseDto deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = SdkV1BatchResponseDtoBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
 }

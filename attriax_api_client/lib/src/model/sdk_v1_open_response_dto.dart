@@ -6,339 +6,123 @@
 import 'package:attriax_api_client/src/model/sdk_install_referrer_result_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_install_state.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'sdk_v1_open_response_dto.g.dart';
 
-/// SdkV1OpenResponseDto
-///
-/// Properties:
-/// * [acceptedAt]
-/// * [deepLink]
-/// * [deepLinkClickedAt]
-/// * [deepLinkConsumedAt]
-/// * [installReferrer]
-/// * [installState]
-/// * [isFirstLaunch]
-/// * [isNewUser]
-/// * [originalInstallReferrer]
-/// * [reinstallReferrer]
-/// * [requestVersion]
-/// * [userId]
-@BuiltValue()
-abstract class SdkV1OpenResponseDto
-    implements Built<SdkV1OpenResponseDto, SdkV1OpenResponseDtoBuilder> {
-  @BuiltValueField(wireName: r'acceptedAt')
-  DateTime get acceptedAt;
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class SdkV1OpenResponseDto {
+  /// Returns a new [SdkV1OpenResponseDto] instance.
+  SdkV1OpenResponseDto({
+    required this.acceptedAt,
 
-  @BuiltValueField(wireName: r'deepLink')
-  SdkJsonDeepLinkDto? get deepLink;
+    this.deepLink,
 
-  @BuiltValueField(wireName: r'deepLinkClickedAt')
-  DateTime? get deepLinkClickedAt;
+    this.deepLinkClickedAt,
 
-  @BuiltValueField(wireName: r'deepLinkConsumedAt')
-  DateTime? get deepLinkConsumedAt;
+    this.deepLinkConsumedAt,
 
-  @BuiltValueField(wireName: r'installReferrer')
-  SdkInstallReferrerResultDto? get installReferrer;
+    this.installReferrer,
 
-  @BuiltValueField(wireName: r'installState')
-  SdkInstallState get installState;
-  // enum installStateEnum {  existing,  new_install,  reinstall,  app_data_clear,  };
+    required this.installState,
 
-  @BuiltValueField(wireName: r'isFirstLaunch')
-  bool get isFirstLaunch;
+    required this.isFirstLaunch,
 
-  @BuiltValueField(wireName: r'isNewUser')
-  bool get isNewUser;
+    required this.isNewUser,
 
-  @BuiltValueField(wireName: r'originalInstallReferrer')
-  SdkInstallReferrerResultDto? get originalInstallReferrer;
+    this.originalInstallReferrer,
 
-  @BuiltValueField(wireName: r'reinstallReferrer')
-  SdkInstallReferrerResultDto? get reinstallReferrer;
+    this.reinstallReferrer,
 
-  @BuiltValueField(wireName: r'requestVersion')
-  String get requestVersion;
+    required this.requestVersion,
 
-  @BuiltValueField(wireName: r'userId')
-  String get userId;
+    required this.userId,
+  });
 
-  SdkV1OpenResponseDto._();
+  @JsonKey(name: r'acceptedAt', required: true, includeIfNull: false)
+  final DateTime acceptedAt;
 
-  factory SdkV1OpenResponseDto([void updates(SdkV1OpenResponseDtoBuilder b)]) =
-      _$SdkV1OpenResponseDto;
+  @JsonKey(name: r'deepLink', required: false, includeIfNull: false)
+  final SdkJsonDeepLinkDto? deepLink;
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(SdkV1OpenResponseDtoBuilder b) => b;
+  @JsonKey(name: r'deepLinkClickedAt', required: false, includeIfNull: false)
+  final DateTime? deepLinkClickedAt;
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<SdkV1OpenResponseDto> get serializer =>
-      _$SdkV1OpenResponseDtoSerializer();
-}
+  @JsonKey(name: r'deepLinkConsumedAt', required: false, includeIfNull: false)
+  final DateTime? deepLinkConsumedAt;
 
-class _$SdkV1OpenResponseDtoSerializer
-    implements PrimitiveSerializer<SdkV1OpenResponseDto> {
-  @override
-  final Iterable<Type> types = const [
-    SdkV1OpenResponseDto,
-    _$SdkV1OpenResponseDto,
-  ];
+  @JsonKey(name: r'installReferrer', required: false, includeIfNull: false)
+  final SdkInstallReferrerResultDto? installReferrer;
+
+  @JsonKey(name: r'installState', required: true, includeIfNull: false)
+  final SdkInstallState installState;
+
+  @JsonKey(name: r'isFirstLaunch', required: true, includeIfNull: false)
+  final bool isFirstLaunch;
+
+  @JsonKey(name: r'isNewUser', required: true, includeIfNull: false)
+  final bool isNewUser;
+
+  @JsonKey(
+    name: r'originalInstallReferrer',
+    required: false,
+    includeIfNull: false,
+  )
+  final SdkInstallReferrerResultDto? originalInstallReferrer;
+
+  @JsonKey(name: r'reinstallReferrer', required: false, includeIfNull: false)
+  final SdkInstallReferrerResultDto? reinstallReferrer;
+
+  @JsonKey(name: r'requestVersion', required: true, includeIfNull: false)
+  final String requestVersion;
+
+  @JsonKey(name: r'userId', required: true, includeIfNull: false)
+  final String userId;
 
   @override
-  final String wireName = r'SdkV1OpenResponseDto';
-
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    SdkV1OpenResponseDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'acceptedAt';
-    yield serializers.serialize(
-      object.acceptedAt,
-      specifiedType: const FullType(DateTime),
-    );
-    if (object.deepLink != null) {
-      yield r'deepLink';
-      yield serializers.serialize(
-        object.deepLink,
-        specifiedType: const FullType.nullable(SdkJsonDeepLinkDto),
-      );
-    }
-    if (object.deepLinkClickedAt != null) {
-      yield r'deepLinkClickedAt';
-      yield serializers.serialize(
-        object.deepLinkClickedAt,
-        specifiedType: const FullType.nullable(DateTime),
-      );
-    }
-    if (object.deepLinkConsumedAt != null) {
-      yield r'deepLinkConsumedAt';
-      yield serializers.serialize(
-        object.deepLinkConsumedAt,
-        specifiedType: const FullType.nullable(DateTime),
-      );
-    }
-    if (object.installReferrer != null) {
-      yield r'installReferrer';
-      yield serializers.serialize(
-        object.installReferrer,
-        specifiedType: const FullType.nullable(SdkInstallReferrerResultDto),
-      );
-    }
-    yield r'installState';
-    yield serializers.serialize(
-      object.installState,
-      specifiedType: const FullType(SdkInstallState),
-    );
-    yield r'isFirstLaunch';
-    yield serializers.serialize(
-      object.isFirstLaunch,
-      specifiedType: const FullType(bool),
-    );
-    yield r'isNewUser';
-    yield serializers.serialize(
-      object.isNewUser,
-      specifiedType: const FullType(bool),
-    );
-    if (object.originalInstallReferrer != null) {
-      yield r'originalInstallReferrer';
-      yield serializers.serialize(
-        object.originalInstallReferrer,
-        specifiedType: const FullType.nullable(SdkInstallReferrerResultDto),
-      );
-    }
-    if (object.reinstallReferrer != null) {
-      yield r'reinstallReferrer';
-      yield serializers.serialize(
-        object.reinstallReferrer,
-        specifiedType: const FullType.nullable(SdkInstallReferrerResultDto),
-      );
-    }
-    yield r'requestVersion';
-    yield serializers.serialize(
-      object.requestVersion,
-      specifiedType: const FullType(String),
-    );
-    yield r'userId';
-    yield serializers.serialize(
-      object.userId,
-      specifiedType: const FullType(String),
-    );
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SdkV1OpenResponseDto &&
+          other.acceptedAt == acceptedAt &&
+          other.deepLink == deepLink &&
+          other.deepLinkClickedAt == deepLinkClickedAt &&
+          other.deepLinkConsumedAt == deepLinkConsumedAt &&
+          other.installReferrer == installReferrer &&
+          other.installState == installState &&
+          other.isFirstLaunch == isFirstLaunch &&
+          other.isNewUser == isNewUser &&
+          other.originalInstallReferrer == originalInstallReferrer &&
+          other.reinstallReferrer == reinstallReferrer &&
+          other.requestVersion == requestVersion &&
+          other.userId == userId;
 
   @override
-  Object serialize(
-    Serializers serializers,
-    SdkV1OpenResponseDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
-  }
+  int get hashCode =>
+      acceptedAt.hashCode +
+      (deepLink == null ? 0 : deepLink.hashCode) +
+      (deepLinkClickedAt == null ? 0 : deepLinkClickedAt.hashCode) +
+      (deepLinkConsumedAt == null ? 0 : deepLinkConsumedAt.hashCode) +
+      (installReferrer == null ? 0 : installReferrer.hashCode) +
+      installState.hashCode +
+      isFirstLaunch.hashCode +
+      isNewUser.hashCode +
+      (originalInstallReferrer == null ? 0 : originalInstallReferrer.hashCode) +
+      (reinstallReferrer == null ? 0 : reinstallReferrer.hashCode) +
+      requestVersion.hashCode +
+      userId.hashCode;
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required SdkV1OpenResponseDtoBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'acceptedAt':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(DateTime),
-                  )
-                  as DateTime;
-          result.acceptedAt = valueDes;
-          break;
-        case r'deepLink':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(SdkJsonDeepLinkDto),
-                  )
-                  as SdkJsonDeepLinkDto?;
-          if (valueDes == null) continue;
-          result.deepLink.replace(valueDes);
-          break;
-        case r'deepLinkClickedAt':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(DateTime),
-                  )
-                  as DateTime?;
-          if (valueDes == null) continue;
-          result.deepLinkClickedAt = valueDes;
-          break;
-        case r'deepLinkConsumedAt':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(DateTime),
-                  )
-                  as DateTime?;
-          if (valueDes == null) continue;
-          result.deepLinkConsumedAt = valueDes;
-          break;
-        case r'installReferrer':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(
-                      SdkInstallReferrerResultDto,
-                    ),
-                  )
-                  as SdkInstallReferrerResultDto?;
-          if (valueDes == null) continue;
-          result.installReferrer.replace(valueDes);
-          break;
-        case r'installState':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(SdkInstallState),
-                  )
-                  as SdkInstallState;
-          result.installState = valueDes;
-          break;
-        case r'isFirstLaunch':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(bool),
-                  )
-                  as bool;
-          result.isFirstLaunch = valueDes;
-          break;
-        case r'isNewUser':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(bool),
-                  )
-                  as bool;
-          result.isNewUser = valueDes;
-          break;
-        case r'originalInstallReferrer':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(
-                      SdkInstallReferrerResultDto,
-                    ),
-                  )
-                  as SdkInstallReferrerResultDto?;
-          if (valueDes == null) continue;
-          result.originalInstallReferrer.replace(valueDes);
-          break;
-        case r'reinstallReferrer':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(
-                      SdkInstallReferrerResultDto,
-                    ),
-                  )
-                  as SdkInstallReferrerResultDto?;
-          if (valueDes == null) continue;
-          result.reinstallReferrer.replace(valueDes);
-          break;
-        case r'requestVersion':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.requestVersion = valueDes;
-          break;
-        case r'userId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.userId = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+  factory SdkV1OpenResponseDto.fromJson(Map<String, dynamic> json) =>
+      _$SdkV1OpenResponseDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SdkV1OpenResponseDtoToJson(this);
 
   @override
-  SdkV1OpenResponseDto deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = SdkV1OpenResponseDtoBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
 }

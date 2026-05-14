@@ -4,8 +4,9 @@
 
 import 'dart:async';
 
-import 'package:built_value/json_object.dart';
-import 'package:built_value/serializer.dart';
+// ignore: unused_import
+import 'dart:convert';
+import 'package:attriax_api_client/src/deserialize.dart';
 import 'package:dio/dio.dart';
 
 import 'package:attriax_api_client/src/model/sdk_acknowledge_response_envelope_dto.dart';
@@ -28,9 +29,7 @@ import 'package:attriax_api_client/src/model/sdk_v1_revenue_receipt_validate_dto
 class SdkApi {
   final Dio _dio;
 
-  final Serializers _serializers;
-
-  const SdkApi(this._dio, this._serializers);
+  const SdkApi(this._dio);
 
   /// sdkControllerBatchV1
   ///
@@ -67,8 +66,7 @@ class SdkApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SdkV1BatchDto);
-      _bodyData = _serializers.serialize(sdkV1BatchDto, specifiedType: _type);
+      _bodyData = jsonEncode(sdkV1BatchDto);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _options.compose(_dio.options, _path),
@@ -90,14 +88,13 @@ class SdkApi {
     SdkV1BatchResponseEnvelopeDto? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null
+      final rawData = _response.data;
+      _responseData = rawData == null
           ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(SdkV1BatchResponseEnvelopeDto),
-                )
-                as SdkV1BatchResponseEnvelopeDto;
+          : deserialize<
+              SdkV1BatchResponseEnvelopeDto,
+              SdkV1BatchResponseEnvelopeDto
+            >(rawData, 'SdkV1BatchResponseEnvelopeDto', growable: true);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -156,11 +153,7 @@ class SdkApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SdkCreateDynamicLinkDto);
-      _bodyData = _serializers.serialize(
-        sdkCreateDynamicLinkDto,
-        specifiedType: _type,
-      );
+      _bodyData = jsonEncode(sdkCreateDynamicLinkDto);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _options.compose(_dio.options, _path),
@@ -182,16 +175,17 @@ class SdkApi {
     SdkCreateDynamicLinkResponseEnvelopeDto? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null
+      final rawData = _response.data;
+      _responseData = rawData == null
           ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(
-                    SdkCreateDynamicLinkResponseEnvelopeDto,
-                  ),
-                )
-                as SdkCreateDynamicLinkResponseEnvelopeDto;
+          : deserialize<
+              SdkCreateDynamicLinkResponseEnvelopeDto,
+              SdkCreateDynamicLinkResponseEnvelopeDto
+            >(
+              rawData,
+              'SdkCreateDynamicLinkResponseEnvelopeDto',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -249,8 +243,7 @@ class SdkApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SdkV1OpenDto);
-      _bodyData = _serializers.serialize(sdkV1OpenDto, specifiedType: _type);
+      _bodyData = jsonEncode(sdkV1OpenDto);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _options.compose(_dio.options, _path),
@@ -272,14 +265,13 @@ class SdkApi {
     SdkV1OpenResponseEnvelopeDto? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null
+      final rawData = _response.data;
+      _responseData = rawData == null
           ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(SdkV1OpenResponseEnvelopeDto),
-                )
-                as SdkV1OpenResponseEnvelopeDto;
+          : deserialize<
+              SdkV1OpenResponseEnvelopeDto,
+              SdkV1OpenResponseEnvelopeDto
+            >(rawData, 'SdkV1OpenResponseEnvelopeDto', growable: true);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -338,8 +330,7 @@ class SdkApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SdkCrashDto);
-      _bodyData = _serializers.serialize(sdkCrashDto, specifiedType: _type);
+      _bodyData = jsonEncode(sdkCrashDto);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _options.compose(_dio.options, _path),
@@ -361,16 +352,13 @@ class SdkApi {
     SdkAcknowledgeResponseEnvelopeDto? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null
+      final rawData = _response.data;
+      _responseData = rawData == null
           ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(
-                    SdkAcknowledgeResponseEnvelopeDto,
-                  ),
-                )
-                as SdkAcknowledgeResponseEnvelopeDto;
+          : deserialize<
+              SdkAcknowledgeResponseEnvelopeDto,
+              SdkAcknowledgeResponseEnvelopeDto
+            >(rawData, 'SdkAcknowledgeResponseEnvelopeDto', growable: true);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -429,8 +417,7 @@ class SdkApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SdkEventDto);
-      _bodyData = _serializers.serialize(sdkEventDto, specifiedType: _type);
+      _bodyData = jsonEncode(sdkEventDto);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _options.compose(_dio.options, _path),
@@ -452,16 +439,13 @@ class SdkApi {
     SdkAcknowledgeResponseEnvelopeDto? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null
+      final rawData = _response.data;
+      _responseData = rawData == null
           ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(
-                    SdkAcknowledgeResponseEnvelopeDto,
-                  ),
-                )
-                as SdkAcknowledgeResponseEnvelopeDto;
+          : deserialize<
+              SdkAcknowledgeResponseEnvelopeDto,
+              SdkAcknowledgeResponseEnvelopeDto
+            >(rawData, 'SdkAcknowledgeResponseEnvelopeDto', growable: true);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -520,8 +504,7 @@ class SdkApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SdkSessionDto);
-      _bodyData = _serializers.serialize(sdkSessionDto, specifiedType: _type);
+      _bodyData = jsonEncode(sdkSessionDto);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _options.compose(_dio.options, _path),
@@ -543,16 +526,13 @@ class SdkApi {
     SdkAcknowledgeResponseEnvelopeDto? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null
+      final rawData = _response.data;
+      _responseData = rawData == null
           ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(
-                    SdkAcknowledgeResponseEnvelopeDto,
-                  ),
-                )
-                as SdkAcknowledgeResponseEnvelopeDto;
+          : deserialize<
+              SdkAcknowledgeResponseEnvelopeDto,
+              SdkAcknowledgeResponseEnvelopeDto
+            >(rawData, 'SdkAcknowledgeResponseEnvelopeDto', growable: true);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -611,11 +591,7 @@ class SdkApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SdkRegisterUninstallTokenDto);
-      _bodyData = _serializers.serialize(
-        sdkRegisterUninstallTokenDto,
-        specifiedType: _type,
-      );
+      _bodyData = jsonEncode(sdkRegisterUninstallTokenDto);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _options.compose(_dio.options, _path),
@@ -637,16 +613,13 @@ class SdkApi {
     SdkAcknowledgeResponseEnvelopeDto? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null
+      final rawData = _response.data;
+      _responseData = rawData == null
           ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(
-                    SdkAcknowledgeResponseEnvelopeDto,
-                  ),
-                )
-                as SdkAcknowledgeResponseEnvelopeDto;
+          : deserialize<
+              SdkAcknowledgeResponseEnvelopeDto,
+              SdkAcknowledgeResponseEnvelopeDto
+            >(rawData, 'SdkAcknowledgeResponseEnvelopeDto', growable: true);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -705,11 +678,7 @@ class SdkApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SdkV1DeepLinkResolveDto);
-      _bodyData = _serializers.serialize(
-        sdkV1DeepLinkResolveDto,
-        specifiedType: _type,
-      );
+      _bodyData = jsonEncode(sdkV1DeepLinkResolveDto);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _options.compose(_dio.options, _path),
@@ -731,16 +700,17 @@ class SdkApi {
     SdkV1DeepLinkResolveResponseEnvelopeDto? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null
+      final rawData = _response.data;
+      _responseData = rawData == null
           ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(
-                    SdkV1DeepLinkResolveResponseEnvelopeDto,
-                  ),
-                )
-                as SdkV1DeepLinkResolveResponseEnvelopeDto;
+          : deserialize<
+              SdkV1DeepLinkResolveResponseEnvelopeDto,
+              SdkV1DeepLinkResolveResponseEnvelopeDto
+            >(
+              rawData,
+              'SdkV1DeepLinkResolveResponseEnvelopeDto',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -798,8 +768,7 @@ class SdkApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SdkUserDto);
-      _bodyData = _serializers.serialize(sdkUserDto, specifiedType: _type);
+      _bodyData = jsonEncode(sdkUserDto);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _options.compose(_dio.options, _path),
@@ -821,16 +790,13 @@ class SdkApi {
     SdkAcknowledgeResponseEnvelopeDto? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null
+      final rawData = _response.data;
+      _responseData = rawData == null
           ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(
-                    SdkAcknowledgeResponseEnvelopeDto,
-                  ),
-                )
-                as SdkAcknowledgeResponseEnvelopeDto;
+          : deserialize<
+              SdkAcknowledgeResponseEnvelopeDto,
+              SdkAcknowledgeResponseEnvelopeDto
+            >(rawData, 'SdkAcknowledgeResponseEnvelopeDto', growable: true);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,
@@ -889,11 +855,7 @@ class SdkApi {
     dynamic _bodyData;
 
     try {
-      const _type = FullType(SdkV1RevenueReceiptValidateDto);
-      _bodyData = _serializers.serialize(
-        sdkV1RevenueReceiptValidateDto,
-        specifiedType: _type,
-      );
+      _bodyData = jsonEncode(sdkV1RevenueReceiptValidateDto);
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _options.compose(_dio.options, _path),
@@ -915,16 +877,17 @@ class SdkApi {
     SdkRevenueReceiptValidateResponseEnvelopeDto? _responseData;
 
     try {
-      final rawResponse = _response.data;
-      _responseData = rawResponse == null
+      final rawData = _response.data;
+      _responseData = rawData == null
           ? null
-          : _serializers.deserialize(
-                  rawResponse,
-                  specifiedType: const FullType(
-                    SdkRevenueReceiptValidateResponseEnvelopeDto,
-                  ),
-                )
-                as SdkRevenueReceiptValidateResponseEnvelopeDto;
+          : deserialize<
+              SdkRevenueReceiptValidateResponseEnvelopeDto,
+              SdkRevenueReceiptValidateResponseEnvelopeDto
+            >(
+              rawData,
+              'SdkRevenueReceiptValidateResponseEnvelopeDto',
+              growable: true,
+            );
     } catch (error, stackTrace) {
       throw DioException(
         requestOptions: _response.requestOptions,

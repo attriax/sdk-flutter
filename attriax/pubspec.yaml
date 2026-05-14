@@ -37,8 +37,6 @@ dependencies:
   attriax_flutter_ios: ^0.1.0
   attriax_flutter_platform_interface: ^0.1.0
   attriax_flutter_windows: ^0.1.0
-  built_collection: ^5.1.1
-  built_value: ^8.12.6
   connectivity_plus: ^7.1.1
   dio: ^5.7.0
   flutter:

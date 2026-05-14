@@ -3,250 +3,86 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
 import 'package:attriax_api_client/src/model/app_user_uninstall_token_provider.dart';
 import 'package:attriax_api_client/src/model/platform.dart';
-import 'package:built_value/json_object.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'sdk_register_uninstall_token_dto.g.dart';
 
-/// SdkRegisterUninstallTokenDto
-///
-/// Properties:
-/// * [appToken]
-/// * [deviceId]
-/// * [deviceIdSource]
-/// * [metadata]
-/// * [platform]
-/// * [provider]
-/// * [token]
-@BuiltValue()
-abstract class SdkRegisterUninstallTokenDto
-    implements
-        Built<
-          SdkRegisterUninstallTokenDto,
-          SdkRegisterUninstallTokenDtoBuilder
-        > {
-  @BuiltValueField(wireName: r'appToken')
-  String get appToken;
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class SdkRegisterUninstallTokenDto {
+  /// Returns a new [SdkRegisterUninstallTokenDto] instance.
+  SdkRegisterUninstallTokenDto({
+    required this.appToken,
 
-  @BuiltValueField(wireName: r'deviceId')
-  String get deviceId;
+    required this.deviceId,
 
-  @BuiltValueField(wireName: r'deviceIdSource')
-  String? get deviceIdSource;
+    this.deviceIdSource,
 
-  @BuiltValueField(wireName: r'metadata')
-  BuiltMap<String, JsonObject?>? get metadata;
+    this.metadata,
 
-  @BuiltValueField(wireName: r'platform')
-  Platform get platform;
-  // enum platformEnum {  ios,  android,  unity_editor,  windows,  macos,  linux,  web,  unknown,  };
+    required this.platform,
 
-  @BuiltValueField(wireName: r'provider')
-  AppUserUninstallTokenProvider get provider;
-  // enum providerEnum {  fcm,  apns,  };
+    required this.provider,
 
-  @BuiltValueField(wireName: r'token')
-  JsonObject? get token;
+    this.token,
+  });
 
-  SdkRegisterUninstallTokenDto._();
+  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
+  final String appToken;
 
-  factory SdkRegisterUninstallTokenDto([
-    void updates(SdkRegisterUninstallTokenDtoBuilder b),
-  ]) = _$SdkRegisterUninstallTokenDto;
+  @JsonKey(name: r'deviceId', required: true, includeIfNull: false)
+  final String deviceId;
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(SdkRegisterUninstallTokenDtoBuilder b) => b;
+  @JsonKey(name: r'deviceIdSource', required: false, includeIfNull: false)
+  final String? deviceIdSource;
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<SdkRegisterUninstallTokenDto> get serializer =>
-      _$SdkRegisterUninstallTokenDtoSerializer();
-}
+  @JsonKey(name: r'metadata', required: false, includeIfNull: false)
+  final Map<String, Object>? metadata;
 
-class _$SdkRegisterUninstallTokenDtoSerializer
-    implements PrimitiveSerializer<SdkRegisterUninstallTokenDto> {
-  @override
-  final Iterable<Type> types = const [
-    SdkRegisterUninstallTokenDto,
-    _$SdkRegisterUninstallTokenDto,
-  ];
+  @JsonKey(name: r'platform', required: true, includeIfNull: false)
+  final Platform platform;
+
+  @JsonKey(name: r'provider', required: true, includeIfNull: false)
+  final AppUserUninstallTokenProvider provider;
+
+  @JsonKey(name: r'token', required: false, includeIfNull: false)
+  final Object? token;
 
   @override
-  final String wireName = r'SdkRegisterUninstallTokenDto';
-
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    SdkRegisterUninstallTokenDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'appToken';
-    yield serializers.serialize(
-      object.appToken,
-      specifiedType: const FullType(String),
-    );
-    yield r'deviceId';
-    yield serializers.serialize(
-      object.deviceId,
-      specifiedType: const FullType(String),
-    );
-    if (object.deviceIdSource != null) {
-      yield r'deviceIdSource';
-      yield serializers.serialize(
-        object.deviceIdSource,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.metadata != null) {
-      yield r'metadata';
-      yield serializers.serialize(
-        object.metadata,
-        specifiedType: const FullType(BuiltMap, [
-          FullType(String),
-          FullType.nullable(JsonObject),
-        ]),
-      );
-    }
-    yield r'platform';
-    yield serializers.serialize(
-      object.platform,
-      specifiedType: const FullType(Platform),
-    );
-    yield r'provider';
-    yield serializers.serialize(
-      object.provider,
-      specifiedType: const FullType(AppUserUninstallTokenProvider),
-    );
-    if (object.token != null) {
-      yield r'token';
-      yield serializers.serialize(
-        object.token,
-        specifiedType: const FullType.nullable(JsonObject),
-      );
-    }
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SdkRegisterUninstallTokenDto &&
+          other.appToken == appToken &&
+          other.deviceId == deviceId &&
+          other.deviceIdSource == deviceIdSource &&
+          other.metadata == metadata &&
+          other.platform == platform &&
+          other.provider == provider &&
+          other.token == token;
 
   @override
-  Object serialize(
-    Serializers serializers,
-    SdkRegisterUninstallTokenDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
-  }
+  int get hashCode =>
+      appToken.hashCode +
+      deviceId.hashCode +
+      deviceIdSource.hashCode +
+      metadata.hashCode +
+      platform.hashCode +
+      provider.hashCode +
+      (token == null ? 0 : token.hashCode);
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required SdkRegisterUninstallTokenDtoBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'appToken':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.appToken = valueDes;
-          break;
-        case r'deviceId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.deviceId = valueDes;
-          break;
-        case r'deviceIdSource':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.deviceIdSource = valueDes;
-          break;
-        case r'metadata':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(BuiltMap, [
-                      FullType(String),
-                      FullType.nullable(JsonObject),
-                    ]),
-                  )
-                  as BuiltMap<String, JsonObject?>;
-          result.metadata.replace(valueDes);
-          break;
-        case r'platform':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(Platform),
-                  )
-                  as Platform;
-          result.platform = valueDes;
-          break;
-        case r'provider':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(
-                      AppUserUninstallTokenProvider,
-                    ),
-                  )
-                  as AppUserUninstallTokenProvider;
-          result.provider = valueDes;
-          break;
-        case r'token':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(JsonObject),
-                  )
-                  as JsonObject?;
-          if (valueDes == null) continue;
-          result.token = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+  factory SdkRegisterUninstallTokenDto.fromJson(Map<String, dynamic> json) =>
+      _$SdkRegisterUninstallTokenDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SdkRegisterUninstallTokenDtoToJson(this);
 
   @override
-  SdkRegisterUninstallTokenDto deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = SdkRegisterUninstallTokenDtoBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
 }

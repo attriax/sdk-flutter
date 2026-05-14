@@ -203,22 +203,20 @@ class AttriaxGeneratedTransport {
     }
 
     final batchDto = sdk.SdkV1BatchDto(
-      (builder) => builder
-        ..requestId = batchRequestId
-        ..appToken = sharedIdentity.appToken
-        ..deviceId = sharedIdentity.deviceId
-        ..deviceIdSource = attriaxStringValue(sharedIdentity.deviceIdSource)
-        ..items.addAll(
-          requests.map(
+      appToken: sharedIdentity.appToken,
+      deviceId: sharedIdentity.deviceId,
+      deviceIdSource: attriaxStringValue(sharedIdentity.deviceIdSource),
+      items: requests
+          .map(
             (queuedRequest) => sdk.SdkV1BatchItemDto(
-              (itemBuilder) => itemBuilder
-                ..kind = attriaxGeneratedBatchItemKind(queuedRequest.request)
-                ..body = attriaxGeneratedJsonObjectMap(
-                  attriaxBatchBody(queuedRequest.request),
-                ).toBuilder(),
+              body: attriaxGeneratedJsonObjectMap(
+                attriaxBatchBody(queuedRequest.request),
+              ),
+              kind: attriaxGeneratedBatchItemKind(queuedRequest.request),
             ),
-          ),
-        ),
+          )
+          .toList(growable: false),
+      requestId: batchRequestId,
     );
 
     try {

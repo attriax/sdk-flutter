@@ -3,195 +3,70 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'sdk_utm_payload_dto.g.dart';
 
-/// SdkUtmPayloadDto
-///
-/// Properties:
-/// * [campaign]
-/// * [content]
-/// * [medium]
-/// * [source_]
-/// * [term]
-@BuiltValue()
-abstract class SdkUtmPayloadDto
-    implements Built<SdkUtmPayloadDto, SdkUtmPayloadDtoBuilder> {
-  @BuiltValueField(wireName: r'campaign')
-  String? get campaign;
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class SdkUtmPayloadDto {
+  /// Returns a new [SdkUtmPayloadDto] instance.
+  SdkUtmPayloadDto({
+    this.campaign,
 
-  @BuiltValueField(wireName: r'content')
-  String? get content;
+    this.content,
 
-  @BuiltValueField(wireName: r'medium')
-  String? get medium;
+    this.medium,
 
-  @BuiltValueField(wireName: r'source')
-  String? get source_;
+    this.source_,
 
-  @BuiltValueField(wireName: r'term')
-  String? get term;
+    this.term,
+  });
 
-  SdkUtmPayloadDto._();
+  @JsonKey(name: r'campaign', required: false, includeIfNull: false)
+  final String? campaign;
 
-  factory SdkUtmPayloadDto([void updates(SdkUtmPayloadDtoBuilder b)]) =
-      _$SdkUtmPayloadDto;
+  @JsonKey(name: r'content', required: false, includeIfNull: false)
+  final String? content;
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(SdkUtmPayloadDtoBuilder b) => b;
+  @JsonKey(name: r'medium', required: false, includeIfNull: false)
+  final String? medium;
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<SdkUtmPayloadDto> get serializer =>
-      _$SdkUtmPayloadDtoSerializer();
-}
+  @JsonKey(name: r'source', required: false, includeIfNull: false)
+  final String? source_;
 
-class _$SdkUtmPayloadDtoSerializer
-    implements PrimitiveSerializer<SdkUtmPayloadDto> {
-  @override
-  final Iterable<Type> types = const [SdkUtmPayloadDto, _$SdkUtmPayloadDto];
+  @JsonKey(name: r'term', required: false, includeIfNull: false)
+  final String? term;
 
   @override
-  final String wireName = r'SdkUtmPayloadDto';
-
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    SdkUtmPayloadDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    if (object.campaign != null) {
-      yield r'campaign';
-      yield serializers.serialize(
-        object.campaign,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.content != null) {
-      yield r'content';
-      yield serializers.serialize(
-        object.content,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.medium != null) {
-      yield r'medium';
-      yield serializers.serialize(
-        object.medium,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.source_ != null) {
-      yield r'source';
-      yield serializers.serialize(
-        object.source_,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.term != null) {
-      yield r'term';
-      yield serializers.serialize(
-        object.term,
-        specifiedType: const FullType(String),
-      );
-    }
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SdkUtmPayloadDto &&
+          other.campaign == campaign &&
+          other.content == content &&
+          other.medium == medium &&
+          other.source_ == source_ &&
+          other.term == term;
 
   @override
-  Object serialize(
-    Serializers serializers,
-    SdkUtmPayloadDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
-  }
+  int get hashCode =>
+      campaign.hashCode +
+      content.hashCode +
+      medium.hashCode +
+      source_.hashCode +
+      term.hashCode;
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required SdkUtmPayloadDtoBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'campaign':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.campaign = valueDes;
-          break;
-        case r'content':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.content = valueDes;
-          break;
-        case r'medium':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.medium = valueDes;
-          break;
-        case r'source':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.source_ = valueDes;
-          break;
-        case r'term':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.term = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+  factory SdkUtmPayloadDto.fromJson(Map<String, dynamic> json) =>
+      _$SdkUtmPayloadDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SdkUtmPayloadDtoToJson(this);
 
   @override
-  SdkUtmPayloadDto deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = SdkUtmPayloadDtoBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
 }

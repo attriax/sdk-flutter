@@ -3,8 +3,6 @@
 //
 
 import 'package:dio/dio.dart';
-import 'package:built_value/serializer.dart';
-import 'package:attriax_api_client/src/serializers.dart';
 import 'package:attriax_api_client/src/auth/api_key_auth.dart';
 import 'package:attriax_api_client/src/auth/basic_auth.dart';
 import 'package:attriax_api_client/src/auth/bearer_auth.dart';
@@ -15,15 +13,11 @@ class AttriaxApiClient {
   static const String basePath = r'http://localhost';
 
   final Dio dio;
-  final Serializers serializers;
-
   AttriaxApiClient({
     Dio? dio,
-    Serializers? serializers,
     String? basePathOverride,
     List<Interceptor>? interceptors,
-  }) : this.serializers = serializers ?? standardSerializers,
-       this.dio =
+  }) : this.dio =
            dio ??
            Dio(
              BaseOptions(
@@ -141,6 +135,6 @@ class AttriaxApiClient {
   /// Get SdkApi instance, base route and serializer can be overridden by a given but be careful,
   /// by doing that all interceptors will not be executed
   SdkApi getSdkApi() {
-    return SdkApi(dio, serializers);
+    return SdkApi(dio);
   }
 }

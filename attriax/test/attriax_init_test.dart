@@ -7,7 +7,6 @@ import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_inte
 import 'package:attriax_flutter/src/internal/attriax_context_collector.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
 import 'package:attriax_api_client/attriax_api_client.dart' as generated_sdk;
-import 'package:built_value/serializer.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
 import 'package:flutter/widgets.dart';
@@ -260,10 +259,7 @@ void main() {
             batchBodies.add(jsonDecode(request.body) as Map<String, Object?>);
             return http.Response(
               jsonEncode(
-                _serializeGenerated(
-                  generated_sdk.SdkV1BatchResponseEnvelopeDto.serializer,
-                  _batchEnvelope(),
-                ),
+                _serializeGenerated(_batchEnvelope()),
               ),
               202,
               headers: const <String, String>{
@@ -1452,20 +1448,18 @@ String _sdkEnvelope(Map<String, Object?> data) => jsonEncode(<String, Object?>{
 
 generated_sdk.SdkV1BatchResponseEnvelopeDto _batchEnvelope() =>
     generated_sdk.SdkV1BatchResponseEnvelopeDto(
-      (builder) => builder
-        ..data.replace(
-          generated_sdk.SdkV1BatchResponseDto(
-            (builder) => builder
-              ..acceptedAt = DateTime.utc(2026, 5, 6, 10, 0)
-              ..duplicateCount = 0
-              ..itemCount = 1
-              ..processedCount = 1
-              ..requestVersion = 'v1',
-          ),
-        )
-        ..success = true
-        ..timestamp = DateTime.utc(2026, 5, 6, 10, 0),
+      data: generated_sdk.SdkV1BatchResponseDto(
+        acceptedAt: DateTime.utc(2026, 5, 6, 10, 0),
+        duplicateCount: 0,
+        itemCount: 1,
+        processedCount: 1,
+        requestVersion: 'v1',
+      ),
+      success: true,
+      timestamp: DateTime.utc(2026, 5, 6, 10, 0),
     );
 
-Object? _serializeGenerated<T>(Serializer<T> serializer, T value) =>
-    generated_sdk.standardSerializers.serializeWith(serializer, value);
+Object? _serializeGenerated(Object value) {
+  final dynamic serializable = value;
+  return serializable.toJson();
+}

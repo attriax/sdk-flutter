@@ -2,7 +2,7 @@
 
 The generated Flutter transport layer lives in `sdk-flutter/attriax_api_client/`.
 
-That package is derived from `api/generated/sdk-contract.openapi.json`, which is itself derived from the NestJS SDK controllers and DTOs in `api/`.
+That package is derived from `api/generated/sdk-contract.flutter.openapi.json`, which is emitted by the API-side contract generator alongside the broader `api/generated/sdk-contract.openapi.json` artifact.
 
 Treat `attriax_api_client` as generated output, not handwritten source.
 
@@ -30,23 +30,34 @@ npm run sdk:flutter:validate
 npm run sdk:contract:generate
 ```
 
+```bash
+npm run sdk:generate:all
+```
+
+```bash
+npm run sdk:validate:all
+```
+
 ## What `sdk:flutter:generate` Does
 
 `npm run sdk:flutter:generate` is the supported end-to-end regeneration flow.
 
 It performs these steps in order:
 
-1. Regenerates `api/generated/sdk-contract.openapi.json` from the NestJS API.
+1. Regenerates both `api/generated/sdk-contract.openapi.json` and `api/generated/sdk-contract.flutter.openapi.json` from the NestJS API.
 2. Deletes the previous `sdk-flutter/attriax_api_client/` output.
-3. Generates a new Dart Dio client with `@openapitools/openapi-generator-cli` using `serializationLibrary=built_value`.
-4. Reapplies Attriax-owned metadata and compatibility fixes:
+3. Generates a new Dart Dio client with `@openapitools/openapi-generator-cli` using `serializationLibrary=json_serializable` and `skipCopyWith=true`.
+4. Reapplies Attriax-owned package metadata and analysis settings:
    - `pubspec.yaml` metadata
    - `analysis_options.yaml`
    - `README.md`
-   - enum mixin compatibility patches required by the current Flutter/Dart toolchain
+   - `CHANGELOG.md`
+   - `LICENSE`
 5. Runs `flutter pub get` in `sdk-flutter/`.
-6. Runs `dart run build_runner build --delete-conflicting-outputs` in `attriax_api_client/`.
+6. Runs `dart run build_runner build --delete-conflicting-outputs` in `attriax_api_client/` to materialize the generated `json_serializable` files.
 7. Runs validation unless you used `sdk:flutter:generate:fast`.
+
+The Flutter path no longer carries `built_value`, `built_collection`, or the old enum-mixin patch step. It still intentionally keeps `build_runner` because the current `dart-dio` `json_serializable` output requires it.
 
 ## What `sdk:flutter:validate` Does
 
@@ -74,14 +85,17 @@ Do not hand-edit generated transport models or generated API methods and then co
 These paths are considered generated and may be replaced entirely:
 
 - `sdk-flutter/attriax_api_client/lib/`
-- `sdk-flutter/attriax_api_client/doc/`
 - `sdk-flutter/attriax_api_client/.openapi-generator/`
+- `sdk-flutter/attriax_api_client/build.yaml`
+- `sdk-flutter/attriax_api_client/.openapi-generator-ignore`
 
 These files are restored by the post-generation script and should still be treated as generated-package metadata, not as manually curated package docs:
 
 - `sdk-flutter/attriax_api_client/pubspec.yaml`
 - `sdk-flutter/attriax_api_client/analysis_options.yaml`
 - `sdk-flutter/attriax_api_client/README.md`
+- `sdk-flutter/attriax_api_client/CHANGELOG.md`
+- `sdk-flutter/attriax_api_client/LICENSE`
 
 ## Why It Is A Separate Package
 

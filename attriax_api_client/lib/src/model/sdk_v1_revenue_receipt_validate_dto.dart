@@ -3,401 +3,144 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'sdk_v1_revenue_receipt_validate_dto.g.dart';
 
-/// SdkV1RevenueReceiptValidateDto
-///
-/// Properties:
-/// * [appToken]
-/// * [clientOccurredAt]
-/// * [deviceId]
-/// * [environment]
-/// * [originalTransactionId]
-/// * [packageName]
-/// * [productId]
-/// * [provider]
-/// * [purchaseToken]
-/// * [receiptData]
-/// * [receiptSignature]
-/// * [signedPayload]
-/// * [store]
-/// * [test]
-/// * [transactionId]
-@BuiltValue()
-abstract class SdkV1RevenueReceiptValidateDto
-    implements
-        Built<
-          SdkV1RevenueReceiptValidateDto,
-          SdkV1RevenueReceiptValidateDtoBuilder
-        > {
-  @BuiltValueField(wireName: r'appToken')
-  String get appToken;
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class SdkV1RevenueReceiptValidateDto {
+  /// Returns a new [SdkV1RevenueReceiptValidateDto] instance.
+  SdkV1RevenueReceiptValidateDto({
+    required this.appToken,
 
-  @BuiltValueField(wireName: r'clientOccurredAt')
-  String? get clientOccurredAt;
+    this.clientOccurredAt,
 
-  @BuiltValueField(wireName: r'deviceId')
-  String? get deviceId;
+    this.deviceId,
 
-  @BuiltValueField(wireName: r'environment')
-  String? get environment;
+    this.environment,
 
-  @BuiltValueField(wireName: r'originalTransactionId')
-  String? get originalTransactionId;
+    this.originalTransactionId,
 
-  @BuiltValueField(wireName: r'packageName')
-  String? get packageName;
+    this.packageName,
 
-  @BuiltValueField(wireName: r'productId')
-  String? get productId;
+    this.productId,
 
-  @BuiltValueField(wireName: r'provider')
-  String? get provider;
+    this.provider,
 
-  @BuiltValueField(wireName: r'purchaseToken')
-  String? get purchaseToken;
+    this.purchaseToken,
 
-  @BuiltValueField(wireName: r'receiptData')
-  String? get receiptData;
+    this.receiptData,
 
-  @BuiltValueField(wireName: r'receiptSignature')
-  String? get receiptSignature;
+    this.receiptSignature,
 
-  @BuiltValueField(wireName: r'signedPayload')
-  String? get signedPayload;
+    this.signedPayload,
 
-  @BuiltValueField(wireName: r'store')
-  String? get store;
+    this.store,
 
-  @BuiltValueField(wireName: r'test')
-  bool? get test;
+    this.test,
 
-  @BuiltValueField(wireName: r'transactionId')
-  String? get transactionId;
+    this.transactionId,
+  });
 
-  SdkV1RevenueReceiptValidateDto._();
+  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
+  final String appToken;
 
-  factory SdkV1RevenueReceiptValidateDto([
-    void updates(SdkV1RevenueReceiptValidateDtoBuilder b),
-  ]) = _$SdkV1RevenueReceiptValidateDto;
+  @JsonKey(name: r'clientOccurredAt', required: false, includeIfNull: false)
+  final String? clientOccurredAt;
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(SdkV1RevenueReceiptValidateDtoBuilder b) => b;
+  @JsonKey(name: r'deviceId', required: false, includeIfNull: false)
+  final String? deviceId;
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<SdkV1RevenueReceiptValidateDto> get serializer =>
-      _$SdkV1RevenueReceiptValidateDtoSerializer();
-}
+  @JsonKey(name: r'environment', required: false, includeIfNull: false)
+  final String? environment;
 
-class _$SdkV1RevenueReceiptValidateDtoSerializer
-    implements PrimitiveSerializer<SdkV1RevenueReceiptValidateDto> {
-  @override
-  final Iterable<Type> types = const [
-    SdkV1RevenueReceiptValidateDto,
-    _$SdkV1RevenueReceiptValidateDto,
-  ];
+  @JsonKey(
+    name: r'originalTransactionId',
+    required: false,
+    includeIfNull: false,
+  )
+  final String? originalTransactionId;
+
+  @JsonKey(name: r'packageName', required: false, includeIfNull: false)
+  final String? packageName;
+
+  @JsonKey(name: r'productId', required: false, includeIfNull: false)
+  final String? productId;
+
+  @JsonKey(name: r'provider', required: false, includeIfNull: false)
+  final String? provider;
+
+  @JsonKey(name: r'purchaseToken', required: false, includeIfNull: false)
+  final String? purchaseToken;
+
+  @JsonKey(name: r'receiptData', required: false, includeIfNull: false)
+  final String? receiptData;
+
+  @JsonKey(name: r'receiptSignature', required: false, includeIfNull: false)
+  final String? receiptSignature;
+
+  @JsonKey(name: r'signedPayload', required: false, includeIfNull: false)
+  final String? signedPayload;
+
+  @JsonKey(name: r'store', required: false, includeIfNull: false)
+  final String? store;
+
+  @JsonKey(name: r'test', required: false, includeIfNull: false)
+  final bool? test;
+
+  @JsonKey(name: r'transactionId', required: false, includeIfNull: false)
+  final String? transactionId;
 
   @override
-  final String wireName = r'SdkV1RevenueReceiptValidateDto';
-
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    SdkV1RevenueReceiptValidateDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'appToken';
-    yield serializers.serialize(
-      object.appToken,
-      specifiedType: const FullType(String),
-    );
-    if (object.clientOccurredAt != null) {
-      yield r'clientOccurredAt';
-      yield serializers.serialize(
-        object.clientOccurredAt,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.deviceId != null) {
-      yield r'deviceId';
-      yield serializers.serialize(
-        object.deviceId,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.environment != null) {
-      yield r'environment';
-      yield serializers.serialize(
-        object.environment,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.originalTransactionId != null) {
-      yield r'originalTransactionId';
-      yield serializers.serialize(
-        object.originalTransactionId,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.packageName != null) {
-      yield r'packageName';
-      yield serializers.serialize(
-        object.packageName,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.productId != null) {
-      yield r'productId';
-      yield serializers.serialize(
-        object.productId,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.provider != null) {
-      yield r'provider';
-      yield serializers.serialize(
-        object.provider,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.purchaseToken != null) {
-      yield r'purchaseToken';
-      yield serializers.serialize(
-        object.purchaseToken,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.receiptData != null) {
-      yield r'receiptData';
-      yield serializers.serialize(
-        object.receiptData,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.receiptSignature != null) {
-      yield r'receiptSignature';
-      yield serializers.serialize(
-        object.receiptSignature,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.signedPayload != null) {
-      yield r'signedPayload';
-      yield serializers.serialize(
-        object.signedPayload,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.store != null) {
-      yield r'store';
-      yield serializers.serialize(
-        object.store,
-        specifiedType: const FullType(String),
-      );
-    }
-    if (object.test != null) {
-      yield r'test';
-      yield serializers.serialize(
-        object.test,
-        specifiedType: const FullType(bool),
-      );
-    }
-    if (object.transactionId != null) {
-      yield r'transactionId';
-      yield serializers.serialize(
-        object.transactionId,
-        specifiedType: const FullType(String),
-      );
-    }
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SdkV1RevenueReceiptValidateDto &&
+          other.appToken == appToken &&
+          other.clientOccurredAt == clientOccurredAt &&
+          other.deviceId == deviceId &&
+          other.environment == environment &&
+          other.originalTransactionId == originalTransactionId &&
+          other.packageName == packageName &&
+          other.productId == productId &&
+          other.provider == provider &&
+          other.purchaseToken == purchaseToken &&
+          other.receiptData == receiptData &&
+          other.receiptSignature == receiptSignature &&
+          other.signedPayload == signedPayload &&
+          other.store == store &&
+          other.test == test &&
+          other.transactionId == transactionId;
 
   @override
-  Object serialize(
-    Serializers serializers,
-    SdkV1RevenueReceiptValidateDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
-  }
+  int get hashCode =>
+      appToken.hashCode +
+      clientOccurredAt.hashCode +
+      deviceId.hashCode +
+      environment.hashCode +
+      originalTransactionId.hashCode +
+      packageName.hashCode +
+      productId.hashCode +
+      provider.hashCode +
+      purchaseToken.hashCode +
+      receiptData.hashCode +
+      receiptSignature.hashCode +
+      signedPayload.hashCode +
+      store.hashCode +
+      test.hashCode +
+      transactionId.hashCode;
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required SdkV1RevenueReceiptValidateDtoBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'appToken':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.appToken = valueDes;
-          break;
-        case r'clientOccurredAt':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.clientOccurredAt = valueDes;
-          break;
-        case r'deviceId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.deviceId = valueDes;
-          break;
-        case r'environment':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.environment = valueDes;
-          break;
-        case r'originalTransactionId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.originalTransactionId = valueDes;
-          break;
-        case r'packageName':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.packageName = valueDes;
-          break;
-        case r'productId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.productId = valueDes;
-          break;
-        case r'provider':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.provider = valueDes;
-          break;
-        case r'purchaseToken':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.purchaseToken = valueDes;
-          break;
-        case r'receiptData':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.receiptData = valueDes;
-          break;
-        case r'receiptSignature':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.receiptSignature = valueDes;
-          break;
-        case r'signedPayload':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.signedPayload = valueDes;
-          break;
-        case r'store':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.store = valueDes;
-          break;
-        case r'test':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(bool),
-                  )
-                  as bool;
-          result.test = valueDes;
-          break;
-        case r'transactionId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.transactionId = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+  factory SdkV1RevenueReceiptValidateDto.fromJson(Map<String, dynamic> json) =>
+      _$SdkV1RevenueReceiptValidateDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SdkV1RevenueReceiptValidateDtoToJson(this);
 
   @override
-  SdkV1RevenueReceiptValidateDto deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = SdkV1RevenueReceiptValidateDtoBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
 }

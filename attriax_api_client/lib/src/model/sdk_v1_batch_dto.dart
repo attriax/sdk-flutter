@@ -4,193 +4,74 @@
 
 // ignore_for_file: unused_element
 import 'package:attriax_api_client/src/model/sdk_v1_batch_item_dto.dart';
-import 'package:built_collection/built_collection.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'sdk_v1_batch_dto.g.dart';
 
-/// SdkV1BatchDto
-///
-/// Properties:
-/// * [appToken] - Shared app token for every item in the batch.
-/// * [deviceId] - Shared device identifier for every item in the batch.
-/// * [deviceIdSource] - Optional shared device-id source for every item in the batch.
-/// * [items]
-/// * [requestId] - Stable client-generated batch identifier used for idempotent retries.
-@BuiltValue()
-abstract class SdkV1BatchDto
-    implements Built<SdkV1BatchDto, SdkV1BatchDtoBuilder> {
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class SdkV1BatchDto {
+  /// Returns a new [SdkV1BatchDto] instance.
+  SdkV1BatchDto({
+    required this.appToken,
+
+    required this.deviceId,
+
+    this.deviceIdSource,
+
+    required this.items,
+
+    required this.requestId,
+  });
+
   /// Shared app token for every item in the batch.
-  @BuiltValueField(wireName: r'appToken')
-  String get appToken;
+  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
+  final String appToken;
 
   /// Shared device identifier for every item in the batch.
-  @BuiltValueField(wireName: r'deviceId')
-  String get deviceId;
+  @JsonKey(name: r'deviceId', required: true, includeIfNull: false)
+  final String deviceId;
 
   /// Optional shared device-id source for every item in the batch.
-  @BuiltValueField(wireName: r'deviceIdSource')
-  String? get deviceIdSource;
+  @JsonKey(name: r'deviceIdSource', required: false, includeIfNull: false)
+  final String? deviceIdSource;
 
-  @BuiltValueField(wireName: r'items')
-  BuiltList<SdkV1BatchItemDto> get items;
+  @JsonKey(name: r'items', required: true, includeIfNull: false)
+  final List<SdkV1BatchItemDto> items;
 
   /// Stable client-generated batch identifier used for idempotent retries.
-  @BuiltValueField(wireName: r'requestId')
-  String get requestId;
-
-  SdkV1BatchDto._();
-
-  factory SdkV1BatchDto([void updates(SdkV1BatchDtoBuilder b)]) =
-      _$SdkV1BatchDto;
-
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(SdkV1BatchDtoBuilder b) => b;
-
-  @BuiltValueSerializer(custom: true)
-  static Serializer<SdkV1BatchDto> get serializer =>
-      _$SdkV1BatchDtoSerializer();
-}
-
-class _$SdkV1BatchDtoSerializer implements PrimitiveSerializer<SdkV1BatchDto> {
-  @override
-  final Iterable<Type> types = const [SdkV1BatchDto, _$SdkV1BatchDto];
+  @JsonKey(name: r'requestId', required: true, includeIfNull: false)
+  final String requestId;
 
   @override
-  final String wireName = r'SdkV1BatchDto';
-
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    SdkV1BatchDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'appToken';
-    yield serializers.serialize(
-      object.appToken,
-      specifiedType: const FullType(String),
-    );
-    yield r'deviceId';
-    yield serializers.serialize(
-      object.deviceId,
-      specifiedType: const FullType(String),
-    );
-    if (object.deviceIdSource != null) {
-      yield r'deviceIdSource';
-      yield serializers.serialize(
-        object.deviceIdSource,
-        specifiedType: const FullType(String),
-      );
-    }
-    yield r'items';
-    yield serializers.serialize(
-      object.items,
-      specifiedType: const FullType(BuiltList, [FullType(SdkV1BatchItemDto)]),
-    );
-    yield r'requestId';
-    yield serializers.serialize(
-      object.requestId,
-      specifiedType: const FullType(String),
-    );
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SdkV1BatchDto &&
+          other.appToken == appToken &&
+          other.deviceId == deviceId &&
+          other.deviceIdSource == deviceIdSource &&
+          other.items == items &&
+          other.requestId == requestId;
 
   @override
-  Object serialize(
-    Serializers serializers,
-    SdkV1BatchDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
-  }
+  int get hashCode =>
+      appToken.hashCode +
+      deviceId.hashCode +
+      deviceIdSource.hashCode +
+      items.hashCode +
+      requestId.hashCode;
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required SdkV1BatchDtoBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'appToken':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.appToken = valueDes;
-          break;
-        case r'deviceId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.deviceId = valueDes;
-          break;
-        case r'deviceIdSource':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.deviceIdSource = valueDes;
-          break;
-        case r'items':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(BuiltList, [
-                      FullType(SdkV1BatchItemDto),
-                    ]),
-                  )
-                  as BuiltList<SdkV1BatchItemDto>;
-          result.items.replace(valueDes);
-          break;
-        case r'requestId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.requestId = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+  factory SdkV1BatchDto.fromJson(Map<String, dynamic> json) =>
+      _$SdkV1BatchDtoFromJson(json);
+
+  Map<String, dynamic> toJson() => _$SdkV1BatchDtoToJson(this);
 
   @override
-  SdkV1BatchDto deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = SdkV1BatchDtoBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
 }

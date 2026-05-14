@@ -3,293 +3,93 @@
 part of 'sdk_v1_open_dto.dart';
 
 // **************************************************************************
-// BuiltValueGenerator
+// JsonSerializableGenerator
 // **************************************************************************
 
-class _$SdkV1OpenDto extends SdkV1OpenDto {
-  @override
-  final AppVersionContextDto app;
-  @override
-  final String appToken;
-  @override
-  final DeviceContextDto device;
-  @override
-  final String deviceId;
-  @override
-  final String? deviceIdSource;
-  @override
-  final bool? googlePlayInstantParam;
-  @override
-  final num? installBeginTimestampSeconds;
-  @override
-  final String? installReferrer;
-  @override
-  final bool? isFirstLaunch;
-  @override
-  final Platform platform;
-  @override
-  final num? referrerClickTimestampSeconds;
-  @override
-  final SdkVersionContextDto sdk;
-  @override
-  final String? sessionId;
-  @override
-  final DateTime? sessionStartedAt;
+SdkV1OpenDto _$SdkV1OpenDtoFromJson(Map<String, dynamic> json) =>
+    $checkedCreate('SdkV1OpenDto', json, ($checkedConvert) {
+      $checkKeys(
+        json,
+        requiredKeys: const [
+          'app',
+          'appToken',
+          'device',
+          'deviceId',
+          'platform',
+          'sdk',
+        ],
+      );
+      final val = SdkV1OpenDto(
+        app: $checkedConvert(
+          'app',
+          (v) => AppVersionContextDto.fromJson(v as Map<String, dynamic>),
+        ),
+        appToken: $checkedConvert('appToken', (v) => v as String),
+        device: $checkedConvert(
+          'device',
+          (v) => DeviceContextDto.fromJson(v as Map<String, dynamic>),
+        ),
+        deviceId: $checkedConvert('deviceId', (v) => v as String),
+        deviceIdSource: $checkedConvert('deviceIdSource', (v) => v as String?),
+        googlePlayInstantParam: $checkedConvert(
+          'googlePlayInstantParam',
+          (v) => v as bool?,
+        ),
+        installBeginTimestampSeconds: $checkedConvert(
+          'installBeginTimestampSeconds',
+          (v) => v as num?,
+        ),
+        installReferrer: $checkedConvert(
+          'installReferrer',
+          (v) => v as String?,
+        ),
+        isFirstLaunch: $checkedConvert('isFirstLaunch', (v) => v as bool?),
+        platform: $checkedConvert(
+          'platform',
+          (v) => $enumDecode(_$PlatformEnumMap, v),
+        ),
+        referrerClickTimestampSeconds: $checkedConvert(
+          'referrerClickTimestampSeconds',
+          (v) => v as num?,
+        ),
+        sdk: $checkedConvert(
+          'sdk',
+          (v) => SdkVersionContextDto.fromJson(v as Map<String, dynamic>),
+        ),
+        sessionId: $checkedConvert('sessionId', (v) => v as String?),
+        sessionStartedAt: $checkedConvert(
+          'sessionStartedAt',
+          (v) => v == null ? null : DateTime.parse(v as String),
+        ),
+      );
+      return val;
+    });
 
-  factory _$SdkV1OpenDto([void Function(SdkV1OpenDtoBuilder)? updates]) =>
-      (SdkV1OpenDtoBuilder()..update(updates))._build();
+Map<String, dynamic> _$SdkV1OpenDtoToJson(SdkV1OpenDto instance) =>
+    <String, dynamic>{
+      'app': instance.app.toJson(),
+      'appToken': instance.appToken,
+      'device': instance.device.toJson(),
+      'deviceId': instance.deviceId,
+      'deviceIdSource': ?instance.deviceIdSource,
+      'googlePlayInstantParam': ?instance.googlePlayInstantParam,
+      'installBeginTimestampSeconds': ?instance.installBeginTimestampSeconds,
+      'installReferrer': ?instance.installReferrer,
+      'isFirstLaunch': ?instance.isFirstLaunch,
+      'platform': _$PlatformEnumMap[instance.platform]!,
+      'referrerClickTimestampSeconds': ?instance.referrerClickTimestampSeconds,
+      'sdk': instance.sdk.toJson(),
+      'sessionId': ?instance.sessionId,
+      'sessionStartedAt': ?instance.sessionStartedAt?.toIso8601String(),
+    };
 
-  _$SdkV1OpenDto._({
-    required this.app,
-    required this.appToken,
-    required this.device,
-    required this.deviceId,
-    this.deviceIdSource,
-    this.googlePlayInstantParam,
-    this.installBeginTimestampSeconds,
-    this.installReferrer,
-    this.isFirstLaunch,
-    required this.platform,
-    this.referrerClickTimestampSeconds,
-    required this.sdk,
-    this.sessionId,
-    this.sessionStartedAt,
-  }) : super._();
-  @override
-  SdkV1OpenDto rebuild(void Function(SdkV1OpenDtoBuilder) updates) =>
-      (toBuilder()..update(updates)).build();
-
-  @override
-  SdkV1OpenDtoBuilder toBuilder() => SdkV1OpenDtoBuilder()..replace(this);
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(other, this)) return true;
-    return other is SdkV1OpenDto &&
-        app == other.app &&
-        appToken == other.appToken &&
-        device == other.device &&
-        deviceId == other.deviceId &&
-        deviceIdSource == other.deviceIdSource &&
-        googlePlayInstantParam == other.googlePlayInstantParam &&
-        installBeginTimestampSeconds == other.installBeginTimestampSeconds &&
-        installReferrer == other.installReferrer &&
-        isFirstLaunch == other.isFirstLaunch &&
-        platform == other.platform &&
-        referrerClickTimestampSeconds == other.referrerClickTimestampSeconds &&
-        sdk == other.sdk &&
-        sessionId == other.sessionId &&
-        sessionStartedAt == other.sessionStartedAt;
-  }
-
-  @override
-  int get hashCode {
-    var _$hash = 0;
-    _$hash = $jc(_$hash, app.hashCode);
-    _$hash = $jc(_$hash, appToken.hashCode);
-    _$hash = $jc(_$hash, device.hashCode);
-    _$hash = $jc(_$hash, deviceId.hashCode);
-    _$hash = $jc(_$hash, deviceIdSource.hashCode);
-    _$hash = $jc(_$hash, googlePlayInstantParam.hashCode);
-    _$hash = $jc(_$hash, installBeginTimestampSeconds.hashCode);
-    _$hash = $jc(_$hash, installReferrer.hashCode);
-    _$hash = $jc(_$hash, isFirstLaunch.hashCode);
-    _$hash = $jc(_$hash, platform.hashCode);
-    _$hash = $jc(_$hash, referrerClickTimestampSeconds.hashCode);
-    _$hash = $jc(_$hash, sdk.hashCode);
-    _$hash = $jc(_$hash, sessionId.hashCode);
-    _$hash = $jc(_$hash, sessionStartedAt.hashCode);
-    _$hash = $jf(_$hash);
-    return _$hash;
-  }
-
-  @override
-  String toString() {
-    return (newBuiltValueToStringHelper(r'SdkV1OpenDto')
-          ..add('app', app)
-          ..add('appToken', appToken)
-          ..add('device', device)
-          ..add('deviceId', deviceId)
-          ..add('deviceIdSource', deviceIdSource)
-          ..add('googlePlayInstantParam', googlePlayInstantParam)
-          ..add('installBeginTimestampSeconds', installBeginTimestampSeconds)
-          ..add('installReferrer', installReferrer)
-          ..add('isFirstLaunch', isFirstLaunch)
-          ..add('platform', platform)
-          ..add('referrerClickTimestampSeconds', referrerClickTimestampSeconds)
-          ..add('sdk', sdk)
-          ..add('sessionId', sessionId)
-          ..add('sessionStartedAt', sessionStartedAt))
-        .toString();
-  }
-}
-
-class SdkV1OpenDtoBuilder
-    implements Builder<SdkV1OpenDto, SdkV1OpenDtoBuilder> {
-  _$SdkV1OpenDto? _$v;
-
-  AppVersionContextDtoBuilder? _app;
-  AppVersionContextDtoBuilder get app =>
-      _$this._app ??= AppVersionContextDtoBuilder();
-  set app(AppVersionContextDtoBuilder? app) => _$this._app = app;
-
-  String? _appToken;
-  String? get appToken => _$this._appToken;
-  set appToken(String? appToken) => _$this._appToken = appToken;
-
-  DeviceContextDtoBuilder? _device;
-  DeviceContextDtoBuilder get device =>
-      _$this._device ??= DeviceContextDtoBuilder();
-  set device(DeviceContextDtoBuilder? device) => _$this._device = device;
-
-  String? _deviceId;
-  String? get deviceId => _$this._deviceId;
-  set deviceId(String? deviceId) => _$this._deviceId = deviceId;
-
-  String? _deviceIdSource;
-  String? get deviceIdSource => _$this._deviceIdSource;
-  set deviceIdSource(String? deviceIdSource) =>
-      _$this._deviceIdSource = deviceIdSource;
-
-  bool? _googlePlayInstantParam;
-  bool? get googlePlayInstantParam => _$this._googlePlayInstantParam;
-  set googlePlayInstantParam(bool? googlePlayInstantParam) =>
-      _$this._googlePlayInstantParam = googlePlayInstantParam;
-
-  num? _installBeginTimestampSeconds;
-  num? get installBeginTimestampSeconds => _$this._installBeginTimestampSeconds;
-  set installBeginTimestampSeconds(num? installBeginTimestampSeconds) =>
-      _$this._installBeginTimestampSeconds = installBeginTimestampSeconds;
-
-  String? _installReferrer;
-  String? get installReferrer => _$this._installReferrer;
-  set installReferrer(String? installReferrer) =>
-      _$this._installReferrer = installReferrer;
-
-  bool? _isFirstLaunch;
-  bool? get isFirstLaunch => _$this._isFirstLaunch;
-  set isFirstLaunch(bool? isFirstLaunch) =>
-      _$this._isFirstLaunch = isFirstLaunch;
-
-  Platform? _platform;
-  Platform? get platform => _$this._platform;
-  set platform(Platform? platform) => _$this._platform = platform;
-
-  num? _referrerClickTimestampSeconds;
-  num? get referrerClickTimestampSeconds =>
-      _$this._referrerClickTimestampSeconds;
-  set referrerClickTimestampSeconds(num? referrerClickTimestampSeconds) =>
-      _$this._referrerClickTimestampSeconds = referrerClickTimestampSeconds;
-
-  SdkVersionContextDtoBuilder? _sdk;
-  SdkVersionContextDtoBuilder get sdk =>
-      _$this._sdk ??= SdkVersionContextDtoBuilder();
-  set sdk(SdkVersionContextDtoBuilder? sdk) => _$this._sdk = sdk;
-
-  String? _sessionId;
-  String? get sessionId => _$this._sessionId;
-  set sessionId(String? sessionId) => _$this._sessionId = sessionId;
-
-  DateTime? _sessionStartedAt;
-  DateTime? get sessionStartedAt => _$this._sessionStartedAt;
-  set sessionStartedAt(DateTime? sessionStartedAt) =>
-      _$this._sessionStartedAt = sessionStartedAt;
-
-  SdkV1OpenDtoBuilder() {
-    SdkV1OpenDto._defaults(this);
-  }
-
-  SdkV1OpenDtoBuilder get _$this {
-    final $v = _$v;
-    if ($v != null) {
-      _app = $v.app.toBuilder();
-      _appToken = $v.appToken;
-      _device = $v.device.toBuilder();
-      _deviceId = $v.deviceId;
-      _deviceIdSource = $v.deviceIdSource;
-      _googlePlayInstantParam = $v.googlePlayInstantParam;
-      _installBeginTimestampSeconds = $v.installBeginTimestampSeconds;
-      _installReferrer = $v.installReferrer;
-      _isFirstLaunch = $v.isFirstLaunch;
-      _platform = $v.platform;
-      _referrerClickTimestampSeconds = $v.referrerClickTimestampSeconds;
-      _sdk = $v.sdk.toBuilder();
-      _sessionId = $v.sessionId;
-      _sessionStartedAt = $v.sessionStartedAt;
-      _$v = null;
-    }
-    return this;
-  }
-
-  @override
-  void replace(SdkV1OpenDto other) {
-    _$v = other as _$SdkV1OpenDto;
-  }
-
-  @override
-  void update(void Function(SdkV1OpenDtoBuilder)? updates) {
-    if (updates != null) updates(this);
-  }
-
-  @override
-  SdkV1OpenDto build() => _build();
-
-  _$SdkV1OpenDto _build() {
-    _$SdkV1OpenDto _$result;
-    try {
-      _$result =
-          _$v ??
-          _$SdkV1OpenDto._(
-            app: app.build(),
-            appToken: BuiltValueNullFieldError.checkNotNull(
-              appToken,
-              r'SdkV1OpenDto',
-              'appToken',
-            ),
-            device: device.build(),
-            deviceId: BuiltValueNullFieldError.checkNotNull(
-              deviceId,
-              r'SdkV1OpenDto',
-              'deviceId',
-            ),
-            deviceIdSource: deviceIdSource,
-            googlePlayInstantParam: googlePlayInstantParam,
-            installBeginTimestampSeconds: installBeginTimestampSeconds,
-            installReferrer: installReferrer,
-            isFirstLaunch: isFirstLaunch,
-            platform: BuiltValueNullFieldError.checkNotNull(
-              platform,
-              r'SdkV1OpenDto',
-              'platform',
-            ),
-            referrerClickTimestampSeconds: referrerClickTimestampSeconds,
-            sdk: sdk.build(),
-            sessionId: sessionId,
-            sessionStartedAt: sessionStartedAt,
-          );
-    } catch (_) {
-      late String _$failedField;
-      try {
-        _$failedField = 'app';
-        app.build();
-
-        _$failedField = 'device';
-        device.build();
-
-        _$failedField = 'sdk';
-        sdk.build();
-      } catch (e) {
-        throw BuiltValueNestedFieldError(
-          r'SdkV1OpenDto',
-          _$failedField,
-          e.toString(),
-        );
-      }
-      rethrow;
-    }
-    replace(_$result);
-    return _$result;
-  }
-}
-
-// ignore_for_file: deprecated_member_use_from_same_package,type=lint
+const _$PlatformEnumMap = {
+  Platform.ios: 'ios',
+  Platform.android: 'android',
+  Platform.unityEditor: 'unity_editor',
+  Platform.windows: 'windows',
+  Platform.macos: 'macos',
+  Platform.linux: 'linux',
+  Platform.web: 'web',
+  Platform.unknown: 'unknown',
+};

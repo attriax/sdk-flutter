@@ -1,8 +1,5 @@
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 import 'package:attriax_api_client/attriax_api_client.dart' as sdk;
-import 'package:built_collection/built_collection.dart';
-import 'package:built_value/json_object.dart';
-import 'package:built_value/serializer.dart';
 
 import 'attriax_json_utils.dart';
 
@@ -27,8 +24,7 @@ final class AttriaxOpenRequest extends AttriaxApiRequest {
   String get label => 'app-open';
 
   @override
-  Map<String, Object?> toQueueBody() =>
-      _serializeGenerated(sdk.SdkV1OpenDto.serializer, payload);
+  Map<String, Object?> toQueueBody() => _generatedQueueBody(payload);
 }
 
 final class AttriaxTrackEventRequest extends AttriaxApiRequest {
@@ -43,8 +39,7 @@ final class AttriaxTrackEventRequest extends AttriaxApiRequest {
   String get label => 'event';
 
   @override
-  Map<String, Object?> toQueueBody() =>
-      _serializeGenerated(sdk.SdkEventDto.serializer, payload);
+  Map<String, Object?> toQueueBody() => _generatedQueueBody(payload);
 }
 
 final class AttriaxCrashReportPayload {
@@ -277,8 +272,7 @@ final class AttriaxUserRequest extends AttriaxApiRequest {
   String get label => 'user update';
 
   @override
-  Map<String, Object?> toQueueBody() =>
-      _serializeGenerated(sdk.SdkUserDto.serializer, payload);
+  Map<String, Object?> toQueueBody() => _generatedQueueBody(payload);
 }
 
 final class AttriaxResolveDeepLinkRequest extends AttriaxApiRequest {
@@ -293,8 +287,7 @@ final class AttriaxResolveDeepLinkRequest extends AttriaxApiRequest {
   String get label => 'deep-link resolution';
 
   @override
-  Map<String, Object?> toQueueBody() =>
-      _serializeGenerated(sdk.SdkV1DeepLinkResolveDto.serializer, payload);
+  Map<String, Object?> toQueueBody() => _generatedQueueBody(payload);
 }
 
 final class AttriaxCreateDynamicLinkRequest extends AttriaxApiRequest {
@@ -309,8 +302,7 @@ final class AttriaxCreateDynamicLinkRequest extends AttriaxApiRequest {
   String get label => 'dynamic-link creation';
 
   @override
-  Map<String, Object?> toQueueBody() =>
-      _serializeGenerated(sdk.SdkCreateDynamicLinkDto.serializer, payload);
+  Map<String, Object?> toQueueBody() => _generatedQueueBody(payload);
 }
 
 String attriaxApiRequestLabel(AttriaxApiRequest request) => request.label;
@@ -411,11 +403,11 @@ AttriaxApiRequest attriaxApiRequestFromJson(
   switch (kindName) {
     case 'open':
       return AttriaxOpenRequest(
-        _deserializeGenerated(sdk.SdkV1OpenDto.serializer, body),
+        _parseGeneratedPayload(body, sdk.SdkV1OpenDto.fromJson),
       );
     case 'trackEvent':
       return AttriaxTrackEventRequest(
-        _deserializeGenerated(sdk.SdkEventDto.serializer, body),
+        _parseGeneratedPayload(body, sdk.SdkEventDto.fromJson),
       );
     case 'trackCrash':
       return AttriaxTrackCrashRequest(AttriaxCrashReportPayload.fromJson(body));
@@ -426,15 +418,15 @@ AttriaxApiRequest attriaxApiRequestFromJson(
     case 'user':
     case 'identify':
       return AttriaxUserRequest(
-        _deserializeGenerated(sdk.SdkUserDto.serializer, body),
+        _parseGeneratedPayload(body, sdk.SdkUserDto.fromJson),
       );
     case 'resolveDeepLink':
       return AttriaxResolveDeepLinkRequest(
-        _deserializeGenerated(sdk.SdkV1DeepLinkResolveDto.serializer, body),
+        _parseGeneratedPayload(body, sdk.SdkV1DeepLinkResolveDto.fromJson),
       );
     case 'createDynamicLink':
       return AttriaxCreateDynamicLinkRequest(
-        _deserializeGenerated(sdk.SdkCreateDynamicLinkDto.serializer, body),
+        _parseGeneratedPayload(body, sdk.SdkCreateDynamicLinkDto.fromJson),
       );
   }
 
@@ -452,29 +444,28 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
   final installReferrerMetadata =
       platformInstallReferrerContext?.metadata ?? const <String, Object?>{};
   final requestDto = sdk.SdkV1OpenDto(
-    (builder) => builder
-      ..app.replace(_generatedAppVersionContext(context.app))
-      ..appToken = config.appToken
-      ..device.replace(_generatedDeviceContext(context.device))
-      ..deviceId = context.deviceId
-      ..deviceIdSource = deviceIdSource
-      ..googlePlayInstantParam = attriaxBoolValue(
-        installReferrerMetadata['googlePlayInstantParam'],
-      )
-      ..installBeginTimestampSeconds = _attriaxIntValue(
-        installReferrerMetadata['installBeginTimestampSeconds'],
-      )
-      ..installReferrer = attriaxStringValue(
-        platformInstallReferrerContext?.installReferrer,
-      )
-      ..isFirstLaunch = context.isFirstLaunch
-      ..platform = _generatedPlatform(context.platform)
-      ..referrerClickTimestampSeconds = _attriaxIntValue(
-        installReferrerMetadata['referrerClickTimestampSeconds'],
-      )
-      ..sessionId = attriaxStringValue(sessionId)
-      ..sessionStartedAt = sessionStartedAt?.toUtc()
-      ..sdk.replace(_generatedSdkVersionContext(context.sdk)),
+    app: _generatedAppVersionContext(context.app),
+    appToken: config.appToken,
+    device: _generatedDeviceContext(context.device),
+    deviceId: context.deviceId,
+    deviceIdSource: deviceIdSource,
+    googlePlayInstantParam: attriaxBoolValue(
+      installReferrerMetadata['googlePlayInstantParam'],
+    ),
+    installBeginTimestampSeconds: _attriaxIntValue(
+      installReferrerMetadata['installBeginTimestampSeconds'],
+    ),
+    installReferrer: attriaxStringValue(
+      platformInstallReferrerContext?.installReferrer,
+    ),
+    isFirstLaunch: context.isFirstLaunch,
+    platform: _generatedPlatform(context.platform),
+    referrerClickTimestampSeconds: _attriaxIntValue(
+      installReferrerMetadata['referrerClickTimestampSeconds'],
+    ),
+    sdk: _generatedSdkVersionContext(context.sdk),
+    sessionId: attriaxStringValue(sessionId),
+    sessionStartedAt: sessionStartedAt?.toUtc(),
   );
 
   return AttriaxOpenRequest(requestDto);
@@ -491,15 +482,14 @@ AttriaxTrackEventRequest attriaxBuildTrackEventRequest({
   DateTime? clientOccurredAt,
 }) {
   final requestDto = sdk.SdkEventDto(
-    (builder) => builder
-      ..appToken = appToken
-      ..clientOccurredAt = clientOccurredAt?.toUtc()
-      ..deviceId = deviceId
-      ..deviceIdSource = deviceIdSource
-      ..eventName = eventName
-      ..eventData = _generatedJsonObjectMap(eventData)?.toBuilder()
-      ..sessionId = attriaxStringValue(sessionId)
-      ..sessionRelativeTimeMs = sessionRelativeTimeMs,
+    appToken: appToken,
+    clientOccurredAt: clientOccurredAt?.toUtc(),
+    deviceId: deviceId,
+    deviceIdSource: deviceIdSource,
+    eventData: _generatedOptionalJsonObjectMap(eventData),
+    eventName: eventName,
+    sessionId: attriaxStringValue(sessionId),
+    sessionRelativeTimeMs: sessionRelativeTimeMs,
   );
 
   return AttriaxTrackEventRequest(requestDto);
@@ -594,23 +584,22 @@ AttriaxTrackSessionRequest attriaxBuildTrackSessionRequest({
 sdk.SdkSessionDto attriaxGeneratedTrackSessionDto(
   AttriaxSessionLifecyclePayload payload,
 ) => sdk.SdkSessionDto(
-  (builder) => builder
-    ..appToken = payload.appToken
-    ..deviceId = payload.deviceId
-    ..deviceIdSource = attriaxStringValue(payload.deviceIdSource)
-    ..kind = _generatedSessionLifecycleKind(payload.kind)
-    ..sessionId = payload.sessionId
-    ..sessionRelativeTimeMs = payload.sessionRelativeTimeMs
-    ..clientOccurredAt = payload.clientOccurredAt.toUtc()
-    ..platform = _generatedPlatform(payload.platform)
-    ..locale = attriaxStringValue(payload.locale)
-    ..isFirstLaunch = payload.isFirstLaunch
-    ..appVersion = attriaxStringValue(payload.appVersion)
-    ..appBuildNumber = attriaxStringValue(payload.appBuildNumber)
-    ..appPackageName = attriaxStringValue(payload.appPackageName)
-    ..sdkApiVersion = attriaxStringValue(payload.sdkApiVersion)
-    ..sdkPackageVersion = attriaxStringValue(payload.sdkPackageVersion)
-    ..metadata = _generatedJsonObjectMap(payload.metadata)?.toBuilder(),
+  appToken: payload.appToken,
+  deviceId: payload.deviceId,
+  deviceIdSource: attriaxStringValue(payload.deviceIdSource),
+  kind: _generatedSessionLifecycleKind(payload.kind),
+  sessionId: payload.sessionId,
+  sessionRelativeTimeMs: payload.sessionRelativeTimeMs,
+  clientOccurredAt: payload.clientOccurredAt.toUtc(),
+  platform: _generatedPlatform(payload.platform),
+  locale: attriaxStringValue(payload.locale),
+  isFirstLaunch: payload.isFirstLaunch,
+  appVersion: attriaxStringValue(payload.appVersion),
+  appBuildNumber: attriaxStringValue(payload.appBuildNumber),
+  appPackageName: attriaxStringValue(payload.appPackageName),
+  sdkApiVersion: attriaxStringValue(payload.sdkApiVersion),
+  sdkPackageVersion: attriaxStringValue(payload.sdkPackageVersion),
+  metadata: _generatedOptionalJsonObjectMap(payload.metadata),
 );
 
 sdk.SdkBatchItemKind attriaxGeneratedBatchItemKind(AttriaxApiRequest request) =>
@@ -623,11 +612,8 @@ sdk.SdkBatchItemKind attriaxGeneratedBatchItemKind(AttriaxApiRequest request) =>
       ),
     };
 
-BuiltMap<String, JsonObject?> attriaxGeneratedJsonObjectMap(
-  Map<String, Object?> value,
-) =>
-    _generatedJsonObjectMap(value) ??
-    BuiltMap<String, JsonObject?>(const <String, JsonObject?>{});
+Map<String, Object> attriaxGeneratedJsonObjectMap(Map<String, Object?> value) =>
+    Map<String, Object>.from(_generatedJsonMap(value));
 
 AttriaxUserRequest attriaxBuildUserRequest({
   required String appToken,
@@ -645,20 +631,19 @@ AttriaxUserRequest attriaxBuildUserRequest({
       .where((value) => value.isNotEmpty)
       .toList(growable: false);
   final requestDto = sdk.SdkUserDto(
-    (builder) => builder
-      ..appToken = appToken
-      ..deviceId = deviceId
-      ..deviceIdSource = deviceIdSource
-      ..externalUserId = attriaxStringValue(externalUserId)
-      ..externalUserName = attriaxStringValue(externalUserName)
-      ..clearAllProperties = clearAllProperties ? true : null
-      ..clearExternalUser = clearExternalUser ? true : null
-      ..clearPropertyKeys =
-          normalizedClearPropertyKeys == null ||
-              normalizedClearPropertyKeys.isEmpty
-          ? null
-          : ListBuilder<String>(normalizedClearPropertyKeys)
-      ..properties = _generatedJsonObjectMap(properties)?.toBuilder(),
+    appToken: appToken,
+    clearAllProperties: clearAllProperties ? true : null,
+    clearExternalUser: clearExternalUser ? true : null,
+    clearPropertyKeys:
+        normalizedClearPropertyKeys == null ||
+            normalizedClearPropertyKeys.isEmpty
+        ? null
+        : normalizedClearPropertyKeys,
+    deviceId: deviceId,
+    deviceIdSource: deviceIdSource,
+    externalUserId: attriaxStringValue(externalUserId),
+    externalUserName: attriaxStringValue(externalUserName),
+    properties: _generatedOptionalJsonObjectMap(properties),
   );
 
   return AttriaxUserRequest(requestDto);
@@ -676,16 +661,15 @@ AttriaxResolveDeepLinkRequest attriaxBuildResolveDeepLinkRequest({
   Map<String, Object?>? metadata,
 }) {
   final requestDto = sdk.SdkV1DeepLinkResolveDto(
-    (builder) => builder
-      ..appToken = appToken
-      ..deviceId = deviceId
-      ..deviceIdSource = deviceIdSource
-      ..isFirstLaunch = isFirstLaunch
-      ..linkPath = attriaxStringValue(linkPath)
-      ..metadata = _generatedJsonObjectMap(metadata)?.toBuilder()
-      ..platform = _generatedPlatform(platform)
-      ..rawUrl = attriaxStringValue(rawUrl)
-      ..source_ = source,
+    appToken: appToken,
+    deviceId: deviceId,
+    deviceIdSource: deviceIdSource,
+    isFirstLaunch: isFirstLaunch,
+    linkPath: attriaxStringValue(linkPath),
+    metadata: _generatedOptionalJsonObjectMap(metadata),
+    platform: _generatedPlatform(platform),
+    rawUrl: attriaxStringValue(rawUrl),
+    source_: source,
   );
 
   return AttriaxResolveDeepLinkRequest(requestDto);
@@ -703,23 +687,22 @@ AttriaxCreateDynamicLinkRequest attriaxBuildCreateDynamicLinkRequest({
   Map<String, Object?>? data,
 }) {
   final requestDto = sdk.SdkCreateDynamicLinkDto(
-    (builder) => builder
-      ..androidRedirect = redirects?.android
-      ..appToken = appToken
-      ..data = _generatedJsonObjectMap(data)?.toBuilder()
-      ..destinationUrl = attriaxStringValue(destinationUrl)
-      ..group = attriaxStringValue(group)
-      ..iosRedirect = redirects?.ios
-      ..name = attriaxStringValue(name)
-      ..prefix = attriaxStringValue(prefix)
-      ..previewDescription = attriaxStringValue(socialPreview?.description)
-      ..previewImagePath = attriaxStringValue(socialPreview?.imagePath)
-      ..previewTitle = attriaxStringValue(socialPreview?.title)
-      ..utmCampaign = attriaxStringValue(utms?.campaign)
-      ..utmContent = attriaxStringValue(utms?.content)
-      ..utmMedium = attriaxStringValue(utms?.medium)
-      ..utmSource = attriaxStringValue(utms?.source)
-      ..utmTerm = attriaxStringValue(utms?.term),
+    androidRedirect: redirects?.android,
+    appToken: appToken,
+    data: _generatedOptionalJsonObjectMap(data),
+    destinationUrl: attriaxStringValue(destinationUrl),
+    group: attriaxStringValue(group),
+    iosRedirect: redirects?.ios,
+    name: attriaxStringValue(name),
+    prefix: attriaxStringValue(prefix),
+    previewDescription: attriaxStringValue(socialPreview?.description),
+    previewImagePath: attriaxStringValue(socialPreview?.imagePath),
+    previewTitle: attriaxStringValue(socialPreview?.title),
+    utmCampaign: attriaxStringValue(utms?.campaign),
+    utmContent: attriaxStringValue(utms?.content),
+    utmMedium: attriaxStringValue(utms?.medium),
+    utmSource: attriaxStringValue(utms?.source),
+    utmTerm: attriaxStringValue(utms?.term),
   );
 
   return AttriaxCreateDynamicLinkRequest(requestDto);
@@ -926,44 +909,41 @@ int? _attriaxIntValue(Object? value) {
 
 sdk.AppVersionContextDto _generatedAppVersionContext(AttriaxAppSnapshot app) =>
     sdk.AppVersionContextDto(
-      (builder) => builder
-        ..buildNumber = attriaxStringValue(app.buildNumber)
-        ..packageName = attriaxStringValue(app.packageName)
-        ..version = attriaxStringValue(app.version),
+      buildNumber: attriaxStringValue(app.buildNumber),
+      packageName: attriaxStringValue(app.packageName),
+      version: attriaxStringValue(app.version),
     );
 
 sdk.DeviceContextDto _generatedDeviceContext(AttriaxDeviceSnapshot device) =>
     sdk.DeviceContextDto(
-      (builder) => builder
-        ..advertisingId = attriaxStringValue(device.advertisingId)
-        ..androidId = attriaxStringValue(device.androidId)
-        ..brand = attriaxStringValue(device.brand)
-        ..colorDepth = device.colorDepth
-        ..devicePixelRatio = device.devicePixelRatio
-        ..hardware = attriaxStringValue(device.hardware)
-        ..isPhysicalDevice = device.isPhysicalDevice
-        ..language = attriaxStringValue(device.language)
-        ..manufacturer = attriaxStringValue(device.manufacturer)
-        ..metadata = _generatedJsonObjectMap(device.metadata)?.toBuilder()
-        ..model = attriaxStringValue(device.model)
-        ..name = attriaxStringValue(device.name)
-        ..osVersion = attriaxStringValue(device.osVersion)
-        ..screenHeight = device.screenHeight
-        ..screenResolution = attriaxStringValue(device.screenResolution)
-        ..screenWidth = device.screenWidth
-        ..supportedAbis = device.supportedAbis.isEmpty
-            ? null
-            : ListBuilder<String>(device.supportedAbis)
-        ..timezone = attriaxStringValue(device.timezone),
+      advertisingId: attriaxStringValue(device.advertisingId),
+      androidId: attriaxStringValue(device.androidId),
+      brand: attriaxStringValue(device.brand),
+      colorDepth: device.colorDepth,
+      devicePixelRatio: device.devicePixelRatio,
+      hardware: attriaxStringValue(device.hardware),
+      isPhysicalDevice: device.isPhysicalDevice,
+      language: attriaxStringValue(device.language),
+      manufacturer: attriaxStringValue(device.manufacturer),
+      metadata: _generatedOptionalJsonObjectMap(device.metadata),
+      model: attriaxStringValue(device.model),
+      name: attriaxStringValue(device.name),
+      osVersion: attriaxStringValue(device.osVersion),
+      screenHeight: device.screenHeight,
+      screenResolution: attriaxStringValue(device.screenResolution),
+      screenWidth: device.screenWidth,
+      supportedAbis: device.supportedAbis.isEmpty
+          ? null
+          : List<String>.from(device.supportedAbis),
+      timezone: attriaxStringValue(device.timezone),
     );
 
 sdk.SdkVersionContextDto _generatedSdkVersionContext(
   AttriaxSdkSnapshot sdkSnapshot,
 ) => sdk.SdkVersionContextDto(
-  (builder) => builder
-    ..apiVersion = sdkSnapshot.apiVersion
-    ..metadata = _generatedJsonObjectMap(sdkSnapshot.metadata)?.toBuilder()
-    ..packageVersion = sdkSnapshot.packageVersion,
+  apiVersion: sdkSnapshot.apiVersion,
+  metadata: _generatedOptionalJsonObjectMap(sdkSnapshot.metadata),
+  packageVersion: sdkSnapshot.packageVersion,
 );
 
 AttriaxAppOpenResult _mapOpenResult(sdk.SdkV1OpenResponseDto response) =>
@@ -1110,30 +1090,35 @@ AttributionType _mapAttributionType(sdk.AttributionType attributionType) =>
       _ => AttributionType.organic,
     };
 
-BuiltMap<String, JsonObject?>? _generatedJsonObjectMap(
+Map<String, Object>? _generatedOptionalJsonObjectMap(
   Map<String, Object?>? value,
 ) {
   if (value == null || value.isEmpty) {
     return null;
   }
 
-  final result = <String, JsonObject?>{};
+  final result = <String, Object>{};
   for (final entry in value.entries) {
     final generatedValue = _generatedJsonValue(entry.value);
     if (identical(generatedValue, _generatedJsonOmittedValue)) {
       continue;
     }
-    result[entry.key] = JsonObject(generatedValue);
+    result[entry.key] = generatedValue;
   }
 
   if (result.isEmpty) {
     return null;
   }
 
-  return BuiltMap<String, JsonObject?>(result);
+  return result;
 }
 
 const Object _generatedJsonOmittedValue = Object();
+
+Map<String, dynamic> _generatedJsonMap(Map<String, Object?> value) =>
+    Map<String, dynamic>.from(
+      _generatedOptionalJsonObjectMap(value) ?? const <String, Object>{},
+    );
 
 Object _generatedJsonValue(Object? value) {
   if (value == null) {
@@ -1152,7 +1137,7 @@ Object _generatedJsonValue(Object? value) {
   }
 
   if (value is Map) {
-    final result = <String, Object?>{};
+    final result = <String, Object>{};
     for (final entry in value.entries) {
       final generatedValue = _generatedJsonValue(entry.value);
       if (identical(generatedValue, _generatedJsonOmittedValue)) {
@@ -1166,29 +1151,18 @@ Object _generatedJsonValue(Object? value) {
   return value.toString();
 }
 
-Map<String, Object?>? _plainJsonObjectMap(
-  BuiltMap<String, JsonObject?>? value,
-) {
+Map<String, Object?>? _plainJsonObjectMap(Map<String, Object>? value) =>
+    attriaxObjectMap(value);
+
+Map<String, String>? _plainStringMap(Map<String, String>? value) {
   if (value == null || value.isEmpty) {
     return null;
   }
 
-  final result = <String, Object?>{};
-  for (final entry in value.entries) {
-    result[entry.key] = _plainJsonValue(entry.value?.value);
-  }
-  return result;
+  return Map<String, String>.from(value);
 }
 
-Map<String, String>? _plainStringMap(BuiltMap<String, String>? value) {
-  if (value == null || value.isEmpty) {
-    return null;
-  }
-
-  return Map<String, String>.from(value.asMap());
-}
-
-Map<String, Object?>? _plainStringObjectMap(BuiltMap<String, String>? value) {
+Map<String, Object?>? _plainStringObjectMap(Map<String, String>? value) {
   final plain = _plainStringMap(value);
   if (plain == null || plain.isEmpty) {
     return null;
@@ -1197,48 +1171,12 @@ Map<String, Object?>? _plainStringObjectMap(BuiltMap<String, String>? value) {
   return Map<String, Object?>.from(plain);
 }
 
-Object? _plainJsonValue(Object? value) {
-  if (value == null || value is String || value is num || value is bool) {
-    return value;
-  }
-  if (value is JsonObject) {
-    return _plainJsonValue(value.value);
-  }
-  if (value is BuiltList) {
-    return value.map(_plainJsonValue).toList(growable: false);
-  }
-  if (value is BuiltMap) {
-    final result = <String, Object?>{};
-    for (final entry in value.entries) {
-      result[entry.key.toString()] = _plainJsonValue(entry.value);
-    }
-    return result;
-  }
-  if (value is List) {
-    return value.map(_plainJsonValue).toList(growable: false);
-  }
-  if (value is Map) {
-    final result = <String, Object?>{};
-    for (final entry in value.entries) {
-      result[entry.key.toString()] = _plainJsonValue(entry.value);
-    }
-    return result;
-  }
-  return value.toString();
+Map<String, Object?> _generatedQueueBody(Object payload) {
+  final dynamic serializable = payload;
+  return attriaxObjectMapOrEmpty(serializable.toJson());
 }
 
-T _deserializeGenerated<T>(Serializer<T> serializer, Object? value) {
-  final deserialized = sdk.standardSerializers.deserializeWith(
-    serializer,
-    value,
-  );
-  if (deserialized == null) {
-    throw const FormatException('Failed to deserialize generated SDK payload.');
-  }
-  return deserialized;
-}
-
-Map<String, Object?> _serializeGenerated<T>(Serializer<T> serializer, T value) {
-  final serialized = sdk.standardSerializers.serializeWith(serializer, value);
-  return attriaxObjectMapOrEmpty(serialized);
-}
+T _parseGeneratedPayload<T>(
+  Map<String, Object?> body,
+  T Function(Map<String, dynamic>) fromJson,
+) => fromJson(_generatedJsonMap(body));

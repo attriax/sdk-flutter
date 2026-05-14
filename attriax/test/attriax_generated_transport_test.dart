@@ -5,7 +5,6 @@ import 'package:attriax_flutter/src/internal/attriax_generated_transport.dart';
 import 'package:attriax_flutter/src/internal/attriax_queue.dart';
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 import 'package:attriax_api_client/attriax_api_client.dart' as sdk;
-import 'package:built_value/serializer.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -22,10 +21,7 @@ void main() {
 
         return _jsonResponse(
           200,
-          _serializeGenerated(
-            sdk.SdkV1OpenResponseEnvelopeDto.serializer,
-            _openEnvelope(),
-          ),
+          _serializeGenerated(_openEnvelope()),
         );
       });
 
@@ -89,10 +85,7 @@ void main() {
 
         return _jsonResponse(
           200,
-          _serializeGenerated(
-            sdk.SdkV1OpenResponseEnvelopeDto.serializer,
-            _openEnvelope(),
-          ),
+          _serializeGenerated(_openEnvelope()),
         );
       });
 
@@ -146,10 +139,7 @@ void main() {
 
         return _jsonResponse(
           200,
-          _serializeGenerated(
-            sdk.SdkV1OpenResponseEnvelopeDto.serializer,
-            _openEnvelope(),
-          ),
+          _serializeGenerated(_openEnvelope()),
         );
       });
 
@@ -164,10 +154,7 @@ void main() {
 
         return _jsonResponse(
           202,
-          _serializeGenerated(
-            sdk.SdkAcknowledgeResponseEnvelopeDto.serializer,
-            _ackEnvelope(),
-          ),
+          _serializeGenerated(_ackEnvelope()),
         );
       });
 
@@ -217,10 +204,7 @@ void main() {
 
           return _jsonResponse(
             202,
-            _serializeGenerated(
-              sdk.SdkAcknowledgeResponseEnvelopeDto.serializer,
-              _ackEnvelope(),
-            ),
+            _serializeGenerated(_ackEnvelope()),
           );
         });
 
@@ -283,10 +267,7 @@ void main() {
 
           return _jsonResponse(
             202,
-            _serializeGenerated(
-              sdk.SdkV1BatchResponseEnvelopeDto.serializer,
-              _batchEnvelope(),
-            ),
+            _serializeGenerated(_batchEnvelope()),
           );
         });
 
@@ -308,10 +289,7 @@ void main() {
 
           return _jsonResponse(
             200,
-            _serializeGenerated(
-              sdk.SdkV1DeepLinkResolveResponseEnvelopeDto.serializer,
-              _resolveEnvelope(),
-            ),
+            _serializeGenerated(_resolveEnvelope()),
           );
         });
 
@@ -365,10 +343,7 @@ void main() {
 
         return _jsonResponse(
           200,
-          _serializeGenerated(
-            sdk.SdkCreateDynamicLinkResponseEnvelopeDto.serializer,
-            _dynamicLinkEnvelope(),
-          ),
+          _serializeGenerated(_dynamicLinkEnvelope()),
         );
       });
 
@@ -443,33 +418,26 @@ AttriaxGeneratedTransport _createTransport(http.Client client) =>
 
 AttriaxOpenRequest _openRequest() => AttriaxOpenRequest(
   sdk.SdkV1OpenDto(
-    (builder) => builder
-      ..app.replace(
-        sdk.AppVersionContextDto((builder) => builder..version = '1.0.0'),
-      )
-      ..appToken = 'ax_test_token'
-      ..device.replace(sdk.DeviceContextDto())
-      ..deviceId = 'device_123'
-      ..deviceIdSource = 'android_ssaid'
-      ..isFirstLaunch = true
-      ..platform = sdk.Platform.android
-      ..sdk.replace(
-        sdk.SdkVersionContextDto(
-          (builder) => builder
-            ..apiVersion = '2025-01-01'
-            ..packageVersion = '1.2.3',
-        ),
-      ),
+    app: sdk.AppVersionContextDto(version: '1.0.0'),
+    appToken: 'ax_test_token',
+    device: sdk.DeviceContextDto(),
+    deviceId: 'device_123',
+    deviceIdSource: 'android_ssaid',
+    isFirstLaunch: true,
+    platform: sdk.Platform.android,
+    sdk: sdk.SdkVersionContextDto(
+      apiVersion: '2025-01-01',
+      packageVersion: '1.2.3',
+    ),
   ),
 );
 
 AttriaxTrackEventRequest _eventRequest() => AttriaxTrackEventRequest(
   sdk.SdkEventDto(
-    (builder) => builder
-      ..appToken = 'ax_test_token'
-      ..deviceId = 'device_123'
-      ..deviceIdSource = 'android_ssaid'
-      ..eventName = 'purchase',
+    appToken: 'ax_test_token',
+    deviceId: 'device_123',
+    deviceIdSource: 'android_ssaid',
+    eventName: 'purchase',
   ),
 );
 
@@ -531,126 +499,96 @@ List<AttriaxQueuedRequest> _batchRequests() => <AttriaxQueuedRequest>[
 AttriaxResolveDeepLinkRequest _resolveRequest() =>
     AttriaxResolveDeepLinkRequest(
       sdk.SdkV1DeepLinkResolveDto(
-        (builder) => builder
-          ..appToken = 'ax_test_token'
-          ..deviceId = 'device_123'
-          ..deviceIdSource = 'android_ssaid'
-          ..isFirstLaunch = true
-          ..linkPath = '/offers/spring'
-          ..platform = sdk.Platform.android
-          ..rawUrl = 'https://ax.example/offers/spring'
-          ..source_ = 'app_link',
+        appToken: 'ax_test_token',
+        deviceId: 'device_123',
+        deviceIdSource: 'android_ssaid',
+        isFirstLaunch: true,
+        linkPath: '/offers/spring',
+        platform: sdk.Platform.android,
+        rawUrl: 'https://ax.example/offers/spring',
+        source_: 'app_link',
       ),
     );
 
 AttriaxCreateDynamicLinkRequest _dynamicLinkRequest() =>
     AttriaxCreateDynamicLinkRequest(
       sdk.SdkCreateDynamicLinkDto(
-        (builder) => builder
-          ..appToken = 'ax_test_token'
-          ..name = 'Spring promo'
-          ..destinationUrl = 'https://example.com/spring',
+        appToken: 'ax_test_token',
+        name: 'Spring promo',
+        destinationUrl: 'https://example.com/spring',
       ),
     );
 
 sdk.SdkV1OpenResponseEnvelopeDto _openEnvelope() =>
     sdk.SdkV1OpenResponseEnvelopeDto(
-      (builder) => builder
-        ..data.replace(
-          sdk.SdkV1OpenResponseDto(
-            (builder) => builder
-              ..acceptedAt = DateTime.utc(2026, 1)
-              ..deepLink.replace(
-                sdk.SdkJsonDeepLinkDto(
-                  (builder) => builder..path = '/offers/spring',
-                ),
-              )
-              ..installState = sdk.SdkInstallState.newInstall
-              ..isFirstLaunch = true
-              ..isNewUser = true
-              ..requestVersion = 'req_v1'
-              ..userId = 'user_123',
-          ),
-        )
-        ..success = true
-        ..timestamp = DateTime.utc(2026, 1),
+      data: sdk.SdkV1OpenResponseDto(
+        acceptedAt: DateTime.utc(2026, 1),
+        deepLink: sdk.SdkJsonDeepLinkDto(path: '/offers/spring'),
+        installState: sdk.SdkInstallState.newInstall,
+        isFirstLaunch: true,
+        isNewUser: true,
+        requestVersion: 'req_v1',
+        userId: 'user_123',
+      ),
+      success: true,
+      timestamp: DateTime.utc(2026, 1),
     );
 
 sdk.SdkAcknowledgeResponseEnvelopeDto _ackEnvelope() =>
     sdk.SdkAcknowledgeResponseEnvelopeDto(
-      (builder) => builder
-        ..data.replace(
-          sdk.SdkAcknowledgeResponseDto((builder) => builder..success = true),
-        )
-        ..success = true
-        ..timestamp = DateTime.utc(2026, 1),
+      data: sdk.SdkAcknowledgeResponseDto(success: true),
+      success: true,
+      timestamp: DateTime.utc(2026, 1),
     );
 
 sdk.SdkV1BatchResponseEnvelopeDto _batchEnvelope() =>
     sdk.SdkV1BatchResponseEnvelopeDto(
-      (builder) => builder
-        ..data.replace(
-          sdk.SdkV1BatchResponseDto(
-            (builder) => builder
-              ..acceptedAt = DateTime.utc(2026, 1)
-              ..duplicateCount = 0
-              ..itemCount = 2
-              ..processedCount = 2
-              ..requestVersion = 'v1',
-          ),
-        )
-        ..success = true
-        ..timestamp = DateTime.utc(2026, 1),
+      data: sdk.SdkV1BatchResponseDto(
+        acceptedAt: DateTime.utc(2026, 1),
+        duplicateCount: 0,
+        itemCount: 2,
+        processedCount: 2,
+        requestVersion: 'v1',
+      ),
+      success: true,
+      timestamp: DateTime.utc(2026, 1),
     );
 
 sdk.SdkV1DeepLinkResolveResponseEnvelopeDto _resolveEnvelope() =>
     sdk.SdkV1DeepLinkResolveResponseEnvelopeDto(
-      (builder) => builder
-        ..data.replace(
-          sdk.SdkV1DeepLinkResolveResponseDto(
-            (builder) => builder
-              ..acceptedAt = DateTime.utc(2026, 1)
-              ..consumedAt = DateTime.utc(2026, 1, 1, 0, 0, 5)
-              ..deepLink.replace(
-                sdk.SdkJsonDeepLinkDto(
-                  (builder) => builder..path = '/offers/spring',
-                ),
-              )
-              ..isFirstLaunch = true
-              ..matched = true
-              ..requestVersion = 'req_v1'
-              ..status = sdk.DeepLinkResolutionStatus.matched,
-          ),
-        )
-        ..success = true
-        ..timestamp = DateTime.utc(2026, 1),
+      data: sdk.SdkV1DeepLinkResolveResponseDto(
+        acceptedAt: DateTime.utc(2026, 1),
+        consumedAt: DateTime.utc(2026, 1, 1, 0, 0, 5),
+        deepLink: sdk.SdkJsonDeepLinkDto(path: '/offers/spring'),
+        isFirstLaunch: true,
+        matched: true,
+        requestVersion: 'req_v1',
+        status: sdk.DeepLinkResolutionStatus.matched,
+      ),
+      success: true,
+      timestamp: DateTime.utc(2026, 1),
     );
 
 sdk.SdkCreateDynamicLinkResponseEnvelopeDto _dynamicLinkEnvelope() =>
     sdk.SdkCreateDynamicLinkResponseEnvelopeDto(
-      (builder) => builder
-        ..data.replace(
-          sdk.SdkCreateDynamicLinkResponseDto(
-            (builder) => builder
-              ..acceptedAt = DateTime.utc(2026, 1)
-              ..link.replace(
-                sdk.SdkDynamicLinkRecordDto(
-                  (builder) => builder
-                    ..createdAt = DateTime.utc(2026, 1)
-                    ..id = 'dl_123'
-                    ..path = '/promo/spring'
-                    ..shortUrl = 'https://ax.example/spring',
-                ),
-              )
-              ..requestVersion = 'req_v1',
-          ),
-        )
-        ..success = true
-        ..timestamp = DateTime.utc(2026, 1),
+      data: sdk.SdkCreateDynamicLinkResponseDto(
+        acceptedAt: DateTime.utc(2026, 1),
+        link: sdk.SdkDynamicLinkRecordDto(
+          createdAt: DateTime.utc(2026, 1),
+          id: 'dl_123',
+          path: '/promo/spring',
+          shortUrl: 'https://ax.example/spring',
+        ),
+        requestVersion: 'req_v1',
+      ),
+      success: true,
+      timestamp: DateTime.utc(2026, 1),
     );
 
-Object? _serializeGenerated<T>(Serializer<T> serializer, T value) =>
-    sdk.standardSerializers.serializeWith(serializer, value);
+Object? _serializeGenerated(Object value) {
+  final dynamic serializable = value;
+  return serializable.toJson();
+}
 
 String _readRequestBody(http.BaseRequest request) {
   if (request case final http.Request typedRequest) {

@@ -3,25 +3,20 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
-part 'deep_link_resolution_status.g.dart';
+enum DeepLinkResolutionStatus {
+  @JsonValue(r'matched')
+  matched(r'matched'),
+  @JsonValue(r'unmatched')
+  unmatched(r'unmatched'),
+  @JsonValue(r'invalid')
+  invalid(r'invalid');
 
-class DeepLinkResolutionStatus extends EnumClass {
-  @BuiltValueEnumConst(wireName: r'matched')
-  static const DeepLinkResolutionStatus matched = _$matched;
-  @BuiltValueEnumConst(wireName: r'unmatched')
-  static const DeepLinkResolutionStatus unmatched = _$unmatched;
-  @BuiltValueEnumConst(wireName: r'invalid')
-  static const DeepLinkResolutionStatus invalid = _$invalid;
+  const DeepLinkResolutionStatus(this.value);
 
-  static Serializer<DeepLinkResolutionStatus> get serializer =>
-      _$deepLinkResolutionStatusSerializer;
+  final String value;
 
-  const DeepLinkResolutionStatus._(String name) : super(name);
-
-  static BuiltSet<DeepLinkResolutionStatus> get values => _$values;
-  static DeepLinkResolutionStatus valueOf(String name) => _$valueOf(name);
+  @override
+  String toString() => value;
 }

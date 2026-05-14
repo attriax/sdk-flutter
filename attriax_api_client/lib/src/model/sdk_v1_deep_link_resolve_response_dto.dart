@@ -5,254 +5,92 @@
 // ignore_for_file: unused_element
 import 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
 import 'package:attriax_api_client/src/model/deep_link_resolution_status.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'sdk_v1_deep_link_resolve_response_dto.g.dart';
 
-/// SdkV1DeepLinkResolveResponseDto
-///
-/// Properties:
-/// * [acceptedAt]
-/// * [consumedAt]
-/// * [deepLink]
-/// * [isFirstLaunch]
-/// * [matched]
-/// * [reason]
-/// * [requestVersion]
-/// * [status]
-@BuiltValue()
-abstract class SdkV1DeepLinkResolveResponseDto
-    implements
-        Built<
-          SdkV1DeepLinkResolveResponseDto,
-          SdkV1DeepLinkResolveResponseDtoBuilder
-        > {
-  @BuiltValueField(wireName: r'acceptedAt')
-  DateTime get acceptedAt;
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class SdkV1DeepLinkResolveResponseDto {
+  /// Returns a new [SdkV1DeepLinkResolveResponseDto] instance.
+  SdkV1DeepLinkResolveResponseDto({
+    required this.acceptedAt,
 
-  @BuiltValueField(wireName: r'consumedAt')
-  DateTime get consumedAt;
+    required this.consumedAt,
 
-  @BuiltValueField(wireName: r'deepLink')
-  SdkJsonDeepLinkDto? get deepLink;
+    this.deepLink,
 
-  @BuiltValueField(wireName: r'isFirstLaunch')
-  bool get isFirstLaunch;
+    required this.isFirstLaunch,
 
-  @BuiltValueField(wireName: r'matched')
-  bool get matched;
+    required this.matched,
 
-  @BuiltValueField(wireName: r'reason')
-  String? get reason;
+    this.reason,
 
-  @BuiltValueField(wireName: r'requestVersion')
-  String get requestVersion;
+    required this.requestVersion,
 
-  @BuiltValueField(wireName: r'status')
-  DeepLinkResolutionStatus get status;
-  // enum statusEnum {  matched,  unmatched,  invalid,  };
+    required this.status,
+  });
 
-  SdkV1DeepLinkResolveResponseDto._();
+  @JsonKey(name: r'acceptedAt', required: true, includeIfNull: false)
+  final DateTime acceptedAt;
 
-  factory SdkV1DeepLinkResolveResponseDto([
-    void updates(SdkV1DeepLinkResolveResponseDtoBuilder b),
-  ]) = _$SdkV1DeepLinkResolveResponseDto;
+  @JsonKey(name: r'consumedAt', required: true, includeIfNull: false)
+  final DateTime consumedAt;
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(SdkV1DeepLinkResolveResponseDtoBuilder b) => b;
+  @JsonKey(name: r'deepLink', required: false, includeIfNull: false)
+  final SdkJsonDeepLinkDto? deepLink;
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<SdkV1DeepLinkResolveResponseDto> get serializer =>
-      _$SdkV1DeepLinkResolveResponseDtoSerializer();
-}
+  @JsonKey(name: r'isFirstLaunch', required: true, includeIfNull: false)
+  final bool isFirstLaunch;
 
-class _$SdkV1DeepLinkResolveResponseDtoSerializer
-    implements PrimitiveSerializer<SdkV1DeepLinkResolveResponseDto> {
-  @override
-  final Iterable<Type> types = const [
-    SdkV1DeepLinkResolveResponseDto,
-    _$SdkV1DeepLinkResolveResponseDto,
-  ];
+  @JsonKey(name: r'matched', required: true, includeIfNull: false)
+  final bool matched;
+
+  @JsonKey(name: r'reason', required: false, includeIfNull: false)
+  final String? reason;
+
+  @JsonKey(name: r'requestVersion', required: true, includeIfNull: false)
+  final String requestVersion;
+
+  @JsonKey(name: r'status', required: true, includeIfNull: false)
+  final DeepLinkResolutionStatus status;
 
   @override
-  final String wireName = r'SdkV1DeepLinkResolveResponseDto';
-
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    SdkV1DeepLinkResolveResponseDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'acceptedAt';
-    yield serializers.serialize(
-      object.acceptedAt,
-      specifiedType: const FullType(DateTime),
-    );
-    yield r'consumedAt';
-    yield serializers.serialize(
-      object.consumedAt,
-      specifiedType: const FullType(DateTime),
-    );
-    if (object.deepLink != null) {
-      yield r'deepLink';
-      yield serializers.serialize(
-        object.deepLink,
-        specifiedType: const FullType.nullable(SdkJsonDeepLinkDto),
-      );
-    }
-    yield r'isFirstLaunch';
-    yield serializers.serialize(
-      object.isFirstLaunch,
-      specifiedType: const FullType(bool),
-    );
-    yield r'matched';
-    yield serializers.serialize(
-      object.matched,
-      specifiedType: const FullType(bool),
-    );
-    if (object.reason != null) {
-      yield r'reason';
-      yield serializers.serialize(
-        object.reason,
-        specifiedType: const FullType.nullable(String),
-      );
-    }
-    yield r'requestVersion';
-    yield serializers.serialize(
-      object.requestVersion,
-      specifiedType: const FullType(String),
-    );
-    yield r'status';
-    yield serializers.serialize(
-      object.status,
-      specifiedType: const FullType(DeepLinkResolutionStatus),
-    );
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SdkV1DeepLinkResolveResponseDto &&
+          other.acceptedAt == acceptedAt &&
+          other.consumedAt == consumedAt &&
+          other.deepLink == deepLink &&
+          other.isFirstLaunch == isFirstLaunch &&
+          other.matched == matched &&
+          other.reason == reason &&
+          other.requestVersion == requestVersion &&
+          other.status == status;
 
   @override
-  Object serialize(
-    Serializers serializers,
-    SdkV1DeepLinkResolveResponseDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
-  }
+  int get hashCode =>
+      acceptedAt.hashCode +
+      consumedAt.hashCode +
+      (deepLink == null ? 0 : deepLink.hashCode) +
+      isFirstLaunch.hashCode +
+      matched.hashCode +
+      (reason == null ? 0 : reason.hashCode) +
+      requestVersion.hashCode +
+      status.hashCode;
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required SdkV1DeepLinkResolveResponseDtoBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'acceptedAt':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(DateTime),
-                  )
-                  as DateTime;
-          result.acceptedAt = valueDes;
-          break;
-        case r'consumedAt':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(DateTime),
-                  )
-                  as DateTime;
-          result.consumedAt = valueDes;
-          break;
-        case r'deepLink':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(SdkJsonDeepLinkDto),
-                  )
-                  as SdkJsonDeepLinkDto?;
-          if (valueDes == null) continue;
-          result.deepLink.replace(valueDes);
-          break;
-        case r'isFirstLaunch':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(bool),
-                  )
-                  as bool;
-          result.isFirstLaunch = valueDes;
-          break;
-        case r'matched':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(bool),
-                  )
-                  as bool;
-          result.matched = valueDes;
-          break;
-        case r'reason':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(String),
-                  )
-                  as String?;
-          if (valueDes == null) continue;
-          result.reason = valueDes;
-          break;
-        case r'requestVersion':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.requestVersion = valueDes;
-          break;
-        case r'status':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(DeepLinkResolutionStatus),
-                  )
-                  as DeepLinkResolutionStatus;
-          result.status = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+  factory SdkV1DeepLinkResolveResponseDto.fromJson(Map<String, dynamic> json) =>
+      _$SdkV1DeepLinkResolveResponseDtoFromJson(json);
+
+  Map<String, dynamic> toJson() =>
+      _$SdkV1DeepLinkResolveResponseDtoToJson(this);
 
   @override
-  SdkV1DeepLinkResolveResponseDto deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = SdkV1DeepLinkResolveResponseDtoBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
 }

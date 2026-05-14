@@ -3,412 +3,154 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
-import 'package:built_value/json_object.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
 part 'sdk_revenue_receipt_validate_response_dto.g.dart';
 
-/// SdkRevenueReceiptValidateResponseDto
-///
-/// Properties:
-/// * [acceptedAt]
-/// * [environment]
-/// * [expiresAt]
-/// * [failureReason]
-/// * [originalTransactionId]
-/// * [productId]
-/// * [provider]
-/// * [providerResult]
-/// * [publicReceipt]
-/// * [requestVersion]
-/// * [status]
-/// * [transactionId]
-/// * [validationId]
-@BuiltValue()
-abstract class SdkRevenueReceiptValidateResponseDto
-    implements
-        Built<
-          SdkRevenueReceiptValidateResponseDto,
-          SdkRevenueReceiptValidateResponseDtoBuilder
-        > {
-  @BuiltValueField(wireName: r'acceptedAt')
-  DateTime get acceptedAt;
+@JsonSerializable(
+  checked: true,
+  createToJson: true,
+  disallowUnrecognizedKeys: false,
+  explicitToJson: true,
+)
+class SdkRevenueReceiptValidateResponseDto {
+  /// Returns a new [SdkRevenueReceiptValidateResponseDto] instance.
+  SdkRevenueReceiptValidateResponseDto({
+    required this.acceptedAt,
 
-  @BuiltValueField(wireName: r'environment')
-  String? get environment;
+    this.environment,
 
-  @BuiltValueField(wireName: r'expiresAt')
-  DateTime? get expiresAt;
+    this.expiresAt,
 
-  @BuiltValueField(wireName: r'failureReason')
-  String? get failureReason;
+    this.failureReason,
 
-  @BuiltValueField(wireName: r'originalTransactionId')
-  String? get originalTransactionId;
+    this.originalTransactionId,
 
-  @BuiltValueField(wireName: r'productId')
-  String? get productId;
+    this.productId,
 
-  @BuiltValueField(wireName: r'provider')
-  String? get provider;
+    this.provider,
 
-  @BuiltValueField(wireName: r'providerResult')
-  BuiltMap<String, JsonObject?>? get providerResult;
+    this.providerResult,
 
-  @BuiltValueField(wireName: r'publicReceipt')
-  BuiltMap<String, JsonObject?> get publicReceipt;
+    required this.publicReceipt,
 
-  @BuiltValueField(wireName: r'requestVersion')
-  String get requestVersion;
+    required this.requestVersion,
 
-  @BuiltValueField(wireName: r'status')
-  SdkRevenueReceiptValidateResponseDtoStatusEnum get status;
-  // enum statusEnum {  verified,  rejected,  pending,  unconfigured,  provider_error,  passthrough,  };
+    required this.status,
 
-  @BuiltValueField(wireName: r'transactionId')
-  String? get transactionId;
+    this.transactionId,
 
-  @BuiltValueField(wireName: r'validationId')
-  String get validationId;
+    required this.validationId,
+  });
 
-  SdkRevenueReceiptValidateResponseDto._();
+  @JsonKey(name: r'acceptedAt', required: true, includeIfNull: false)
+  final DateTime acceptedAt;
 
-  factory SdkRevenueReceiptValidateResponseDto([
-    void updates(SdkRevenueReceiptValidateResponseDtoBuilder b),
-  ]) = _$SdkRevenueReceiptValidateResponseDto;
+  @JsonKey(name: r'environment', required: false, includeIfNull: false)
+  final String? environment;
 
-  @BuiltValueHook(initializeBuilder: true)
-  static void _defaults(SdkRevenueReceiptValidateResponseDtoBuilder b) => b;
+  @JsonKey(name: r'expiresAt', required: false, includeIfNull: false)
+  final DateTime? expiresAt;
 
-  @BuiltValueSerializer(custom: true)
-  static Serializer<SdkRevenueReceiptValidateResponseDto> get serializer =>
-      _$SdkRevenueReceiptValidateResponseDtoSerializer();
-}
+  @JsonKey(name: r'failureReason', required: false, includeIfNull: false)
+  final String? failureReason;
 
-class _$SdkRevenueReceiptValidateResponseDtoSerializer
-    implements PrimitiveSerializer<SdkRevenueReceiptValidateResponseDto> {
-  @override
-  final Iterable<Type> types = const [
-    SdkRevenueReceiptValidateResponseDto,
-    _$SdkRevenueReceiptValidateResponseDto,
-  ];
+  @JsonKey(
+    name: r'originalTransactionId',
+    required: false,
+    includeIfNull: false,
+  )
+  final String? originalTransactionId;
+
+  @JsonKey(name: r'productId', required: false, includeIfNull: false)
+  final String? productId;
+
+  @JsonKey(name: r'provider', required: false, includeIfNull: false)
+  final String? provider;
+
+  @JsonKey(name: r'providerResult', required: false, includeIfNull: false)
+  final Map<String, Object>? providerResult;
+
+  @JsonKey(name: r'publicReceipt', required: true, includeIfNull: false)
+  final Map<String, Object> publicReceipt;
+
+  @JsonKey(name: r'requestVersion', required: true, includeIfNull: false)
+  final String requestVersion;
+
+  @JsonKey(name: r'status', required: true, includeIfNull: false)
+  final SdkRevenueReceiptValidateResponseDtoStatusEnum status;
+
+  @JsonKey(name: r'transactionId', required: false, includeIfNull: false)
+  final String? transactionId;
+
+  @JsonKey(name: r'validationId', required: true, includeIfNull: false)
+  final String validationId;
 
   @override
-  final String wireName = r'SdkRevenueReceiptValidateResponseDto';
-
-  Iterable<Object?> _serializeProperties(
-    Serializers serializers,
-    SdkRevenueReceiptValidateResponseDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) sync* {
-    yield r'acceptedAt';
-    yield serializers.serialize(
-      object.acceptedAt,
-      specifiedType: const FullType(DateTime),
-    );
-    if (object.environment != null) {
-      yield r'environment';
-      yield serializers.serialize(
-        object.environment,
-        specifiedType: const FullType.nullable(String),
-      );
-    }
-    if (object.expiresAt != null) {
-      yield r'expiresAt';
-      yield serializers.serialize(
-        object.expiresAt,
-        specifiedType: const FullType.nullable(DateTime),
-      );
-    }
-    if (object.failureReason != null) {
-      yield r'failureReason';
-      yield serializers.serialize(
-        object.failureReason,
-        specifiedType: const FullType.nullable(String),
-      );
-    }
-    if (object.originalTransactionId != null) {
-      yield r'originalTransactionId';
-      yield serializers.serialize(
-        object.originalTransactionId,
-        specifiedType: const FullType.nullable(String),
-      );
-    }
-    if (object.productId != null) {
-      yield r'productId';
-      yield serializers.serialize(
-        object.productId,
-        specifiedType: const FullType.nullable(String),
-      );
-    }
-    if (object.provider != null) {
-      yield r'provider';
-      yield serializers.serialize(
-        object.provider,
-        specifiedType: const FullType.nullable(String),
-      );
-    }
-    if (object.providerResult != null) {
-      yield r'providerResult';
-      yield serializers.serialize(
-        object.providerResult,
-        specifiedType: const FullType.nullable(BuiltMap, [
-          FullType(String),
-          FullType.nullable(JsonObject),
-        ]),
-      );
-    }
-    yield r'publicReceipt';
-    yield serializers.serialize(
-      object.publicReceipt,
-      specifiedType: const FullType(BuiltMap, [
-        FullType(String),
-        FullType.nullable(JsonObject),
-      ]),
-    );
-    yield r'requestVersion';
-    yield serializers.serialize(
-      object.requestVersion,
-      specifiedType: const FullType(String),
-    );
-    yield r'status';
-    yield serializers.serialize(
-      object.status,
-      specifiedType: const FullType(
-        SdkRevenueReceiptValidateResponseDtoStatusEnum,
-      ),
-    );
-    if (object.transactionId != null) {
-      yield r'transactionId';
-      yield serializers.serialize(
-        object.transactionId,
-        specifiedType: const FullType.nullable(String),
-      );
-    }
-    yield r'validationId';
-    yield serializers.serialize(
-      object.validationId,
-      specifiedType: const FullType(String),
-    );
-  }
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is SdkRevenueReceiptValidateResponseDto &&
+          other.acceptedAt == acceptedAt &&
+          other.environment == environment &&
+          other.expiresAt == expiresAt &&
+          other.failureReason == failureReason &&
+          other.originalTransactionId == originalTransactionId &&
+          other.productId == productId &&
+          other.provider == provider &&
+          other.providerResult == providerResult &&
+          other.publicReceipt == publicReceipt &&
+          other.requestVersion == requestVersion &&
+          other.status == status &&
+          other.transactionId == transactionId &&
+          other.validationId == validationId;
 
   @override
-  Object serialize(
-    Serializers serializers,
-    SdkRevenueReceiptValidateResponseDto object, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    return _serializeProperties(
-      serializers,
-      object,
-      specifiedType: specifiedType,
-    ).toList();
-  }
+  int get hashCode =>
+      acceptedAt.hashCode +
+      (environment == null ? 0 : environment.hashCode) +
+      (expiresAt == null ? 0 : expiresAt.hashCode) +
+      (failureReason == null ? 0 : failureReason.hashCode) +
+      (originalTransactionId == null ? 0 : originalTransactionId.hashCode) +
+      (productId == null ? 0 : productId.hashCode) +
+      (provider == null ? 0 : provider.hashCode) +
+      (providerResult == null ? 0 : providerResult.hashCode) +
+      publicReceipt.hashCode +
+      requestVersion.hashCode +
+      status.hashCode +
+      (transactionId == null ? 0 : transactionId.hashCode) +
+      validationId.hashCode;
 
-  void _deserializeProperties(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-    required List<Object?> serializedList,
-    required SdkRevenueReceiptValidateResponseDtoBuilder result,
-    required List<Object?> unhandled,
-  }) {
-    for (var i = 0; i < serializedList.length; i += 2) {
-      final key = serializedList[i] as String;
-      final value = serializedList[i + 1];
-      switch (key) {
-        case r'acceptedAt':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(DateTime),
-                  )
-                  as DateTime;
-          result.acceptedAt = valueDes;
-          break;
-        case r'environment':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(String),
-                  )
-                  as String?;
-          if (valueDes == null) continue;
-          result.environment = valueDes;
-          break;
-        case r'expiresAt':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(DateTime),
-                  )
-                  as DateTime?;
-          if (valueDes == null) continue;
-          result.expiresAt = valueDes;
-          break;
-        case r'failureReason':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(String),
-                  )
-                  as String?;
-          if (valueDes == null) continue;
-          result.failureReason = valueDes;
-          break;
-        case r'originalTransactionId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(String),
-                  )
-                  as String?;
-          if (valueDes == null) continue;
-          result.originalTransactionId = valueDes;
-          break;
-        case r'productId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(String),
-                  )
-                  as String?;
-          if (valueDes == null) continue;
-          result.productId = valueDes;
-          break;
-        case r'provider':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(String),
-                  )
-                  as String?;
-          if (valueDes == null) continue;
-          result.provider = valueDes;
-          break;
-        case r'providerResult':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(BuiltMap, [
-                      FullType(String),
-                      FullType.nullable(JsonObject),
-                    ]),
-                  )
-                  as BuiltMap<String, JsonObject?>?;
-          if (valueDes == null) continue;
-          result.providerResult.replace(valueDes);
-          break;
-        case r'publicReceipt':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(BuiltMap, [
-                      FullType(String),
-                      FullType.nullable(JsonObject),
-                    ]),
-                  )
-                  as BuiltMap<String, JsonObject?>;
-          result.publicReceipt.replace(valueDes);
-          break;
-        case r'requestVersion':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.requestVersion = valueDes;
-          break;
-        case r'status':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(
-                      SdkRevenueReceiptValidateResponseDtoStatusEnum,
-                    ),
-                  )
-                  as SdkRevenueReceiptValidateResponseDtoStatusEnum;
-          result.status = valueDes;
-          break;
-        case r'transactionId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType.nullable(String),
-                  )
-                  as String?;
-          if (valueDes == null) continue;
-          result.transactionId = valueDes;
-          break;
-        case r'validationId':
-          final valueDes =
-              serializers.deserialize(
-                    value,
-                    specifiedType: const FullType(String),
-                  )
-                  as String;
-          result.validationId = valueDes;
-          break;
-        default:
-          unhandled.add(key);
-          unhandled.add(value);
-          break;
-      }
-    }
-  }
+  factory SdkRevenueReceiptValidateResponseDto.fromJson(
+    Map<String, dynamic> json,
+  ) => _$SdkRevenueReceiptValidateResponseDtoFromJson(json);
+
+  Map<String, dynamic> toJson() =>
+      _$SdkRevenueReceiptValidateResponseDtoToJson(this);
 
   @override
-  SdkRevenueReceiptValidateResponseDto deserialize(
-    Serializers serializers,
-    Object serialized, {
-    FullType specifiedType = FullType.unspecified,
-  }) {
-    final result = SdkRevenueReceiptValidateResponseDtoBuilder();
-    final serializedList = (serialized as Iterable<Object?>).toList();
-    final unhandled = <Object?>[];
-    _deserializeProperties(
-      serializers,
-      serialized,
-      specifiedType: specifiedType,
-      serializedList: serializedList,
-      unhandled: unhandled,
-      result: result,
-    );
-    return result.build();
+  String toString() {
+    return toJson().toString();
   }
 }
 
-class SdkRevenueReceiptValidateResponseDtoStatusEnum extends EnumClass {
-  @BuiltValueEnumConst(wireName: r'verified')
-  static const SdkRevenueReceiptValidateResponseDtoStatusEnum verified =
-      _$sdkRevenueReceiptValidateResponseDtoStatusEnum_verified;
-  @BuiltValueEnumConst(wireName: r'rejected')
-  static const SdkRevenueReceiptValidateResponseDtoStatusEnum rejected =
-      _$sdkRevenueReceiptValidateResponseDtoStatusEnum_rejected;
-  @BuiltValueEnumConst(wireName: r'pending')
-  static const SdkRevenueReceiptValidateResponseDtoStatusEnum pending =
-      _$sdkRevenueReceiptValidateResponseDtoStatusEnum_pending;
-  @BuiltValueEnumConst(wireName: r'unconfigured')
-  static const SdkRevenueReceiptValidateResponseDtoStatusEnum unconfigured =
-      _$sdkRevenueReceiptValidateResponseDtoStatusEnum_unconfigured;
-  @BuiltValueEnumConst(wireName: r'provider_error')
-  static const SdkRevenueReceiptValidateResponseDtoStatusEnum providerError =
-      _$sdkRevenueReceiptValidateResponseDtoStatusEnum_providerError;
-  @BuiltValueEnumConst(wireName: r'passthrough')
-  static const SdkRevenueReceiptValidateResponseDtoStatusEnum passthrough =
-      _$sdkRevenueReceiptValidateResponseDtoStatusEnum_passthrough;
+enum SdkRevenueReceiptValidateResponseDtoStatusEnum {
+  @JsonValue(r'verified')
+  verified(r'verified'),
+  @JsonValue(r'rejected')
+  rejected(r'rejected'),
+  @JsonValue(r'pending')
+  pending(r'pending'),
+  @JsonValue(r'unconfigured')
+  unconfigured(r'unconfigured'),
+  @JsonValue(r'provider_error')
+  providerError(r'provider_error'),
+  @JsonValue(r'passthrough')
+  passthrough(r'passthrough');
 
-  static Serializer<SdkRevenueReceiptValidateResponseDtoStatusEnum>
-  get serializer => _$sdkRevenueReceiptValidateResponseDtoStatusEnumSerializer;
+  const SdkRevenueReceiptValidateResponseDtoStatusEnum(this.value);
 
-  const SdkRevenueReceiptValidateResponseDtoStatusEnum._(String name)
-    : super(name);
+  final String value;
 
-  static BuiltSet<SdkRevenueReceiptValidateResponseDtoStatusEnum> get values =>
-      _$sdkRevenueReceiptValidateResponseDtoStatusEnumValues;
-  static SdkRevenueReceiptValidateResponseDtoStatusEnum valueOf(String name) =>
-      _$sdkRevenueReceiptValidateResponseDtoStatusEnumValueOf(name);
+  @override
+  String toString() => value;
 }

@@ -3,34 +3,30 @@
 //
 
 // ignore_for_file: unused_element
-import 'package:built_collection/built_collection.dart';
-import 'package:built_value/built_value.dart';
-import 'package:built_value/serializer.dart';
+import 'package:json_annotation/json_annotation.dart';
 
-part 'attribution_type.g.dart';
-
-class AttributionType extends EnumClass {
+/// Attribution source classification for the startup referrer payload.
+enum AttributionType {
   /// Attribution source classification for the startup referrer payload.
-  @BuiltValueEnumConst(wireName: r'referrer')
-  static const AttributionType referrer = _$referrer;
+  @JsonValue(r'referrer')
+  referrer(r'referrer'),
 
   /// Attribution source classification for the startup referrer payload.
-  @BuiltValueEnumConst(wireName: r'fingerprint')
-  static const AttributionType fingerprint = _$fingerprint;
+  @JsonValue(r'fingerprint')
+  fingerprint(r'fingerprint'),
 
   /// Attribution source classification for the startup referrer payload.
-  @BuiltValueEnumConst(wireName: r'external')
-  static const AttributionType external_ = _$external_;
+  @JsonValue(r'external')
+  external_(r'external'),
 
   /// Attribution source classification for the startup referrer payload.
-  @BuiltValueEnumConst(wireName: r'organic')
-  static const AttributionType organic = _$organic;
+  @JsonValue(r'organic')
+  organic(r'organic');
 
-  static Serializer<AttributionType> get serializer =>
-      _$attributionTypeSerializer;
+  const AttributionType(this.value);
 
-  const AttributionType._(String name) : super(name);
+  final String value;
 
-  static BuiltSet<AttributionType> get values => _$values;
-  static AttributionType valueOf(String name) => _$valueOf(name);
+  @override
+  String toString() => value;
 }
