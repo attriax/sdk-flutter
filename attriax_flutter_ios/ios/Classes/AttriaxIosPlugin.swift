@@ -266,10 +266,12 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             return nil
         }
 
-        let identifier = withUnsafePointer(to: &systemInfo.machine) { machinePointer in
+        var machine = systemInfo.machine
+        let machineSize = MemoryLayout.size(ofValue: machine)
+        let identifier = withUnsafePointer(to: &machine) { machinePointer in
             machinePointer.withMemoryRebound(
                 to: CChar.self,
-                capacity: MemoryLayout.size(ofValue: systemInfo.machine)
+                capacity: machineSize
             ) {
                 String(cString: $0)
             }

@@ -71,7 +71,10 @@ class AttriaxContextCollector {
 
   Future<AttriaxTrackingAuthorizationStatus> requestTrackingAuthorization({
     Duration? timeout,
-  }) => _platform.requestTrackingAuthorization(timeout: timeout);
+  }) =>
+      _trackingAuthorizationManager.requestTrackingAuthorization(
+        timeout: timeout,
+      );
 
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
