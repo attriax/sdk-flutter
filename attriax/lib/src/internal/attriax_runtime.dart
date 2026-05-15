@@ -153,6 +153,8 @@ class AttriaxRuntime {
       _synchronizer?.synchronizationState ==
       AttriaxSynchronizationState.synchronized;
   AttriaxSdkSnapshot? get sdkSnapshot => _contextManager.sdkSnapshot;
+  AttriaxRawDeepLinkEvent? get rawInitialDeepLink =>
+      _deepLinkManager.rawInitialDeepLink;
   AttriaxDeepLinkEvent? get initialDeepLink => _deepLinkManager.initialDeepLink;
   bool get isInitialDeepLinkResolved =>
       _deepLinkManager.isInitialDeepLinkResolved;
@@ -168,6 +170,8 @@ class AttriaxRuntime {
 
   // ---------- streams (delegated to hub) ------------------------------------ //
 
+  Stream<AttriaxRawDeepLinkEvent> get rawDeepLinks =>
+      _deepLinkManager.rawStream;
   Stream<AttriaxDeepLinkEvent> get deepLinks => _deepLinkManager.stream;
   Stream<AttriaxSynchronizationState> get synchronizationStates =>
       _eventHub.synchronizationStates;
@@ -510,7 +514,7 @@ class AttriaxRuntime {
     await _transport!.registerUninstallToken(request);
   }
 
-  Future<AttriaxDeepLinkResolution?> recordDeepLink({
+  Future<AttriaxDeepLinkEvent?> recordDeepLink({
     Uri? uri,
     String? linkPath,
     Map<String, Object?>? metadata,
@@ -536,6 +540,10 @@ class AttriaxRuntime {
 
   Future<AttriaxDeepLinkEvent?> waitForInitialDeepLink() =>
       _deepLinkManager.waitForInitialDeepLink();
+
+  Future<AttriaxDeepLinkEvent> waitForDeepLinkResolution(
+    AttriaxRawDeepLinkEvent rawEvent,
+  ) => _deepLinkManager.waitResolution(rawEvent);
 
   Future<AttriaxTrackingAuthorizationStatus> requestTrackingAuthorization({
     Duration? timeout,

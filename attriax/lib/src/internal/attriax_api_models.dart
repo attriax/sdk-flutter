@@ -970,6 +970,7 @@ AttriaxDeepLinkResolutionResult _mapDeepLinkResolutionResult(
   isFirstLaunch: response.isFirstLaunch,
   reason: response.reason,
   deepLink: _mapDeepLink(response.deepLink),
+  browserAction: _mapBrowserAction(response.browserAction),
   requestVersion: response.requestVersion,
   acceptedAt: response.acceptedAt,
   consumedAt: response.consumedAt,
@@ -992,6 +993,31 @@ AttriaxDeepLink? _mapDeepLink(sdk.SdkJsonDeepLinkDto? deepLink) =>
         data: _plainStringObjectMap(deepLink.data),
         utm: _mapUtmPayload(deepLink.utm),
       );
+
+AttriaxResolvedUrlAction? _mapBrowserAction(
+  sdk.SdkBrowserActionDto? browserAction,
+) {
+  if (browserAction == null) {
+    return null;
+  }
+
+  final uri = Uri.tryParse(browserAction.url);
+  if (uri == null) {
+    return null;
+  }
+
+  return AttriaxResolvedUrlAction(
+    uri: uri,
+    openMode: _mapResolvedUrlOpenMode(browserAction.openMode),
+  );
+}
+
+AttriaxResolvedUrlOpenMode _mapResolvedUrlOpenMode(
+  sdk.RouteUrlOpenMode openMode,
+) => switch (openMode) {
+  sdk.RouteUrlOpenMode.inApp => AttriaxResolvedUrlOpenMode.inApp,
+  sdk.RouteUrlOpenMode.external_ => AttriaxResolvedUrlOpenMode.external,
+};
 
 AttriaxInstallReferrerDetails? _mapInstallReferrerDetails(
   sdk.SdkInstallReferrerResultDto? details,

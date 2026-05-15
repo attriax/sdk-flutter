@@ -130,6 +130,29 @@ class MethodChannelAttriax extends AttriaxPlatform {
     }
   }
 
+  @override
+  Future<bool> openBrowserUrl({
+    required Uri uri,
+    required AttriaxResolvedUrlOpenMode openMode,
+  }) async {
+    try {
+      final result = await _channel.invokeMethod<Object?>(
+        'openBrowserUrl',
+        <String, Object?>{
+          'url': uri.toString(),
+          'openMode': _browserOpenModeValue(openMode),
+        },
+      );
+      return result == true;
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException('openBrowserUrl', error, stackTrace);
+      return false;
+    } on PlatformException catch (error, stackTrace) {
+      _logException('openBrowserUrl', error, stackTrace);
+      return false;
+    }
+  }
+
   AttriaxInstallReferrerContext missingPluginInstallReferrerContext(
     MissingPluginException error,
   ) => const AttriaxInstallReferrerContext();
@@ -158,4 +181,11 @@ class MethodChannelAttriax extends AttriaxPlatform {
     'timed_out' => AttriaxTrackingAuthorizationStatus.timedOut,
     _ => AttriaxTrackingAuthorizationStatus.unknown,
   };
+
+  String _browserOpenModeValue(AttriaxResolvedUrlOpenMode openMode) =>
+      switch (openMode) {
+        AttriaxResolvedUrlOpenMode.external => 'external',
+        AttriaxResolvedUrlOpenMode.inApp ||
+        AttriaxResolvedUrlOpenMode.unknown => 'in_app',
+      };
 }

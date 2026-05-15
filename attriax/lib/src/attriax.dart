@@ -654,9 +654,9 @@ class Attriax {
   ///
   /// Provide either [uri] or [linkPath]. [metadata] accepts regular
   /// JSON-compatible Dart values and is sent with the resolution request.
-  /// Returns the completed backend resolution. When Attriax does not recognize
-  /// the link, the returned resolution still completes with `found == false`.
-  Future<AttriaxDeepLinkResolution?> recordDeepLink({
+  /// Returns the completed backend deep-link event. When Attriax does not
+  /// recognize the link, the returned event still completes with `found == false`.
+  Future<AttriaxDeepLinkEvent?> recordDeepLink({
     Uri? uri,
     String? linkPath,
     Map<String, Object?>? metadata,
@@ -763,6 +763,10 @@ class AttriaxDeepLinks {
 
   final AttriaxRuntime _runtime;
 
+  /// Launch raw deep-link event captured during startup, when one was present.
+  AttriaxRawDeepLinkEvent? get rawInitialDeepLink =>
+      _runtime.rawInitialDeepLink;
+
   /// Launch deep-link event captured during startup, when one was present.
   ///
   /// This stays `null` until the initial-link probe completes. Use
@@ -776,17 +780,22 @@ class AttriaxDeepLinks {
   /// Waits for the initial deep-link probe to finish if it is still pending.
   ///
   /// This resolves to the launch deep-link event, or `null` when no initial
-  /// deep link was present. Call [AttriaxDeepLinkEvent.resolve] on the returned
-  /// event when you also need the completed backend result.
+  /// deep link was present.
   Future<AttriaxDeepLinkEvent?> waitForInitialDeepLink() =>
       _runtime.waitForInitialDeepLink();
 
+  /// Waits for the resolved deep-link event corresponding to [rawEvent].
+  Future<AttriaxDeepLinkEvent> waitResolution(
+    AttriaxRawDeepLinkEvent rawEvent,
+  ) => _runtime.waitForDeepLinkResolution(rawEvent);
+
+  /// Broadcast stream of raw deep-link inputs from native platform capture.
+  Stream<AttriaxRawDeepLinkEvent> get rawStream => _runtime.rawDeepLinks;
+
   /// Broadcast stream of handled deep-link events.
   ///
-  /// Automatic incoming links emit immediately and callers can await
-  /// [AttriaxDeepLinkEvent.resolve] when they also need the server-side
-  /// resolution outcome. Deferred app-open matches are emitted here as
-  /// already-resolved deep-link events.
+  /// Automatic incoming links emit here after Attriax resolves them.
+  /// Deferred app-open matches are also emitted here.
   Stream<AttriaxDeepLinkEvent> get stream => _runtime.deepLinks;
 
   /// Most recent handled deep-link event seen by the SDK.

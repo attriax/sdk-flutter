@@ -258,9 +258,7 @@ void main() {
           if (request.url.path == '/api/sdk/v1/batch') {
             batchBodies.add(jsonDecode(request.body) as Map<String, Object?>);
             return http.Response(
-              jsonEncode(
-                _serializeGenerated(_batchEnvelope()),
-              ),
+              jsonEncode(_serializeGenerated(_batchEnvelope())),
               202,
               headers: const <String, String>{
                 'content-type': 'application/json',
@@ -840,54 +838,51 @@ void main() {
       expect(eventData['adPlacement'], 'level_end');
     });
 
-    test(
-      'recordAdEvent queues a normalized ad lifecycle payload',
-      () async {
-        connectivityPlatform = FakeConnectivityPlatform(
-          currentResults: const <ConnectivityResult>[ConnectivityResult.none],
-        );
-        ConnectivityPlatform.instance = connectivityPlatform;
-        connectivity = Connectivity();
-        sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
-          client: client,
-          deepLinkSource: deepLinkSource,
-          connectivity: connectivity,
-          contextCollector: contextCollector,
-          prefs: prefs,
-          enableDebugLogs: false,
-        );
+    test('recordAdEvent queues a normalized ad lifecycle payload', () async {
+      connectivityPlatform = FakeConnectivityPlatform(
+        currentResults: const <ConnectivityResult>[ConnectivityResult.none],
+      );
+      ConnectivityPlatform.instance = connectivityPlatform;
+      connectivity = Connectivity();
+      sdk = Attriax.test(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        client: client,
+        deepLinkSource: deepLinkSource,
+        connectivity: connectivity,
+        contextCollector: contextCollector,
+        prefs: prefs,
+        enableDebugLogs: false,
+      );
 
-        await sdk.init();
-        await sdk.recordAdEvent(
-          AttriaxAdEventType.showFailed,
-          adNetwork: 'admob',
-          mediationNetwork: 'admob',
-          adUnitId: 'ca-app-pub-3940256099942544/1712485313',
-          adPlacement: 'level_end',
-          adFormat: 'rewarded',
-          failureReason: 'no_fill',
-          loadLatencyMs: 420,
-          test: true,
-        );
+      await sdk.init();
+      await sdk.recordAdEvent(
+        AttriaxAdEventType.showFailed,
+        adNetwork: 'admob',
+        mediationNetwork: 'admob',
+        adUnitId: 'ca-app-pub-3940256099942544/1712485313',
+        adPlacement: 'level_end',
+        adFormat: 'rewarded',
+        failureReason: 'no_fill',
+        loadLatencyMs: 420,
+        test: true,
+      );
 
-        final bodies = _queuedBodiesFromPrefs(prefs);
-        expect(bodies, hasLength(1));
+      final bodies = _queuedBodiesFromPrefs(prefs);
+      expect(bodies, hasLength(1));
 
-        final body = bodies.single;
-        final eventData = body['eventData']! as Map<String, Object?>;
+      final body = bodies.single;
+      final eventData = body['eventData']! as Map<String, Object?>;
 
-        expect(body['eventName'], 'ad_show_failed');
-        expect(eventData['adNetwork'], 'admob');
-        expect(eventData['mediationNetwork'], 'admob');
-        expect(eventData['adUnitId'], 'ca-app-pub-3940256099942544/1712485313');
-        expect(eventData['adPlacement'], 'level_end');
-        expect(eventData['adFormat'], 'rewarded');
-        expect(eventData['failureReason'], 'no_fill');
-        expect(eventData['loadLatencyMs'], 420.0);
-        expect(eventData['test'], isTrue);
-      },
-    );
+      expect(body['eventName'], 'ad_show_failed');
+      expect(eventData['adNetwork'], 'admob');
+      expect(eventData['mediationNetwork'], 'admob');
+      expect(eventData['adUnitId'], 'ca-app-pub-3940256099942544/1712485313');
+      expect(eventData['adPlacement'], 'level_end');
+      expect(eventData['adFormat'], 'rewarded');
+      expect(eventData['failureReason'], 'no_fill');
+      expect(eventData['loadLatencyMs'], 420.0);
+      expect(eventData['test'], isTrue);
+    });
 
     test('recordAdEvent queues a standardized ad_load payload', () async {
       connectivityPlatform = FakeConnectivityPlatform(

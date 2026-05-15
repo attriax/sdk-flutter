@@ -16,30 +16,30 @@ void main() {
 
     test('resolves a pending deep link with a matched resolution', () async {
       final receivedAt = DateTime.utc(2026, 4, 24);
-      final resolution = AttriaxDeepLinkResolution(
+      final rawEventFuture = hub.rawDeepLinks.first;
+      final rawEvent = hub.emitPendingDeepLink(
+        uri: Uri.parse('https://example.com/promo/spring-launch'),
+        receivedAt: receivedAt,
+        isInitialLink: true,
+      );
+
+      final emittedRawEvent = await rawEventFuture;
+      final resolution = AttriaxDeepLinkEvent(
         uri: Uri.parse('https://example.com/promo/spring-launch'),
         clickedAt: receivedAt,
         consumedAt: DateTime.utc(2026, 4, 24, 0, 0, 1),
         found: true,
+        trigger: AttriaxDeepLinkTrigger.coldStart,
+        isAttriaxSubDomain: false,
+        rawEvent: emittedRawEvent,
         data: const <String, String>{'campaign': 'spring-launch'},
       );
 
-      final emittedEventFuture = hub.deepLinks.first;
-      hub.emitPendingDeepLink(
-        uri: Uri.parse('https://example.com/promo/spring-launch'),
-        receivedAt: receivedAt,
-        trigger: AttriaxDeepLinkTrigger.coldStart,
-        isInitialLink: true,
-        isAttriaxDomain: false,
-      );
+      hub.resolvePendingDeepLink(event: rawEvent, resolution: resolution);
 
-      final emittedEvent = await emittedEventFuture;
-      hub.resolvePendingDeepLink(event: emittedEvent, resolution: resolution);
-
-      final resolved = await emittedEvent.resolve();
-      expect(emittedEvent.uri.path, '/promo/spring-launch');
-      expect(emittedEvent.isColdStart, isTrue);
-      expect(emittedEvent.isDeferred, isFalse);
+      final resolved = await hub.waitForResolution(rawEvent);
+      expect(emittedRawEvent.uri.path, '/promo/spring-launch');
+      expect(emittedRawEvent.isInitial, isTrue);
       expect(resolved, same(resolution));
       expect(resolved.found, isTrue);
       expect(resolved.data?['campaign'], 'spring-launch');
@@ -49,95 +49,87 @@ void main() {
       'resolves a pending deep link with found false for external links',
       () async {
         final receivedAt = DateTime.utc(2026, 4, 24);
-        final resolution = AttriaxDeepLinkResolution(
+
+        final rawEvent = hub.emitPendingDeepLink(
+          uri: Uri.parse('https://example.com/unknown/path'),
+          receivedAt: receivedAt,
+          isInitialLink: false,
+        );
+        final resolution = AttriaxDeepLinkEvent(
           uri: Uri.parse('https://example.com/unknown/path'),
           clickedAt: receivedAt,
           consumedAt: DateTime.utc(2026, 4, 24, 0, 0, 1),
           found: false,
-        );
-
-        final emittedEventFuture = hub.deepLinks.first;
-        hub.emitPendingDeepLink(
-          uri: Uri.parse('https://example.com/unknown/path'),
-          receivedAt: receivedAt,
           trigger: AttriaxDeepLinkTrigger.foreground,
-          isInitialLink: false,
-          isAttriaxDomain: false,
+          isAttriaxSubDomain: false,
+          rawEvent: rawEvent,
         );
 
-        final emittedEvent = await emittedEventFuture;
-        hub.resolvePendingDeepLink(event: emittedEvent, resolution: resolution);
+        hub.resolvePendingDeepLink(event: rawEvent, resolution: resolution);
 
-        final resolved = await emittedEvent.resolve();
-        expect(emittedEvent.isForeground, isTrue);
+        final resolved = await hub.waitForResolution(rawEvent);
+        expect(resolved.isForeground, isTrue);
         expect(resolved.found, isFalse);
         expect(resolved.data, isNull);
       },
     );
 
     test('emits an already resolved deep link immediately', () async {
-      final resolution = AttriaxDeepLinkResolution(
+      final resolution = AttriaxDeepLinkEvent(
         uri: Uri.parse('https://demo.attriax.com/promo/deferred'),
         clickedAt: DateTime.utc(2026, 4, 20),
         consumedAt: DateTime.utc(2026, 4, 24),
         found: true,
+        trigger: AttriaxDeepLinkTrigger.deferred,
+        isAttriaxSubDomain: true,
         data: const <String, String>{'campaign': 'deferred'},
       );
 
       final emittedEventFuture = hub.deepLinks.first;
-      hub.emitResolvedDeepLink(
-        uri: Uri.parse('https://demo.attriax.com/promo/deferred'),
-        receivedAt: DateTime.utc(2026, 4, 24),
-        trigger: AttriaxDeepLinkTrigger.deferred,
-        resolution: resolution,
-        isAttriaxDomain: true,
-      );
+      hub.emitResolvedDeepLink(event: resolution);
 
       final emittedEvent = await emittedEventFuture;
-      final result = await emittedEvent.resolve();
 
       expect(emittedEvent.isDeferred, isTrue);
-      expect(emittedEvent.isAttriaxDomain, isTrue);
-      expect(result, same(resolution));
-    });
-
-    test('marks Attriax subdomain deep links with isAttriaxDomain', () async {
-      final emittedEvent = hub.emitPendingDeepLink(
-        uri: Uri.parse('https://demo.attriax.com/promo/spring-launch'),
-        receivedAt: DateTime.utc(2026, 4, 24),
-        trigger: AttriaxDeepLinkTrigger.coldStart,
-        isInitialLink: true,
-        isAttriaxDomain: true,
-      );
-
-      expect(emittedEvent.isAttriaxDomain, isTrue);
-    });
-
-    test('leaves custom-domain deep links with isAttriax false', () async {
-      final emittedEvent = hub.emitPendingDeepLink(
-        uri: Uri.parse('https://app.example.com/promo/spring-launch'),
-        receivedAt: DateTime.utc(2026, 4, 24),
-        trigger: AttriaxDeepLinkTrigger.coldStart,
-        isInitialLink: true,
-        isAttriaxDomain: false,
-      );
-
-      expect(emittedEvent.isAttriaxDomain, isFalse);
+      expect(emittedEvent.isAttriaxSubDomain, isTrue);
+      expect(emittedEvent, same(resolution));
     });
 
     test(
-      'exposes the initial deep-link event as soon as it is captured',
+      'stores the raw initial deep link as soon as it is captured',
       () async {
-        final initialEvent = hub.emitPendingDeepLink(
-          uri: Uri.parse('https://example.com/promo/launch'),
-          receivedAt: DateTime.utc(2026, 4, 29, 10),
-          trigger: AttriaxDeepLinkTrigger.coldStart,
+        final emittedEvent = hub.emitPendingDeepLink(
+          uri: Uri.parse('https://demo.attriax.com/promo/spring-launch'),
+          receivedAt: DateTime.utc(2026, 4, 24),
           isInitialLink: true,
-          isAttriaxDomain: false,
         );
 
+        expect(hub.rawInitialDeepLinkValue, same(emittedEvent));
+      },
+    );
+
+    test(
+      'completes the initial resolved deep link when the result is emitted',
+      () async {
+        final rawEvent = hub.emitPendingDeepLink(
+          uri: Uri.parse('https://example.com/promo/launch'),
+          receivedAt: DateTime.utc(2026, 4, 29, 10),
+          isInitialLink: true,
+        );
+        final resolvedEvent = AttriaxDeepLinkEvent(
+          uri: Uri.parse('https://example.com/promo/launch'),
+          clickedAt: DateTime.utc(2026, 4, 29, 10),
+          consumedAt: DateTime.utc(2026, 4, 29, 10, 0, 1),
+          found: true,
+          trigger: AttriaxDeepLinkTrigger.coldStart,
+          isAttriaxSubDomain: false,
+          rawEvent: rawEvent,
+        );
+
+        hub.emitResolvedDeepLink(event: resolvedEvent);
+
         final result = await hub.initialDeepLink;
-        expect(result, same(initialEvent));
+        expect(result, same(resolvedEvent));
       },
     );
 

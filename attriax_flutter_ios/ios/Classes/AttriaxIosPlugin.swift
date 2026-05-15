@@ -1,5 +1,6 @@
 import Flutter
 import Security
+import SafariServices
 import UIKit
 import Darwin
 #if canImport(AdSupport)
@@ -61,6 +62,8 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             result(initialLink)
         case "getLatestLink":
             result(latestLink)
+        case "openBrowserUrl":
+            openBrowserUrl(call: call, result: result)
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -148,6 +151,42 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
 
     private func collectInstallReferrer() -> [String: Any] {
         ["metadata": ["source": "ios_install_referrer"]]
+    }
+
+    private func openBrowserUrl(
+        call: FlutterMethodCall,
+        result: @escaping FlutterResult
+    ) {
+        guard let arguments = call.arguments as? [String: Any],
+              let urlString = arguments["url"] as? String,
+              let url = URL(string: urlString)
+        else {
+            result(false)
+            return
+        }
+
+        let openMode = (arguments["openMode"] as? String)?.trimmingCharacters(
+            in: .whitespacesAndNewlines
+        ) ?? "in_app"
+
+        DispatchQueue.main.async {
+            if openMode == "external" {
+                UIApplication.shared.open(url, options: [:]) { opened in
+                    result(opened)
+                }
+                return
+            }
+
+            guard let presenter = Self.topViewController() else {
+                result(false)
+                return
+            }
+
+            let controller = SFSafariViewController(url: url)
+            presenter.present(controller, animated: true) {
+                result(true)
+            }
+        }
     }
 
     private func consumePendingCrashReport() -> [String: Any]? {
@@ -292,6 +331,39 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
 #endif
 
         return normalizedIdentifier
+    }
+
+    private static func topViewController(
+        from base: UIViewController? = nil
+    ) -> UIViewController? {
+        let root = base ?? activeWindow()?.rootViewController
+        if let navigationController = root as? UINavigationController {
+            return topViewController(from: navigationController.visibleViewController)
+        }
+        if let tabBarController = root as? UITabBarController,
+           let selectedViewController = tabBarController.selectedViewController {
+            return topViewController(from: selectedViewController)
+        }
+        if let presentedViewController = root?.presentedViewController {
+            return topViewController(from: presentedViewController)
+        }
+        return root
+    }
+
+    private static func activeWindow() -> UIWindow? {
+        if #available(iOS 13.0, *) {
+            for scene in UIApplication.shared.connectedScenes {
+                guard let windowScene = scene as? UIWindowScene else {
+                    continue
+                }
+                if let window = windowScene.windows.first(where: { $0.isKeyWindow }) {
+                    return window
+                }
+            }
+            return nil
+        }
+
+        return UIApplication.shared.keyWindow
     }
 
     private func resolvePreciseDeviceModel(

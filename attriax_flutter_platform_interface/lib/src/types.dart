@@ -20,6 +20,8 @@ enum AttriaxPlatformType { ios, android, web, windows, macos, linux, unknown }
 
 enum AttriaxDeepLinkResolutionStatus { matched, unmatched, invalid }
 
+enum AttriaxResolvedUrlOpenMode { inApp, external, unknown }
+
 /// Describes what caused a deep-link event to be emitted.
 enum AttriaxDeepLinkTrigger {
   /// The app launched from a fully stopped state because of this link.
@@ -391,6 +393,30 @@ class AttriaxDeepLink {
   };
 }
 
+class AttriaxResolvedUrlAction {
+  const AttriaxResolvedUrlAction({required this.uri, required this.openMode});
+
+  factory AttriaxResolvedUrlAction.fromJson(Map<String, Object?> json) {
+    final uri = _jsonUri(json['url'] ?? json['uri']);
+    if (uri == null) {
+      throw const FormatException('Missing or invalid "url".');
+    }
+
+    return AttriaxResolvedUrlAction(
+      uri: uri,
+      openMode: _parseResolvedUrlOpenMode(_jsonString(json['openMode'])),
+    );
+  }
+
+  final Uri uri;
+  final AttriaxResolvedUrlOpenMode openMode;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'url': uri.toString(),
+    'openMode': openMode.name,
+  };
+}
+
 /// Structured install-referrer details resolved by Attriax.
 class AttriaxInstallReferrerDetails {
   const AttriaxInstallReferrerDetails({
@@ -719,26 +745,119 @@ class AttriaxRevenueReceiptValidationResult {
   final Map<String, Object?> publicReceipt;
 }
 
-class AttriaxDeepLinkResolution {
-  const AttriaxDeepLinkResolution({
+class AttriaxRawDeepLinkEvent {
+  const AttriaxRawDeepLinkEvent({
+    required this.uri,
+    required this.receivedAt,
+    required this.isInitial,
+  });
+
+  factory AttriaxRawDeepLinkEvent.fromJson(Map<String, Object?> json) {
+    return AttriaxRawDeepLinkEvent(
+      uri: _jsonUri(json['uri']) ?? Uri(path: _jsonString(json['path']) ?? '/'),
+      receivedAt: _requireJsonDateTime(json, 'receivedAt'),
+      isInitial: _jsonBool(json['isInitial']) ?? false,
+    );
+  }
+
+  /// The full URI captured directly from the native deep-link source.
+  final Uri uri;
+
+  /// Local timestamp when the SDK observed the raw deep-link input.
+  final DateTime receivedAt;
+
+  /// Whether this raw event came from the launch link captured during startup.
+  final bool isInitial;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'uri': uri.toString(),
+    'receivedAt': receivedAt.toIso8601String(),
+    'isInitial': isInitial,
+  };
+}
+
+class AttriaxDeepLinkReferrerDetails {
+  const AttriaxDeepLinkReferrerDetails({
+    required this.uri,
+    required this.receivedAt,
+    required this.clickedAt,
+    required this.consumedAt,
+    required this.trigger,
+    required this.isAttriaxDomain,
+    required this.found,
+    this.data,
+    this.utm,
+    this.browserAction,
+    this.handledBySdk = false,
+  });
+
+  final Uri uri;
+  final DateTime receivedAt;
+  final DateTime clickedAt;
+  final DateTime consumedAt;
+  final AttriaxDeepLinkTrigger trigger;
+  final bool isAttriaxDomain;
+  final bool found;
+  final Map<String, String>? data;
+  final AttriaxUtmParameters? utm;
+  final AttriaxResolvedUrlAction? browserAction;
+  final bool handledBySdk;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'uri': uri.toString(),
+    'receivedAt': receivedAt.toIso8601String(),
+    'clickedAt': clickedAt.toIso8601String(),
+    'consumedAt': consumedAt.toIso8601String(),
+    'trigger': trigger.name,
+    'isAttriaxDomain': isAttriaxDomain,
+    'found': found,
+    if (data != null && data!.isNotEmpty)
+      'data': Map<String, String>.from(data!),
+    if (utm != null && !utm!.isEmpty) 'utm': utm!.toJson(),
+    if (browserAction != null) 'browserAction': browserAction!.toJson(),
+    'handledBySdk': handledBySdk,
+  };
+}
+
+class AttriaxDeepLinkEvent {
+  const AttriaxDeepLinkEvent({
     required this.uri,
     required this.clickedAt,
     required this.consumedAt,
     required this.found,
+    required this.trigger,
+    required this.isAttriaxSubDomain,
+    this.rawEvent,
     this.data,
     this.utm,
+    this.browserAction,
+    this.handledBySdk = false,
   });
 
-  factory AttriaxDeepLinkResolution.fromJson(Map<String, Object?> json) {
+  factory AttriaxDeepLinkEvent.fromJson(Map<String, Object?> json) {
     final utmJson = _jsonObject(json['utm']);
+    final browserActionJson = _jsonObject(json['browserAction']);
+    final rawEventJson = _jsonObject(json['rawEvent']);
 
-    return AttriaxDeepLinkResolution(
+    return AttriaxDeepLinkEvent(
       uri: _jsonUri(json['uri']) ?? Uri(path: _jsonString(json['path']) ?? '/'),
       clickedAt: _requireJsonDateTime(json, 'clickedAt'),
       consumedAt: _requireJsonDateTime(json, 'consumedAt'),
       found: _jsonBool(json['found']) ?? false,
+      trigger: _parseDeepLinkTrigger(_jsonString(json['trigger'])),
+      isAttriaxSubDomain:
+          _jsonBool(json['isAttriaxSubDomain']) ??
+          _jsonBool(json['isAttriaxDomain']) ??
+          false,
+      rawEvent: rawEventJson == null
+          ? null
+          : AttriaxRawDeepLinkEvent.fromJson(rawEventJson),
       data: _jsonStringMap(json['data']),
       utm: utmJson == null ? null : AttriaxUtmParameters.fromJson(utmJson),
+      browserAction: browserActionJson == null
+          ? null
+          : AttriaxResolvedUrlAction.fromJson(browserActionJson),
+      handledBySdk: _jsonBool(json['handledBySdk']) ?? false,
     );
   }
 
@@ -754,82 +873,26 @@ class AttriaxDeepLinkResolution {
   /// Whether Attriax matched this event to a registered link.
   final bool found;
 
+  /// Describes how this deep-link event was triggered.
+  final AttriaxDeepLinkTrigger trigger;
+
+  /// Whether the resolved URI belongs to an Attriax-managed subdomain.
+  final bool isAttriaxSubDomain;
+
+  /// Raw deep-link input that started this resolution, when available.
+  final AttriaxRawDeepLinkEvent? rawEvent;
+
   /// Dashboard-configured key-value payload for matched links.
   final Map<String, String>? data;
 
   /// Resolved UTM parameters associated with the matched link.
   final AttriaxUtmParameters? utm;
 
-  Map<String, Object?> toJson() => <String, Object?>{
-    'uri': uri.toString(),
-    'clickedAt': clickedAt.toIso8601String(),
-    'consumedAt': consumedAt.toIso8601String(),
-    'found': found,
-    if (data != null && data!.isNotEmpty)
-      'data': Map<String, String>.from(data!),
-    if (utm != null && !utm!.isEmpty) 'utm': utm!.toJson(),
-  };
-}
+  /// Browser destination returned by Attriax for SDK-managed handling.
+  final AttriaxResolvedUrlAction? browserAction;
 
-class AttriaxDeepLinkReferrerDetails {
-  const AttriaxDeepLinkReferrerDetails({
-    required this.uri,
-    required this.receivedAt,
-    required this.clickedAt,
-    required this.consumedAt,
-    required this.trigger,
-    required this.isAttriaxDomain,
-    required this.found,
-    this.data,
-    this.utm,
-  });
-
-  final Uri uri;
-  final DateTime receivedAt;
-  final DateTime clickedAt;
-  final DateTime consumedAt;
-  final AttriaxDeepLinkTrigger trigger;
-  final bool isAttriaxDomain;
-  final bool found;
-  final Map<String, String>? data;
-  final AttriaxUtmParameters? utm;
-
-  Map<String, Object?> toJson() => <String, Object?>{
-    'uri': uri.toString(),
-    'receivedAt': receivedAt.toIso8601String(),
-    'clickedAt': clickedAt.toIso8601String(),
-    'consumedAt': consumedAt.toIso8601String(),
-    'trigger': trigger.name,
-    'isAttriaxDomain': isAttriaxDomain,
-    'found': found,
-    if (data != null && data!.isNotEmpty)
-      'data': Map<String, String>.from(data!),
-    if (utm != null && !utm!.isEmpty) 'utm': utm!.toJson(),
-  };
-}
-
-class AttriaxDeepLinkEvent {
-  AttriaxDeepLinkEvent({
-    required this.uri,
-    required this.receivedAt,
-    required this.trigger,
-    required this.isAttriaxDomain,
-    required Future<AttriaxDeepLinkResolution> resolutionFuture,
-  }) : _resolutionFuture = resolutionFuture;
-
-  /// The full URI that triggered this event.
-  final Uri uri;
-
-  /// Local timestamp when the SDK received the event.
-  final DateTime receivedAt;
-
-  /// Describes how this deep-link event was triggered.
-  final AttriaxDeepLinkTrigger trigger;
-
-  /// Whether the SDK knows this URI belongs to an Attriax-managed domain.
-  final bool isAttriaxDomain;
-
-  final Future<AttriaxDeepLinkResolution> _resolutionFuture;
+  /// Whether the SDK already handled the link by opening a browser.
+  final bool handledBySdk;
 
   bool get isDeferred => trigger == AttriaxDeepLinkTrigger.deferred;
 
@@ -837,13 +900,20 @@ class AttriaxDeepLinkEvent {
 
   bool get isForeground => trigger == AttriaxDeepLinkTrigger.foreground;
 
-  /// Waits for backend processing of this deep-link event.
-  ///
-  /// Retryable transport failures and HTTP 5xx responses stay pending until
-  /// delivery eventually succeeds. The future completes with an error if the
-  /// backend returns a non-retryable HTTP 4xx response, or if the SDK is reset
-  /// or disposed before resolution finishes.
-  Future<AttriaxDeepLinkResolution> resolve() => _resolutionFuture;
+  Map<String, Object?> toJson() => <String, Object?>{
+    'uri': uri.toString(),
+    'clickedAt': clickedAt.toIso8601String(),
+    'consumedAt': consumedAt.toIso8601String(),
+    'found': found,
+    'trigger': trigger.name,
+    'isAttriaxSubDomain': isAttriaxSubDomain,
+    if (rawEvent != null) 'rawEvent': rawEvent!.toJson(),
+    if (data != null && data!.isNotEmpty)
+      'data': Map<String, String>.from(data!),
+    if (utm != null && !utm!.isEmpty) 'utm': utm!.toJson(),
+    if (browserAction != null) 'browserAction': browserAction!.toJson(),
+    'handledBySdk': handledBySdk,
+  };
 }
 
 class AttriaxDeepLinkResolutionResult {
@@ -853,6 +923,7 @@ class AttriaxDeepLinkResolutionResult {
     required this.isFirstLaunch,
     this.reason,
     this.deepLink,
+    this.browserAction,
     this.requestVersion,
     this.acceptedAt,
     this.consumedAt,
@@ -860,6 +931,7 @@ class AttriaxDeepLinkResolutionResult {
 
   factory AttriaxDeepLinkResolutionResult.fromJson(Map<String, Object?> json) {
     final deepLinkJson = _jsonObject(json['deepLink']);
+    final browserActionJson = _jsonObject(json['browserAction']);
 
     return AttriaxDeepLinkResolutionResult(
       matched: _jsonBool(json['matched']) ?? false,
@@ -868,6 +940,9 @@ class AttriaxDeepLinkResolutionResult {
       reason: _jsonString(json['reason']),
       deepLink: deepLinkJson != null
           ? AttriaxDeepLink.fromJson(deepLinkJson)
+          : null,
+      browserAction: browserActionJson != null
+          ? AttriaxResolvedUrlAction.fromJson(browserActionJson)
           : null,
       requestVersion: _jsonString(json['requestVersion']),
       acceptedAt: _jsonDateTime(json['acceptedAt']),
@@ -880,6 +955,7 @@ class AttriaxDeepLinkResolutionResult {
   final bool isFirstLaunch;
   final String? reason;
   final AttriaxDeepLink? deepLink;
+  final AttriaxResolvedUrlAction? browserAction;
   final String? requestVersion;
   final DateTime? acceptedAt;
   final DateTime? consumedAt;
@@ -1101,6 +1177,7 @@ class AttriaxConfig {
     this.automaticCrashReportingEnabled = true,
     this.requestTrackingAuthorizationOnInit = false,
     this.trackingAuthorizationStatusTimeout = const Duration(seconds: 60),
+    this.automaticBrowserHandling = true,
     this.sessionTrackingEnabled = true,
     this.sessionHeartbeatInterval = const Duration(seconds: 60),
     this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 5),
@@ -1183,6 +1260,9 @@ class AttriaxConfig {
   /// Explicit [Attriax.requestTrackingAuthorization] calls do not use this
   /// timeout unless the caller passes one directly.
   final Duration trackingAuthorizationStatusTimeout;
+
+  /// Whether the SDK opens backend-provided browser actions automatically.
+  final bool automaticBrowserHandling;
 
   /// Enables automatic session lifecycle tracking and session enrichment.
   final bool sessionTrackingEnabled;
@@ -1325,6 +1405,31 @@ AttriaxDeepLinkResolutionStatus _parseResolutionStatus(String? value) {
     case 'invalid':
     default:
       return AttriaxDeepLinkResolutionStatus.invalid;
+  }
+}
+
+AttriaxDeepLinkTrigger _parseDeepLinkTrigger(String? value) {
+  switch (value) {
+    case 'coldStart':
+      return AttriaxDeepLinkTrigger.coldStart;
+    case 'deferred':
+      return AttriaxDeepLinkTrigger.deferred;
+    case 'foreground':
+    default:
+      return AttriaxDeepLinkTrigger.foreground;
+  }
+}
+
+AttriaxResolvedUrlOpenMode _parseResolvedUrlOpenMode(String? value) {
+  switch (value) {
+    case 'in_app':
+    case 'inApp':
+      return AttriaxResolvedUrlOpenMode.inApp;
+    case 'external':
+      return AttriaxResolvedUrlOpenMode.external;
+    case 'unknown':
+    default:
+      return AttriaxResolvedUrlOpenMode.unknown;
   }
 }
 

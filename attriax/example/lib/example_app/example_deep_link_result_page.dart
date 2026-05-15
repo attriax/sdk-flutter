@@ -5,11 +5,16 @@ import 'example_app_formatters.dart';
 import 'example_app_widgets.dart';
 
 class ExampleDeepLinkResultPage extends StatefulWidget {
-  const ExampleDeepLinkResultPage({super.key, required this.event});
+  const ExampleDeepLinkResultPage({
+    super.key,
+    required this.sdk,
+    required this.rawEvent,
+  });
 
   static const String routeName = '/deeplinks/result';
 
-  final AttriaxDeepLinkEvent event;
+  final Attriax sdk;
+  final AttriaxRawDeepLinkEvent rawEvent;
 
   @override
   State<ExampleDeepLinkResultPage> createState() =>
@@ -17,16 +22,18 @@ class ExampleDeepLinkResultPage extends StatefulWidget {
 }
 
 class _ExampleDeepLinkResultPageState extends State<ExampleDeepLinkResultPage> {
-  late final Future<AttriaxDeepLinkResolution> _resolutionFuture = widget.event
-      .resolve();
+  late final Future<AttriaxDeepLinkEvent> _resolutionFuture = widget
+      .sdk
+      .deepLinks
+      .waitResolution(widget.rawEvent);
 
   @override
   Widget build(BuildContext context) {
     return ExamplePageScaffold(
       title: 'Deep Link Result',
       subtitle:
-          'This is the route the example opens when a deep link reaches the app. The event arrives first, then the resolution settles.',
-      child: FutureBuilder<AttriaxDeepLinkResolution>(
+          'This route opens from the raw deep-link stream first, then waits for the resolved deep-link event.',
+      child: FutureBuilder<AttriaxDeepLinkEvent>(
         future: _resolutionFuture,
         builder: (context, snapshot) {
           final resolution = snapshot.data;
@@ -41,21 +48,21 @@ class _ExampleDeepLinkResultPageState extends State<ExampleDeepLinkResultPage> {
                     : 'Resolving deep link...',
                 subtitle: snapshot.hasError
                     ? formatExampleError(snapshot.error!)
-                    : widget.event.uri.toString(),
+                    : widget.rawEvent.uri.toString(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     ExampleKeyValueRow(
-                      label: 'Trigger',
-                      value: widget.event.trigger.name,
+                      label: 'Raw URI',
+                      value: widget.rawEvent.uri.toString(),
                     ),
                     ExampleKeyValueRow(
                       label: 'Received at',
-                      value: formatExampleTimestamp(widget.event.receivedAt),
+                      value: formatExampleTimestamp(widget.rawEvent.receivedAt),
                     ),
                     ExampleKeyValueRow(
-                      label: 'Attriax host',
-                      value: widget.event.isAttriaxDomain ? 'Yes' : 'No',
+                      label: 'Initial link',
+                      value: widget.rawEvent.isInitial ? 'Yes' : 'No',
                     ),
                     if (snapshot.connectionState != ConnectionState.done)
                       const Padding(
@@ -70,10 +77,18 @@ class _ExampleDeepLinkResultPageState extends State<ExampleDeepLinkResultPage> {
                 ExampleSectionCard(
                   title: 'Resolution data',
                   subtitle:
-                      'Use event.resolve() when you need the backend-verified deep-link result.',
+                      'Use deepLinks.waitResolution(rawEvent) when you need the backend-verified deep-link result.',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
+                      ExampleKeyValueRow(
+                        label: 'Trigger',
+                        value: resolution.trigger.name,
+                      ),
+                      ExampleKeyValueRow(
+                        label: 'Attriax subdomain',
+                        value: resolution.isAttriaxSubDomain ? 'Yes' : 'No',
+                      ),
                       ExampleKeyValueRow(
                         label: 'Found',
                         value: resolution.found ? 'Yes' : 'No',

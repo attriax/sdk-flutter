@@ -25,6 +25,12 @@ SdkV1DeepLinkResolveResponseDto _$SdkV1DeepLinkResolveResponseDtoFromJson(
       'acceptedAt',
       (v) => DateTime.parse(v as String),
     ),
+    browserAction: $checkedConvert(
+      'browserAction',
+      (v) => v == null
+          ? null
+          : SdkBrowserActionDto.fromJson(v as Map<String, dynamic>),
+    ),
     consumedAt: $checkedConvert(
       'consumedAt',
       (v) => DateTime.parse(v as String),
@@ -51,6 +57,7 @@ Map<String, dynamic> _$SdkV1DeepLinkResolveResponseDtoToJson(
   SdkV1DeepLinkResolveResponseDto instance,
 ) => <String, dynamic>{
   'acceptedAt': instance.acceptedAt.toIso8601String(),
+  'browserAction': ?instance.browserAction?.toJson(),
   'consumedAt': instance.consumedAt.toIso8601String(),
   'deepLink': ?instance.deepLink?.toJson(),
   'isFirstLaunch': instance.isFirstLaunch,

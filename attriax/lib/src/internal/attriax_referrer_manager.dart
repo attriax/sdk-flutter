@@ -313,21 +313,22 @@ class AttriaxReferrerManager {
     final sessionId = _observedSessionId;
 
     try {
-      final resolution = await event.resolve();
       if (!_isSessionObservationCurrent(generation, sessionId)) {
         return;
       }
 
       final details = AttriaxDeepLinkReferrerDetails(
-        uri: resolution.uri,
-        receivedAt: event.receivedAt,
-        clickedAt: resolution.clickedAt,
-        consumedAt: resolution.consumedAt,
+        uri: event.uri,
+        receivedAt: event.rawEvent?.receivedAt ?? event.clickedAt,
+        clickedAt: event.clickedAt,
+        consumedAt: event.consumedAt,
         trigger: event.trigger,
-        isAttriaxDomain: event.isAttriaxDomain,
-        found: resolution.found,
-        data: resolution.data,
-        utm: resolution.utm,
+        isAttriaxDomain: event.isAttriaxSubDomain,
+        found: event.found,
+        data: event.data,
+        utm: event.utm,
+        browserAction: event.browserAction,
+        handledBySdk: event.handledBySdk,
       );
       _setLatestDeepLinkValue(details);
       if (!_sessionReferrerResolved && _isSessionOpeningEvent(event)) {

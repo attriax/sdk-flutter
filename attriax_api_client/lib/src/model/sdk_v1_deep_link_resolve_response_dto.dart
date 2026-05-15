@@ -3,6 +3,7 @@
 //
 
 // ignore_for_file: unused_element
+import 'package:attriax_api_client/src/model/sdk_browser_action_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
 import 'package:attriax_api_client/src/model/deep_link_resolution_status.dart';
 import 'package:json_annotation/json_annotation.dart';
@@ -19,6 +20,8 @@ class SdkV1DeepLinkResolveResponseDto {
   /// Returns a new [SdkV1DeepLinkResolveResponseDto] instance.
   SdkV1DeepLinkResolveResponseDto({
     required this.acceptedAt,
+
+    this.browserAction,
 
     required this.consumedAt,
 
@@ -37,6 +40,9 @@ class SdkV1DeepLinkResolveResponseDto {
 
   @JsonKey(name: r'acceptedAt', required: true, includeIfNull: false)
   final DateTime acceptedAt;
+
+  @JsonKey(name: r'browserAction', required: false, includeIfNull: false)
+  final SdkBrowserActionDto? browserAction;
 
   @JsonKey(name: r'consumedAt', required: true, includeIfNull: false)
   final DateTime consumedAt;
@@ -64,6 +70,7 @@ class SdkV1DeepLinkResolveResponseDto {
       identical(this, other) ||
       other is SdkV1DeepLinkResolveResponseDto &&
           other.acceptedAt == acceptedAt &&
+          other.browserAction == browserAction &&
           other.consumedAt == consumedAt &&
           other.deepLink == deepLink &&
           other.isFirstLaunch == isFirstLaunch &&
@@ -75,6 +82,7 @@ class SdkV1DeepLinkResolveResponseDto {
   @override
   int get hashCode =>
       acceptedAt.hashCode +
+      (browserAction == null ? 0 : browserAction.hashCode) +
       consumedAt.hashCode +
       (deepLink == null ? 0 : deepLink.hashCode) +
       isFirstLaunch.hashCode +

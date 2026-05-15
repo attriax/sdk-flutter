@@ -17,7 +17,7 @@ Pod::Spec.new do |s|
   # AdSupport ships with the iOS SDK — no third-party dependency is
   # introduced. It is required for the IDFA lookup in
   # `AttriaxIosPlugin.collectNativeContext()`.
-  s.frameworks       = 'AdSupport'
+  s.frameworks       = 'AdSupport', 'SafariServices'
   s.platform         = :ios, '13.0'
   s.swift_version    = '5.0'
 end

@@ -22,13 +22,13 @@ class ExampleAppController extends ChangeNotifier {
   final ExamplePushTokenService _pushTokenService;
   final ExamplePlatformBridge _platformBridge;
 
-  void Function(AttriaxDeepLinkEvent event)? onDeepLinkNavigation;
+  void Function(AttriaxRawDeepLinkEvent event)? onDeepLinkNavigation;
 
   final List<ExampleActivityEntry> recentActivity = <ExampleActivityEntry>[];
   final Set<String> _handledDeepLinkKeys = <String>{};
 
   StreamSubscription<AttriaxSynchronizationState>? _syncSubscription;
-  StreamSubscription<AttriaxDeepLinkEvent>? _deepLinkSubscription;
+  StreamSubscription<AttriaxRawDeepLinkEvent>? _deepLinkSubscription;
   StreamSubscription<ExamplePushTokenSnapshot>? _pushTokenSubscription;
 
   bool _started = false;
@@ -46,9 +46,11 @@ class ExampleAppController extends ChangeNotifier {
   AttriaxSdkSnapshot? sdkSnapshot;
   AttriaxInstallReferrerDetails? originalInstallReferrer;
   AttriaxInstallReferrerDetails? reinstallReferrer;
+  AttriaxRawDeepLinkEvent? rawInitialDeepLink;
+  AttriaxRawDeepLinkEvent? latestRawDeepLink;
   AttriaxDeepLinkEvent? initialDeepLink;
   AttriaxDeepLinkEvent? latestDeepLink;
-  AttriaxDeepLinkResolution? latestResolution;
+  AttriaxDeepLinkEvent? latestResolution;
   Object? latestDeepLinkError;
   AttriaxCreateDynamicLinkResult? latestCreatedLink;
   String? latestValidationSummary;
@@ -97,7 +99,9 @@ class ExampleAppController extends ChangeNotifier {
       _syncFromSdk();
       notifyListeners();
     });
-    _deepLinkSubscription = sdk.deepLinks.stream.listen(_handleDeepLinkEvent);
+    _deepLinkSubscription = sdk.deepLinks.rawStream.listen(
+      _handleDeepLinkEvent,
+    );
     _pushTokenSubscription = _pushTokenService.snapshots.listen((snapshot) {
       pushTokenSnapshot = snapshot;
       latestTokenSummary = snapshot.summary;
@@ -121,15 +125,19 @@ class ExampleAppController extends ChangeNotifier {
 
     _syncFromSdk();
     initialDeepLinkResolved = sdk.deepLinks.initialDeepLinkResolved;
+    rawInitialDeepLink = sdk.deepLinks.rawInitialDeepLink;
+    latestRawDeepLink ??= rawInitialDeepLink;
     initialDeepLink = sdk.deepLinks.initialDeepLink;
     latestDeepLink = sdk.deepLinks.latestDeepLink;
+    latestResolution = latestDeepLink;
 
     try {
       final initialEvent = await sdk.deepLinks.waitForInitialDeepLink();
       initialDeepLinkResolved = sdk.deepLinks.initialDeepLinkResolved;
       if (initialEvent != null) {
         initialDeepLink = initialEvent;
-        unawaited(_handleDeepLinkEvent(initialEvent));
+        latestDeepLink ??= initialEvent;
+        latestResolution ??= initialEvent;
       }
 
       originalInstallReferrer = await sdk.referrer.getOriginalInstallReferrer(
@@ -459,6 +467,7 @@ class ExampleAppController extends ChangeNotifier {
       _pushActivity('recordDeepLink', detail: 'no result', isError: true);
     } else {
       latestResolution = resolution;
+      latestDeepLink = resolution;
       statusMessage = resolution.found
           ? 'Manual deep link matched ${resolution.uri}.'
           : 'Manual deep link was recorded but not matched.';
@@ -540,20 +549,20 @@ class ExampleAppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _handleDeepLinkEvent(AttriaxDeepLinkEvent event) async {
-    final key = deepLinkEventKey(event);
+  Future<void> _handleDeepLinkEvent(AttriaxRawDeepLinkEvent event) async {
+    final key = rawDeepLinkEventKey(event);
     final shouldNavigate = _handledDeepLinkKeys.add(key);
 
     initialDeepLinkResolved = sdk.deepLinks.initialDeepLinkResolved;
-    if (event.isColdStart && initialDeepLink == null) {
-      initialDeepLink = event;
+    if (event.isInitial && rawInitialDeepLink == null) {
+      rawInitialDeepLink = event;
     }
-    latestDeepLink = event;
+    latestRawDeepLink = event;
     latestDeepLinkError = null;
-    statusMessage = 'Received deep link ${event.uri}.';
+    statusMessage = 'Received raw deep link ${event.uri}.';
     _pushActivity(
-      'deepLinks.stream',
-      detail: '${event.trigger.name} ${event.uri}',
+      'deepLinks.rawStream',
+      detail: '${event.isInitial ? 'initial' : 'runtime'} ${event.uri}',
     );
     notifyListeners();
 
@@ -562,12 +571,16 @@ class ExampleAppController extends ChangeNotifier {
     }
 
     try {
-      latestResolution = await event.resolve();
+      latestResolution = await sdk.deepLinks.waitResolution(event);
+      latestDeepLink = latestResolution;
+      if (latestResolution!.isColdStart && initialDeepLink == null) {
+        initialDeepLink = latestResolution;
+      }
       statusMessage = latestResolution!.found
           ? 'Deep link matched ${latestResolution!.uri}.'
           : 'Deep link recorded without a matching Attriax link.';
       _pushActivity(
-        'deepLink.resolve',
+        'deepLinks.waitResolution',
         detail: latestResolution!.found ? 'matched' : 'unmatched',
       );
     } catch (error) {
@@ -575,7 +588,7 @@ class ExampleAppController extends ChangeNotifier {
       statusMessage =
           'Deep-link resolution failed: ${formatExampleError(error)}';
       _pushActivity(
-        'deepLink.resolve',
+        'deepLinks.waitResolution',
         detail: formatExampleError(error),
         isError: true,
       );

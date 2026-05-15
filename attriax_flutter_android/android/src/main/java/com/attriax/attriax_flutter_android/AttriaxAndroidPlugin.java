@@ -1,5 +1,6 @@
 package com.attriax.attriax_flutter_android;
 
+import android.app.Activity;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageInfo;
 import android.content.pm.Signature;
@@ -8,6 +9,7 @@ import android.content.Intent;
 import android.content.pm.InstallSourceInfo;
 import android.content.pm.verify.domain.DomainVerificationManager;
 import android.content.pm.verify.domain.DomainVerificationUserState;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
@@ -124,8 +126,38 @@ public class AttriaxAndroidPlugin implements
                     result.success(latestLink);
                 }
                 break;
+            case "openBrowserUrl":
+                openBrowserUrl(call, result);
+                break;
             default:
                 result.notImplemented();
+        }
+    }
+
+    private void openBrowserUrl(@NonNull MethodCall call, @NonNull Result result) {
+        final Activity activity = activityBinding != null ? activityBinding.getActivity() : null;
+        final String url = call.argument("url");
+        final String openMode = call.argument("openMode");
+
+        if (activity == null || url == null || url.trim().isEmpty()) {
+            result.success(false);
+            return;
+        }
+
+        try {
+            Intent intent;
+            if ("external".equals(openMode)) {
+                intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+            } else {
+                intent = new Intent(activity, AttriaxInAppBrowserActivity.class);
+                intent.putExtra(AttriaxInAppBrowserActivity.EXTRA_URL, url);
+            }
+
+            activity.startActivity(intent);
+            result.success(true);
+        } catch (Exception exception) {
+            Log.w(CHANNEL_NAME, "openBrowserUrl failed", exception);
+            result.success(false);
         }
     }
 

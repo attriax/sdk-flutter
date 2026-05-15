@@ -96,27 +96,27 @@ void main() {
   testWidgets('deep link events navigate to the result page', (tester) async {
     await pumpExampleApp(tester);
 
-    final resolution = AttriaxDeepLinkResolution(
+    final rawEvent = AttriaxRawDeepLinkEvent(
+      uri: Uri.parse(
+        'https://example-test.attriax.com/example/deep-link-success',
+      ),
+      receivedAt: DateTime.utc(2026, 5, 14, 10),
+      isInitial: false,
+    );
+    final resolution = AttriaxDeepLinkEvent(
       uri: Uri.parse(
         'https://example-test.attriax.com/example/deep-link-success',
       ),
       clickedAt: DateTime.utc(2026, 5, 14, 10),
       consumedAt: DateTime.utc(2026, 5, 14, 10, 0, 1),
       found: true,
+      trigger: AttriaxDeepLinkTrigger.foreground,
+      isAttriaxSubDomain: true,
+      rawEvent: rawEvent,
       data: const <String, String>{'campaign': 'spring-launch'},
     );
 
-    sdk.emitDeepLink(
-      AttriaxDeepLinkEvent(
-        uri: Uri.parse(
-          'https://example-test.attriax.com/example/deep-link-success',
-        ),
-        receivedAt: DateTime.utc(2026, 5, 14, 10),
-        trigger: AttriaxDeepLinkTrigger.foreground,
-        isAttriaxDomain: true,
-        resolutionFuture: Future<AttriaxDeepLinkResolution>.value(resolution),
-      ),
-    );
+    sdk.emitDeepLink(rawEvent: rawEvent, resolvedEvent: resolution);
 
     await pumpRouteTransition(tester);
     await tester.pump();
@@ -249,6 +249,8 @@ void main() {
 }
 
 class FakeAttriax extends Fake implements Attriax {
+  final StreamController<AttriaxRawDeepLinkEvent> _rawDeepLinksController =
+      StreamController<AttriaxRawDeepLinkEvent>.broadcast();
   final StreamController<AttriaxDeepLinkEvent> _deepLinksController =
       StreamController<AttriaxDeepLinkEvent>.broadcast();
   final StreamController<AttriaxSynchronizationState>
@@ -270,8 +272,11 @@ class FakeAttriax extends Fake implements Attriax {
         source: 'attriax',
       );
   AttriaxInstallReferrerDetails? reinstallReferrerResult;
+  AttriaxRawDeepLinkEvent? rawInitialDeepLinkResult;
   AttriaxDeepLinkEvent? initialDeepLinkResult;
   AttriaxDeepLinkEvent? latestDeepLinkResult;
+  final Map<AttriaxRawDeepLinkEvent, Future<AttriaxDeepLinkEvent>>
+  _resolutionByRaw = <AttriaxRawDeepLinkEvent, Future<AttriaxDeepLinkEvent>>{};
 
   @override
   late final AttriaxDeepLinks deepLinks = _FakeAttriaxDeepLinks(this);
@@ -320,6 +325,9 @@ class FakeAttriax extends Fake implements Attriax {
 
   @override
   Future<void> dispose() async {
+    if (!_rawDeepLinksController.isClosed) {
+      await _rawDeepLinksController.close();
+    }
     if (!_deepLinksController.isClosed) {
       await _deepLinksController.close();
     }
@@ -531,26 +539,37 @@ class FakeAttriax extends Fake implements Attriax {
   }
 
   @override
-  Future<AttriaxDeepLinkResolution?> recordDeepLink({
+  Future<AttriaxDeepLinkEvent?> recordDeepLink({
     Uri? uri,
     String? linkPath,
     Map<String, Object?>? metadata,
     String source = 'manual',
   }) async {
-    return AttriaxDeepLinkResolution(
+    return AttriaxDeepLinkEvent(
       uri:
           uri ??
           Uri.parse('https://example-test.attriax.com/${linkPath ?? ''}'),
       clickedAt: DateTime.utc(2026, 5, 14, 10),
       consumedAt: DateTime.utc(2026, 5, 14, 10, 0, 1),
       found: true,
+      trigger: AttriaxDeepLinkTrigger.foreground,
+      isAttriaxSubDomain: true,
       data: const <String, String>{'source': 'manual'},
     );
   }
 
-  void emitDeepLink(AttriaxDeepLinkEvent event) {
-    latestDeepLinkResult = event;
-    _deepLinksController.add(event);
+  void emitDeepLink({
+    required AttriaxRawDeepLinkEvent rawEvent,
+    required AttriaxDeepLinkEvent resolvedEvent,
+  }) {
+    rawInitialDeepLinkResult ??= rawEvent.isInitial ? rawEvent : null;
+    initialDeepLinkResult ??= rawEvent.isInitial ? resolvedEvent : null;
+    latestDeepLinkResult = resolvedEvent;
+    _resolutionByRaw[rawEvent] = Future<AttriaxDeepLinkEvent>.value(
+      resolvedEvent,
+    );
+    _rawDeepLinksController.add(rawEvent);
+    _deepLinksController.add(resolvedEvent);
   }
 }
 
@@ -558,6 +577,10 @@ class _FakeAttriaxDeepLinks implements AttriaxDeepLinks {
   _FakeAttriaxDeepLinks(this._sdk);
 
   final FakeAttriax _sdk;
+
+  @override
+  AttriaxRawDeepLinkEvent? get rawInitialDeepLink =>
+      _sdk.rawInitialDeepLinkResult;
 
   @override
   AttriaxDeepLinkEvent? get initialDeepLink => _sdk.initialDeepLinkResult;
@@ -568,6 +591,15 @@ class _FakeAttriaxDeepLinks implements AttriaxDeepLinks {
   @override
   Future<AttriaxDeepLinkEvent?> waitForInitialDeepLink() async =>
       _sdk.initialDeepLinkResult;
+
+  @override
+  Future<AttriaxDeepLinkEvent> waitResolution(
+    AttriaxRawDeepLinkEvent rawEvent,
+  ) async => _sdk._resolutionByRaw[rawEvent]!;
+
+  @override
+  Stream<AttriaxRawDeepLinkEvent> get rawStream =>
+      _sdk._rawDeepLinksController.stream;
 
   @override
   Stream<AttriaxDeepLinkEvent> get stream => _sdk._deepLinksController.stream;

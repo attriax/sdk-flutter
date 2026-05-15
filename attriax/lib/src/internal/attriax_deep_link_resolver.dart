@@ -17,22 +17,33 @@ class AttriaxDeepLinkResolver {
     return normalized.isEmpty ? null : normalized;
   }
 
-  AttriaxDeepLinkResolution buildResolution(
+  AttriaxDeepLinkEvent buildResolution(
     AttriaxDeepLinkResolutionResult result, {
     required DateTime clickedAt,
+    required AttriaxDeepLinkTrigger trigger,
+    required bool isAttriaxSubDomain,
+    Uri? fallbackUri,
+    AttriaxRawDeepLinkEvent? rawEvent,
+    bool handledBySdk = false,
   }) {
     final canonicalUri =
         result.deepLink?.uri ??
+        fallbackUri ??
         _uriFromNormalizedPath(normalizeLinkPath(result.deepLink?.path));
 
-    return AttriaxDeepLinkResolution(
+    return AttriaxDeepLinkEvent(
       uri: canonicalUri,
       clickedAt: clickedAt,
       consumedAt:
           result.consumedAt ?? result.acceptedAt ?? DateTime.now().toUtc(),
       found: result.matched,
+      trigger: trigger,
+      isAttriaxSubDomain: isAttriaxSubDomain,
+      rawEvent: rawEvent,
       data: stringifyData(result.deepLink?.data),
       utm: result.deepLink?.utm,
+      browserAction: result.browserAction,
+      handledBySdk: handledBySdk,
     );
   }
 
@@ -71,16 +82,20 @@ class AttriaxDeepLinkResolver {
     return _uriFromNormalizedPath(normalizeLinkPath(result.deepLink?.path));
   }
 
-  AttriaxDeepLinkResolution buildDeferredResolution(
+  AttriaxDeepLinkEvent buildDeferredResolution(
     AttriaxAppOpenResult result, {
     required DateTime fallbackTime,
   }) {
-    return AttriaxDeepLinkResolution(
-      uri: buildDeferredUri(result),
+    final uri = buildDeferredUri(result);
+
+    return AttriaxDeepLinkEvent(
+      uri: uri,
       clickedAt: result.deepLinkClickedAt ?? result.acceptedAt ?? fallbackTime,
       consumedAt:
           result.deepLinkConsumedAt ?? result.acceptedAt ?? fallbackTime,
       found: result.deepLink != null,
+      trigger: AttriaxDeepLinkTrigger.deferred,
+      isAttriaxSubDomain: isAttriaxDomain(uri),
       data: stringifyData(
         result.deepLink?.data ??
             result.reinstallReferrer?.deepLinkData ??
@@ -90,6 +105,7 @@ class AttriaxDeepLinkResolver {
           result.deepLink?.utm ??
           result.reinstallReferrer?.utm ??
           result.installReferrer?.utm,
+      handledBySdk: false,
     );
   }
 

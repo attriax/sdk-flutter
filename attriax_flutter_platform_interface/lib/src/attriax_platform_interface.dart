@@ -41,4 +41,9 @@ abstract class AttriaxPlatform extends PlatformInterface {
   }) async => AttriaxTrackingAuthorizationStatus.notSupported;
 
   Future<AttriaxPendingCrashReport?> consumePendingCrashReport() async => null;
+
+  Future<bool> openBrowserUrl({
+    required Uri uri,
+    required AttriaxResolvedUrlOpenMode openMode,
+  }) async => false;
 }

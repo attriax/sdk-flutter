@@ -22,6 +22,7 @@ void main() {
     late AttriaxEventHub eventHub;
     late AttriaxContextManager contextManager;
     late _FakeRequestManager requestManager;
+    late _FakePlatform platform;
     late SharedPreferences prefs;
 
     setUp(() async {
@@ -33,6 +34,7 @@ void main() {
       prefs = await SharedPreferences.getInstance();
       eventHub = AttriaxEventHub();
       requestManager = _FakeRequestManager();
+      platform = _FakePlatform();
       contextManager = await _createContextManager(prefs: prefs);
     });
 
@@ -81,6 +83,8 @@ void main() {
         expect(result, isNotNull);
         expect(result!.found, isTrue);
         expect(result.data, isNull);
+        expect(result.browserAction, isNull);
+        expect(result.handledBySdk, isFalse);
         expect(emittedEvents, isEmpty);
         expect(manager.latestDeepLink, isNull);
         expect(
@@ -91,6 +95,114 @@ void main() {
           requestManager.lastRequest?.toQueueBody()['source'],
           'manual_test',
         );
+      },
+    );
+
+    test(
+      'opens browser actions before resolving manual deep-link conversions',
+      () async {
+        final manager = AttriaxDeepLinkManager(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          contextManager: contextManager,
+          listener: AttriaxDeepLinkListener(
+            deepLinkSource: _FakeDeepLinkSource(),
+          ),
+          eventHub: eventHub,
+          preferencesStore: AttriaxPreferencesStore(prefsOverride: prefs),
+          requestManager: requestManager,
+          logger: AttriaxLogger(enableDebugLogs: false),
+          platform: platform,
+        );
+
+        final resolutionFuture = manager.recordManualConversion(
+          uri: Uri.parse('https://example.com/promo/manual'),
+        );
+
+        requestManager.completeSuccess(
+          AttriaxResolveDeepLinkApiResponse(
+            result: AttriaxDeepLinkResolutionResult(
+              matched: true,
+              status: AttriaxDeepLinkResolutionStatus.matched,
+              isFirstLaunch: false,
+              deepLink: const AttriaxDeepLink(path: 'promo/manual'),
+              browserAction: AttriaxResolvedUrlAction(
+                uri: Uri.parse('https://example.com/account'),
+                openMode: AttriaxResolvedUrlOpenMode.unknown,
+              ),
+            ),
+          ),
+        );
+
+        final result = await resolutionFuture;
+        await pumpEventQueue();
+
+        expect(result, isNotNull);
+        expect(
+          result!.browserAction?.uri,
+          Uri.parse('https://example.com/account'),
+        );
+        expect(
+          result.browserAction?.openMode,
+          AttriaxResolvedUrlOpenMode.unknown,
+        );
+        expect(result.handledBySdk, isTrue);
+        expect(platform.openedUrls, <Uri>[
+          Uri.parse('https://example.com/account'),
+        ]);
+        expect(platform.openModes, <AttriaxResolvedUrlOpenMode>[
+          AttriaxResolvedUrlOpenMode.unknown,
+        ]);
+      },
+    );
+
+    test(
+      'surfaces browser actions without opening them when automatic browser handling is disabled',
+      () async {
+        final manager = AttriaxDeepLinkManager(
+          config: const AttriaxConfig(
+            appToken: 'ax_test_token',
+            automaticBrowserHandling: false,
+          ),
+          contextManager: contextManager,
+          listener: AttriaxDeepLinkListener(
+            deepLinkSource: _FakeDeepLinkSource(),
+          ),
+          eventHub: eventHub,
+          preferencesStore: AttriaxPreferencesStore(prefsOverride: prefs),
+          requestManager: requestManager,
+          logger: AttriaxLogger(enableDebugLogs: false),
+          platform: platform,
+        );
+
+        final resolutionFuture = manager.recordManualConversion(
+          uri: Uri.parse('https://example.com/promo/manual'),
+        );
+
+        requestManager.completeSuccess(
+          AttriaxResolveDeepLinkApiResponse(
+            result: AttriaxDeepLinkResolutionResult(
+              matched: true,
+              status: AttriaxDeepLinkResolutionStatus.matched,
+              isFirstLaunch: false,
+              deepLink: const AttriaxDeepLink(path: 'promo/manual'),
+              browserAction: AttriaxResolvedUrlAction(
+                uri: Uri.parse('https://example.com/account'),
+                openMode: AttriaxResolvedUrlOpenMode.external,
+              ),
+            ),
+          ),
+        );
+
+        final result = await resolutionFuture;
+        await pumpEventQueue();
+
+        expect(result, isNotNull);
+        expect(
+          result!.browserAction?.uri,
+          Uri.parse('https://example.com/account'),
+        );
+        expect(result.handledBySdk, isFalse);
+        expect(platform.openedUrls, isEmpty);
       },
     );
 
@@ -120,12 +232,11 @@ void main() {
       );
 
       final emittedEvent = await emittedEventFuture;
-      final emittedResult = await emittedEvent.resolve();
 
       expect(emittedEvent.isDeferred, isTrue);
       expect(emittedEvent.uri.path, '/promo/deferred');
-      expect(emittedResult.found, isTrue);
-      expect(emittedResult.data, isNull);
+      expect(emittedEvent.found, isTrue);
+      expect(emittedEvent.data, isNull);
       expect(manager.latestDeepLink, same(emittedEvent));
     });
 
@@ -255,7 +366,7 @@ void main() {
 
         await manager.start();
 
-        final emittedEventFuture = manager.stream.first;
+        final emittedEventFuture = manager.rawStream.first;
         source.add(Uri.parse('https://example.com/promo/fail'));
         await pumpEventQueue();
         requestManager.completeError(
@@ -265,7 +376,7 @@ void main() {
         final emittedEvent = await emittedEventFuture;
 
         await expectLater(
-          emittedEvent.resolve(),
+          manager.waitResolution(emittedEvent),
           throwsA(isA<AttriaxTransportHttpException>()),
         );
       },
@@ -494,4 +605,20 @@ class _InitialDeepLinkSource implements AttriaxDeepLinkSource {
 
   @override
   Stream<Uri> get uriLinkStream => const Stream<Uri>.empty();
+}
+
+class _FakePlatform extends AttriaxPlatform {
+  final List<Uri> openedUrls = <Uri>[];
+  final List<AttriaxResolvedUrlOpenMode> openModes =
+      <AttriaxResolvedUrlOpenMode>[];
+
+  @override
+  Future<bool> openBrowserUrl({
+    required Uri uri,
+    required AttriaxResolvedUrlOpenMode openMode,
+  }) async {
+    openedUrls.add(uri);
+    openModes.add(openMode);
+    return true;
+  }
 }

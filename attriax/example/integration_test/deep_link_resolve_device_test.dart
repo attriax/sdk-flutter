@@ -90,8 +90,7 @@ void main() {
       const Duration(seconds: 10),
     );
 
-    final resolution = await initialEvent!.resolve();
-    expect(resolution.found, isTrue);
+    expect(initialEvent!.found, isTrue);
     expect(openRequest.path, '/api/sdk/v1/open');
     expect(resolveRequest.path, '/api/sdk/v1/deep-links/resolve');
     expect(

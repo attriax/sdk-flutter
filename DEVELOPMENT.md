@@ -35,6 +35,9 @@ cd ..\attriax_flutter_ios && flutter test
 # Run public example
 cd attriax\example && flutter run
 
+# Regenerate the public Windows example wrapper if desktop builds go stale
+cd .. && npm run sdk:flutter:example:windows:repair
+
 # Run internal tester
 cd ..\flutter-internal-tester && flutter run
 ```
@@ -136,6 +139,9 @@ When adding a new feature:
 
 **Issue**: Android build errors
 - **Solution**: Run `./gradlew clean` in `attriax_flutter_android/android/`
+
+**Issue**: Windows example build fails with missing `cpp_client_wrapper` files under `attriax/example/windows/flutter/ephemeral/`
+- **Solution**: Run `npm run sdk:flutter:example:windows:repair` from the workspace root. That removes the stale generated Windows wrapper output, refreshes workspace dependencies, and rebuilds the public example.
 
 ### Useful Resources
 

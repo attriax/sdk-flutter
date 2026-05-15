@@ -138,4 +138,25 @@ void main() {
       expect(report.occurredAt, DateTime.utc(2026, 5, 4, 10, 0));
     },
   );
+
+  test(
+    'openBrowserUrl forwards the method call and normalizes unknown mode',
+    () async {
+      messenger.setMockMethodCallHandler(channel, (methodCall) async {
+        expect(methodCall.method, 'openBrowserUrl');
+        expect(methodCall.arguments, <String, Object?>{
+          'url': 'https://example.com/browser',
+          'openMode': 'in_app',
+        });
+        return true;
+      });
+
+      final opened = await MethodChannelAttriax().openBrowserUrl(
+        uri: Uri.parse('https://example.com/browser'),
+        openMode: AttriaxResolvedUrlOpenMode.unknown,
+      );
+
+      expect(opened, isTrue);
+    },
+  );
 }

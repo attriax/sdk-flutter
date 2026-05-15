@@ -65,7 +65,7 @@ class _AttriaxPackageExampleAppState extends State<AttriaxPackageExampleApp> {
     super.dispose();
   }
 
-  void _openDeepLinkResult(AttriaxDeepLinkEvent event) {
+  void _openDeepLinkResult(AttriaxRawDeepLinkEvent event) {
     _exampleNavigatorKey.currentState?.pushNamed(
       ExampleDeepLinkResultPage.routeName,
       arguments: event,
@@ -120,9 +120,10 @@ class _AttriaxPackageExampleAppState extends State<AttriaxPackageExampleApp> {
           settings: settings,
         );
       case ExampleDeepLinkResultPage.routeName:
-        final event = settings.arguments as AttriaxDeepLinkEvent;
+        final event = settings.arguments as AttriaxRawDeepLinkEvent;
         return MaterialPageRoute<void>(
-          builder: (_) => ExampleDeepLinkResultPage(event: event),
+          builder: (_) =>
+              ExampleDeepLinkResultPage(sdk: widget.sdk, rawEvent: event),
           settings: settings,
         );
       case '/':

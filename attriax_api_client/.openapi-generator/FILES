@@ -18,9 +18,11 @@ lib/src/model/attribution_type.dart
 lib/src/model/deep_link_resolution_status.dart
 lib/src/model/device_context_dto.dart
 lib/src/model/platform.dart
+lib/src/model/route_url_open_mode.dart
 lib/src/model/sdk_acknowledge_response_dto.dart
 lib/src/model/sdk_acknowledge_response_envelope_dto.dart
 lib/src/model/sdk_batch_item_kind.dart
+lib/src/model/sdk_browser_action_dto.dart
 lib/src/model/sdk_crash_dto.dart
 lib/src/model/sdk_create_dynamic_link_dto.dart
 lib/src/model/sdk_create_dynamic_link_response_dto.dart

@@ -58,13 +58,26 @@ class _ExampleDeepLinksPageState extends State<ExampleDeepLinksPage> {
                           : 'Still waiting',
                     ),
                     ExampleKeyValueRow(
-                      label: 'Initial deep link',
+                      label: 'Initial raw deep link',
+                      value: widget.controller.rawInitialDeepLink == null
+                          ? 'None'
+                          : widget.controller.rawInitialDeepLink!.uri
+                                .toString(),
+                    ),
+                    ExampleKeyValueRow(
+                      label: 'Latest raw deep link',
+                      value: widget.controller.latestRawDeepLink == null
+                          ? 'None'
+                          : widget.controller.latestRawDeepLink!.uri.toString(),
+                    ),
+                    ExampleKeyValueRow(
+                      label: 'Initial resolved deep link',
                       value: widget.controller.initialDeepLink == null
                           ? 'None'
                           : widget.controller.initialDeepLink!.uri.toString(),
                     ),
                     ExampleKeyValueRow(
-                      label: 'Latest deep link',
+                      label: 'Latest resolved deep link',
                       value: widget.controller.latestDeepLink == null
                           ? 'None'
                           : widget.controller.latestDeepLink!.uri.toString(),

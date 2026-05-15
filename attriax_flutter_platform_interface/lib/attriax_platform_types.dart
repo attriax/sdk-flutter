@@ -19,7 +19,7 @@ export 'src/types.dart'
         AttriaxDynamicLinkUtms,
         AttriaxCreateDynamicLinkResult,
         AttriaxRevenueReceiptValidationResult,
-        AttriaxDeepLinkResolution,
+        AttriaxRawDeepLinkEvent,
         AttriaxDeepLinkEvent,
         AttriaxAppOpen,
         AttriaxInitResult,

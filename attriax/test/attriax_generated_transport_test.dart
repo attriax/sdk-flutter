@@ -19,10 +19,7 @@ void main() {
         expect(request.url.path, '/api/sdk/v1/open');
         expect(_readRequestBody(request), contains('ax_test_token'));
 
-        return _jsonResponse(
-          200,
-          _serializeGenerated(_openEnvelope()),
-        );
+        return _jsonResponse(200, _serializeGenerated(_openEnvelope()));
       });
 
       final transport = _createTransport(client);
@@ -83,10 +80,7 @@ void main() {
         expect(nestedMetadata.containsKey('child'), isFalse);
         expect(deviceMetadata['tags'], <Object?>['one', 'two']);
 
-        return _jsonResponse(
-          200,
-          _serializeGenerated(_openEnvelope()),
-        );
+        return _jsonResponse(200, _serializeGenerated(_openEnvelope()));
       });
 
       final transport = _createTransport(client);
@@ -137,10 +131,7 @@ void main() {
         expect(deviceBody['colorDepth'], 32);
         expect(deviceBody['osVersion'], 'Windows 11 24H2 (build 26100)');
 
-        return _jsonResponse(
-          200,
-          _serializeGenerated(_openEnvelope()),
-        );
+        return _jsonResponse(200, _serializeGenerated(_openEnvelope()));
       });
 
       final transport = _createTransport(client);
@@ -152,10 +143,7 @@ void main() {
         expect(request.method, 'POST');
         expect(request.url.path, '/api/sdk/v1/events');
 
-        return _jsonResponse(
-          202,
-          _serializeGenerated(_ackEnvelope()),
-        );
+        return _jsonResponse(202, _serializeGenerated(_ackEnvelope()));
       });
 
       final transport = _createTransport(client);
@@ -202,10 +190,7 @@ void main() {
           expect(body, contains('"kind":"pause"'));
           expect(body, contains('"sessionId":"session_123"'));
 
-          return _jsonResponse(
-            202,
-            _serializeGenerated(_ackEnvelope()),
-          );
+          return _jsonResponse(202, _serializeGenerated(_ackEnvelope()));
         });
 
         final transport = _createTransport(client);
@@ -265,10 +250,7 @@ void main() {
             isTrue,
           );
 
-          return _jsonResponse(
-            202,
-            _serializeGenerated(_batchEnvelope()),
-          );
+          return _jsonResponse(202, _serializeGenerated(_batchEnvelope()));
         });
 
         final transport = _createTransport(client);
@@ -287,10 +269,7 @@ void main() {
           expect(request.method, 'POST');
           expect(request.url.path, '/api/sdk/v1/deep-links/resolve');
 
-          return _jsonResponse(
-            200,
-            _serializeGenerated(_resolveEnvelope()),
-          );
+          return _jsonResponse(200, _serializeGenerated(_resolveEnvelope()));
         });
 
         final transport = _createTransport(client);
@@ -299,6 +278,14 @@ void main() {
         final response = result.response as AttriaxResolveDeepLinkApiResponse;
         expect(response.result.matched, isTrue);
         expect(response.result.deepLink?.path, '/offers/spring');
+        expect(
+          response.result.browserAction?.uri,
+          Uri.parse('https://example.com/account'),
+        );
+        expect(
+          response.result.browserAction?.openMode,
+          AttriaxResolvedUrlOpenMode.external,
+        );
         expect(response.result.reason, isNull);
       },
     );
@@ -341,10 +328,7 @@ void main() {
         expect(request.method, 'POST');
         expect(request.url.path, '/api/sdk/v1/dynamic-links');
 
-        return _jsonResponse(
-          200,
-          _serializeGenerated(_dynamicLinkEnvelope()),
-        );
+        return _jsonResponse(200, _serializeGenerated(_dynamicLinkEnvelope()));
       });
 
       final transport = _createTransport(client);
@@ -558,6 +542,10 @@ sdk.SdkV1DeepLinkResolveResponseEnvelopeDto _resolveEnvelope() =>
     sdk.SdkV1DeepLinkResolveResponseEnvelopeDto(
       data: sdk.SdkV1DeepLinkResolveResponseDto(
         acceptedAt: DateTime.utc(2026, 1),
+        browserAction: sdk.SdkBrowserActionDto(
+          openMode: sdk.RouteUrlOpenMode.external_,
+          url: 'https://example.com/account',
+        ),
         consumedAt: DateTime.utc(2026, 1, 1, 0, 0, 5),
         deepLink: sdk.SdkJsonDeepLinkDto(path: '/offers/spring'),
         isFirstLaunch: true,

@@ -73,7 +73,7 @@ String describeExampleInstallReferrer(AttriaxInstallReferrerDetails? details) {
   return '${details.attributionType.name} · $source · $campaign';
 }
 
-String describeExampleResolution(AttriaxDeepLinkResolution? resolution) {
+String describeExampleResolution(AttriaxDeepLinkEvent? resolution) {
   if (resolution == null) {
     return 'No resolution yet';
   }
@@ -114,8 +114,8 @@ String shortExampleJson(Object? value) {
   }
 }
 
-String deepLinkEventKey(AttriaxDeepLinkEvent event) =>
-    '${event.uri}|${event.receivedAt.toIso8601String()}|${event.trigger.name}';
+String rawDeepLinkEventKey(AttriaxRawDeepLinkEvent event) =>
+    '${event.uri}|${event.receivedAt.toIso8601String()}|${event.isInitial}';
 
 String _trimExampleZeros(String value) =>
     value.replaceFirst(RegExp(r'([.]\d*?[1-9])0+$|[.]0+$'), r'$1');

@@ -2,6 +2,7 @@ import 'package:attriax_api_client/src/model/app_version_context_dto.dart';
 import 'package:attriax_api_client/src/model/device_context_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_acknowledge_response_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_acknowledge_response_envelope_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_browser_action_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_crash_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_create_dynamic_link_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_create_dynamic_link_response_dto.dart';
@@ -61,6 +62,7 @@ ReturnType deserialize<ReturnType, BaseType>(
       return DeviceContextDto.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'Platform':
+    case 'RouteUrlOpenMode':
     case 'SdkAcknowledgeResponseDto':
       return SdkAcknowledgeResponseDto.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -70,6 +72,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           )
           as ReturnType;
     case 'SdkBatchItemKind':
+    case 'SdkBrowserActionDto':
+      return SdkBrowserActionDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'SdkCrashDto':
       return SdkCrashDto.fromJson(value as Map<String, dynamic>) as ReturnType;
     case 'SdkCreateDynamicLinkDto':
