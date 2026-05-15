@@ -125,6 +125,9 @@ class Attriax {
   /// this facade alongside regular incoming links.
   late final AttriaxDeepLinks deepLinks = AttriaxDeepLinks._(_runtime);
 
+  /// SKAdNetwork state and update helpers exposed through a focused facade.
+  late final AttriaxSkan skan = AttriaxSkan._(_runtime);
+
   /// Whether [init] has completed successfully.
   ///
   /// Until this becomes `true`, tracking and identification calls throw because
@@ -218,10 +221,12 @@ class Attriax {
   Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
+    AttriaxSkanSemanticEvent? skanEvent,
     bool flushImmediately = false,
   }) => _runtime.recordEvent(
     eventName,
     eventData: eventData,
+    skanEvent: skanEvent,
     flushImmediately: flushImmediately,
   );
 
@@ -274,6 +279,7 @@ class Attriax {
     bool? voided,
     bool? test,
     String? validationId,
+    AttriaxSkanSemanticEvent? skanEvent,
     Map<String, Object?>? metadata,
     bool flushImmediately = true,
   }) {
@@ -319,6 +325,7 @@ class Attriax {
         'test': ?test,
         'validationId': ?_trimOrNull(validationId),
       },
+      skanEvent: skanEvent ?? AttriaxSkanSemanticEvent.purchase,
       flushImmediately: flushImmediately,
     );
   }
@@ -475,6 +482,7 @@ class Attriax {
     String? adType,
     String? adPlacement,
     bool? test,
+    AttriaxSkanSemanticEvent? skanEvent,
     Map<String, Object?>? metadata,
     bool flushImmediately = true,
   }) {
@@ -501,6 +509,7 @@ class Attriax {
         'adPlacement': ?_trimOrNull(adPlacement),
         'test': ?test,
       },
+      skanEvent: skanEvent ?? AttriaxSkanSemanticEvent.adRevenue,
       flushImmediately: flushImmediately,
     );
   }
@@ -522,6 +531,7 @@ class Attriax {
     String? rewardType,
     num? rewardAmount,
     bool? test,
+    AttriaxSkanSemanticEvent? skanEvent,
     Map<String, Object?>? metadata,
     bool flushImmediately = true,
   }) {
@@ -559,8 +569,18 @@ class Attriax {
         'rewardAmount': ?normalizedRewardAmount,
         'test': ?test,
       },
+      skanEvent: skanEvent ?? _defaultSkanEventForAdType(type),
       flushImmediately: flushImmediately,
     );
+  }
+
+  AttriaxSkanSemanticEvent? _defaultSkanEventForAdType(
+    AttriaxAdEventType type,
+  ) {
+    return switch (type) {
+      AttriaxAdEventType.impression => AttriaxSkanSemanticEvent.adImpression,
+      _ => null,
+    };
   }
 
   /// Queues a first-class page view event for screen analytics and funnels.
@@ -704,6 +724,32 @@ class _AttriaxNormalizedRevenue {
 
   final double revenue;
   final String currency;
+}
+
+/// SKAdNetwork helpers exposed by [Attriax].
+class AttriaxSkan {
+  AttriaxSkan._(this._runtime);
+
+  final AttriaxRuntime _runtime;
+
+  /// Latest locally persisted SKAdNetwork state tracked by the SDK.
+  AttriaxSkanState? get state => _runtime.skanState;
+
+  /// Updates the current SKAdNetwork conversion value on supported iOS versions.
+  Future<AttriaxSkanUpdateResult> updateConversionValue({
+    required int fineValue,
+    AttriaxSkanCoarseValue? coarseValue,
+    bool lockWindow = false,
+  }) => _runtime.updateSkanConversionValue(
+    fineValue: fineValue,
+    coarseValue: coarseValue,
+    lockWindow: lockWindow,
+  );
+
+  /// Applies the configured automatic template to a semantic app event.
+  Future<AttriaxSkanUpdateResult?> recordSemanticEvent(
+    AttriaxSkanSemanticEvent event,
+  ) => _runtime.recordSkanSemanticEvent(event);
 }
 
 /// Referrer lookups exposed by [Attriax].

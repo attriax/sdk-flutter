@@ -64,6 +64,214 @@ enum AttriaxRevenueReceiptValidationStatus {
   passthrough,
 }
 
+enum AttriaxSkanMode { auto, manual }
+
+enum AttriaxSkanTemplate {
+  auto,
+  game,
+  ecommerce,
+  subscription,
+  adMonetization,
+  utility,
+  retentionPurchaseAds,
+}
+
+enum AttriaxSkanCoarseValue { low, medium, high }
+
+enum AttriaxSkanSemanticEvent {
+  signUp,
+  login,
+  tutorialComplete,
+  levelAchieved,
+  sessionQualified,
+  addToCart,
+  checkoutStarted,
+  purchase,
+  subscriptionStarted,
+  subscriptionRenewed,
+  trialStarted,
+  adImpression,
+  adRevenue,
+}
+
+enum AttriaxSkanUpdateStatus {
+  updated,
+  skipped,
+  alreadyAtOrAboveValue,
+  invalidValue,
+  disabled,
+  notSupported,
+  error,
+}
+
+class AttriaxSkanConfig {
+  const AttriaxSkanConfig({
+    this.enabled = true,
+    this.mode = AttriaxSkanMode.auto,
+    this.template = AttriaxSkanTemplate.auto,
+    this.lockWindowEnabled = false,
+    this.registerFirstLaunchValue = true,
+  });
+
+  final bool enabled;
+  final AttriaxSkanMode mode;
+  final AttriaxSkanTemplate template;
+  final bool lockWindowEnabled;
+  final bool registerFirstLaunchValue;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'enabled': enabled,
+    'mode': mode.name,
+    'template': _skanTemplateToJson(template),
+    'lockWindowEnabled': lockWindowEnabled,
+    'registerFirstLaunchValue': registerFirstLaunchValue,
+  };
+}
+
+class AttriaxSkanState {
+  const AttriaxSkanState({
+    required this.enabled,
+    required this.mode,
+    required this.configuredTemplate,
+    this.resolvedTemplate,
+    this.fineValue,
+    this.coarseValue,
+    this.lockWindow = false,
+    this.firstLaunchValueRegistered = false,
+    this.lastUpdatedAt,
+  });
+
+  factory AttriaxSkanState.fromJson(Map<String, Object?> json) {
+    return AttriaxSkanState(
+      enabled: _jsonBool(json['enabled']) ?? false,
+      mode:
+          _attriaxSkanModeFromJson(_jsonString(json['mode'])) ??
+          AttriaxSkanMode.auto,
+      configuredTemplate:
+          _attriaxSkanTemplateFromJson(
+            _jsonString(json['configuredTemplate']),
+          ) ??
+          AttriaxSkanTemplate.auto,
+      resolvedTemplate: _attriaxSkanTemplateFromJson(
+        _jsonString(json['resolvedTemplate']),
+      ),
+      fineValue: _jsonInt(json['fineValue']),
+      coarseValue: _attriaxSkanCoarseValueFromJson(
+        _jsonString(json['coarseValue']),
+      ),
+      lockWindow: _jsonBool(json['lockWindow']) ?? false,
+      firstLaunchValueRegistered:
+          _jsonBool(json['firstLaunchValueRegistered']) ?? false,
+      lastUpdatedAt: _jsonDateTime(json['lastUpdatedAt']),
+    );
+  }
+
+  factory AttriaxSkanState.fromPayload(Object? payload) =>
+      AttriaxSkanState.fromJson(_jsonObjectOrEmpty(payload));
+
+  final bool enabled;
+  final AttriaxSkanMode mode;
+  final AttriaxSkanTemplate configuredTemplate;
+  final AttriaxSkanTemplate? resolvedTemplate;
+  final int? fineValue;
+  final AttriaxSkanCoarseValue? coarseValue;
+  final bool lockWindow;
+  final bool firstLaunchValueRegistered;
+  final DateTime? lastUpdatedAt;
+
+  AttriaxSkanState copyWith({
+    bool? enabled,
+    AttriaxSkanMode? mode,
+    AttriaxSkanTemplate? configuredTemplate,
+    AttriaxSkanTemplate? resolvedTemplate,
+    bool clearResolvedTemplate = false,
+    int? fineValue,
+    bool clearFineValue = false,
+    AttriaxSkanCoarseValue? coarseValue,
+    bool clearCoarseValue = false,
+    bool? lockWindow,
+    bool? firstLaunchValueRegistered,
+    DateTime? lastUpdatedAt,
+    bool clearLastUpdatedAt = false,
+  }) => AttriaxSkanState(
+    enabled: enabled ?? this.enabled,
+    mode: mode ?? this.mode,
+    configuredTemplate: configuredTemplate ?? this.configuredTemplate,
+    resolvedTemplate: clearResolvedTemplate
+        ? null
+        : (resolvedTemplate ?? this.resolvedTemplate),
+    fineValue: clearFineValue ? null : (fineValue ?? this.fineValue),
+    coarseValue: clearCoarseValue ? null : (coarseValue ?? this.coarseValue),
+    lockWindow: lockWindow ?? this.lockWindow,
+    firstLaunchValueRegistered:
+        firstLaunchValueRegistered ?? this.firstLaunchValueRegistered,
+    lastUpdatedAt: clearLastUpdatedAt
+        ? null
+        : (lastUpdatedAt ?? this.lastUpdatedAt),
+  );
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'enabled': enabled,
+    'mode': mode.name,
+    'configuredTemplate': _skanTemplateToJson(configuredTemplate),
+    if (resolvedTemplate != null)
+      'resolvedTemplate': _skanTemplateToJson(resolvedTemplate!),
+    if (fineValue != null) 'fineValue': fineValue,
+    if (coarseValue != null) 'coarseValue': coarseValue!.name,
+    'lockWindow': lockWindow,
+    'firstLaunchValueRegistered': firstLaunchValueRegistered,
+    if (lastUpdatedAt != null)
+      'lastUpdatedAt': lastUpdatedAt!.toUtc().toIso8601String(),
+  };
+}
+
+class AttriaxSkanUpdateResult {
+  const AttriaxSkanUpdateResult({
+    required this.status,
+    this.message,
+    this.fineValue,
+    this.coarseValue,
+    this.lockWindow,
+    this.state,
+  });
+
+  factory AttriaxSkanUpdateResult.fromJson(Map<String, Object?> json) {
+    return AttriaxSkanUpdateResult(
+      status:
+          _attriaxSkanUpdateStatusFromJson(_jsonString(json['status'])) ??
+          AttriaxSkanUpdateStatus.error,
+      message: _jsonString(json['message']),
+      fineValue: _jsonInt(json['fineValue']),
+      coarseValue: _attriaxSkanCoarseValueFromJson(
+        _jsonString(json['coarseValue']),
+      ),
+      lockWindow: _jsonBool(json['lockWindow']),
+      state: _jsonObject(json['state']) == null
+          ? null
+          : AttriaxSkanState.fromJson(_jsonObject(json['state'])!),
+    );
+  }
+
+  factory AttriaxSkanUpdateResult.fromPayload(Object? payload) =>
+      AttriaxSkanUpdateResult.fromJson(_jsonObjectOrEmpty(payload));
+
+  final AttriaxSkanUpdateStatus status;
+  final String? message;
+  final int? fineValue;
+  final AttriaxSkanCoarseValue? coarseValue;
+  final bool? lockWindow;
+  final AttriaxSkanState? state;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'status': _skanUpdateStatusToJson(status),
+    if (message != null) 'message': message,
+    if (fineValue != null) 'fineValue': fineValue,
+    if (coarseValue != null) 'coarseValue': coarseValue!.name,
+    if (lockWindow != null) 'lockWindow': lockWindow,
+    if (state != null) 'state': state!.toJson(),
+  };
+}
+
 class AttriaxNativeContext {
   const AttriaxNativeContext({
     this.installReferrer,
@@ -1104,6 +1312,7 @@ class AttriaxConfig {
     this.sessionTrackingEnabled = true,
     this.sessionHeartbeatInterval = const Duration(seconds: 60),
     this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 5),
+    this.skan,
   });
 
   /// Application token issued by Attriax for the current app.
@@ -1192,7 +1401,75 @@ class AttriaxConfig {
 
   /// Heartbeat interval used during the installation's first launch session.
   final Duration firstLaunchSessionHeartbeatInterval;
+
+  /// Optional SKAdNetwork configuration for Apple-platform conversion updates.
+  ///
+  /// Leave this `null` to keep SKAN behavior disabled. When provided, Attriax
+  /// can register the first-launch zero value, expose manual update APIs, and
+  /// apply template-based automatic updates on iOS.
+  final AttriaxSkanConfig? skan;
 }
+
+String _skanTemplateToJson(AttriaxSkanTemplate value) => switch (value) {
+  AttriaxSkanTemplate.auto => 'auto',
+  AttriaxSkanTemplate.game => 'game',
+  AttriaxSkanTemplate.ecommerce => 'ecommerce',
+  AttriaxSkanTemplate.subscription => 'subscription',
+  AttriaxSkanTemplate.adMonetization => 'ad_monetization',
+  AttriaxSkanTemplate.utility => 'utility',
+  AttriaxSkanTemplate.retentionPurchaseAds => 'retention_purchase_ads',
+};
+
+String _skanUpdateStatusToJson(AttriaxSkanUpdateStatus value) =>
+    switch (value) {
+      AttriaxSkanUpdateStatus.updated => 'updated',
+      AttriaxSkanUpdateStatus.skipped => 'skipped',
+      AttriaxSkanUpdateStatus.alreadyAtOrAboveValue =>
+        'already_at_or_above_value',
+      AttriaxSkanUpdateStatus.invalidValue => 'invalid_value',
+      AttriaxSkanUpdateStatus.disabled => 'disabled',
+      AttriaxSkanUpdateStatus.notSupported => 'not_supported',
+      AttriaxSkanUpdateStatus.error => 'error',
+    };
+
+AttriaxSkanMode? _attriaxSkanModeFromJson(String? value) => switch (value) {
+  'auto' => AttriaxSkanMode.auto,
+  'manual' => AttriaxSkanMode.manual,
+  _ => null,
+};
+
+AttriaxSkanTemplate? _attriaxSkanTemplateFromJson(String? value) =>
+    switch (value) {
+      'auto' => AttriaxSkanTemplate.auto,
+      'game' => AttriaxSkanTemplate.game,
+      'ecommerce' => AttriaxSkanTemplate.ecommerce,
+      'subscription' => AttriaxSkanTemplate.subscription,
+      'ad_monetization' => AttriaxSkanTemplate.adMonetization,
+      'utility' => AttriaxSkanTemplate.utility,
+      'retention_purchase_ads' => AttriaxSkanTemplate.retentionPurchaseAds,
+      _ => null,
+    };
+
+AttriaxSkanCoarseValue? _attriaxSkanCoarseValueFromJson(String? value) =>
+    switch (value) {
+      'low' => AttriaxSkanCoarseValue.low,
+      'medium' => AttriaxSkanCoarseValue.medium,
+      'high' => AttriaxSkanCoarseValue.high,
+      _ => null,
+    };
+
+AttriaxSkanUpdateStatus? _attriaxSkanUpdateStatusFromJson(String? value) =>
+    switch (value) {
+      'updated' => AttriaxSkanUpdateStatus.updated,
+      'skipped' => AttriaxSkanUpdateStatus.skipped,
+      'already_at_or_above_value' =>
+        AttriaxSkanUpdateStatus.alreadyAtOrAboveValue,
+      'invalid_value' => AttriaxSkanUpdateStatus.invalidValue,
+      'disabled' => AttriaxSkanUpdateStatus.disabled,
+      'not_supported' => AttriaxSkanUpdateStatus.notSupported,
+      'error' => AttriaxSkanUpdateStatus.error,
+      _ => null,
+    };
 
 Map<String, Object?> _jsonObjectOrEmpty(Object? value) =>
     _jsonObject(value) ?? const <String, Object?>{};

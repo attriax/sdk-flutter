@@ -60,6 +60,9 @@ class AttriaxContextCollector {
   final AttriaxTrackingAuthorizationManager _trackingAuthorizationManager;
   final AttriaxPlatformInstallReferrerManager _platformInstallReferrerManager;
 
+  AttriaxPlatform get platformInstance => _platform;
+  AttriaxPlatformType get currentPlatformType => _platformType;
+
   AttriaxPlatformInstallReferrerManager get platformInstallReferrerManager =>
       _platformInstallReferrerManager;
 
@@ -71,10 +74,9 @@ class AttriaxContextCollector {
 
   Future<AttriaxTrackingAuthorizationStatus> requestTrackingAuthorization({
     Duration? timeout,
-  }) =>
-      _trackingAuthorizationManager.requestTrackingAuthorization(
-        timeout: timeout,
-      );
+  }) => _trackingAuthorizationManager.requestTrackingAuthorization(
+    timeout: timeout,
+  );
 
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,

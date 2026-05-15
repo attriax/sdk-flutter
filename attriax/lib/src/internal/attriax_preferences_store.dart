@@ -88,6 +88,7 @@ class AttriaxPreferencesStore {
   static const String queueDiagnosticsStorageKey =
       'attriax.queue.diagnostics.v1';
   static const String pendingCrashReportStorageKey = 'attriax.crash.pending';
+  static const String skanStateStorageKey = 'attriax.skan.state.v1';
 
   final SharedPreferences? _prefsOverride;
   final Future<SharedPreferences> Function()? _preferencesLoader;
@@ -338,6 +339,35 @@ class AttriaxPreferencesStore {
     }
 
     await _writeString(sessionSnapshotStorageKey, jsonEncode(session.toJson()));
+  }
+
+  Future<AttriaxSkanState?> readSkanState() async {
+    final rawValue = await _readString(skanStateStorageKey);
+    if (rawValue == null || rawValue.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(rawValue);
+      if (decoded is! Map) {
+        return null;
+      }
+
+      return AttriaxSkanState.fromJson(
+        decoded.map((key, value) => MapEntry(key.toString(), value as Object?)),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> setSkanState({required AttriaxSkanState? state}) async {
+    if (state == null) {
+      await _remove(skanStateStorageKey);
+      return;
+    }
+
+    await _writeString(skanStateStorageKey, jsonEncode(state.toJson()));
   }
 
   Future<String?> readQueuePayload() => _readString(queueStorageKey);

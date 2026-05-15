@@ -161,6 +161,38 @@ void main() {
       expect(await store.readDeferredAppOpenDeepLinkHandled(), isTrue);
     });
 
+    test('round-trips SKAN state', () async {
+      final now = DateTime.utc(2026, 5, 15, 12, 30);
+      final state = AttriaxSkanState(
+        enabled: true,
+        mode: AttriaxSkanMode.auto,
+        configuredTemplate: AttriaxSkanTemplate.game,
+        resolvedTemplate: AttriaxSkanTemplate.game,
+        fineValue: 24,
+        coarseValue: AttriaxSkanCoarseValue.medium,
+        lockWindow: true,
+        firstLaunchValueRegistered: true,
+        lastUpdatedAt: now,
+      );
+
+      await store.setSkanState(state: state);
+
+      final restored = await store.readSkanState();
+
+      expect(restored?.enabled, isTrue);
+      expect(restored?.configuredTemplate, AttriaxSkanTemplate.game);
+      expect(restored?.resolvedTemplate, AttriaxSkanTemplate.game);
+      expect(restored?.fineValue, 24);
+      expect(restored?.coarseValue, AttriaxSkanCoarseValue.medium);
+      expect(restored?.lockWindow, isTrue);
+      expect(restored?.firstLaunchValueRegistered, isTrue);
+      expect(restored?.lastUpdatedAt, now);
+
+      await store.setSkanState(state: null);
+
+      expect(await store.readSkanState(), isNull);
+    });
+
     test(
       'falls back to in-memory values when preferences loading fails',
       () async {

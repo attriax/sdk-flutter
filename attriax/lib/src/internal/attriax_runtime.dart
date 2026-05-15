@@ -24,6 +24,7 @@ import 'attriax_request_manager.dart';
 import 'attriax_referrer_manager.dart';
 import 'attriax_runtime_settings_state.dart';
 import 'attriax_session_manager.dart';
+import 'attriax_skan_manager.dart';
 import 'attriax_synchronizer.dart';
 import 'attriax_tracking_manager.dart';
 
@@ -96,6 +97,14 @@ class AttriaxRuntime {
       deepLinkManager: _deepLinkManager,
       currentSessionIdProvider: () => _sessionManager.currentSession?.id,
     );
+    _skanManager = AttriaxSkanManager(
+      config: config,
+      preferencesStore: _preferencesStore,
+      platform: contextCollector.platformInstance,
+      platformType: contextCollector.currentPlatformType,
+      clock: _clock,
+      logger: _logger,
+    );
     _trackingManager = AttriaxTrackingManager(
       config: config,
       logger: _logger,
@@ -104,6 +113,7 @@ class AttriaxRuntime {
       settingsState: _settingsState,
       requestManager: _requestManager,
       sessionManager: _sessionManager,
+      skanManager: _skanManager,
     );
   }
 
@@ -123,6 +133,7 @@ class AttriaxRuntime {
   late final AttriaxReferrerManager _referrerManager;
   late final AttriaxTrackingManager _trackingManager;
   late final AttriaxSessionManager _sessionManager;
+  late final AttriaxSkanManager _skanManager;
 
   AttriaxSynchronizer? _synchronizer;
   AttriaxGeneratedTransport? _transport;
@@ -153,6 +164,7 @@ class AttriaxRuntime {
       _synchronizer?.synchronizationState ==
       AttriaxSynchronizationState.synchronized;
   AttriaxSdkSnapshot? get sdkSnapshot => _contextManager.sdkSnapshot;
+  AttriaxSkanState? get skanState => _skanManager.state;
   AttriaxDeepLinkEvent? get initialDeepLink => _deepLinkManager.initialDeepLink;
   bool get isInitialDeepLinkResolved =>
       _deepLinkManager.isInitialDeepLinkResolved;
@@ -220,6 +232,7 @@ class AttriaxRuntime {
     _contextManager.reset();
     await _sessionManager.reset();
     await _referrerManager.reset();
+    await _skanManager.reset();
 
     _settingsState.restore(enabled: true, eventsEnabled: true);
     _appOpenSchedulingFuture = null;
@@ -243,6 +256,7 @@ class AttriaxRuntime {
     );
 
     await _contextManager.init();
+    await _skanManager.init(isFirstLaunch: _contextManager.isFirstLaunch);
     final sessionRestore = await _sessionManager.init(
       enabled: _sessionTrackingEnabled,
     );
@@ -302,14 +316,36 @@ class AttriaxRuntime {
   Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
+    AttriaxSkanSemanticEvent? skanEvent,
     bool flushImmediately = false,
   }) async {
     _assertInitialized();
     await _trackingManager.recordEvent(
       eventName,
       eventData: eventData,
+      skanEvent: skanEvent,
       flushImmediately: flushImmediately,
     );
+  }
+
+  Future<AttriaxSkanUpdateResult> updateSkanConversionValue({
+    required int fineValue,
+    AttriaxSkanCoarseValue? coarseValue,
+    bool lockWindow = false,
+  }) async {
+    _assertInitialized();
+    return _skanManager.updateConversionValue(
+      fineValue: fineValue,
+      coarseValue: coarseValue,
+      lockWindow: lockWindow,
+    );
+  }
+
+  Future<AttriaxSkanUpdateResult?> recordSkanSemanticEvent(
+    AttriaxSkanSemanticEvent event,
+  ) async {
+    _assertInitialized();
+    return _skanManager.handleSemanticEvent(event);
   }
 
   Future<void> recordPageView(
@@ -607,6 +643,7 @@ class AttriaxRuntime {
     await _synchronizer?.dispose();
     await _appOpenManager.dispose();
     await _eventHub.dispose();
+    await _skanManager.reset();
     _client.close();
   }
 
