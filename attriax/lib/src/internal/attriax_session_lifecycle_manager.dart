@@ -40,6 +40,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
     _isInBackground = _isBackgroundLifecycleState(state);
   }
 
+  // ignore: use_setters_to_change_properties
   void seedRecoveredSessionEnd(AttriaxSessionSnapshot? session) {
     _pendingRecoveredSessionEnd = session;
   }

@@ -4,29 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'attriax_ad_event_type.dart';
+import 'attriax_analytics_keys.dart';
 import 'attriax_deep_link_source.dart';
 import 'internal/attriax_context_collector.dart';
 import 'internal/attriax_deep_link_listener.dart';
 import 'internal/attriax_logger.dart';
 import 'internal/attriax_runtime.dart';
 import 'attriax_synchronization.dart';
-
-/// Canonical ad lifecycle events tracked by the Attriax SDKs.
-enum AttriaxAdEventType {
-  request('ad_request'),
-  load('ad_load'),
-  loadFailed('ad_load_failed'),
-  show('ad_show'),
-  showFailed('ad_show_failed'),
-  impression('ad_impression'),
-  click('ad_click'),
-  dismiss('ad_dismiss'),
-  reward('ad_reward');
-
-  const AttriaxAdEventType(this.eventName);
-
-  final String eventName;
-}
 
 /// The public entry point for the Attriax mobile attribution SDK.
 ///
@@ -124,6 +109,9 @@ class Attriax {
   /// Deferred deep links resolved from the app-open flow are surfaced through
   /// this facade alongside regular incoming links.
   late final AttriaxDeepLinks deepLinks = AttriaxDeepLinks._(_runtime);
+
+  /// SKAdNetwork state and update helpers exposed through a focused facade.
+  late final AttriaxSkan skan = AttriaxSkan._(_runtime);
 
   /// Whether [init] has completed successfully.
   ///
@@ -295,29 +283,37 @@ class Attriax {
     );
 
     return _runtime.recordEvent(
-      'purchase',
+      AttriaxAnalyticsEventKeys.purchase,
       eventData: <String, Object?>{
         ...?metadata,
-        'revenue': normalizedRevenueCurrency.revenue,
-        'currency': normalizedRevenueCurrency.currency,
-        if (revenueInMicros) 'revenueInMicros': true,
-        'purchaseType': ?_trimOrNull(purchaseType),
-        'productId': ?_trimOrNull(productId),
-        'transactionId': ?_trimOrNull(transactionId),
-        'originalTransactionId': ?_trimOrNull(originalTransactionId),
-        'validationProvider': ?_trimOrNull(validationProvider),
-        'validationEnvironment': ?_trimOrNull(validationEnvironment),
-        'purchaseToken': ?_trimOrNull(purchaseToken),
-        'receiptData': ?_trimOrNull(receiptData),
-        'signedPayload': ?_trimOrNull(signedPayload),
-        'receiptSignature': ?_trimOrNull(receiptSignature),
-        'isRenewal': ?isRenewal,
-        if (quantity != 1) 'quantity': quantity,
-        'store': ?_trimOrNull(store),
-        'packageName': ?_trimOrNull(packageName),
-        'voided': ?voided,
-        'test': ?test,
-        'validationId': ?_trimOrNull(validationId),
+        AttriaxAnalyticsParamKeys.revenue: normalizedRevenueCurrency.revenue,
+        AttriaxAnalyticsParamKeys.currency: normalizedRevenueCurrency.currency,
+        if (revenueInMicros) AttriaxAnalyticsParamKeys.revenueInMicros: true,
+        AttriaxAnalyticsParamKeys.purchaseType: ?_trimOrNull(purchaseType),
+        AttriaxAnalyticsParamKeys.productId: ?_trimOrNull(productId),
+        AttriaxAnalyticsParamKeys.transactionId: ?_trimOrNull(transactionId),
+        AttriaxAnalyticsParamKeys.originalTransactionId: ?_trimOrNull(
+          originalTransactionId,
+        ),
+        AttriaxAnalyticsParamKeys.validationProvider: ?_trimOrNull(
+          validationProvider,
+        ),
+        AttriaxAnalyticsParamKeys.validationEnvironment: ?_trimOrNull(
+          validationEnvironment,
+        ),
+        AttriaxAnalyticsParamKeys.purchaseToken: ?_trimOrNull(purchaseToken),
+        AttriaxAnalyticsParamKeys.receiptData: ?_trimOrNull(receiptData),
+        AttriaxAnalyticsParamKeys.signedPayload: ?_trimOrNull(signedPayload),
+        AttriaxAnalyticsParamKeys.receiptSignature: ?_trimOrNull(
+          receiptSignature,
+        ),
+        AttriaxAnalyticsParamKeys.isRenewal: ?isRenewal,
+        if (quantity != 1) AttriaxAnalyticsParamKeys.quantity: quantity,
+        AttriaxAnalyticsParamKeys.store: ?_trimOrNull(store),
+        AttriaxAnalyticsParamKeys.packageName: ?_trimOrNull(packageName),
+        AttriaxAnalyticsParamKeys.voided: ?voided,
+        AttriaxAnalyticsParamKeys.test: ?test,
+        AttriaxAnalyticsParamKeys.validationId: ?_trimOrNull(validationId),
       },
       flushImmediately: flushImmediately,
     );
@@ -370,23 +366,25 @@ class Attriax {
         : -normalizedRevenueCurrency.revenue.abs();
 
     return _runtime.recordEvent(
-      'refund',
+      AttriaxAnalyticsEventKeys.refund,
       eventData: <String, Object?>{
         ...?metadata,
-        'revenue': refundRevenue,
-        'currency': normalizedRevenueCurrency.currency,
-        'revenueType': 'refund',
-        if (revenueInMicros) 'revenueInMicros': true,
-        'purchaseType': ?_trimOrNull(purchaseType),
-        'productId': ?_trimOrNull(productId),
-        'transactionId': ?_trimOrNull(transactionId),
-        'originalTransactionId': ?_trimOrNull(originalTransactionId),
-        if (quantity != 1) 'quantity': quantity,
-        'store': ?_trimOrNull(store),
-        'packageName': ?_trimOrNull(packageName),
-        'voided': ?voided,
-        'test': ?test,
-        'reason': ?_trimOrNull(reason),
+        AttriaxAnalyticsParamKeys.revenue: refundRevenue,
+        AttriaxAnalyticsParamKeys.currency: normalizedRevenueCurrency.currency,
+        AttriaxAnalyticsParamKeys.revenueType: AttriaxAnalyticsEventKeys.refund,
+        if (revenueInMicros) AttriaxAnalyticsParamKeys.revenueInMicros: true,
+        AttriaxAnalyticsParamKeys.purchaseType: ?_trimOrNull(purchaseType),
+        AttriaxAnalyticsParamKeys.productId: ?_trimOrNull(productId),
+        AttriaxAnalyticsParamKeys.transactionId: ?_trimOrNull(transactionId),
+        AttriaxAnalyticsParamKeys.originalTransactionId: ?_trimOrNull(
+          originalTransactionId,
+        ),
+        if (quantity != 1) AttriaxAnalyticsParamKeys.quantity: quantity,
+        AttriaxAnalyticsParamKeys.store: ?_trimOrNull(store),
+        AttriaxAnalyticsParamKeys.packageName: ?_trimOrNull(packageName),
+        AttriaxAnalyticsParamKeys.voided: ?voided,
+        AttriaxAnalyticsParamKeys.test: ?test,
+        AttriaxAnalyticsParamKeys.reason: ?_trimOrNull(reason),
       },
       flushImmediately: flushImmediately,
     );
@@ -489,17 +487,17 @@ class Attriax {
     );
 
     return _runtime.recordEvent(
-      'ad_revenue',
+      AttriaxAnalyticsEventKeys.adRevenue,
       eventData: <String, Object?>{
         ...?metadata,
-        'revenue': normalizedRevenueCurrency.revenue,
-        'currency': normalizedRevenueCurrency.currency,
-        if (revenueInMicros) 'revenueInMicros': true,
-        'adNetwork': ?_trimOrNull(adNetwork),
-        'adFormat': ?_trimOrNull(adFormat),
-        'adType': ?_trimOrNull(adType),
-        'adPlacement': ?_trimOrNull(adPlacement),
-        'test': ?test,
+        AttriaxAnalyticsParamKeys.revenue: normalizedRevenueCurrency.revenue,
+        AttriaxAnalyticsParamKeys.currency: normalizedRevenueCurrency.currency,
+        if (revenueInMicros) AttriaxAnalyticsParamKeys.revenueInMicros: true,
+        AttriaxAnalyticsParamKeys.adNetwork: ?_trimOrNull(adNetwork),
+        AttriaxAnalyticsParamKeys.adFormat: ?_trimOrNull(adFormat),
+        AttriaxAnalyticsParamKeys.adType: ?_trimOrNull(adType),
+        AttriaxAnalyticsParamKeys.adPlacement: ?_trimOrNull(adPlacement),
+        AttriaxAnalyticsParamKeys.test: ?test,
       },
       flushImmediately: flushImmediately,
     );
@@ -547,17 +545,19 @@ class Attriax {
       type.eventName,
       eventData: <String, Object?>{
         ...?metadata,
-        'adNetwork': ?_trimOrNull(adNetwork),
-        'mediationNetwork': ?_trimOrNull(mediationNetwork),
-        'adUnitId': ?_trimOrNull(adUnitId),
-        'adPlacement': ?_trimOrNull(adPlacement),
-        'adFormat': ?_trimOrNull(adFormat),
-        'adType': ?_trimOrNull(adType),
-        'failureReason': ?_trimOrNull(failureReason),
-        'rewardType': ?_trimOrNull(rewardType),
-        'loadLatencyMs': ?normalizedLoadLatencyMs,
-        'rewardAmount': ?normalizedRewardAmount,
-        'test': ?test,
+        AttriaxAnalyticsParamKeys.adNetwork: ?_trimOrNull(adNetwork),
+        AttriaxAnalyticsParamKeys.mediationNetwork: ?_trimOrNull(
+          mediationNetwork,
+        ),
+        AttriaxAnalyticsParamKeys.adUnitId: ?_trimOrNull(adUnitId),
+        AttriaxAnalyticsParamKeys.adPlacement: ?_trimOrNull(adPlacement),
+        AttriaxAnalyticsParamKeys.adFormat: ?_trimOrNull(adFormat),
+        AttriaxAnalyticsParamKeys.adType: ?_trimOrNull(adType),
+        AttriaxAnalyticsParamKeys.failureReason: ?_trimOrNull(failureReason),
+        AttriaxAnalyticsParamKeys.rewardType: ?_trimOrNull(rewardType),
+        AttriaxAnalyticsParamKeys.loadLatencyMs: ?normalizedLoadLatencyMs,
+        AttriaxAnalyticsParamKeys.rewardAmount: ?normalizedRewardAmount,
+        AttriaxAnalyticsParamKeys.test: ?test,
       },
       flushImmediately: flushImmediately,
     );
@@ -704,6 +704,27 @@ class _AttriaxNormalizedRevenue {
 
   final double revenue;
   final String currency;
+}
+
+/// SKAdNetwork helpers exposed by [Attriax].
+class AttriaxSkan {
+  AttriaxSkan._(this._runtime);
+
+  final AttriaxRuntime _runtime;
+
+  /// Latest locally persisted SKAdNetwork state tracked by the SDK.
+  AttriaxSkanState? get state => _runtime.skanState;
+
+  /// Updates the current SKAdNetwork conversion value on supported iOS versions.
+  Future<AttriaxSkanUpdateResult> updateConversionValue({
+    required int fineValue,
+    AttriaxSkanCoarseValue? coarseValue,
+    bool lockWindow = false,
+  }) => _runtime.updateSkanConversionValue(
+    fineValue: fineValue,
+    coarseValue: coarseValue,
+    lockWindow: lockWindow,
+  );
 }
 
 /// Referrer lookups exposed by [Attriax].

@@ -23,6 +23,7 @@ dev_dependencies:
   attriax_api_client:
     path: ../../attriax_api_client
   connectivity_plus: ^7.1.1
+  connectivity_plus_platform_interface: ^2.0.1
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
   flutter_test:

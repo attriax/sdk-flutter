@@ -197,7 +197,7 @@ class AttriaxSynchronizer {
       await inFlightRefresh;
     }
 
-    _dispatcher.clearPending(error: error, stackTrace: null);
+    _dispatcher.clearPending(error: error);
     await _withQueueOperationLock(
       () => _queueManager.writeAll(const <AttriaxQueuedRequest>[]),
     );

@@ -35,10 +35,16 @@ and the privacy-manifest/runtime setup documented in the main `attriax_flutter` 
 This package bundles Apple privacy manifests for the SDK-owned native code on
 iOS and macOS.
 
-- The iOS manifest declares the SDK's `UserDefaults` access used for pending
-  crash report persistence.
-- The manifests intentionally leave tracking domains empty because Attriax host
-  names can be app-specific and are configured by the integrating app.
+- The iOS manifest declares SDK-owned `Device ID` and `Crash Data` collection
+  plus the required-reason `UserDefaults` access used for pending crash report
+  persistence.
+- The macOS manifest declares SDK-owned `Device ID` collection.
+- The manifests intentionally leave tracking domains out of the package because
+  Attriax host names are app-specific and are configured by the integrating
+  app.
+- If an iOS app ships with `collectAdvertisingId` enabled, the host app must
+  still add the matching tracking domains, ATT purpose string, and App Store
+  privacy labels for its configured Attriax host and consent flow.
 - App Store privacy labels, ATT purpose strings, and any app-level tracking
   declarations still belong to the host app and must match the shipped Attriax
   configuration.

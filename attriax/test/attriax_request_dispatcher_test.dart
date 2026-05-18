@@ -75,14 +75,15 @@ void main() {
         statusCode: 202,
         response: AttriaxAckResponse(success: true),
       );
-      dispatcher.onDelivered = (request, statusCode) {
-        deliveredRequest = request;
-        deliveredStatus = statusCode;
-      };
-      dispatcher.registerHandlers(
-        queuedRequest.id,
-        onSuccess: (response) => successResponse = response,
-      );
+      dispatcher
+        ..onDelivered = (request, statusCode) {
+          deliveredRequest = request;
+          deliveredStatus = statusCode;
+        }
+        ..registerHandlers(
+          queuedRequest.id,
+          onSuccess: (response) => successResponse = response,
+        );
 
       await dispatcher.flush();
 
@@ -166,13 +167,13 @@ void main() {
     );
 
     test('supports http-date retry-after headers', () async {
-      final retryAt = DateTime.now().toUtc().add(const Duration(seconds: 75));
+      final retryAt = DateTime.utc(2099, 5, 15, 12, 31, 15);
       final requestOptions = RequestOptions(path: '/api/sdk/v1/batch');
       transport.batchErrors.add(
         AttriaxTransportHttpException(
           statusCode: 429,
           headers: Headers.fromMap(<String, List<String>>{
-            'retry-after': <String>[retryAt.toIso8601String()],
+            'retry-after': <String>['Fri, 15 May 2099 12:31:15 GMT'],
           }),
           source: DioException(
             requestOptions: requestOptions,
@@ -455,22 +456,23 @@ void main() {
         expect(await queueManager.readAll(), hasLength(1));
 
         await queueManager.enqueue(openRequest);
-        transport.sendResult = AttriaxTransportSuccess(
-          statusCode: 200,
-          response: AttriaxOpenApiResponse(
-            result: AttriaxAppOpenResult(
-              userId: 'user_1',
-              isNewUser: true,
-              isFirstLaunch: true,
-              requestVersion: 'v1',
-              acceptedAt: now,
+        transport
+          ..sendResult = AttriaxTransportSuccess(
+            statusCode: 200,
+            response: AttriaxOpenApiResponse(
+              result: AttriaxAppOpenResult(
+                userId: 'user_1',
+                isNewUser: true,
+                isFirstLaunch: true,
+                requestVersion: 'v1',
+                acceptedAt: now,
+              ),
             ),
-          ),
-        );
-        transport.sendBatchResult = const AttriaxTransportSuccess(
-          statusCode: 202,
-          response: AttriaxAckResponse(success: true),
-        );
+          )
+          ..sendBatchResult = const AttriaxTransportSuccess(
+            statusCode: 202,
+            response: AttriaxAckResponse(success: true),
+          );
 
         appOpenMonitor.hasSuccessfulResult = true;
         await dispatcher.flush();
@@ -542,23 +544,24 @@ void main() {
         expect(queuedAfterFailure.first.attemptCount, 1);
         expect(queuedAfterFailure.last.id, queuedRequest.id);
 
-        transport.sendError = null;
-        transport.sendResult = AttriaxTransportSuccess(
-          statusCode: 200,
-          response: AttriaxOpenApiResponse(
-            result: AttriaxAppOpenResult(
-              userId: 'user_1',
-              isNewUser: true,
-              isFirstLaunch: true,
-              requestVersion: 'v1',
-              acceptedAt: now,
+        transport
+          ..sendError = null
+          ..sendResult = AttriaxTransportSuccess(
+            statusCode: 200,
+            response: AttriaxOpenApiResponse(
+              result: AttriaxAppOpenResult(
+                userId: 'user_1',
+                isNewUser: true,
+                isFirstLaunch: true,
+                requestVersion: 'v1',
+                acceptedAt: now,
+              ),
             ),
-          ),
-        );
-        transport.sendBatchResult = const AttriaxTransportSuccess(
-          statusCode: 202,
-          response: AttriaxAckResponse(success: true),
-        );
+          )
+          ..sendBatchResult = const AttriaxTransportSuccess(
+            statusCode: 202,
+            response: AttriaxAckResponse(success: true),
+          );
 
         appOpenMonitor.hasSuccessfulResult = true;
         await dispatcher.flush();
@@ -628,9 +631,9 @@ class FakeTransport implements AttriaxGeneratedTransport {
   final List<List<AttriaxQueuedRequest>> sentBatches =
       <List<AttriaxQueuedRequest>>[];
   AttriaxTransportSuccess? sendResult;
-  final List<Object> batchErrors = <Object>[];
+  final List<Exception> batchErrors = <Exception>[];
   AttriaxTransportSuccess? sendBatchResult;
-  Object? sendError;
+  Exception? sendError;
 
   @override
   Future<AttriaxTransportSuccess> send(AttriaxApiRequest request) async {
@@ -674,6 +677,13 @@ class FakeTransport implements AttriaxGeneratedTransport {
 
   @override
   Future<AttriaxRevenueReceiptValidationResult> validateRevenueReceipt(
+    Map<String, Object?> payload,
+  ) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<AttriaxRevenueUsdConversionResult> convertRevenueToUsd(
     Map<String, Object?> payload,
   ) {
     throw UnimplementedError();

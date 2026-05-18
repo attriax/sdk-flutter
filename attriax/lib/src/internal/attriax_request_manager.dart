@@ -2,17 +2,9 @@ import 'attriax_api_models.dart';
 import 'attriax_synchronizer.dart';
 
 class AttriaxRequestManager {
-  AttriaxSynchronizer? _synchronizer;
+  AttriaxSynchronizer? synchronizer;
 
-  bool get isBound => _synchronizer != null;
-
-  void bindSynchronizer(AttriaxSynchronizer synchronizer) {
-    _synchronizer = synchronizer;
-  }
-
-  void unbindSynchronizer() {
-    _synchronizer = null;
-  }
+  bool get isBound => synchronizer != null;
 
   Future<void> enqueue(
     AttriaxApiRequest request, {
@@ -20,7 +12,7 @@ class AttriaxRequestManager {
     void Function(Object error, StackTrace? stackTrace)? onError,
     bool flushImmediately = true,
   }) {
-    final synchronizer = _synchronizer;
+    final synchronizer = this.synchronizer;
     if (synchronizer == null) {
       return Future<void>.error(
         StateError('Attriax request manager is not bound to a synchronizer.'),

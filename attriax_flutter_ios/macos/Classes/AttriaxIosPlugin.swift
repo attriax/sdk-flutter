@@ -88,12 +88,8 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         let newValue = UUID().uuidString
         let service = Bundle.main.bundleIdentifier ?? "com.attriax.sdk"
         let account = "attriax.device_id"
-        let addQuery: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: service,
-            kSecAttrAccount: account,
-            kSecValueData: Data(newValue.utf8),
-        ]
+        var addQuery = baseKeychainQuery(service: service, account: account)
+        addQuery[kSecValueData] = Data(newValue.utf8)
 
         let status = SecItemAdd(addQuery as CFDictionary, nil)
         if status == errSecSuccess {
@@ -108,13 +104,9 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
     private func readKeychainDeviceId() -> String? {
         let service = Bundle.main.bundleIdentifier ?? "com.attriax.sdk"
         let account = "attriax.device_id"
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: service,
-            kSecAttrAccount: account,
-            kSecReturnData: true,
-            kSecMatchLimit: kSecMatchLimitOne,
-        ]
+        var query = baseKeychainQuery(service: service, account: account)
+        query[kSecReturnData] = true
+        query[kSecMatchLimit] = kSecMatchLimitOne
 
         var result: CFTypeRef?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -128,5 +120,21 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
 
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? nil : trimmed
+    }
+
+    private func baseKeychainQuery(service: String, account: String) -> [CFString: Any] {
+        var query: [CFString: Any] = [
+            kSecClass: kSecClassGenericPassword,
+            kSecAttrService: service,
+            kSecAttrAccount: account,
+        ]
+
+        if #available(macOS 10.15, *) {
+            // The data-protection keychain avoids login-keychain access prompts
+            // for normal app-managed secrets on modern macOS.
+            query[kSecUseDataProtectionKeychain] = kCFBooleanTrue
+        }
+
+        return query
     }
 }

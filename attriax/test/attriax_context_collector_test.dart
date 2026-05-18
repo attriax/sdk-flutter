@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:attriax_flutter/src/internal/attriax_context_collector.dart';
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 import 'package:flutter/foundation.dart';
@@ -299,6 +301,65 @@ void main() {
       expect(platform.collectAdvertisingIdValues, <bool>[false]);
     },
   );
+
+  test(
+    'startup waits for a manual tracking request that begins after init starts',
+    () async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+
+      final requestCompleter = Completer<void>();
+      final platform =
+          FakeAttriaxPlatform.withNativeContext(const AttriaxNativeContext())
+            ..requestTrackingAuthorizationStatus =
+                AttriaxTrackingAuthorizationStatus.notDetermined
+            ..requestTrackingAuthorizationCompleter = requestCompleter
+            ..trackingAuthorizationStatusResponses =
+                <AttriaxTrackingAuthorizationStatus>[
+                  AttriaxTrackingAuthorizationStatus.notDetermined,
+                  AttriaxTrackingAuthorizationStatus.notDetermined,
+                  AttriaxTrackingAuthorizationStatus.authorized,
+                ];
+      final collector = AttriaxContextCollector(
+        config: const AttriaxConfig(
+          appToken: 'ax_test_token',
+          trackingAuthorizationStatusTimeout: Duration(milliseconds: 100),
+        ),
+        platform: platform,
+      );
+
+      var snapshotCompleted = false;
+      final snapshotFuture = collector
+          .collectContextSnapshot(deviceId: 'ios-device-1', isFirstLaunch: true)
+          .then((snapshot) {
+            snapshotCompleted = true;
+            return snapshot;
+          });
+
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+
+      var requestCompleted = false;
+      final requestFuture = collector.requestTrackingAuthorization().then((
+        status,
+      ) {
+        requestCompleted = true;
+        return status;
+      });
+
+      await Future<void>.delayed(const Duration(milliseconds: 180));
+
+      expect(snapshotCompleted, isFalse);
+      expect(requestCompleted, isFalse);
+
+      requestCompleter.complete();
+
+      final status = await requestFuture;
+      expect(status, AttriaxTrackingAuthorizationStatus.authorized);
+
+      await snapshotFuture;
+      expect(snapshotCompleted, isTrue);
+    },
+  );
 }
 
 class FakeAttriaxPlatform extends AttriaxPlatform {
@@ -319,6 +380,9 @@ class FakeAttriaxPlatform extends AttriaxPlatform {
   trackingAuthorizationStatusResponses = <AttriaxTrackingAuthorizationStatus>[];
   AttriaxTrackingAuthorizationStatus trackingAuthorizationStatus =
       AttriaxTrackingAuthorizationStatus.notDetermined;
+  AttriaxTrackingAuthorizationStatus requestTrackingAuthorizationStatus =
+      AttriaxTrackingAuthorizationStatus.authorized;
+  Completer<void>? requestTrackingAuthorizationCompleter;
 
   @override
   Future<AttriaxNativeContext> collectNativeContext({
@@ -343,7 +407,14 @@ class FakeAttriaxPlatform extends AttriaxPlatform {
   @override
   Future<AttriaxTrackingAuthorizationStatus> requestTrackingAuthorization({
     Duration? timeout,
-  }) async => AttriaxTrackingAuthorizationStatus.authorized;
+  }) async {
+    final completer = requestTrackingAuthorizationCompleter;
+    if (completer != null) {
+      await completer.future;
+    }
+
+    return requestTrackingAuthorizationStatus;
+  }
 
   @override
   Future<AttriaxInstallReferrerContext> collectInstallReferrer() async {

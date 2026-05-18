@@ -157,7 +157,7 @@ void main() {
             exceptionType: 'java.lang.IllegalStateException',
             message: 'boom',
             stackTrace: 'native stack',
-            occurredAt: DateTime.utc(2026, 5, 4, 10, 0),
+            occurredAt: DateTime.utc(2026, 5, 4, 10),
             metadata: <String, Object?>{'threadName': 'main'},
           ),
         );
@@ -318,7 +318,7 @@ void main() {
             exceptionType: 'java.lang.IllegalStateException',
             message: 'boom',
             stackTrace: 'native stack',
-            occurredAt: DateTime.utc(2026, 5, 4, 10, 0),
+            occurredAt: DateTime.utc(2026, 5, 4, 10),
           ),
         );
         AttriaxPlatform.instance = crashPlatform;
@@ -388,7 +388,7 @@ void main() {
             exceptionType: 'java.lang.IllegalStateException',
             message: 'boom',
             stackTrace: 'native stack',
-            occurredAt: DateTime.utc(2026, 5, 4, 10, 0),
+            occurredAt: DateTime.utc(2026, 5, 4, 10),
           ),
         );
         AttriaxPlatform.instance = crashPlatform;
@@ -419,7 +419,7 @@ void main() {
     );
 
     test('creates and persists a current session snapshot', () async {
-      final now = DateTime.utc(2026, 5, 3, 12, 0);
+      final now = DateTime.utc(2026, 5, 3, 12);
       final clock = AttriaxMutableClock(now);
       sdk = Attriax.test(
         config: AttriaxConfig(appToken: 'ax_test_token', clock: clock),
@@ -443,7 +443,7 @@ void main() {
     });
 
     test('restores the current session while it is still active', () async {
-      final now = DateTime.utc(2026, 5, 3, 12, 0);
+      final now = DateTime.utc(2026, 5, 3, 12);
       final firstClock = AttriaxMutableClock(now);
       sdk = Attriax.test(
         config: AttriaxConfig(appToken: 'ax_test_token', clock: firstClock),
@@ -494,7 +494,7 @@ void main() {
     test(
       'starts a new session after the continuation window expires',
       () async {
-        final now = DateTime.utc(2026, 5, 3, 12, 0);
+        final now = DateTime.utc(2026, 5, 3, 12);
         final firstClock = AttriaxMutableClock(now);
         sdk = Attriax.test(
           config: AttriaxConfig(appToken: 'ax_test_token', clock: firstClock),
@@ -540,7 +540,7 @@ void main() {
     );
 
     test('queues track events with the active session metadata', () async {
-      var now = DateTime.utc(2026, 5, 3, 12, 0);
+      var now = DateTime.utc(2026, 5, 3, 12);
       final clock = AttriaxMutableClock(now);
       connectivityPlatform = FakeConnectivityPlatform(
         currentResults: const <ConnectivityResult>[ConnectivityResult.none],
@@ -1210,7 +1210,7 @@ void main() {
     test(
       'queues pause and resume lifecycle telemetry for the same session',
       () async {
-        var now = DateTime.utc(2026, 5, 3, 12, 0);
+        var now = DateTime.utc(2026, 5, 3, 12);
         final clock = AttriaxMutableClock(now);
         connectivityPlatform = FakeConnectivityPlatform(
           currentResults: const <ConnectivityResult>[ConnectivityResult.none],
@@ -1282,7 +1282,7 @@ List<Map<String, Object?>> _queuedEntriesFromPrefs(SharedPreferences prefs) {
 List<Map<String, Object?>> _queuedBodiesFromPrefs(SharedPreferences prefs) =>
     _queuedEntriesFromPrefs(prefs)
         .where((entry) => entry['kind'] != 'open')
-        .map((entry) => entry['body'] as Map<String, Object?>)
+        .map((entry) => entry['body']! as Map<String, Object?>)
         .toList(growable: false);
 
 Future<void> _flushRuntimeTransitions() => pumpEventQueue();
@@ -1444,14 +1444,14 @@ String _sdkEnvelope(Map<String, Object?> data) => jsonEncode(<String, Object?>{
 generated_sdk.SdkV1BatchResponseEnvelopeDto _batchEnvelope() =>
     generated_sdk.SdkV1BatchResponseEnvelopeDto(
       data: generated_sdk.SdkV1BatchResponseDto(
-        acceptedAt: DateTime.utc(2026, 5, 6, 10, 0),
+        acceptedAt: DateTime.utc(2026, 5, 6, 10),
         duplicateCount: 0,
         itemCount: 1,
         processedCount: 1,
         requestVersion: 'v1',
       ),
       success: true,
-      timestamp: DateTime.utc(2026, 5, 6, 10, 0),
+      timestamp: DateTime.utc(2026, 5, 6, 10),
     );
 
 Object? _serializeGenerated(Object value) {

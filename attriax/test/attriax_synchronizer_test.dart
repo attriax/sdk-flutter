@@ -159,6 +159,13 @@ class FakeTransport implements AttriaxGeneratedTransport {
   ) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<AttriaxRevenueUsdConversionResult> convertRevenueToUsd(
+    Map<String, Object?> payload,
+  ) {
+    throw UnimplementedError();
+  }
 }
 
 class FakeConnectivityPlatform extends ConnectivityPlatform {

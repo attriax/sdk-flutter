@@ -1,6 +1,7 @@
 import Flutter
 import Security
 import SafariServices
+import StoreKit
 import UIKit
 import Darwin
 #if canImport(AdSupport)
@@ -58,6 +59,8 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             requestTrackingAuthorization(result: result)
         case "consumePendingCrashReport":
             result(consumePendingCrashReport())
+        case "updateSkanConversionValue":
+            updateSkanConversionValue(call: call, result: result)
         case "getInitialLink":
             result(initialLink)
         case "getLatestLink":
@@ -305,10 +308,12 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             return nil
         }
 
-        let identifier = withUnsafePointer(to: &systemInfo.machine) { machinePointer in
+        var machine = systemInfo.machine
+        let machineSize = MemoryLayout.size(ofValue: machine)
+        let identifier = withUnsafePointer(to: &machine) { machinePointer in
             machinePointer.withMemoryRebound(
                 to: CChar.self,
-                capacity: MemoryLayout.size(ofValue: systemInfo.machine)
+                capacity: machineSize
             ) {
                 String(cString: $0)
             }
@@ -423,6 +428,111 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
 #else
         result("not_supported")
 #endif
+    }
+
+    private func updateSkanConversionValue(
+        call: FlutterMethodCall,
+        result: @escaping FlutterResult
+    ) {
+        let arguments = call.arguments as? [String: Any]
+        let fineValue = (arguments?["fineValue"] as? NSNumber)?.intValue
+        let coarseValue = arguments?["coarseValue"] as? String
+        let lockWindow = arguments?["lockWindow"] as? Bool ?? false
+
+        guard let fineValue else {
+            result([
+                "status": "invalid_value",
+                "message": "fineValue is required for SKAdNetwork conversion updates."
+            ])
+            return
+        }
+
+        guard (0...63).contains(fineValue) else {
+            result([
+                "status": "invalid_value",
+                "message": "fineValue must be between 0 and 63."
+            ])
+            return
+        }
+
+        DispatchQueue.main.async {
+            if #available(iOS 16.1, *) {
+                SKAdNetwork.updatePostbackConversionValue(
+                    fineValue,
+                    coarseValue: self.skanCoarseValue(from: coarseValue),
+                    lockWindow: lockWindow
+                ) { error in
+                    if let error {
+                        result([
+                            "status": "error",
+                            "message": error.localizedDescription,
+                            "fineValue": fineValue,
+                            "coarseValue": coarseValue as Any,
+                            "lockWindow": lockWindow,
+                        ])
+                    } else {
+                        result([
+                            "status": "updated",
+                            "fineValue": fineValue,
+                            "coarseValue": coarseValue as Any,
+                            "lockWindow": lockWindow,
+                        ])
+                    }
+                }
+                return
+            }
+
+            if #available(iOS 15.4, *) {
+                SKAdNetwork.updatePostbackConversionValue(fineValue) { error in
+                    if let error {
+                        result([
+                            "status": "error",
+                            "message": error.localizedDescription,
+                            "fineValue": fineValue,
+                            "lockWindow": false,
+                        ])
+                    } else {
+                        result([
+                            "status": "updated",
+                            "fineValue": fineValue,
+                            "lockWindow": false,
+                        ])
+                    }
+                }
+                return
+            }
+
+            if #available(iOS 14.0, *) {
+                SKAdNetwork.updateConversionValue(fineValue)
+                result([
+                    "status": "updated",
+                    "fineValue": fineValue,
+                    "lockWindow": false,
+                ])
+                return
+            }
+
+            result([
+                "status": "not_supported",
+                "message": "SKAdNetwork conversion updates require iOS 14.0 or later.",
+                "fineValue": fineValue,
+                "lockWindow": false,
+            ])
+        }
+    }
+
+    @available(iOS 16.1, *)
+    private func skanCoarseValue(from rawValue: String?) -> SKAdNetwork.CoarseConversionValue? {
+        switch rawValue {
+        case "low":
+            return .low
+        case "medium":
+            return .medium
+        case "high":
+            return .high
+        default:
+            return nil
+        }
     }
 
     private func currentTrackingAuthorizationStatus() -> String {

@@ -153,6 +153,36 @@ class MethodChannelAttriax extends AttriaxPlatform {
     }
   }
 
+  @override
+  Future<AttriaxSkanUpdateResult> updateSkanConversionValue({
+    required int fineValue,
+    AttriaxSkanCoarseValue? coarseValue,
+    bool lockWindow = false,
+  }) async {
+    try {
+      final result = await _channel
+          .invokeMethod<Object?>('updateSkanConversionValue', <String, Object?>{
+            'fineValue': fineValue,
+            if (coarseValue != null) 'coarseValue': coarseValue.name,
+            'lockWindow': lockWindow,
+          });
+      return AttriaxSkanUpdateResult.fromPayload(result);
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException('updateSkanConversionValue', error, stackTrace);
+      return const AttriaxSkanUpdateResult(
+        status: AttriaxSkanUpdateStatus.notSupported,
+        message:
+            'SKAdNetwork conversion updates are not supported on this platform.',
+      );
+    } on PlatformException catch (error, stackTrace) {
+      _logException('updateSkanConversionValue', error, stackTrace);
+      return AttriaxSkanUpdateResult(
+        status: AttriaxSkanUpdateStatus.error,
+        message: error.message,
+      );
+    }
+  }
+
   AttriaxInstallReferrerContext missingPluginInstallReferrerContext(
     MissingPluginException error,
   ) => const AttriaxInstallReferrerContext();

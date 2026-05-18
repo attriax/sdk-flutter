@@ -10,6 +10,9 @@ class AttriaxTrackingAuthorizationManager {
   }) : _config = config,
        _platform = platform,
        _platformType = platformType;
+  static const Duration _pendingTrackingAuthorizationPollInterval = Duration(
+    milliseconds: 250,
+  );
 
   final AttriaxConfig _config;
   final AttriaxPlatform _platform;
@@ -35,7 +38,7 @@ class AttriaxTrackingAuthorizationManager {
       return inFlightRequest;
     }
 
-    final request = _platform.requestTrackingAuthorization(timeout: timeout);
+    final request = _requestTrackingAuthorization(timeout: timeout);
     _trackingAuthorizationRequest = request;
     _signalTrackingAuthorizationRequest();
 
@@ -46,6 +49,86 @@ class AttriaxTrackingAuthorizationManager {
     } finally {
       if (identical(_trackingAuthorizationRequest, request)) {
         _trackingAuthorizationRequest = null;
+      }
+    }
+  }
+
+  Future<AttriaxTrackingAuthorizationStatus> _requestTrackingAuthorization({
+    Duration? timeout,
+  }) async {
+    if (_platformType != AttriaxPlatformType.ios) {
+      return _platform.requestTrackingAuthorization(timeout: timeout);
+    }
+
+    final requestSignal = Completer<void>();
+    AttriaxTrackingAuthorizationStatus? requestStatus;
+    Object? requestError;
+    StackTrace? requestStackTrace;
+
+    unawaited(
+      _platform
+          .requestTrackingAuthorization(timeout: timeout)
+          .then<void>(
+            (status) {
+              requestStatus = status;
+            },
+            onError: (Object error, StackTrace stackTrace) {
+              requestError = error;
+              requestStackTrace = stackTrace;
+            },
+          )
+          .whenComplete(() {
+            if (!requestSignal.isCompleted) {
+              requestSignal.complete();
+            }
+          }),
+    );
+
+    var remaining = timeout;
+    final initialDelay = _trackingAuthorizationPollDelay(remaining);
+    if (!requestSignal.isCompleted) {
+      await _waitForFutureOrDelay(
+        future: requestSignal.future,
+        delay: initialDelay,
+      );
+
+      if (remaining != null) {
+        remaining -= initialDelay;
+      }
+    }
+
+    while (true) {
+      if (requestSignal.isCompleted) {
+        if (requestError != null) {
+          Error.throwWithStackTrace(requestError!, requestStackTrace!);
+        }
+
+        final completedStatus = requestStatus;
+        if (completedStatus != null &&
+            completedStatus !=
+                AttriaxTrackingAuthorizationStatus.notDetermined) {
+          return completedStatus;
+        }
+      }
+
+      final status = await getTrackingAuthorizationStatus();
+      if (_isResolvedTrackingAuthorizationStatus(status)) {
+        return status;
+      }
+
+      if (remaining != null && remaining <= Duration.zero) {
+        return AttriaxTrackingAuthorizationStatus.timedOut;
+      }
+
+      final delay = _trackingAuthorizationPollDelay(remaining);
+      if (requestSignal.isCompleted) {
+        await Future<void>.delayed(delay);
+      } else {
+        await _waitForFutureOrDelay(future: requestSignal.future, delay: delay);
+      }
+
+      if (remaining != null) {
+        remaining -= delay;
       }
     }
   }
@@ -165,8 +248,29 @@ class AttriaxTrackingAuthorizationManager {
     }
   }
 
+  Duration _trackingAuthorizationPollDelay(Duration? remaining) {
+    if (remaining == null) {
+      return _pendingTrackingAuthorizationPollInterval;
+    }
+
+    return remaining < _pendingTrackingAuthorizationPollInterval
+        ? remaining
+        : _pendingTrackingAuthorizationPollInterval;
+  }
+
   Future<void> _waitForTrackingAuthorizationSignal({
     required Completer<void> signal,
+    required Duration delay,
+  }) async {
+    try {
+      await _waitForFutureOrDelay(future: signal.future, delay: delay);
+    } finally {
+      _clearTrackingAuthorizationRequestSignal(signal);
+    }
+  }
+
+  Future<void> _waitForFutureOrDelay({
+    required Future<void> future,
     required Duration delay,
   }) async {
     final delayCompleter = Completer<void>();
@@ -177,13 +281,9 @@ class AttriaxTrackingAuthorizationManager {
     });
 
     try {
-      await Future.any<void>(<Future<void>>[
-        delayCompleter.future,
-        signal.future,
-      ]);
+      await Future.any<void>(<Future<void>>[delayCompleter.future, future]);
     } finally {
       timer.cancel();
-      _clearTrackingAuthorizationRequestSignal(signal);
     }
   }
 

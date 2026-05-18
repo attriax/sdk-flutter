@@ -233,10 +233,7 @@ class AttriaxEventHub {
     StackTrace? stackTrace,
   }) {
     unawaited(
-      completer.future.then<void>(
-        (_) {},
-        onError: (Object _, StackTrace __) {},
-      ),
+      completer.future.then<void>((_) {}, onError: (Object _, StackTrace _) {}),
     );
     completer.completeError(error, stackTrace);
   }

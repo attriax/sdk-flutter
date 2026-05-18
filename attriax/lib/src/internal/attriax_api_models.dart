@@ -377,10 +377,10 @@ Map<String, Object?> attriaxBatchBody(AttriaxApiRequest request) {
     );
   }
 
-  final body = Map<String, Object?>.from(request.toQueueBody());
-  body.remove('appToken');
-  body.remove('deviceId');
-  body.remove('deviceIdSource');
+  final body = Map<String, Object?>.from(request.toQueueBody())
+    ..remove('appToken')
+    ..remove('deviceId')
+    ..remove('deviceIdSource');
   return body;
 }
 
@@ -803,6 +803,53 @@ class AttriaxRevenueReceiptValidationApiResponse extends AttriaxApiResponse {
   final AttriaxRevenueReceiptValidationResult result;
 }
 
+class AttriaxRevenueUsdConversionResult {
+  const AttriaxRevenueUsdConversionResult({
+    required this.requestVersion,
+    required this.acceptedAt,
+    required this.currency,
+    required this.amountOriginalMicros,
+    required this.amountUsdMicros,
+    required this.amountUsd,
+    required this.rate,
+    required this.rateDate,
+    required this.conversionStatus,
+  });
+
+  factory AttriaxRevenueUsdConversionResult.fromJson(
+    Map<String, Object?> json,
+  ) => AttriaxRevenueUsdConversionResult(
+    requestVersion: attriaxStringValue(json['requestVersion']) ?? 'v1',
+    acceptedAt:
+        attriaxDateTimeValue(json['acceptedAt'])?.toUtc() ??
+        DateTime.now().toUtc(),
+    currency: attriaxStringValue(json['currency']) ?? 'USD',
+    amountOriginalMicros:
+        attriaxStringValue(json['amountOriginalMicros']) ?? '0',
+    amountUsdMicros: attriaxStringValue(json['amountUsdMicros']) ?? '0',
+    amountUsd: _attriaxDoubleValue(json['amountUsd']) ?? 0,
+    rate: attriaxStringValue(json['rate']) ?? '1',
+    rateDate: attriaxStringValue(json['rateDate']) ?? '',
+    conversionStatus: attriaxStringValue(json['conversionStatus']) ?? 'usd',
+  );
+
+  final String requestVersion;
+  final DateTime acceptedAt;
+  final String currency;
+  final String amountOriginalMicros;
+  final String amountUsdMicros;
+  final double amountUsd;
+  final String rate;
+  final String rateDate;
+  final String conversionStatus;
+}
+
+class AttriaxRevenueUsdConversionApiResponse extends AttriaxApiResponse {
+  const AttriaxRevenueUsdConversionApiResponse({required this.result});
+
+  final AttriaxRevenueUsdConversionResult result;
+}
+
 AttriaxAckResponse attriaxAckResponseFromGenerated(
   sdk.SdkAcknowledgeResponseEnvelopeDto envelope,
 ) => AttriaxAckResponse(success: envelope.data.success);
@@ -861,6 +908,20 @@ attriaxRevenueReceiptValidationResponseFromJsonEnvelope(
   );
 }
 
+AttriaxRevenueUsdConversionApiResponse
+attriaxRevenueUsdConversionResponseFromJsonEnvelope(
+  Map<String, Object?> envelope,
+) {
+  final data = attriaxObjectMap(envelope['data']);
+  if (data == null) {
+    throw const FormatException('Missing or invalid "data".');
+  }
+
+  return AttriaxRevenueUsdConversionApiResponse(
+    result: AttriaxRevenueUsdConversionResult.fromJson(data),
+  );
+}
+
 sdk.Platform _generatedPlatform(AttriaxPlatformType platform) =>
     switch (platform) {
       AttriaxPlatformType.ios => sdk.Platform.ios,
@@ -903,6 +964,13 @@ int? _attriaxIntValue(Object? value) {
   }
   if (value is num) {
     return value.toInt();
+  }
+  return null;
+}
+
+double? _attriaxDoubleValue(Object? value) {
+  if (value is num) {
+    return value.toDouble();
   }
   return null;
 }
@@ -954,6 +1022,11 @@ AttriaxAppOpenResult _mapOpenResult(sdk.SdkV1OpenResponseDto response) =>
       installState: _mapInstallState(response.installState),
       requestVersion: response.requestVersion,
       acceptedAt: response.acceptedAt,
+      skan: response.skan == null
+          ? null
+          : AttriaxSkanRuntimeConfiguration.fromJson(
+              attriaxObjectMap(response.skan) ?? const <String, Object?>{},
+            ),
       deepLink: _mapDeepLink(response.deepLink),
       originalInstallReferrer: _mapInstallReferrerDetails(
         response.originalInstallReferrer,
@@ -1068,7 +1141,6 @@ AttriaxInstallState _mapInstallState(sdk.SdkInstallState installState) =>
       sdk.SdkInstallState.reinstall => AttriaxInstallState.reinstall,
       sdk.SdkInstallState.appDataClear => AttriaxInstallState.appDataClear,
       sdk.SdkInstallState.existing => AttriaxInstallState.existing,
-      _ => AttriaxInstallState.existing,
     };
 
 AttriaxDynamicLinkRecord _mapDynamicLinkRecord(
@@ -1104,7 +1176,6 @@ AttriaxDeepLinkResolutionStatus _mapDeepLinkResolutionStatus(
     AttriaxDeepLinkResolutionStatus.unmatched,
   sdk.DeepLinkResolutionStatus.invalid =>
     AttriaxDeepLinkResolutionStatus.invalid,
-  _ => AttriaxDeepLinkResolutionStatus.invalid,
 };
 
 AttributionType _mapAttributionType(sdk.AttributionType attributionType) =>
@@ -1113,7 +1184,6 @@ AttributionType _mapAttributionType(sdk.AttributionType attributionType) =>
       sdk.AttributionType.fingerprint => AttributionType.fingerprint,
       sdk.AttributionType.external_ => AttributionType.external,
       sdk.AttributionType.organic => AttributionType.organic,
-      _ => AttributionType.organic,
     };
 
 Map<String, Object>? _generatedOptionalJsonObjectMap(

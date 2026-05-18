@@ -71,10 +71,7 @@ class AttriaxDeepLinkResolver {
     final deferredUri =
         result.deepLink?.uri ??
         result.reinstallReferrer?.deepLinkUri ??
-        result.installReferrer?.deepLinkUri ??
-        (result.installReferrer?.deepLinkUrl == null
-            ? null
-            : Uri.tryParse(result.installReferrer!.deepLinkUrl!));
+        result.installReferrer?.deepLinkUri;
     if (deferredUri != null) {
       return deferredUri;
     }
@@ -105,7 +102,6 @@ class AttriaxDeepLinkResolver {
           result.deepLink?.utm ??
           result.reinstallReferrer?.utm ??
           result.installReferrer?.utm,
-      handledBySdk: false,
     );
   }
 

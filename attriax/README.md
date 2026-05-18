@@ -55,14 +55,13 @@ Future<void> processAttriaxStartup(Attriax attriax) async {
     timeout: const Duration(seconds: 5),
     safe: true,
   );
-  final initialResolution = await initialDeepLink?.resolve();
 
   debugPrint(
     'Original install referrer: ${originalInstallReferrer?.campaign}',
   );
   debugPrint('Session referrer: ${sessionReferrer?.uri.toString() ?? 'none'}');
   debugPrint(
-    'Initial deep link: ${initialDeepLink?.uri.toString() ?? 'none'} (found: ${initialResolution?.found ?? false})',
+    'Initial deep link: ${initialDeepLink?.uri.toString() ?? 'none'} (found: ${initialDeepLink?.found ?? false})',
   );
 }
 
@@ -91,9 +90,8 @@ final createdDynamicLink = await attriax.createDynamicLink(
 
 debugPrint('Share this short URL: ${createdDynamicLink.link.shortUrl}');
 
-attriax.deepLinks.stream.listen((event) async {
-  final resolution = await event.resolve();
-  if (!resolution.found) {
+attriax.deepLinks.stream.listen((event) {
+  if (!event.found) {
     return;
   }
 
@@ -101,7 +99,7 @@ attriax.deepLinks.stream.listen((event) async {
     '/deep-link',
     arguments: <String, Object?>{
       'uri': event.uri.toString(),
-      'data': resolution.data,
+      'data': event.data,
     },
   );
 });
@@ -187,6 +185,46 @@ await attriax.recordPageView(
 );
 ```
 
+## Analytics Vocabulary
+
+The package exports `AttriaxAnalyticsEventKeys` and
+`AttriaxAnalyticsParamKeys` so your app, dashboard funnels, and SKAN schema can
+share the same event vocabulary.
+
+Use the predefined event keys for the most common conversion milestones:
+
+- account lifecycle: `sign_up`, `login`
+- onboarding and game progression: `tutorial_begin`, `tutorial_complete`, `level_start`, `level_complete`, `level_up`
+- checkout and revenue: `add_payment_info`, `add_to_cart`, `checkout_started`, `purchase`, `refund`, `subscription_started`, `subscription_renewed`, `trial_started`
+- ads and navigation: `ad_*` events plus `page_view`
+
+Use the predefined parameter keys when those events need consistent payloads.
+The most common ones are `revenue`, `currency`, `productId`, `transactionId`,
+`paymentType`, `method`, `level`, `value`, `pageName`, `adPlacement`, and
+`source`.
+
+```dart
+await attriax.recordEvent(
+  AttriaxAnalyticsEventKeys.addPaymentInfo,
+  eventData: const <String, Object?>{
+    AttriaxAnalyticsParamKeys.paymentType: 'apple_pay',
+    AttriaxAnalyticsParamKeys.value: 'annual_paywall',
+  },
+);
+
+await attriax.recordEvent(
+  AttriaxAnalyticsEventKeys.tutorialBegin,
+  eventData: const <String, Object?>{
+    AttriaxAnalyticsParamKeys.source: 'first_session',
+  },
+);
+```
+
+These constants are intentionally curated rather than exhaustive. If your app
+needs a custom event name, you can still send it with `recordEvent(...)`; use
+the shared constants whenever you want a stable, SDK-documented conversion
+event name.
+
 ## Ad Events
 
 Use the standardized ad lifecycle methods when you want ad delivery,
@@ -259,6 +297,57 @@ host-side setup. Desktop examples stay intentionally minimal and expect manual
 forwarding when you wire a desktop protocol handler.
 
 Because Android install referrer is the strongest attribution input for mobile installs, validate at least one Play-distributed Android build before release. iOS does not have an install-referrer equivalent, so universal-link handling and the initial app-open request become the primary checks there.
+
+## SKAdNetwork Developer-Copy Setup
+
+SKAdNetwork developer-copy reporting is separate from Attriax deep-link setup.
+There are two independent pieces:
+
+- Your app usually lets Attriax download the SKAN schema from the dashboard during app open.
+- Apple sends developer-copy install-validation postbacks to the URL declared in the consuming app's `Info.plist`.
+
+Use local `AttriaxConfig.skan` only when you want to disable SDK-side conversion updates in app code:
+
+```dart
+final attriax = Attriax(
+  config: const AttriaxConfig(
+    appToken: 'ax_your_app_token',
+    skan: AttriaxSkanConfig(enabled: false),
+  ),
+);
+```
+
+On iOS, add the hardcoded Attriax developer-copy host to the advertised app's
+`ios/Runner/Info.plist`:
+
+```xml
+<key>NSAdvertisingAttributionReportEndpoint</key>
+<string>https://skan.attriax.com</string>
+
+<key>SKAdNetworkPostbackURLList</key>
+<array>
+  <string>https://skan.attriax.com</string>
+</array>
+```
+
+Keep the configured value pathless. Apple and newer toolchains derive the
+well-known callback path automatically. Apple documents that
+`NSAdvertisingAttributionReportEndpoint` uses only the registrable domain and
+ignores subdomains, so do not point these settings at an app-specific host such
+as `myapp.attriax.com`.
+
+Attriax accepts developer-copy callbacks at:
+
+- `https://skan.attriax.com/.well-known/skadnetwork/report-attribution/`
+- `https://attriax.com/.well-known/skadnetwork/report-attribution/`
+
+Dashboard SKAN surfaces are now the normal source of runtime SKAN rules. The SDK
+downloads the app schema during app open, while local `AttriaxConfig.skan`
+configuration is reserved for explicit app-code opt-out cases such as disabling
+local SKAN updates in a particular build.
+
+Save the numeric iOS App Store ID in the Attriax dashboard so Attriax can map
+incoming postbacks back to the app.
 
 ## Uninstall Tracking
 
@@ -382,36 +471,34 @@ debugPrint('Updated ATT status: $updatedStatus');
 
 By default, manual ATT requests do not use a timeout. Pass `timeout:` only if your own flow needs one.
 
-The Apple implementation package now bundles `PrivacyInfo.xcprivacy` files for its own SDK-side required-reason API usage. Those manifests only cover the plugin bundle itself.
+The Apple implementation package now bundles `PrivacyInfo.xcprivacy` files for its own SDK-side required-reason API usage and SDK-owned data collection declarations. Today those manifests cover `Device ID` on iOS and macOS plus `Crash Data` on iOS.
 
-Android apps that allow advertising ID collection must account for the AD_ID permission and Play Console Data Safety answers. iOS apps that enable tracking or IDFA collection still own the App Store privacy labels, ATT purpose string, and any app-level tracking or privacy-manifest declarations that match the configuration they actually ship.
+Android apps that allow advertising ID collection must account for the AD_ID permission and Play Console Data Safety answers. iOS apps that enable tracking or IDFA collection still own the App Store privacy labels, ATT purpose string, and any app-level tracking domains or privacy-manifest declarations that match the configuration they actually ship.
 
 ## Deep Links
 
 - Read `attriax.deepLinks.stream` as a broadcast stream with no buffering.
 - Use `attriax.deepLinks.initialDeepLink`, `initialDeepLinkResolved`, and `waitForInitialDeepLink()` when you need synchronous initial-link state plus an awaitable completion handle.
 - Read `attriax.deepLinks.latestDeepLink` when you need the most recent handled deep-link event, including deferred deep links.
-- Each `AttriaxDeepLinkEvent` exposes `uri`, `receivedAt`, `trigger`, and `isAttriaxDomain` immediately.
-- Call `resolve()` on the event when you need the backend result for that specific link. Unmatched or external links still resolve successfully with `found == false`.
+- Each `AttriaxDeepLinkEvent` is already resolved and exposes `uri`, `clickedAt`, `consumedAt`, `trigger`, `isAttriaxSubDomain`, `found`, and any matched `data` immediately.
+- Use `attriax.deepLinks.rawStream` together with `waitResolution(rawEvent)` only when you specifically need to observe the pre-resolution raw input and then await its resolved event.
 
 Startup handling:
 
 ```dart
 final initialDeepLink = await attriax.deepLinks.waitForInitialDeepLink();
-final resolution = await initialDeepLink?.resolve();
 final path = initialDeepLink?.uri.path;
 
 debugPrint(
-  'Initial deep link path: ${path ?? 'none'} (found: ${resolution?.found ?? false})',
+  'Initial deep link path: ${path ?? 'none'} (found: ${initialDeepLink?.found ?? false})',
 );
 ```
 
 Stream handling:
 
 ```dart
-attriax.deepLinks.stream.listen((event) async {
-  final resolution = await event.resolve();
-  if (!resolution.found) {
+attriax.deepLinks.stream.listen((event) {
+  if (!event.found) {
     return;
   }
 
@@ -419,7 +506,7 @@ attriax.deepLinks.stream.listen((event) async {
     '/deep-link',
     arguments: <String, Object?>{
       'uri': event.uri.toString(),
-      'data': resolution.data,
+      'data': event.data,
     },
   );
 });

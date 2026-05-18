@@ -14,7 +14,7 @@ void main() {
     test('round-trips crash report requests through queue JSON', () {
       final queuedRequest = AttriaxQueuedRequest(
         id: 'req_1',
-        createdAt: DateTime.utc(2026, 5, 4, 10, 0),
+        createdAt: DateTime.utc(2026, 5, 4, 10),
         request: AttriaxTrackCrashRequest(
           AttriaxCrashReportPayload(
             appToken: 'ax_test_token',
@@ -76,6 +76,7 @@ void main() {
         expect(diagnostics.corruptedPayloadCount, 1);
         expect(diagnostics.lastCorruptionReason, 'invalid_queue_payload');
         expect(diagnostics.lastCorruptionAt, isNotNull);
+        expect(diagnostics.lastCorruptQueuePayload, '{"broken":true}');
       },
     );
 
@@ -86,7 +87,7 @@ void main() {
         final prefs = await SharedPreferences.getInstance();
         final validRequest = AttriaxQueuedRequest(
           id: 'req_valid',
-          createdAt: DateTime.utc(2026, 5, 4, 10, 0),
+          createdAt: DateTime.utc(2026, 5, 4, 10),
           request: attriaxBuildTrackEventRequest(
             appToken: 'ax_test_token',
             deviceId: 'device_123',
@@ -114,6 +115,49 @@ void main() {
         expect(diagnostics.corruptedPayloadCount, 1);
         expect(diagnostics.lastCorruptionReason, 'invalid_queue_entry');
         expect(diagnostics.lastCorruptedEntryCount, 1);
+        expect(diagnostics.lastCorruptQueuePayload, isNotNull);
+      },
+    );
+
+    test('readStatus does not repair malformed queue payloads', () async {
+      SharedPreferences.setMockInitialValues(<String, Object>{
+        AttriaxPreferencesStore.queueStorageKey: '{"broken":true}',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final queueManager = AttriaxQueueManager(
+        preferencesStore: AttriaxPreferencesStore(prefsOverride: prefs),
+        maxQueueSize: 10,
+      );
+
+      final status = await queueManager.readStatus();
+
+      expect(status.pendingRequestCount, 0);
+      expect(
+        prefs.getString(AttriaxPreferencesStore.queueStorageKey),
+        '{"broken":true}',
+      );
+    });
+
+    test(
+      'preserves unreadable diagnostics payloads for later inspection',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          AttriaxPreferencesStore.queueDiagnosticsStorageKey: '{"broken":',
+        });
+        final prefs = await SharedPreferences.getInstance();
+        final queueManager = AttriaxQueueManager(
+          preferencesStore: AttriaxPreferencesStore(prefsOverride: prefs),
+          maxQueueSize: 10,
+        );
+
+        final diagnostics = await queueManager.readDiagnostics();
+        final restoredDiagnostics = await queueManager.readDiagnostics();
+
+        expect(diagnostics.corruptedDiagnosticsPayloadCount, 1);
+        expect(diagnostics.lastDiagnosticsCorruptionAt, isNotNull);
+        expect(diagnostics.lastCorruptDiagnosticsPayload, '{"broken":');
+        expect(restoredDiagnostics.corruptedDiagnosticsPayloadCount, 1);
+        expect(restoredDiagnostics.lastCorruptDiagnosticsPayload, '{"broken":');
       },
     );
 
@@ -131,7 +175,7 @@ void main() {
         await queueManager.enqueue(
           AttriaxQueuedRequest(
             id: 'req_1',
-            createdAt: DateTime.utc(2026, 5, 4, 10, 0),
+            createdAt: DateTime.utc(2026, 5, 4, 10),
             request: attriaxBuildTrackEventRequest(
               appToken: 'ax_test_token',
               deviceId: 'device_123',
@@ -192,7 +236,7 @@ void main() {
       );
       final droppedRequest = AttriaxQueuedRequest(
         id: 'req_drop',
-        createdAt: DateTime.utc(2026, 5, 4, 10, 0),
+        createdAt: DateTime.utc(2026, 5, 4, 10),
         request: attriaxBuildTrackEventRequest(
           appToken: 'ax_test_token',
           deviceId: 'device_123',

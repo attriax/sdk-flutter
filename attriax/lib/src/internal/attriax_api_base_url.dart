@@ -4,7 +4,11 @@ class AttriaxNormalizedApiBaseUrl {
   final String apiBaseUrl;
 }
 
-AttriaxNormalizedApiBaseUrl normalizeAttriaxApiBaseUrl(String value) {
+AttriaxNormalizedApiBaseUrl normalizeAttriaxApiBaseUrl(
+  String value, {
+  bool warnOnLocalhost = false,
+  void Function(String message)? onWarning,
+}) {
   final normalized = value.trim().replaceFirst(RegExp(r'/+$'), '');
   final apiUri = Uri.tryParse(normalized);
   if (apiUri == null || !apiUri.hasScheme || !apiUri.hasAuthority) {
@@ -17,6 +21,12 @@ AttriaxNormalizedApiBaseUrl normalizeAttriaxApiBaseUrl(String value) {
   if (apiUri.scheme != 'https' && !(isLocalhost && apiUri.scheme == 'http')) {
     throw ArgumentError(
       'Attriax apiBaseUrl must use HTTPS unless it targets localhost.',
+    );
+  }
+
+  if (warnOnLocalhost && isLocalhost) {
+    onWarning?.call(
+      'Attriax apiBaseUrl points to a loopback endpoint. This is intended for development only and will not work from released apps unless the device can reach that local host.',
     );
   }
 

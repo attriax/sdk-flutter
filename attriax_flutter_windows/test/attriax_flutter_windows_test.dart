@@ -12,17 +12,15 @@ class MockAttriaxFlutterWindowsPlatform
 }
 
 void main() {
-  final AttriaxFlutterWindowsPlatform initialPlatform =
-      AttriaxFlutterWindowsPlatform.instance;
+  final initialPlatform = AttriaxFlutterWindowsPlatform.instance;
 
   test('$MethodChannelAttriaxFlutterWindows is the default instance', () {
     expect(initialPlatform, isInstanceOf<MethodChannelAttriaxFlutterWindows>());
   });
 
   test('getPlatformVersion', () async {
-    AttriaxFlutterWindows attriaxFlutterWindowsPlugin = AttriaxFlutterWindows();
-    MockAttriaxFlutterWindowsPlatform fakePlatform =
-        MockAttriaxFlutterWindowsPlatform();
+    final attriaxFlutterWindowsPlugin = AttriaxFlutterWindows();
+    final fakePlatform = MockAttriaxFlutterWindowsPlatform();
     AttriaxFlutterWindowsPlatform.instance = fakePlatform;
 
     expect(await attriaxFlutterWindowsPlugin.getPlatformVersion(), '42');

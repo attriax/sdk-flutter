@@ -207,7 +207,7 @@ void main() {
     );
 
     test('emits a deferred deep link from app-open results', () async {
-      String? currentSessionId = 'session_1';
+      const currentSessionId = 'session_1';
       final manager = AttriaxDeepLinkManager(
         config: const AttriaxConfig(appToken: 'ax_test_token'),
         contextManager: contextManager,
@@ -243,7 +243,7 @@ void main() {
     test(
       'suppresses deferred deep links for app-data-clear launches',
       () async {
-        String? currentSessionId = 'session_1';
+        const currentSessionId = 'session_1';
         final manager = AttriaxDeepLinkManager(
           config: const AttriaxConfig(appToken: 'ax_test_token'),
           contextManager: contextManager,
@@ -284,7 +284,7 @@ void main() {
     );
 
     test('emits a deferred app-open deep link only once per install', () async {
-      String? currentSessionId = 'session_1';
+      const currentSessionId = 'session_1';
       final manager = AttriaxDeepLinkManager(
         config: const AttriaxConfig(appToken: 'ax_test_token'),
         contextManager: contextManager,
@@ -351,7 +351,7 @@ void main() {
       () async {
         final source = _StreamDeepLinkSource();
         addTearDown(source.dispose);
-        String? currentSessionId = 'session_1';
+        const currentSessionId = 'session_1';
         final manager = AttriaxDeepLinkManager(
           config: const AttriaxConfig(appToken: 'ax_test_token'),
           contextManager: contextManager,
@@ -431,7 +431,7 @@ void main() {
     test(
       'suppresses stale deferred deep links after the session changes',
       () async {
-        String? currentSessionId = 'session_2';
+        const currentSessionId = 'session_2';
         final manager = AttriaxDeepLinkManager(
           config: const AttriaxConfig(appToken: 'ax_test_token'),
           contextManager: contextManager,

@@ -42,7 +42,7 @@ class AttriaxRuntimeSettingsState implements AttriaxRuntimeSettingsView {
   void setEnabled({
     required bool enabled,
     required bool initialized,
-    required Future<void> Function(bool enabled) applyState,
+    required Future<void> Function({required bool enabled}) applyState,
     void Function()? onPreparingToEnable,
   }) {
     _requestedEnabledOverride = enabled;
@@ -60,7 +60,7 @@ class AttriaxRuntimeSettingsState implements AttriaxRuntimeSettingsView {
 
     _enabledTransition = _enabledTransition
         .then((_) => _persistEnabledPreference(enabled))
-        .then((_) => applyState(enabled))
+        .then((_) => applyState(enabled: enabled))
         .catchError((Object error, StackTrace stackTrace) {
           _logger.error(
             'Failed to update Attriax enabled state.',

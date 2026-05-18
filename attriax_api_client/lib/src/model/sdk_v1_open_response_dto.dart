@@ -5,6 +5,7 @@
 // ignore_for_file: unused_element
 import 'package:attriax_api_client/src/model/sdk_install_referrer_result_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_skan_runtime_configuration_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_install_state.dart';
 import 'package:json_annotation/json_annotation.dart';
 
@@ -40,6 +41,8 @@ class SdkV1OpenResponseDto {
     this.reinstallReferrer,
 
     required this.requestVersion,
+
+    this.skan,
 
     required this.userId,
   });
@@ -81,6 +84,9 @@ class SdkV1OpenResponseDto {
   @JsonKey(name: r'requestVersion', required: true, includeIfNull: false)
   final String requestVersion;
 
+  @JsonKey(name: r'skan', required: false, includeIfNull: false)
+  final SdkV1SkanRuntimeConfigurationDto? skan;
+
   @JsonKey(name: r'userId', required: true, includeIfNull: false)
   final String userId;
 
@@ -99,6 +105,7 @@ class SdkV1OpenResponseDto {
           other.originalInstallReferrer == originalInstallReferrer &&
           other.reinstallReferrer == reinstallReferrer &&
           other.requestVersion == requestVersion &&
+          other.skan == skan &&
           other.userId == userId;
 
   @override
@@ -114,6 +121,7 @@ class SdkV1OpenResponseDto {
       (originalInstallReferrer == null ? 0 : originalInstallReferrer.hashCode) +
       (reinstallReferrer == null ? 0 : reinstallReferrer.hashCode) +
       requestVersion.hashCode +
+      (skan == null ? 0 : skan.hashCode) +
       userId.hashCode;
 
   factory SdkV1OpenResponseDto.fromJson(Map<String, dynamic> json) =>

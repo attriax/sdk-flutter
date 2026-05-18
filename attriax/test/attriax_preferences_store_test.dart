@@ -161,11 +161,108 @@ void main() {
       expect(await store.readDeferredAppOpenDeepLinkHandled(), isTrue);
     });
 
+    test('round-trips SKAN state', () async {
+      final now = DateTime.utc(2026, 5, 15, 12, 30);
+      final state = AttriaxSkanState(
+        enabled: true,
+        schemaVersion: 4,
+        schema: AttriaxSkanSchema(
+          version: 4,
+          updatedAt: now,
+          window1: const AttriaxSkanWindow1(
+            groups: <AttriaxSkanWindow1Group>[
+              AttriaxSkanWindow1Group(
+                id: 'group_purchase',
+                startBit: 4,
+                bitCount: 2,
+                events: <AttriaxSkanEvent>[
+                  AttriaxSkanEvent(
+                    id: 'event_purchase',
+                    eventName: 'purchase',
+                    coarseValue: AttriaxSkanCoarseValue.medium,
+                    lockWindow: true,
+                  ),
+                ],
+              ),
+            ],
+          ),
+          window2: const AttriaxSkanCoarseWindow(
+            events: <AttriaxSkanCoarseWindowEvent>[
+              AttriaxSkanCoarseWindowEvent(
+                id: 'retention_day_7',
+                eventName: '_attriax_retention',
+                coarseValue: AttriaxSkanCoarseValue.medium,
+                conditions: <AttriaxSkanCondition>[
+                  AttriaxSkanCondition(
+                    id: 'condition_day',
+                    paramKey: 'day',
+                    value: 7,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        fineValue: 24,
+        coarseValue: AttriaxSkanCoarseValue.medium,
+        lockWindow: true,
+        firstLaunchValueRegistered: true,
+        lastUpdatedAt: now,
+        installAnchorAt: now.subtract(const Duration(days: 1)),
+        completedRetentionDays: const <int>[1],
+        purchaseRevenueUsdMicros: 2500000,
+        purchaseCount: 2,
+        adShowCount: 5,
+      );
+
+      await store.setSkanState(state: state);
+
+      final restored = await store.readSkanState();
+
+      expect(restored?.enabled, isTrue);
+      expect(restored?.schemaVersion, 4);
+      expect(restored?.schema?.window1.groups.single.startBit, 4);
+      expect(
+        restored?.schema?.window1.groups.single.events.single.eventName,
+        'purchase',
+      );
+      expect(
+        restored?.schema?.window1.groups.single.events.single.coarseValue,
+        AttriaxSkanCoarseValue.medium,
+      );
+      expect(
+        restored?.schema?.window1.groups.single.events.single.lockWindow,
+        isTrue,
+      );
+      expect(
+        restored?.schema?.window2.events.single.eventName,
+        '_attriax_retention',
+      );
+      expect(restored?.fineValue, 24);
+      expect(restored?.coarseValue, AttriaxSkanCoarseValue.medium);
+      expect(restored?.lockWindow, isTrue);
+      expect(restored?.firstLaunchValueRegistered, isTrue);
+      expect(restored?.lastUpdatedAt, now);
+      expect(restored?.installAnchorAt, now.subtract(const Duration(days: 1)));
+      expect(restored?.completedRetentionDays, const <int>[1]);
+      expect(restored?.purchaseRevenueUsdMicros, 2500000);
+      expect(restored?.purchaseCount, 2);
+      expect(restored?.adShowCount, 5);
+
+      await store.setSkanState(state: null);
+
+      expect(await store.readSkanState(), isNull);
+    });
+
     test(
       'falls back to in-memory values when preferences loading fails',
       () async {
+        final degradedOperations = <String>[];
         final failingStore = AttriaxPreferencesStore(
           preferencesLoader: () async => throw StateError('prefs unavailable'),
+          onPersistenceDegraded: ({required operation, required error}) {
+            degradedOperations.add('$operation: $error');
+          },
         );
 
         final restoredRuntime = await failingStore.restoreRuntimePreferences(
@@ -189,6 +286,10 @@ void main() {
             .readStoredPlatformInstallReferrer();
         expect(storedReferrer.isLoaded, isTrue);
         expect(storedReferrer.value, 'utm_source=memory');
+        expect(failingStore.isPersistenceDegraded, isTrue);
+        expect(failingStore.lastPersistenceFailureOperation, 'loadPreferences');
+        expect(failingStore.lastPersistenceError, isA<StateError>());
+        expect(degradedOperations, hasLength(1));
       },
     );
   });

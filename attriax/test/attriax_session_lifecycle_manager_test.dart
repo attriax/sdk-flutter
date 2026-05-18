@@ -18,7 +18,7 @@ void main() {
     test(
       'flushes pending recovered sessions during tracked activity',
       () async {
-        var now = DateTime.utc(2026, 5, 3, 12, 0);
+        var now = DateTime.utc(2026, 5, 3, 12);
         final requests = <AttriaxApiRequest>[];
         final clock = AttriaxMutableClock(now);
         final sessionManager = await _createSessionManager(
@@ -65,7 +65,7 @@ void main() {
     test(
       'emits pause and resume lifecycle telemetry for the current session',
       () async {
-        var now = DateTime.utc(2026, 5, 3, 12, 0);
+        var now = DateTime.utc(2026, 5, 3, 12);
         final requests = <AttriaxApiRequest>[];
         final clock = AttriaxMutableClock(now);
         final sessionManager = await _createSessionManager(

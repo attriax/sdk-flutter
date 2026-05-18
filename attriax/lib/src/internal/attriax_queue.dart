@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:shared_preferences/shared_preferences.dart'
+    show SharedPreferences;
+
 import 'attriax_api_models.dart';
 import 'attriax_json_utils.dart';
 import 'attriax_preferences_store.dart';
@@ -19,8 +22,6 @@ class AttriaxQueuedRequest {
     this.nextRetryAt,
   });
 
-  static const Object _unset = Object();
-
   factory AttriaxQueuedRequest.fromJson(Map<String, Object?> json) =>
       AttriaxQueuedRequest(
         id: attriaxRequireString(json, 'id'),
@@ -36,6 +37,8 @@ class AttriaxQueuedRequest {
         lastHttpStatusCode: _attriaxIntValue(json['lastHttpStatusCode']),
         nextRetryAt: attriaxDateTimeValue(json['nextRetryAt']),
       );
+
+  static const Object _unset = Object();
 
   final String id;
   final AttriaxApiRequest request;
@@ -55,26 +58,24 @@ class AttriaxQueuedRequest {
     Object? lastErrorClass = _unset,
     Object? lastHttpStatusCode = _unset,
     Object? nextRetryAt = _unset,
-  }) {
-    return AttriaxQueuedRequest(
-      id: id ?? this.id,
-      request: request ?? this.request,
-      createdAt: createdAt ?? this.createdAt,
-      attemptCount: attemptCount ?? this.attemptCount,
-      lastAttemptAt: identical(lastAttemptAt, _unset)
-          ? this.lastAttemptAt
-          : lastAttemptAt as DateTime?,
-      lastErrorClass: identical(lastErrorClass, _unset)
-          ? this.lastErrorClass
-          : lastErrorClass as String?,
-      lastHttpStatusCode: identical(lastHttpStatusCode, _unset)
-          ? this.lastHttpStatusCode
-          : lastHttpStatusCode as int?,
-      nextRetryAt: identical(nextRetryAt, _unset)
-          ? this.nextRetryAt
-          : nextRetryAt as DateTime?,
-    );
-  }
+  }) => AttriaxQueuedRequest(
+    id: id ?? this.id,
+    request: request ?? this.request,
+    createdAt: createdAt ?? this.createdAt,
+    attemptCount: attemptCount ?? this.attemptCount,
+    lastAttemptAt: identical(lastAttemptAt, _unset)
+        ? this.lastAttemptAt
+        : lastAttemptAt as DateTime?,
+    lastErrorClass: identical(lastErrorClass, _unset)
+        ? this.lastErrorClass
+        : lastErrorClass as String?,
+    lastHttpStatusCode: identical(lastHttpStatusCode, _unset)
+        ? this.lastHttpStatusCode
+        : lastHttpStatusCode as int?,
+    nextRetryAt: identical(nextRetryAt, _unset)
+        ? this.nextRetryAt
+        : nextRetryAt as DateTime?,
+  );
 
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,
@@ -121,48 +122,25 @@ class AttriaxQueueManager {
   Future<List<AttriaxQueuedRequest>> readAll() => _withLock(_readAllUnlocked);
 
   Future<List<AttriaxQueuedRequest>> _readAllUnlocked() async {
-    final raw = await _preferencesStore.readQueuePayload();
-    if (raw == null || raw.isEmpty) {
-      return <AttriaxQueuedRequest>[];
+    final inspection = _inspectQueuePayload(
+      await _preferencesStore.readQueuePayload(),
+    );
+    if (!inspection.hasCorruption) {
+      return List<AttriaxQueuedRequest>.from(inspection.queue);
     }
 
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! List) {
-        await _recordCorruptionUnlocked(reason: 'invalid_queue_payload');
-        await _preferencesStore.writeQueuePayload(null);
-        return <AttriaxQueuedRequest>[];
-      }
-
-      final queue = <AttriaxQueuedRequest>[];
-      var invalidEntryCount = 0;
-      for (final value in decoded) {
-        final json = attriaxObjectMap(value);
-        if (json == null) {
-          invalidEntryCount += 1;
-          continue;
-        }
-
-        try {
-          queue.add(AttriaxQueuedRequest.fromJson(json));
-        } on FormatException {
-          invalidEntryCount += 1;
-        }
-      }
-
-      if (invalidEntryCount > 0) {
-        await _recordCorruptionUnlocked(
-          reason: 'invalid_queue_entry',
-          affectedEntryCount: invalidEntryCount,
-        );
-        await _writeAllUnlocked(queue);
-      }
-      return queue;
-    } catch (_) {
-      await _recordCorruptionUnlocked(reason: 'invalid_queue_payload');
+    await _recordCorruptionUnlocked(
+      reason: inspection.corruptionReason!,
+      affectedEntryCount: inspection.invalidEntryCount,
+      rawPayload: inspection.rawPayload,
+    );
+    if (inspection.shouldClearQueue) {
       await _preferencesStore.writeQueuePayload(null);
       return <AttriaxQueuedRequest>[];
     }
+
+    await _writeAllUnlocked(inspection.queue);
+    return List<AttriaxQueuedRequest>.from(inspection.queue);
   }
 
   Future<AttriaxQueueDiagnostics> readDiagnostics() =>
@@ -178,17 +156,19 @@ class AttriaxQueueManager {
       final decoded = jsonDecode(raw);
       final json = attriaxObjectMap(decoded);
       if (json == null) {
-        return const AttriaxQueueDiagnostics();
+        return _recordDiagnosticsCorruptionUnlocked(raw);
       }
 
       return AttriaxQueueDiagnostics.fromJson(json);
     } catch (_) {
-      return const AttriaxQueueDiagnostics();
+      return _recordDiagnosticsCorruptionUnlocked(raw);
     }
   }
 
   Future<AttriaxQueueStatus> readStatus() => _withLock(() async {
-    final queue = await _readAllUnlocked();
+    final queue = _inspectQueuePayload(
+      await _preferencesStore.readQueuePayload(),
+    ).queue;
     final diagnostics = await _readDiagnosticsUnlocked();
     return AttriaxQueueStatus(
       pendingRequestCount: queue.length,
@@ -222,6 +202,7 @@ class AttriaxQueueManager {
   Future<void> _recordCorruptionUnlocked({
     required String reason,
     int affectedEntryCount = 0,
+    String? rawPayload,
   }) async {
     final diagnostics = await _readDiagnosticsUnlocked();
     await _writeDiagnosticsUnlocked(
@@ -230,8 +211,21 @@ class AttriaxQueueManager {
         lastCorruptionAt: DateTime.now().toUtc(),
         lastCorruptionReason: reason,
         lastCorruptedEntryCount: affectedEntryCount,
+        lastCorruptQueuePayload: rawPayload,
       ),
     );
+  }
+
+  Future<AttriaxQueueDiagnostics> _recordDiagnosticsCorruptionUnlocked(
+    String rawPayload,
+  ) async {
+    final diagnostics = AttriaxQueueDiagnostics(
+      corruptedDiagnosticsPayloadCount: 1,
+      lastDiagnosticsCorruptionAt: DateTime.now().toUtc(),
+      lastCorruptDiagnosticsPayload: rawPayload,
+    );
+    await _writeDiagnosticsUnlocked(diagnostics);
+    return diagnostics;
   }
 
   Future<void> _recordEvictionUnlocked(
@@ -330,6 +324,74 @@ class AttriaxQueueManager {
     }
     return nextRetryAt;
   }
+
+  _QueueInspectionResult _inspectQueuePayload(String? rawPayload) {
+    if (rawPayload == null || rawPayload.isEmpty) {
+      return const _QueueInspectionResult(queue: <AttriaxQueuedRequest>[]);
+    }
+
+    try {
+      final decoded = jsonDecode(rawPayload);
+      if (decoded is! List) {
+        return _QueueInspectionResult(
+          queue: const <AttriaxQueuedRequest>[],
+          corruptionReason: 'invalid_queue_payload',
+          rawPayload: rawPayload,
+        );
+      }
+
+      final queue = <AttriaxQueuedRequest>[];
+      var invalidEntryCount = 0;
+      for (final value in decoded) {
+        final json = attriaxObjectMap(value);
+        if (json == null) {
+          invalidEntryCount += 1;
+          continue;
+        }
+
+        try {
+          queue.add(AttriaxQueuedRequest.fromJson(json));
+        } on FormatException {
+          invalidEntryCount += 1;
+        }
+      }
+
+      if (invalidEntryCount > 0) {
+        return _QueueInspectionResult(
+          queue: queue,
+          corruptionReason: 'invalid_queue_entry',
+          invalidEntryCount: invalidEntryCount,
+          rawPayload: rawPayload,
+        );
+      }
+
+      return _QueueInspectionResult(queue: queue);
+    } catch (_) {
+      return _QueueInspectionResult(
+        queue: const <AttriaxQueuedRequest>[],
+        corruptionReason: 'invalid_queue_payload',
+        rawPayload: rawPayload,
+      );
+    }
+  }
+}
+
+final class _QueueInspectionResult {
+  const _QueueInspectionResult({
+    required this.queue,
+    this.corruptionReason,
+    this.invalidEntryCount = 0,
+    this.rawPayload,
+  });
+
+  final List<AttriaxQueuedRequest> queue;
+  final String? corruptionReason;
+  final int invalidEntryCount;
+  final String? rawPayload;
+
+  bool get hasCorruption => corruptionReason != null;
+
+  bool get shouldClearQueue => corruptionReason == 'invalid_queue_payload';
 }
 
 int? _attriaxIntValue(Object? value) {

@@ -10,6 +10,10 @@ topics:
   - analytics
   - sdk-flutter
 
+false_secrets:
+  - /example/android/app/google-services.json
+  - /example/lib/firebase_options.dart
+
 environment:
   sdk: ^3.8.0
   flutter: ">=3.29.0"

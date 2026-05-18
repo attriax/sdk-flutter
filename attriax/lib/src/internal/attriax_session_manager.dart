@@ -21,6 +21,7 @@ final class AttriaxSessionRestoreResult {
   final AttriaxSessionSnapshot? replacedSession;
 }
 
+// ignore: one_member_abstracts
 abstract interface class AttriaxTrackedSessionPreparer {
   Future<AttriaxSessionSnapshot?> prepareTrackedSessionAt(DateTime occurredAt);
 }
@@ -189,6 +190,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
   void syncLifecycleState(AppLifecycleState? state) =>
       _lifecycleManager.syncLifecycleState(state);
 
+  // ignore: use_setters_to_change_properties
   void seedRecoveredSessionEnd(AttriaxSessionSnapshot? session) =>
       _lifecycleManager.seedRecoveredSessionEnd(session);
 

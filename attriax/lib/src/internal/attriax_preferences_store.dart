@@ -3,6 +3,9 @@ import 'dart:convert';
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+typedef AttriaxPersistenceDegradedCallback =
+    void Function({required String operation, required Object error});
+
 class AttriaxStoredRuntimePreferences {
   const AttriaxStoredRuntimePreferences({
     required this.isEnabled,
@@ -61,8 +64,10 @@ class AttriaxPreferencesStore {
   AttriaxPreferencesStore({
     SharedPreferences? prefsOverride,
     Future<SharedPreferences> Function()? preferencesLoader,
+    AttriaxPersistenceDegradedCallback? onPersistenceDegraded,
   }) : _prefsOverride = prefsOverride,
-       _preferencesLoader = preferencesLoader;
+       _preferencesLoader = preferencesLoader,
+       _onPersistenceDegraded = onPersistenceDegraded;
 
   static const String deviceIdStorageKey = 'attriax.device_id';
   static const String deviceIdSourceStorageKey = 'attriax.device_id_source';
@@ -88,13 +93,22 @@ class AttriaxPreferencesStore {
   static const String queueDiagnosticsStorageKey =
       'attriax.queue.diagnostics.v1';
   static const String pendingCrashReportStorageKey = 'attriax.crash.pending';
+  static const String skanStateStorageKey = 'attriax.skan.state.v1';
 
   final SharedPreferences? _prefsOverride;
   final Future<SharedPreferences> Function()? _preferencesLoader;
+  final AttriaxPersistenceDegradedCallback? _onPersistenceDegraded;
   final Map<String, Object?> _memoryValues = <String, Object?>{};
 
   SharedPreferences? _prefs;
   bool _didFailToLoadPreferences = false;
+  Object? _lastPersistenceError;
+  String? _lastPersistenceFailureOperation;
+
+  bool get isPersistenceDegraded => _didFailToLoadPreferences;
+  Object? get lastPersistenceError => _lastPersistenceError;
+  String? get lastPersistenceFailureOperation =>
+      _lastPersistenceFailureOperation;
 
   Future<AttriaxStoredRuntimePreferences> restoreRuntimePreferences({
     bool? enabledOverride,
@@ -340,6 +354,35 @@ class AttriaxPreferencesStore {
     await _writeString(sessionSnapshotStorageKey, jsonEncode(session.toJson()));
   }
 
+  Future<AttriaxSkanState?> readSkanState() async {
+    final rawValue = await _readString(skanStateStorageKey);
+    if (rawValue == null || rawValue.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(rawValue);
+      if (decoded is! Map) {
+        return null;
+      }
+
+      return AttriaxSkanState.fromJson(
+        decoded.map((key, value) => MapEntry(key.toString(), value as Object?)),
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> setSkanState({required AttriaxSkanState? state}) async {
+    if (state == null) {
+      await _remove(skanStateStorageKey);
+      return;
+    }
+
+    await _writeString(skanStateStorageKey, jsonEncode(state.toJson()));
+  }
+
   Future<String?> readQueuePayload() => _readString(queueStorageKey);
 
   Future<void> writeQueuePayload(String? value) async {
@@ -441,8 +484,8 @@ class AttriaxPreferencesStore {
 
     try {
       await prefs.setBool(key, value);
-    } catch (_) {
-      _didFailToLoadPreferences = true;
+    } catch (error) {
+      _markPersistenceFailure(operation: 'setBool($key)', error: error);
     }
   }
 
@@ -455,8 +498,8 @@ class AttriaxPreferencesStore {
 
     try {
       await prefs.setString(key, value);
-    } catch (_) {
-      _didFailToLoadPreferences = true;
+    } catch (error) {
+      _markPersistenceFailure(operation: 'setString($key)', error: error);
     }
   }
 
@@ -469,8 +512,8 @@ class AttriaxPreferencesStore {
 
     try {
       await prefs.remove(key);
-    } catch (_) {
-      _didFailToLoadPreferences = true;
+    } catch (error) {
+      _markPersistenceFailure(operation: 'remove($key)', error: error);
     }
   }
 
@@ -489,9 +532,22 @@ class AttriaxPreferencesStore {
     try {
       _prefs = await (_preferencesLoader ?? SharedPreferences.getInstance)();
       return _prefs;
-    } catch (_) {
-      _didFailToLoadPreferences = true;
+    } catch (error) {
+      _markPersistenceFailure(operation: 'loadPreferences', error: error);
       return null;
+    }
+  }
+
+  void _markPersistenceFailure({
+    required String operation,
+    required Object error,
+  }) {
+    final wasDegraded = _didFailToLoadPreferences;
+    _didFailToLoadPreferences = true;
+    _lastPersistenceError = error;
+    _lastPersistenceFailureOperation = operation;
+    if (!wasDegraded) {
+      _onPersistenceDegraded?.call(operation: operation, error: error);
     }
   }
 

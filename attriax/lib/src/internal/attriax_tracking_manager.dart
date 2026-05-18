@@ -1,10 +1,12 @@
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 
+import '../attriax_analytics_keys.dart';
 import 'attriax_api_models.dart';
 import 'attriax_context_manager.dart';
 import 'attriax_logger.dart';
 import 'attriax_request_manager.dart';
 import 'attriax_runtime_settings_state.dart';
+import 'attriax_skan_manager.dart';
 import 'attriax_session_manager.dart';
 import 'attriax_user_properties.dart';
 
@@ -18,13 +20,15 @@ class AttriaxTrackingManager {
     required AttriaxRuntimeSettingsView settingsState,
     required AttriaxRequestManager requestManager,
     required AttriaxTrackedSessionPreparer sessionManager,
+    AttriaxSkanManager? skanManager,
   }) : _config = config,
        _logger = logger,
        _clock = clock,
        _contextManager = contextManager,
        _settingsState = settingsState,
        _requestManager = requestManager,
-       _sessionManager = sessionManager;
+       _sessionManager = sessionManager,
+       _skanManager = skanManager;
 
   final AttriaxConfig _config;
   final AttriaxLogger _logger;
@@ -33,18 +37,30 @@ class AttriaxTrackingManager {
   final AttriaxRuntimeSettingsView _settingsState;
   final AttriaxRequestManager _requestManager;
   final AttriaxTrackedSessionPreparer _sessionManager;
+  final AttriaxSkanManager? _skanManager;
 
   Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
     bool flushImmediately = false,
-  }) => _queueEvent(
-    eventName,
-    eventData: eventData,
-    flushImmediately: _shouldFlushEventImmediately(
-      flushImmediately: flushImmediately,
-    ),
-  );
+  }) async {
+    if (!_settingsState.isEnabled || !_settingsState.areEventsEnabled) {
+      _logger.verbose(
+        'Ignoring recordEvent("$eventName") because SDK or events are disabled.',
+      );
+      return;
+    }
+
+    await _queueEvent(
+      eventName,
+      eventData: eventData,
+      flushImmediately: _shouldFlushEventImmediately(
+        flushImmediately: flushImmediately,
+      ),
+    );
+
+    await _skanManager?.handleTrackedEvent(eventName, eventData: eventData);
+  }
 
   Future<void> recordPageView(
     String pageName, {
@@ -68,19 +84,26 @@ class AttriaxTrackingManager {
     final normalizedPageTitle = _trimOrNull(pageTitle);
     final normalizedPreviousPageName = _trimOrNull(previousPageName);
 
+    final pageViewEventData = <String, Object?>{
+      ...?parameters,
+      AttriaxAnalyticsParamKeys.pageName: normalizedPageName,
+      AttriaxAnalyticsParamKeys.pageClass: ?normalizedPageClass,
+      AttriaxAnalyticsParamKeys.pageTitle: ?normalizedPageTitle,
+      AttriaxAnalyticsParamKeys.previousPageName: ?normalizedPreviousPageName,
+      AttriaxAnalyticsParamKeys.source: source,
+    };
+
     await _queueEvent(
-      'page_view',
-      eventData: <String, Object?>{
-        ...?parameters,
-        'pageName': normalizedPageName,
-        'pageClass': ?normalizedPageClass,
-        'pageTitle': ?normalizedPageTitle,
-        'previousPageName': ?normalizedPreviousPageName,
-        'source': source,
-      },
+      AttriaxAnalyticsEventKeys.pageView,
+      eventData: pageViewEventData,
       flushImmediately: _shouldFlushEventImmediately(
         flushImmediately: flushImmediately,
       ),
+    );
+
+    await _skanManager?.handleTrackedEvent(
+      AttriaxAnalyticsEventKeys.pageView,
+      eventData: pageViewEventData,
     );
   }
 
@@ -234,13 +257,6 @@ class AttriaxTrackingManager {
     required bool flushImmediately,
     Map<String, Object?>? eventData,
   }) async {
-    if (!_settingsState.isEnabled || !_settingsState.areEventsEnabled) {
-      _logger.verbose(
-        'Ignoring recordEvent("$eventName") because SDK or events are disabled.',
-      );
-      return;
-    }
-
     final occurredAt = _clock.now();
     final currentSession = await _sessionManager.prepareTrackedSessionAt(
       occurredAt,

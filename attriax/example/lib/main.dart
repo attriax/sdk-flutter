@@ -8,7 +8,7 @@ import 'example_app_configuration.dart';
 export 'example_app/example_app_shell.dart' show AttriaxPackageExampleApp;
 
 final Attriax _exampleSdk = Attriax(
-  config: const AttriaxConfig(appToken: exampleAppToken),
+  config: AttriaxConfig(appToken: exampleAppToken),
 );
 
 Future<void> main() async {

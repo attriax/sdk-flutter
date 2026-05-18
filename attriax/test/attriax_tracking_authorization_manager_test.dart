@@ -198,6 +198,96 @@ void main() {
       expect(platform.requestTrackingAuthorizationCalls, 2);
     },
   );
+
+  testWidgets(
+    'requestTrackingAuthorization waits for a resolved iOS status after a premature notDetermined callback',
+    (tester) async {
+      final platform = FakeAttriaxPlatform()
+        ..requestTrackingAuthorizationStatus =
+            AttriaxTrackingAuthorizationStatus.notDetermined
+        ..trackingAuthorizationStatusResponses =
+            <AttriaxTrackingAuthorizationStatus>[
+              AttriaxTrackingAuthorizationStatus.notDetermined,
+              AttriaxTrackingAuthorizationStatus.authorized,
+            ];
+      final manager = AttriaxTrackingAuthorizationManager(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        platform: platform,
+        platformType: AttriaxPlatformType.ios,
+      );
+
+      final request = manager.requestTrackingAuthorization();
+      await tester.pump();
+
+      expect(platform.requestTrackingAuthorizationCalls, 1);
+      expect(platform.getTrackingAuthorizationStatusCalls, 1);
+
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(await request, AttriaxTrackingAuthorizationStatus.authorized);
+      expect(platform.getTrackingAuthorizationStatusCalls, 2);
+    },
+  );
+
+  testWidgets(
+    'requestTrackingAuthorization times out when iOS status never resolves after a premature notDetermined callback',
+    (tester) async {
+      final platform = FakeAttriaxPlatform()
+        ..requestTrackingAuthorizationStatus =
+            AttriaxTrackingAuthorizationStatus.notDetermined
+        ..trackingAuthorizationStatus =
+            AttriaxTrackingAuthorizationStatus.notDetermined;
+      final manager = AttriaxTrackingAuthorizationManager(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        platform: platform,
+        platformType: AttriaxPlatformType.ios,
+      );
+
+      final request = manager.requestTrackingAuthorization(
+        timeout: const Duration(milliseconds: 300),
+      );
+      await tester.pump();
+
+      expect(platform.requestTrackingAuthorizationCalls, 1);
+      expect(platform.getTrackingAuthorizationStatusCalls, 1);
+
+      await tester.pump(const Duration(milliseconds: 301));
+
+      expect(await request, AttriaxTrackingAuthorizationStatus.timedOut);
+      expect(platform.getTrackingAuthorizationStatusCalls, 2);
+    },
+  );
+
+  testWidgets(
+    'requestTrackingAuthorization resolves from status polling when the iOS request callback stays pending',
+    (tester) async {
+      final requestCompleter = Completer<AttriaxTrackingAuthorizationStatus>();
+      final platform = FakeAttriaxPlatform()
+        ..requestTrackingAuthorizationCompleter = requestCompleter
+        ..trackingAuthorizationStatusResponses =
+            <AttriaxTrackingAuthorizationStatus>[
+              AttriaxTrackingAuthorizationStatus.notDetermined,
+              AttriaxTrackingAuthorizationStatus.authorized,
+            ];
+      final manager = AttriaxTrackingAuthorizationManager(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        platform: platform,
+        platformType: AttriaxPlatformType.ios,
+      );
+
+      final request = manager.requestTrackingAuthorization();
+
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(platform.requestTrackingAuthorizationCalls, 1);
+      expect(platform.getTrackingAuthorizationStatusCalls, 1);
+
+      await tester.pump(const Duration(milliseconds: 250));
+
+      expect(await request, AttriaxTrackingAuthorizationStatus.authorized);
+      expect(platform.getTrackingAuthorizationStatusCalls, 2);
+    },
+  );
 }
 
 class FakeAttriaxPlatform extends AttriaxPlatform {

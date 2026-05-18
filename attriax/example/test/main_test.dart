@@ -39,7 +39,10 @@ void main() {
     );
   });
 
-  Future<void> pumpExampleApp(WidgetTester tester) async {
+  Future<void> pumpExampleApp(
+    WidgetTester tester, {
+    String? bootstrapError,
+  }) async {
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump();
@@ -50,6 +53,7 @@ void main() {
     await tester.pumpWidget(
       AttriaxPackageExampleApp(
         sdk: sdk,
+        bootstrapError: bootstrapError,
         pushTokenService: pushTokens,
         platformBridge: platformBridge,
       ),
@@ -91,6 +95,30 @@ void main() {
     expect(find.text('Mini games'), findsOneWidget);
     expect(find.text('Recent activity'), findsOneWidget);
     expect(find.textContaining('FCM token synced with Attriax.'), findsWidgets);
+  });
+
+  testWidgets('shows the bootstrap error page and skips startup refreshes', (
+    tester,
+  ) async {
+    await pumpExampleApp(
+      tester,
+      bootstrapError: 'Attriax init failed: network unavailable',
+    );
+
+    expect(find.text('Startup blocked'), findsOneWidget);
+    expect(
+      find.text('Attriax init failed: network unavailable'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining(
+        'Edit lib/example_app_configuration.dart to change the app token',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Current token:'), findsOneWidget);
+    expect(find.text('Current SDK state'), findsNothing);
+    expect(pushTokens.refreshCalls, 0);
   });
 
   testWidgets('deep link events navigate to the result page', (tester) async {

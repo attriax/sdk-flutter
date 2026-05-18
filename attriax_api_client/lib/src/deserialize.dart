@@ -14,6 +14,8 @@ import 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_register_uninstall_token_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_revenue_receipt_validate_response_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_revenue_receipt_validate_response_envelope_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_revenue_usd_conversion_response_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_revenue_usd_conversion_response_envelope_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_session_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_user_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_utm_payload_dto.dart';
@@ -27,7 +29,16 @@ import 'package:attriax_api_client/src/model/sdk_v1_deep_link_resolve_response_e
 import 'package:attriax_api_client/src/model/sdk_v1_open_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_open_response_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_open_response_envelope_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_revenue_convert_to_usd_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_revenue_receipt_validate_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_skan_coarse_window_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_skan_coarse_window_event_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_skan_condition_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_skan_event_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_skan_runtime_configuration_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_skan_schema_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_skan_window1_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_skan_window1_group_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_version_context_dto.dart';
 
 final _regList = RegExp(r'^List<(.*)>$');
@@ -117,6 +128,16 @@ ReturnType deserialize<ReturnType, BaseType>(
             value as Map<String, dynamic>,
           )
           as ReturnType;
+    case 'SdkRevenueUsdConversionResponseDto':
+      return SdkRevenueUsdConversionResponseDto.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'SdkRevenueUsdConversionResponseEnvelopeDto':
+      return SdkRevenueUsdConversionResponseEnvelopeDto.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
     case 'SdkSessionDto':
       return SdkSessionDto.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -163,10 +184,43 @@ ReturnType deserialize<ReturnType, BaseType>(
             value as Map<String, dynamic>,
           )
           as ReturnType;
+    case 'SdkV1RevenueConvertToUsdDto':
+      return SdkV1RevenueConvertToUsdDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'SdkV1RevenueReceiptValidateDto':
       return SdkV1RevenueReceiptValidateDto.fromJson(
             value as Map<String, dynamic>,
           )
+          as ReturnType;
+    case 'SdkV1SkanCoarseValue':
+    case 'SdkV1SkanCoarseWindowDto':
+      return SdkV1SkanCoarseWindowDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SdkV1SkanCoarseWindowEventDto':
+      return SdkV1SkanCoarseWindowEventDto.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'SdkV1SkanConditionDto':
+      return SdkV1SkanConditionDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SdkV1SkanEventDto':
+      return SdkV1SkanEventDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SdkV1SkanRuleOperator':
+    case 'SdkV1SkanRuntimeConfigurationDto':
+      return SdkV1SkanRuntimeConfigurationDto.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'SdkV1SkanSchemaDto':
+      return SdkV1SkanSchemaDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SdkV1SkanWindow1Dto':
+      return SdkV1SkanWindow1Dto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SdkV1SkanWindow1GroupDto':
+      return SdkV1SkanWindow1GroupDto.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'SdkVersionContextDto':
       return SdkVersionContextDto.fromJson(value as Map<String, dynamic>)

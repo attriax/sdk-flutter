@@ -270,6 +270,29 @@ class AttriaxGeneratedTransport {
         .result;
   }
 
+  Future<AttriaxRevenueUsdConversionResult> convertRevenueToUsd(
+    Map<String, Object?> payload,
+  ) async {
+    final response = await _dio.post<Object?>(
+      '/api/sdk/v1/revenue/convert-to-usd',
+      data: attriaxNormalizeJsonMap(payload),
+      options: Options(validateStatus: _allowAnyStatus),
+    );
+
+    final result = _unwrapJsonEnvelope(
+      label: 'revenue USD conversion',
+      response: response,
+      mapper: attriaxRevenueUsdConversionResponseFromJsonEnvelope,
+    );
+    if (result.response is! AttriaxRevenueUsdConversionApiResponse) {
+      throw const AttriaxTransportInvalidResponseException(
+        'Unexpected revenue USD conversion response type.',
+      );
+    }
+
+    return (result.response as AttriaxRevenueUsdConversionApiResponse).result;
+  }
+
   Future<void> registerUninstallToken(Map<String, Object?> payload) async {
     final response = await _dio.post<Object?>(
       '/api/sdk/v1/uninstall-tokens',

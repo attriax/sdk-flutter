@@ -471,7 +471,7 @@ List<AttriaxQueuedRequest> _batchRequests() => <AttriaxQueuedRequest>[
   AttriaxQueuedRequest(
     id: 'req_1',
     request: _eventRequest(),
-    createdAt: DateTime.utc(2026, 1),
+    createdAt: DateTime.utc(2026),
   ),
   AttriaxQueuedRequest(
     id: 'req_2',
@@ -506,7 +506,7 @@ AttriaxCreateDynamicLinkRequest _dynamicLinkRequest() =>
 sdk.SdkV1OpenResponseEnvelopeDto _openEnvelope() =>
     sdk.SdkV1OpenResponseEnvelopeDto(
       data: sdk.SdkV1OpenResponseDto(
-        acceptedAt: DateTime.utc(2026, 1),
+        acceptedAt: DateTime.utc(2026),
         deepLink: sdk.SdkJsonDeepLinkDto(path: '/offers/spring'),
         installState: sdk.SdkInstallState.newInstall,
         isFirstLaunch: true,
@@ -515,33 +515,33 @@ sdk.SdkV1OpenResponseEnvelopeDto _openEnvelope() =>
         userId: 'user_123',
       ),
       success: true,
-      timestamp: DateTime.utc(2026, 1),
+      timestamp: DateTime.utc(2026),
     );
 
 sdk.SdkAcknowledgeResponseEnvelopeDto _ackEnvelope() =>
     sdk.SdkAcknowledgeResponseEnvelopeDto(
       data: sdk.SdkAcknowledgeResponseDto(success: true),
       success: true,
-      timestamp: DateTime.utc(2026, 1),
+      timestamp: DateTime.utc(2026),
     );
 
 sdk.SdkV1BatchResponseEnvelopeDto _batchEnvelope() =>
     sdk.SdkV1BatchResponseEnvelopeDto(
       data: sdk.SdkV1BatchResponseDto(
-        acceptedAt: DateTime.utc(2026, 1),
+        acceptedAt: DateTime.utc(2026),
         duplicateCount: 0,
         itemCount: 2,
         processedCount: 2,
         requestVersion: 'v1',
       ),
       success: true,
-      timestamp: DateTime.utc(2026, 1),
+      timestamp: DateTime.utc(2026),
     );
 
 sdk.SdkV1DeepLinkResolveResponseEnvelopeDto _resolveEnvelope() =>
     sdk.SdkV1DeepLinkResolveResponseEnvelopeDto(
       data: sdk.SdkV1DeepLinkResolveResponseDto(
-        acceptedAt: DateTime.utc(2026, 1),
+        acceptedAt: DateTime.utc(2026),
         browserAction: sdk.SdkBrowserActionDto(
           openMode: sdk.RouteUrlOpenMode.external_,
           url: 'https://example.com/account',
@@ -554,15 +554,15 @@ sdk.SdkV1DeepLinkResolveResponseEnvelopeDto _resolveEnvelope() =>
         status: sdk.DeepLinkResolutionStatus.matched,
       ),
       success: true,
-      timestamp: DateTime.utc(2026, 1),
+      timestamp: DateTime.utc(2026),
     );
 
 sdk.SdkCreateDynamicLinkResponseEnvelopeDto _dynamicLinkEnvelope() =>
     sdk.SdkCreateDynamicLinkResponseEnvelopeDto(
       data: sdk.SdkCreateDynamicLinkResponseDto(
-        acceptedAt: DateTime.utc(2026, 1),
+        acceptedAt: DateTime.utc(2026),
         link: sdk.SdkDynamicLinkRecordDto(
-          createdAt: DateTime.utc(2026, 1),
+          createdAt: DateTime.utc(2026),
           id: 'dl_123',
           path: '/promo/spring',
           shortUrl: 'https://ax.example/spring',
@@ -570,7 +570,7 @@ sdk.SdkCreateDynamicLinkResponseEnvelopeDto _dynamicLinkEnvelope() =>
         requestVersion: 'req_v1',
       ),
       success: true,
-      timestamp: DateTime.utc(2026, 1),
+      timestamp: DateTime.utc(2026),
     );
 
 Object? _serializeGenerated(Object value) {

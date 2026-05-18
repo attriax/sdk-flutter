@@ -71,6 +71,12 @@
 	<true/>
 	<key>FlutterDeepLinkingEnabled</key>
 	<false/>
+	<key>NSAdvertisingAttributionReportEndpoint</key>
+	<string>https://skan.attriax.com</string>
+	<key>SKAdNetworkPostbackURLList</key>
+	<array>
+		<string>https://skan.attriax.com</string>
+	</array>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>We track this data to measure advertising performance and improve your user experience</string>
 	<key>UILaunchStoryboardName</key>

@@ -4,6 +4,10 @@ class AttriaxQueueDiagnostics {
     this.lastCorruptionAt,
     this.lastCorruptionReason,
     this.lastCorruptedEntryCount = 0,
+    this.lastCorruptQueuePayload,
+    this.corruptedDiagnosticsPayloadCount = 0,
+    this.lastDiagnosticsCorruptionAt,
+    this.lastCorruptDiagnosticsPayload,
     this.evictedRequestCount = 0,
     this.lastEvictedAt,
     this.lastEvictedRequestKinds = const <String>[],
@@ -13,21 +17,30 @@ class AttriaxQueueDiagnostics {
     this.lastDroppedRequestKinds = const <String>[],
   });
 
-  factory AttriaxQueueDiagnostics.fromJson(Map<String, Object?> json) {
-    return AttriaxQueueDiagnostics(
-      corruptedPayloadCount: _readInt(json['corruptedPayloadCount']) ?? 0,
-      lastCorruptionAt: _readDateTime(json['lastCorruptionAt']),
-      lastCorruptionReason: _readString(json['lastCorruptionReason']),
-      lastCorruptedEntryCount: _readInt(json['lastCorruptedEntryCount']) ?? 0,
-      evictedRequestCount: _readInt(json['evictedRequestCount']) ?? 0,
-      lastEvictedAt: _readDateTime(json['lastEvictedAt']),
-      lastEvictedRequestKinds: _readStringList(json['lastEvictedRequestKinds']),
-      droppedRequestCount: _readInt(json['droppedRequestCount']) ?? 0,
-      lastDroppedAt: _readDateTime(json['lastDroppedAt']),
-      lastDroppedReason: _readString(json['lastDroppedReason']),
-      lastDroppedRequestKinds: _readStringList(json['lastDroppedRequestKinds']),
-    );
-  }
+  factory AttriaxQueueDiagnostics.fromJson(
+    Map<String, Object?> json,
+  ) => AttriaxQueueDiagnostics(
+    corruptedPayloadCount: _readInt(json['corruptedPayloadCount']) ?? 0,
+    lastCorruptionAt: _readDateTime(json['lastCorruptionAt']),
+    lastCorruptionReason: _readString(json['lastCorruptionReason']),
+    lastCorruptedEntryCount: _readInt(json['lastCorruptedEntryCount']) ?? 0,
+    lastCorruptQueuePayload: _readString(json['lastCorruptQueuePayload']),
+    corruptedDiagnosticsPayloadCount:
+        _readInt(json['corruptedDiagnosticsPayloadCount']) ?? 0,
+    lastDiagnosticsCorruptionAt: _readDateTime(
+      json['lastDiagnosticsCorruptionAt'],
+    ),
+    lastCorruptDiagnosticsPayload: _readString(
+      json['lastCorruptDiagnosticsPayload'],
+    ),
+    evictedRequestCount: _readInt(json['evictedRequestCount']) ?? 0,
+    lastEvictedAt: _readDateTime(json['lastEvictedAt']),
+    lastEvictedRequestKinds: _readStringList(json['lastEvictedRequestKinds']),
+    droppedRequestCount: _readInt(json['droppedRequestCount']) ?? 0,
+    lastDroppedAt: _readDateTime(json['lastDroppedAt']),
+    lastDroppedReason: _readString(json['lastDroppedReason']),
+    lastDroppedRequestKinds: _readStringList(json['lastDroppedRequestKinds']),
+  );
 
   static const Object _unset = Object();
 
@@ -35,6 +48,10 @@ class AttriaxQueueDiagnostics {
   final DateTime? lastCorruptionAt;
   final String? lastCorruptionReason;
   final int lastCorruptedEntryCount;
+  final String? lastCorruptQueuePayload;
+  final int corruptedDiagnosticsPayloadCount;
+  final DateTime? lastDiagnosticsCorruptionAt;
+  final String? lastCorruptDiagnosticsPayload;
   final int evictedRequestCount;
   final DateTime? lastEvictedAt;
   final List<String> lastEvictedRequestKinds;
@@ -45,6 +62,7 @@ class AttriaxQueueDiagnostics {
 
   bool get hasIssues =>
       corruptedPayloadCount > 0 ||
+      corruptedDiagnosticsPayloadCount > 0 ||
       evictedRequestCount > 0 ||
       droppedRequestCount > 0;
 
@@ -53,6 +71,10 @@ class AttriaxQueueDiagnostics {
     Object? lastCorruptionAt = _unset,
     Object? lastCorruptionReason = _unset,
     int? lastCorruptedEntryCount,
+    Object? lastCorruptQueuePayload = _unset,
+    int? corruptedDiagnosticsPayloadCount,
+    Object? lastDiagnosticsCorruptionAt = _unset,
+    Object? lastCorruptDiagnosticsPayload = _unset,
     int? evictedRequestCount,
     Object? lastEvictedAt = _unset,
     Object? lastEvictedRequestKinds = _unset,
@@ -60,63 +82,79 @@ class AttriaxQueueDiagnostics {
     Object? lastDroppedAt = _unset,
     Object? lastDroppedReason = _unset,
     Object? lastDroppedRequestKinds = _unset,
-  }) {
-    return AttriaxQueueDiagnostics(
-      corruptedPayloadCount:
-          corruptedPayloadCount ?? this.corruptedPayloadCount,
-      lastCorruptionAt: identical(lastCorruptionAt, _unset)
-          ? this.lastCorruptionAt
-          : lastCorruptionAt as DateTime?,
-      lastCorruptionReason: identical(lastCorruptionReason, _unset)
-          ? this.lastCorruptionReason
-          : lastCorruptionReason as String?,
-      lastCorruptedEntryCount:
-          lastCorruptedEntryCount ?? this.lastCorruptedEntryCount,
-      evictedRequestCount: evictedRequestCount ?? this.evictedRequestCount,
-      lastEvictedAt: identical(lastEvictedAt, _unset)
-          ? this.lastEvictedAt
-          : lastEvictedAt as DateTime?,
-      lastEvictedRequestKinds: identical(lastEvictedRequestKinds, _unset)
-          ? this.lastEvictedRequestKinds
-          : List<String>.unmodifiable(
-              (lastEvictedRequestKinds as List<String>?) ?? const <String>[],
-            ),
-      droppedRequestCount: droppedRequestCount ?? this.droppedRequestCount,
-      lastDroppedAt: identical(lastDroppedAt, _unset)
-          ? this.lastDroppedAt
-          : lastDroppedAt as DateTime?,
-      lastDroppedReason: identical(lastDroppedReason, _unset)
-          ? this.lastDroppedReason
-          : lastDroppedReason as String?,
-      lastDroppedRequestKinds: identical(lastDroppedRequestKinds, _unset)
-          ? this.lastDroppedRequestKinds
-          : List<String>.unmodifiable(
-              (lastDroppedRequestKinds as List<String>?) ?? const <String>[],
-            ),
-    );
-  }
+  }) => AttriaxQueueDiagnostics(
+    corruptedPayloadCount: corruptedPayloadCount ?? this.corruptedPayloadCount,
+    lastCorruptionAt: identical(lastCorruptionAt, _unset)
+        ? this.lastCorruptionAt
+        : lastCorruptionAt as DateTime?,
+    lastCorruptionReason: identical(lastCorruptionReason, _unset)
+        ? this.lastCorruptionReason
+        : lastCorruptionReason as String?,
+    lastCorruptedEntryCount:
+        lastCorruptedEntryCount ?? this.lastCorruptedEntryCount,
+    lastCorruptQueuePayload: identical(lastCorruptQueuePayload, _unset)
+        ? this.lastCorruptQueuePayload
+        : lastCorruptQueuePayload as String?,
+    corruptedDiagnosticsPayloadCount:
+        corruptedDiagnosticsPayloadCount ??
+        this.corruptedDiagnosticsPayloadCount,
+    lastDiagnosticsCorruptionAt: identical(lastDiagnosticsCorruptionAt, _unset)
+        ? this.lastDiagnosticsCorruptionAt
+        : lastDiagnosticsCorruptionAt as DateTime?,
+    lastCorruptDiagnosticsPayload:
+        identical(lastCorruptDiagnosticsPayload, _unset)
+        ? this.lastCorruptDiagnosticsPayload
+        : lastCorruptDiagnosticsPayload as String?,
+    evictedRequestCount: evictedRequestCount ?? this.evictedRequestCount,
+    lastEvictedAt: identical(lastEvictedAt, _unset)
+        ? this.lastEvictedAt
+        : lastEvictedAt as DateTime?,
+    lastEvictedRequestKinds: identical(lastEvictedRequestKinds, _unset)
+        ? this.lastEvictedRequestKinds
+        : List<String>.unmodifiable(
+            (lastEvictedRequestKinds as List<String>?) ?? const <String>[],
+          ),
+    droppedRequestCount: droppedRequestCount ?? this.droppedRequestCount,
+    lastDroppedAt: identical(lastDroppedAt, _unset)
+        ? this.lastDroppedAt
+        : lastDroppedAt as DateTime?,
+    lastDroppedReason: identical(lastDroppedReason, _unset)
+        ? this.lastDroppedReason
+        : lastDroppedReason as String?,
+    lastDroppedRequestKinds: identical(lastDroppedRequestKinds, _unset)
+        ? this.lastDroppedRequestKinds
+        : List<String>.unmodifiable(
+            (lastDroppedRequestKinds as List<String>?) ?? const <String>[],
+          ),
+  );
 
-  Map<String, Object?> toJson() {
-    return <String, Object?>{
-      'corruptedPayloadCount': corruptedPayloadCount,
-      if (lastCorruptionAt != null)
-        'lastCorruptionAt': lastCorruptionAt!.toIso8601String(),
-      if (lastCorruptionReason != null)
-        'lastCorruptionReason': lastCorruptionReason,
-      'lastCorruptedEntryCount': lastCorruptedEntryCount,
-      'evictedRequestCount': evictedRequestCount,
-      if (lastEvictedAt != null)
-        'lastEvictedAt': lastEvictedAt!.toIso8601String(),
-      if (lastEvictedRequestKinds.isNotEmpty)
-        'lastEvictedRequestKinds': lastEvictedRequestKinds,
-      'droppedRequestCount': droppedRequestCount,
-      if (lastDroppedAt != null)
-        'lastDroppedAt': lastDroppedAt!.toIso8601String(),
-      if (lastDroppedReason != null) 'lastDroppedReason': lastDroppedReason,
-      if (lastDroppedRequestKinds.isNotEmpty)
-        'lastDroppedRequestKinds': lastDroppedRequestKinds,
-    };
-  }
+  Map<String, Object?> toJson() => <String, Object?>{
+    'corruptedPayloadCount': corruptedPayloadCount,
+    if (lastCorruptionAt != null)
+      'lastCorruptionAt': lastCorruptionAt!.toIso8601String(),
+    if (lastCorruptionReason != null)
+      'lastCorruptionReason': lastCorruptionReason,
+    'lastCorruptedEntryCount': lastCorruptedEntryCount,
+    if (lastCorruptQueuePayload != null)
+      'lastCorruptQueuePayload': lastCorruptQueuePayload,
+    'corruptedDiagnosticsPayloadCount': corruptedDiagnosticsPayloadCount,
+    if (lastDiagnosticsCorruptionAt != null)
+      'lastDiagnosticsCorruptionAt': lastDiagnosticsCorruptionAt!
+          .toIso8601String(),
+    if (lastCorruptDiagnosticsPayload != null)
+      'lastCorruptDiagnosticsPayload': lastCorruptDiagnosticsPayload,
+    'evictedRequestCount': evictedRequestCount,
+    if (lastEvictedAt != null)
+      'lastEvictedAt': lastEvictedAt!.toIso8601String(),
+    if (lastEvictedRequestKinds.isNotEmpty)
+      'lastEvictedRequestKinds': lastEvictedRequestKinds,
+    'droppedRequestCount': droppedRequestCount,
+    if (lastDroppedAt != null)
+      'lastDroppedAt': lastDroppedAt!.toIso8601String(),
+    if (lastDroppedReason != null) 'lastDroppedReason': lastDroppedReason,
+    if (lastDroppedRequestKinds.isNotEmpty)
+      'lastDroppedRequestKinds': lastDroppedRequestKinds,
+  };
 }
 
 class AttriaxQueueStatus {

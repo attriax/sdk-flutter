@@ -135,7 +135,7 @@ void main() {
       expect(report.isFatal, isTrue);
       expect(report.exceptionType, 'java.lang.IllegalStateException');
       expect(report.metadata['threadName'], 'main');
-      expect(report.occurredAt, DateTime.utc(2026, 5, 4, 10, 0));
+      expect(report.occurredAt, DateTime.utc(2026, 5, 4, 10));
     },
   );
 

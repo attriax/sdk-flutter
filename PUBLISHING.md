@@ -87,9 +87,10 @@ The publish helper follows the release order above and delegates to
 - Verify universal links on cold start, warm start, and resumed app flows.
 - Re-check Associated Domains entitlements and the production AASA file.
 - Confirm the packaged `attriax_flutter_ios` privacy manifests still match the native
-  code paths being shipped. The bundled manifests cover SDK-owned native usage,
-  but host apps still need their own App Store privacy labels and any app-level
-  tracking declarations.
+  code paths being shipped. The bundled manifests now declare SDK-owned Device
+  ID collection on Apple platforms plus iOS Crash Data collection, but host apps
+  still need their own App Store privacy labels, ATT purpose string, and any
+  app-level tracking domains when iOS `collectAdvertisingId` is enabled.
 - Remember that `identifierForVendor` can change after reinstall/vendor changes;
   do not treat it as a permanent account identifier.
 - Update App Store privacy disclosures whenever collected fields or identifiers

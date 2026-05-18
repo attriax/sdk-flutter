@@ -24,6 +24,7 @@ import 'attriax_request_manager.dart';
 import 'attriax_referrer_manager.dart';
 import 'attriax_runtime_settings_state.dart';
 import 'attriax_session_manager.dart';
+import 'attriax_skan_manager.dart';
 import 'attriax_synchronizer.dart';
 import 'attriax_tracking_manager.dart';
 
@@ -52,6 +53,12 @@ class AttriaxRuntime {
        _clock = config.clock ?? const AttriaxSystemClock(),
        _preferencesStore = AttriaxPreferencesStore(
          prefsOverride: prefsOverride,
+         onPersistenceDegraded: ({required operation, required error}) {
+           logger.warning(
+             'Attriax persistent storage is unavailable after $operation. The SDK will continue in memory-only mode for this process.',
+             error: error,
+           );
+         },
        ),
        _eventHub = AttriaxEventHub(),
        _requestManager = AttriaxRequestManager() {
@@ -96,6 +103,15 @@ class AttriaxRuntime {
       deepLinkManager: _deepLinkManager,
       currentSessionIdProvider: () => _sessionManager.currentSession?.id,
     );
+    _skanManager = AttriaxSkanManager(
+      config: config,
+      preferencesStore: _preferencesStore,
+      platform: contextCollector.platformInstance,
+      platformType: contextCollector.currentPlatformType,
+      clock: _clock,
+      logger: _logger,
+      usdRevenueConverter: _convertSkanRevenueToUsdMicros,
+    );
     _trackingManager = AttriaxTrackingManager(
       config: config,
       logger: _logger,
@@ -104,6 +120,7 @@ class AttriaxRuntime {
       settingsState: _settingsState,
       requestManager: _requestManager,
       sessionManager: _sessionManager,
+      skanManager: _skanManager,
     );
   }
 
@@ -123,6 +140,7 @@ class AttriaxRuntime {
   late final AttriaxReferrerManager _referrerManager;
   late final AttriaxTrackingManager _trackingManager;
   late final AttriaxSessionManager _sessionManager;
+  late final AttriaxSkanManager _skanManager;
 
   AttriaxSynchronizer? _synchronizer;
   AttriaxGeneratedTransport? _transport;
@@ -155,6 +173,7 @@ class AttriaxRuntime {
   AttriaxSdkSnapshot? get sdkSnapshot => _contextManager.sdkSnapshot;
   AttriaxRawDeepLinkEvent? get rawInitialDeepLink =>
       _deepLinkManager.rawInitialDeepLink;
+  AttriaxSkanState? get skanState => _skanManager.state;
   AttriaxDeepLinkEvent? get initialDeepLink => _deepLinkManager.initialDeepLink;
   bool get isInitialDeepLinkResolved =>
       _deepLinkManager.isInitialDeepLinkResolved;
@@ -163,8 +182,23 @@ class AttriaxRuntime {
       _synchronizer?.synchronizationState ??
       AttriaxSynchronizationState.initializing;
 
-  AttriaxNormalizedApiBaseUrl get _apiBaseUrlConfig =>
-      _normalizedApiBaseUrl ??= normalizeAttriaxApiBaseUrl(config.apiBaseUrl);
+  bool get _shouldWarnOnLocalhostApiBaseUrl => !kDebugMode;
+
+  AttriaxNormalizedApiBaseUrl get _apiBaseUrlConfig {
+    final cached = _normalizedApiBaseUrl;
+    if (cached != null) {
+      return cached;
+    }
+
+    final shouldWarnOnLocalhost = _shouldWarnOnLocalhostApiBaseUrl;
+    final normalized = normalizeAttriaxApiBaseUrl(
+      config.apiBaseUrl,
+      warnOnLocalhost: shouldWarnOnLocalhost,
+      onWarning: shouldWarnOnLocalhost ? _logger.warning : null,
+    );
+    _normalizedApiBaseUrl = normalized;
+    return normalized;
+  }
 
   bool get _sessionTrackingEnabled => config.sessionTrackingEnabled;
 
@@ -208,7 +242,7 @@ class AttriaxRuntime {
 
     _restoreCrashHandlers();
     await _contextManager.setAutomaticCrashReportingEnabled(enabled: false);
-    _requestManager.unbindSynchronizer();
+    _requestManager.synchronizer = null;
     _sessionManager.dispose();
     await _referrerManager.dispose();
     await _deepLinkManager.stop();
@@ -224,6 +258,7 @@ class AttriaxRuntime {
     _contextManager.reset();
     await _sessionManager.reset();
     await _referrerManager.reset();
+    await _skanManager.reset();
 
     _settingsState.restore(enabled: true, eventsEnabled: true);
     _appOpenSchedulingFuture = null;
@@ -247,6 +282,7 @@ class AttriaxRuntime {
     );
 
     await _contextManager.init();
+    await _skanManager.init(isFirstLaunch: _contextManager.isFirstLaunch);
     final sessionRestore = await _sessionManager.init(
       enabled: _sessionTrackingEnabled,
     );
@@ -267,8 +303,9 @@ class AttriaxRuntime {
       eventFlushInterval: config.eventFlushInterval,
       logger: _logger,
     );
-    _requestManager.bindSynchronizer(_synchronizer!);
-    _synchronizer!.onStateChanged = _eventHub.emitSynchronizationState;
+    final synchronizer = _synchronizer!;
+    _requestManager.synchronizer = synchronizer;
+    synchronizer.onStateChanged = _eventHub.emitSynchronizationState;
 
     _initialized = true;
     await _contextManager.setAutomaticCrashReportingEnabled(
@@ -313,6 +350,19 @@ class AttriaxRuntime {
       eventName,
       eventData: eventData,
       flushImmediately: flushImmediately,
+    );
+  }
+
+  Future<AttriaxSkanUpdateResult> updateSkanConversionValue({
+    required int fineValue,
+    AttriaxSkanCoarseValue? coarseValue,
+    bool lockWindow = false,
+  }) async {
+    _assertInitialized();
+    return _skanManager.updateConversionValue(
+      fineValue: fineValue,
+      coarseValue: coarseValue,
+      lockWindow: lockWindow,
     );
   }
 
@@ -593,7 +643,7 @@ class AttriaxRuntime {
   void setEnabled({required bool enabled}) => _settingsState.setEnabled(
     enabled: enabled,
     initialized: _initialized,
-    applyState: _applyEnabledState,
+    applyState: ({required bool enabled}) => _applyEnabledState(enabled),
     onPreparingToEnable: enabled ? _prepareReferrerWaitersForReenable : null,
   );
 
@@ -608,13 +658,14 @@ class AttriaxRuntime {
     _logger.verbose('Disposing Attriax SDK runtime.');
     _restoreCrashHandlers();
     await _contextManager.setAutomaticCrashReportingEnabled(enabled: false);
-    _requestManager.unbindSynchronizer();
+    _requestManager.synchronizer = null;
     _sessionManager.dispose();
     await _referrerManager.dispose();
     await _deepLinkManager.stop();
     await _synchronizer?.dispose();
     await _appOpenManager.dispose();
     await _eventHub.dispose();
+    await _skanManager.reset();
     _client.close();
   }
 
@@ -722,6 +773,7 @@ class AttriaxRuntime {
     final originSessionId = _sessionManager.currentSession?.id;
     await _appOpenManager.schedule(
       onCompleted: (result) async {
+        await _skanManager.applyAppOpenResult(result);
         await _deepLinkManager.handleDeferredAppOpen(
           result,
           originSessionId: originSessionId,
@@ -730,10 +782,30 @@ class AttriaxRuntime {
     );
   }
 
+  Future<int?> _convertSkanRevenueToUsdMicros({
+    required int amountMicros,
+    required String currency,
+    required DateTime clientOccurredAt,
+  }) async {
+    final transport = _transport;
+    if (transport == null) {
+      return null;
+    }
+
+    final result = await transport.convertRevenueToUsd(<String, Object?>{
+      'appToken': config.appToken,
+      'currency': currency,
+      'amountMicros': amountMicros.toString(),
+      'clientOccurredAt': clientOccurredAt.toUtc().toIso8601String(),
+    });
+
+    return int.tryParse(result.amountUsdMicros);
+  }
+
   Future<T?> _readReferrer<T>({
     required Future<T?> Function() reader,
-    Duration? timeout,
     required bool safe,
+    Duration? timeout,
   }) async {
     if (!_initialized || !isEnabled) {
       return null;

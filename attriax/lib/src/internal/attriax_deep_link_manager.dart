@@ -20,9 +20,9 @@ class AttriaxDeepLinkManager {
     required AttriaxDeepLinkListener listener,
     required AttriaxEventHub eventHub,
     required AttriaxPreferencesStore preferencesStore,
-    String? Function()? currentSessionIdProvider,
     required AttriaxRequestManager requestManager,
     required AttriaxLogger logger,
+    String? Function()? currentSessionIdProvider,
     AttriaxDeepLinkResolver resolver = const AttriaxDeepLinkResolver(),
     AttriaxPlatform? platform,
     AttriaxClock? clock,
@@ -336,8 +336,9 @@ class AttriaxDeepLinkManager {
         fallbackUri: event.uri,
         rawEvent: event,
       );
-      _eventHub.resolvePendingDeepLink(event: event, resolution: resolution);
-      _eventHub.emitResolvedDeepLink(event: resolution);
+      _eventHub
+        ..resolvePendingDeepLink(event: event, resolution: resolution)
+        ..emitResolvedDeepLink(event: resolution);
     } catch (error, stackTrace) {
       _logger.error(
         'Deep-link browser handling failed.',

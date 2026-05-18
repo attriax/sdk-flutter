@@ -35,6 +35,8 @@ lib/src/model/sdk_json_deep_link_dto.dart
 lib/src/model/sdk_register_uninstall_token_dto.dart
 lib/src/model/sdk_revenue_receipt_validate_response_dto.dart
 lib/src/model/sdk_revenue_receipt_validate_response_envelope_dto.dart
+lib/src/model/sdk_revenue_usd_conversion_response_dto.dart
+lib/src/model/sdk_revenue_usd_conversion_response_envelope_dto.dart
 lib/src/model/sdk_session_dto.dart
 lib/src/model/sdk_session_lifecycle_kind.dart
 lib/src/model/sdk_user_dto.dart
@@ -49,6 +51,17 @@ lib/src/model/sdk_v1_deep_link_resolve_response_envelope_dto.dart
 lib/src/model/sdk_v1_open_dto.dart
 lib/src/model/sdk_v1_open_response_dto.dart
 lib/src/model/sdk_v1_open_response_envelope_dto.dart
+lib/src/model/sdk_v1_revenue_convert_to_usd_dto.dart
 lib/src/model/sdk_v1_revenue_receipt_validate_dto.dart
+lib/src/model/sdk_v1_skan_coarse_value.dart
+lib/src/model/sdk_v1_skan_coarse_window_dto.dart
+lib/src/model/sdk_v1_skan_coarse_window_event_dto.dart
+lib/src/model/sdk_v1_skan_condition_dto.dart
+lib/src/model/sdk_v1_skan_event_dto.dart
+lib/src/model/sdk_v1_skan_rule_operator.dart
+lib/src/model/sdk_v1_skan_runtime_configuration_dto.dart
+lib/src/model/sdk_v1_skan_schema_dto.dart
+lib/src/model/sdk_v1_skan_window1_dto.dart
+lib/src/model/sdk_v1_skan_window1_group_dto.dart
 lib/src/model/sdk_version_context_dto.dart
 pubspec.yaml

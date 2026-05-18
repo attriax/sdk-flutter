@@ -5,15 +5,15 @@ import 'package:attriax_flutter_windows/attriax_flutter_windows_method_channel.d
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  MethodChannelAttriaxFlutterWindows platform =
-      MethodChannelAttriaxFlutterWindows();
-  const MethodChannel channel = MethodChannel('attriax_flutter_windows');
+  final platform = MethodChannelAttriaxFlutterWindows();
+  const channel = MethodChannel('attriax_flutter_windows');
 
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
-          return '42';
-        });
+        .setMockMethodCallHandler(
+          channel,
+          (MethodCall methodCall) async => '42',
+        );
   });
 
   tearDown(() {

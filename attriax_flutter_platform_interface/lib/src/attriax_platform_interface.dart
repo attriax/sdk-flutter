@@ -46,4 +46,14 @@ abstract class AttriaxPlatform extends PlatformInterface {
     required Uri uri,
     required AttriaxResolvedUrlOpenMode openMode,
   }) async => false;
+
+  Future<AttriaxSkanUpdateResult> updateSkanConversionValue({
+    required int fineValue,
+    AttriaxSkanCoarseValue? coarseValue,
+    bool lockWindow = false,
+  }) async => const AttriaxSkanUpdateResult(
+    status: AttriaxSkanUpdateStatus.notSupported,
+    message:
+        'SKAdNetwork conversion updates are not supported on this platform.',
+  );
 }

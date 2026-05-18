@@ -37,6 +37,36 @@ void main() {
       );
     });
 
+    test('can emit a warning for loopback URLs outside debug usage', () {
+      final warnings = <String>[];
+
+      final normalized = normalizeAttriaxApiBaseUrl(
+        'http://localhost:3000/api',
+        warnOnLocalhost: true,
+        onWarning: warnings.add,
+      );
+
+      expect(normalized.apiBaseUrl, 'http://localhost:3000');
+      expect(warnings, <String>[
+        'Attriax apiBaseUrl points to a loopback endpoint. This is intended for development only and will not work from released apps unless the device can reach that local host.',
+      ]);
+    });
+
+    test('can emit the same warning for HTTPS loopback URLs', () {
+      final warnings = <String>[];
+
+      final normalized = normalizeAttriaxApiBaseUrl(
+        'https://127.0.0.1:8443/api',
+        warnOnLocalhost: true,
+        onWarning: warnings.add,
+      );
+
+      expect(normalized.apiBaseUrl, 'https://127.0.0.1:8443');
+      expect(warnings, <String>[
+        'Attriax apiBaseUrl points to a loopback endpoint. This is intended for development only and will not work from released apps unless the device can reach that local host.',
+      ]);
+    });
+
     test('rejects insecure remote API endpoints', () {
       expect(
         () => normalizeAttriaxApiBaseUrl('http://api.attriax.com'),

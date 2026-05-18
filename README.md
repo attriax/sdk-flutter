@@ -43,9 +43,8 @@ Future<void> main() async {
 
 Future<void> processAttriaxStartup(Attriax attriax) async {
 	final initialDeepLink = await attriax.deepLinks.waitForInitialDeepLink();
-	final resolution = await initialDeepLink?.resolve();
 	debugPrint(
-		'${initialDeepLink?.uri.toString() ?? 'no deep link'} (found: ${resolution?.found ?? false})',
+		'${initialDeepLink?.uri.toString() ?? 'no deep link'} (found: ${initialDeepLink?.found ?? false})',
 	);
 }
 

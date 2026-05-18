@@ -13,6 +13,18 @@ void main() {
         config.firstLaunchSessionHeartbeatInterval,
         const Duration(seconds: 5),
       );
+      expect(config.skan, isNull);
     },
   );
+
+  test('AttriaxConfig keeps the optional SKAN configuration', () {
+    const config = AttriaxConfig(
+      appToken: 'ax_test_token',
+      skan: AttriaxSkanConfig(enabled: false, registerFirstLaunchValue: false),
+    );
+
+    expect(config.skan, isNotNull);
+    expect(config.skan?.enabled, isFalse);
+    expect(config.skan?.registerFirstLaunchValue, isFalse);
+  });
 }

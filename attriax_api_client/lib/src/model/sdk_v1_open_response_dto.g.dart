@@ -64,6 +64,14 @@ SdkV1OpenResponseDto _$SdkV1OpenResponseDtoFromJson(
           : SdkInstallReferrerResultDto.fromJson(v as Map<String, dynamic>),
     ),
     requestVersion: $checkedConvert('requestVersion', (v) => v as String),
+    skan: $checkedConvert(
+      'skan',
+      (v) => v == null
+          ? null
+          : SdkV1SkanRuntimeConfigurationDto.fromJson(
+              v as Map<String, dynamic>,
+            ),
+    ),
     userId: $checkedConvert('userId', (v) => v as String),
   );
   return val;
@@ -83,6 +91,7 @@ Map<String, dynamic> _$SdkV1OpenResponseDtoToJson(
   'originalInstallReferrer': ?instance.originalInstallReferrer?.toJson(),
   'reinstallReferrer': ?instance.reinstallReferrer?.toJson(),
   'requestVersion': instance.requestVersion,
+  'skan': ?instance.skan?.toJson(),
   'userId': instance.userId,
 };
 
