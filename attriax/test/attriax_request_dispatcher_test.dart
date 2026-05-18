@@ -415,6 +415,76 @@ void main() {
     });
 
     test(
+      'recursively splits oversized batches after repeated HTTP 413s',
+      () async {
+        final secondRequest = AttriaxQueuedRequest(
+          id: 'req_2',
+          request: attriaxBuildTrackEventRequest(
+            appToken: 'ax_test_token',
+            deviceId: 'device_1',
+            deviceIdSource: 'android_ssaid',
+            eventName: 'level_up',
+            eventData: const <String, Object?>{'level': 2},
+          ),
+          createdAt: DateTime.utc(2026, 5, 1, 0, 0, 5),
+        );
+        final thirdRequest = AttriaxQueuedRequest(
+          id: 'req_3',
+          request: attriaxBuildTrackEventRequest(
+            appToken: 'ax_test_token',
+            deviceId: 'device_1',
+            deviceIdSource: 'android_ssaid',
+            eventName: 'level_up',
+            eventData: const <String, Object?>{'level': 3},
+          ),
+          createdAt: DateTime.utc(2026, 5, 1, 0, 0, 10),
+        );
+        final fourthRequest = AttriaxQueuedRequest(
+          id: 'req_4',
+          request: attriaxBuildTrackEventRequest(
+            appToken: 'ax_test_token',
+            deviceId: 'device_1',
+            deviceIdSource: 'android_ssaid',
+            eventName: 'level_up',
+            eventData: const <String, Object?>{'level': 4},
+          ),
+          createdAt: DateTime.utc(2026, 5, 1, 0, 0, 15),
+        );
+        await queueManager.writeAll(<AttriaxQueuedRequest>[
+          queuedRequest,
+          secondRequest,
+          thirdRequest,
+          fourthRequest,
+        ]);
+
+        transport.batchErrors.addAll(<Exception>[
+          const AttriaxTransportHttpException(statusCode: 413),
+          const AttriaxTransportHttpException(statusCode: 413),
+        ]);
+
+        await dispatcher.flush();
+
+        expect(
+          transport.sentBatches.map((batch) => batch.length).toList(),
+          <int>[4, 2, 1, 1, 2],
+        );
+        expect(
+          transport.sentBatches
+              .map((batch) => batch.map((request) => request.id).toList())
+              .toList(),
+          <List<String>>[
+            <String>['req_1', 'req_2', 'req_3', 'req_4'],
+            <String>['req_1', 'req_2'],
+            <String>['req_1'],
+            <String>['req_2'],
+            <String>['req_3', 'req_4'],
+          ],
+        );
+        expect(await queueManager.readAll(), isEmpty);
+      },
+    );
+
+    test(
       'waits for a successful app-open before cached batchable requests',
       () async {
         appOpenMonitor.hasSuccessfulResult = false;

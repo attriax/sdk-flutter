@@ -455,13 +455,30 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             return
         }
 
+        let buildSkanErrorMessage: (Error) -> String = { error in
+            let nsError = error as NSError
+            var message = nsError.localizedDescription
+
+            if message.isEmpty {
+                message = "\(nsError.domain) error \(nsError.code)."
+            } else {
+                message += " [\(nsError.domain) \(nsError.code)]"
+            }
+
+            if nsError.domain == "SKANErrorDomain" && nsError.code == 10 {
+                message += " This commonly means StoreKit does not have an eligible SKAdNetwork attribution context for this install. Simulator and direct-debug installs are not reliable for validating conversion-value updates; verify on a physical iOS device with an eligible attributed install."
+            }
+
+            return message
+        }
+
         DispatchQueue.main.async {
             if #available(iOS 16.1, *) {
                 let completion: (Error?) -> Void = { error in
                     if let error {
                         result([
                             "status": "error",
-                            "message": error.localizedDescription,
+                            "message": buildSkanErrorMessage(error),
                             "fineValue": fineValue,
                             "coarseValue": coarseValue as Any,
                             "lockWindow": lockWindow,
@@ -504,7 +521,7 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
                     if let error {
                         result([
                             "status": "error",
-                            "message": error.localizedDescription,
+                            "message": buildSkanErrorMessage(error),
                             "fineValue": fineValue,
                             "lockWindow": false,
                         ])
