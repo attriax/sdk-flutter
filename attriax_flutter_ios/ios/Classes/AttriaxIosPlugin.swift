@@ -457,11 +457,7 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
 
         DispatchQueue.main.async {
             if #available(iOS 16.1, *) {
-                SKAdNetwork.updatePostbackConversionValue(
-                    fineValue,
-                    coarseValue: self.skanCoarseValue(from: coarseValue),
-                    lockWindow: lockWindow
-                ) { error in
+                let completion: (Error?) -> Void = { error in
                     if let error {
                         result([
                             "status": "error",
@@ -478,6 +474,27 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
                             "lockWindow": lockWindow,
                         ])
                     }
+                }
+
+                if let resolvedCoarseValue = self.skanCoarseValue(from: coarseValue) {
+                    SKAdNetwork.updatePostbackConversionValue(
+                        fineValue,
+                        coarseValue: resolvedCoarseValue,
+                        lockWindow: lockWindow,
+                        completionHandler: completion
+                    )
+                } else if lockWindow {
+                    result([
+                        "status": "invalid_value",
+                        "message": "lockWindow requires a coarseValue on this iOS SDK.",
+                        "fineValue": fineValue,
+                        "lockWindow": lockWindow,
+                    ])
+                } else {
+                    SKAdNetwork.updatePostbackConversionValue(
+                        fineValue,
+                        completionHandler: completion
+                    )
                 }
                 return
             }
