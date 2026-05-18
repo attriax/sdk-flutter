@@ -5,6 +5,8 @@
 /// conversion steps Attriax expects most apps to care about without trying to
 /// mirror every event name from third-party analytics products.
 abstract final class AttriaxAnalyticsEventKeys {
+  const AttriaxAnalyticsEventKeys._();
+
   /// Account creation completed.
   static const String signUp = 'sign_up';
 
@@ -82,8 +84,6 @@ abstract final class AttriaxAnalyticsEventKeys {
 
   /// Manual or automatic page or screen view.
   static const String pageView = 'page_view';
-
-  const AttriaxAnalyticsEventKeys._();
 }
 
 /// Common analytics payload keys used by Attriax helpers and SKAN schemas.
@@ -91,6 +91,8 @@ abstract final class AttriaxAnalyticsEventKeys {
 /// These keys are intentionally generic so the same payload shape can be reused
 /// in regular event tracking, standardized helpers, and SKAN rule conditions.
 abstract final class AttriaxAnalyticsParamKeys {
+  const AttriaxAnalyticsParamKeys._();
+
   /// Normalized monetary amount in the supplied currency.
   static const String revenue = 'revenue';
 
@@ -222,6 +224,4 @@ abstract final class AttriaxAnalyticsParamKeys {
 
   /// Generic numeric or categorical event value.
   static const String value = 'value';
-
-  const AttriaxAnalyticsParamKeys._();
 }

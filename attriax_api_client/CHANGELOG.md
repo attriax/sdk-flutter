@@ -1,6 +1,7 @@
 # Changelog
 
-## [Unreleased]
+## 0.2.0
+- Reworked library generation
 
 ## 0.1.0
 

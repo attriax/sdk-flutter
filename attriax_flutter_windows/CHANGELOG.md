@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.0
+
+### Changed
+- No runtime behavior changes in the Windows implementation; the package version is aligned with the federated 0.2.0 release and the package sources/tests were refreshed for the current lint/style rules.
+
 ## 0.1.0
 
 ### Changed

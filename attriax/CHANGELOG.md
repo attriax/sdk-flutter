@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.0
+
+### Added
+- `Attriax.skan` state and conversion-value update helpers, plus persisted server-driven SKAdNetwork schema/state handling for Apple-platform attribution flows.
+- Shared `AttriaxAnalyticsEventKeys` and `AttriaxAnalyticsParamKeys` exports so apps, dashboard funnels, and SKAN rules can share the same event vocabulary.
+- Browser-action aware deep-link resolution with automatic in-app or external URL handling on supported mobile platforms.
+- A rebuilt public example app with Firebase/share integration, push-token registration flows, deep-link inspection, and richer startup/runtime coverage.
+
+### Changed
+- Breaking: `recordDeepLink()` now returns the completed `AttriaxDeepLinkEvent?` instead of the lower-level `AttriaxDeepLinkResolution?` wrapper.
+- Breaking: deeplinks are now reworked, the stream returns already resolved events, while you can use rawStream for the install raw AppLink events.
+- Events are now enhanced, look for the new `AttriaxAnalyticsEventKeys` and `AttriaxAnalyticsParamKeys` exports for the shared event vocabulary. Useful for SKAN conversion-value rules and consistent event naming across your app and the dashboard.
+- Startup app-open monitoring now waits for the app-open lifecycle to settle before resolving deferred deep links and session referrers.
+- ATT startup/request handling now waits for the real platform authorization result before continuing advertising-ID dependent native context collection.
+
+### Fixed
+- macOS startup no longer triggers a login-keychain permission prompt when the SDK restores or creates its stable device identifier.
+
 ## 0.1.0
 
 ### Added

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+### Added
+- Native `openBrowserUrl` handling for backend-provided deep-link browser actions, including an embedded `AttriaxInAppBrowserActivity` for in-app presentation.
+
+### Changed
+- Android deep-link handling can now follow resolved browser actions automatically through the shared platform-interface browser hook.
+
 ## 0.1.0
 
 ### Added

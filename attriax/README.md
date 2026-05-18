@@ -12,7 +12,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  attriax_flutter: ^0.1.0
+  attriax_flutter: ^0.2.0
 ```
 
 For local workspace development inside this repository, keep using the existing path-based workspace setup instead of a hosted dependency.

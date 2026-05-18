@@ -1,5 +1,5 @@
 const String attriaxSdkApiVersion = 'v1';
-const String attriaxSdkPackageVersion = '0.1.0';
+const String attriaxSdkPackageVersion = '0.2.0';
 
 /// Attribution classification returned by Attriax.
 enum AttributionType {

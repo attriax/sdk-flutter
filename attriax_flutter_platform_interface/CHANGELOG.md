@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.0
+
+### Added
+- `AttriaxResolvedUrlAction`, `AttriaxResolvedUrlOpenMode`, and browser-action payloads on deep-link and referrer models so the SDK can follow backend-provided browser destinations.
+- `AttriaxSkanConfig`, `AttriaxSkanState`, `AttriaxSkanUpdateResult`, and the related SKAdNetwork schema/value models used by the Apple-platform runtime.
+- New `AttriaxPlatform.openBrowserUrl()` and `AttriaxPlatform.updateSkanConversionValue()` hooks for federated implementations.
+
+### Changed
+- `AttriaxConfig` now exposes `automaticBrowserHandling` and `skan` configuration for the main SDK runtime.
+- Method-channel regression coverage now includes browser-action handling and the expanded SKAdNetwork payload shapes.
+
 ## 0.1.0
 
 ### Added
