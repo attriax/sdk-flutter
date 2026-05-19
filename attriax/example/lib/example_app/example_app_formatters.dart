@@ -63,6 +63,25 @@ String describeExamplePushPhase(ExamplePushTokenPhase phase) {
   }
 }
 
+String describeExampleSkanUpdateStatus(AttriaxSkanUpdateStatus status) {
+  switch (status) {
+    case AttriaxSkanUpdateStatus.updated:
+      return 'updated';
+    case AttriaxSkanUpdateStatus.skipped:
+      return 'skipped';
+    case AttriaxSkanUpdateStatus.alreadyAtOrAboveValue:
+      return 'already at or above value';
+    case AttriaxSkanUpdateStatus.invalidValue:
+      return 'rejected as invalid';
+    case AttriaxSkanUpdateStatus.disabled:
+      return 'disabled';
+    case AttriaxSkanUpdateStatus.notSupported:
+      return 'not supported';
+    case AttriaxSkanUpdateStatus.error:
+      return 'failed';
+  }
+}
+
 String describeExampleInstallReferrer(AttriaxInstallReferrerDetails? details) {
   if (details == null) {
     return 'None yet';
