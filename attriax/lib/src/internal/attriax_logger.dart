@@ -34,15 +34,29 @@ class AttriaxLogger {
     Object? error,
     StackTrace? stackTrace,
   }) {
-    debugPrint('[Attriax][$level] $message');
+    _emitLine('[Attriax][$level] $message');
     if (error != null) {
-      debugPrint('[Attriax][$level] $error');
+      _emitLine('[Attriax][$level] $error');
     }
     if (stackTrace != null && (_enableDebugLogs || level == 'ERROR')) {
-      debugPrintStack(
-        label: '[Attriax][$level] stackTrace',
-        stackTrace: stackTrace,
-      );
+      if (kDebugMode) {
+        debugPrintStack(
+          label: '[Attriax][$level] stackTrace',
+          stackTrace: stackTrace,
+        );
+      } else {
+        _emitLine('[Attriax][$level] stackTrace');
+        _emitLine('$stackTrace');
+      }
     }
+  }
+
+  void _emitLine(String line) {
+    if (kDebugMode) {
+      debugPrint(line);
+      return;
+    }
+
+    print(line);
   }
 }
