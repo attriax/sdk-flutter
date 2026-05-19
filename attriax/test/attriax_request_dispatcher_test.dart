@@ -353,6 +353,71 @@ void main() {
       expect(await queueManager.readAll(), isEmpty);
     });
 
+    test(
+      'appends a current-session heartbeat keepalive to event batches',
+      () async {
+        final deliveredKeepAlives = <String>[];
+        dispatcher = AttriaxRequestDispatcher(
+          transport: transport,
+          connectivity: connectivity,
+          appOpenMonitor: appOpenMonitor,
+          queueManager: queueManager,
+          logger: AttriaxLogger(enableDebugLogs: false),
+          buildSessionKeepAliveBatchRequest: (_) =>
+              attriaxBuildTrackSessionRequest(
+                appToken: 'ax_test_token',
+                deviceIdSource: 'android_ssaid',
+                session: AttriaxSessionSnapshot(
+                  id: 'session_1',
+                  deviceId: 'device_1',
+                  platform: AttriaxPlatformType.android,
+                  locale: 'en-US',
+                  isFirstLaunch: false,
+                  startedAt: now.subtract(const Duration(minutes: 1)),
+                  lastActivityAt: now,
+                  heartbeatInterval: const Duration(minutes: 5),
+                  appVersion: '1.0.0',
+                  appBuildNumber: '1',
+                  appPackageName: 'com.attriax.test',
+                  sdkPackageVersion: '1.0.0',
+                ),
+                kind: AttriaxSessionLifecycleKind.heartbeat,
+                occurredAt: now,
+              ),
+          onSessionKeepAliveDelivered: (sessionId, occurredAt) {
+            deliveredKeepAlives.add(
+              '$sessionId@${occurredAt.toUtc().toIso8601String()}',
+            );
+          },
+        );
+
+        await dispatcher.flush();
+
+        expect(transport.sentBatches, hasLength(1));
+        expect(
+          transport.sentBatches.single.map((request) => request.id).toList(),
+          <String>[
+            'req_1',
+            'keepalive_session_1_${now.microsecondsSinceEpoch}',
+          ],
+        );
+        expect(
+          transport.sentBatches.single.last.request,
+          isA<AttriaxTrackSessionRequest>(),
+        );
+        expect(
+          (transport.sentBatches.single.last.request
+                  as AttriaxTrackSessionRequest)
+              .payload
+              .kind,
+          AttriaxSessionLifecycleKind.heartbeat,
+        );
+        expect(deliveredKeepAlives, <String>[
+          'session_1@${now.toUtc().toIso8601String()}',
+        ]);
+      },
+    );
+
     test('splits queue batches when device identity changes', () async {
       final secondRequest = AttriaxQueuedRequest(
         id: 'req_2',
@@ -413,6 +478,63 @@ void main() {
       ]);
       expect(await queueManager.readAll(), isEmpty);
     });
+
+    test(
+      'caps sendable batches before they exceed item-count limits',
+      () async {
+        dispatcher = AttriaxRequestDispatcher(
+          transport: transport,
+          connectivity: connectivity,
+          appOpenMonitor: appOpenMonitor,
+          queueManager: queueManager,
+          logger: AttriaxLogger(enableDebugLogs: false),
+          buildSessionKeepAliveBatchRequest: (_) =>
+              attriaxBuildTrackSessionRequest(
+                appToken: 'ax_test_token',
+                deviceIdSource: 'android_ssaid',
+                session: AttriaxSessionSnapshot(
+                  id: 'session_1',
+                  deviceId: 'device_1',
+                  platform: AttriaxPlatformType.android,
+                  locale: 'en-US',
+                  isFirstLaunch: false,
+                  startedAt: now.subtract(const Duration(minutes: 1)),
+                  lastActivityAt: now,
+                  heartbeatInterval: const Duration(minutes: 5),
+                  appVersion: '1.0.0',
+                  appBuildNumber: '1',
+                  appPackageName: 'com.attriax.test',
+                  sdkPackageVersion: '1.0.0',
+                ),
+                kind: AttriaxSessionLifecycleKind.heartbeat,
+                occurredAt: now,
+              ),
+        );
+
+        final requests = List<AttriaxQueuedRequest>.generate(
+          120,
+          (index) => AttriaxQueuedRequest(
+            id: 'req_${index + 1}',
+            request: attriaxBuildTrackEventRequest(
+              appToken: 'ax_test_token',
+              deviceId: 'device_1',
+              deviceIdSource: 'android_ssaid',
+              eventName: 'purchase_${index + 1}',
+              eventData: const <String, Object?>{'value': 42},
+            ),
+            createdAt: now.subtract(const Duration(seconds: 30)),
+          ),
+        );
+        await queueManager.writeAll(requests);
+
+        await dispatcher.flush();
+
+        expect(transport.sentBatches, hasLength(2));
+        expect(transport.sentBatches[0], hasLength(100));
+        expect(transport.sentBatches[1], hasLength(22));
+        expect(await queueManager.readAll(), isEmpty);
+      },
+    );
 
     test(
       'waits for a successful app-open before cached batchable requests',

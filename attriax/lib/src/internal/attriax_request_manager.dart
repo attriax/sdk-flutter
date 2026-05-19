@@ -26,4 +26,15 @@ class AttriaxRequestManager {
       flushImmediately: flushImmediately,
     );
   }
+
+  Future<void> flush() {
+    final synchronizer = this.synchronizer;
+    if (synchronizer == null) {
+      return Future<void>.error(
+        StateError('Attriax request manager is not bound to a synchronizer.'),
+      );
+    }
+
+    return synchronizer.flush();
+  }
 }

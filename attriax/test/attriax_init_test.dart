@@ -1256,6 +1256,56 @@ void main() {
         expect(bodies[1]['sessionRelativeTimeMs'], 6000);
       },
     );
+
+    test(
+      'queues pause and resume lifecycle telemetry when the app is hidden',
+      () async {
+        var now = DateTime.utc(2026, 5, 3, 12);
+        final clock = AttriaxMutableClock(now);
+        connectivityPlatform = FakeConnectivityPlatform(
+          currentResults: const <ConnectivityResult>[ConnectivityResult.none],
+        );
+        ConnectivityPlatform.instance = connectivityPlatform;
+        connectivity = Connectivity();
+        sdk = Attriax.test(
+          config: AttriaxConfig(appToken: 'ax_test_token', clock: clock),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init();
+        final session = _storedSessionSnapshot(prefs);
+        expect(session, isNotNull);
+
+        now = now.add(const Duration(seconds: 3));
+        clock.currentTime = now;
+        TestWidgetsFlutterBinding.instance.handleAppLifecycleStateChanged(
+          AppLifecycleState.hidden,
+        );
+        await _flushRuntimeTransitions();
+
+        now = now.add(const Duration(seconds: 3));
+        clock.currentTime = now;
+        TestWidgetsFlutterBinding.instance.handleAppLifecycleStateChanged(
+          AppLifecycleState.resumed,
+        );
+        await _flushRuntimeTransitions();
+
+        final bodies = _queuedBodiesFromPrefs(prefs);
+        expect(bodies.map((body) => body['kind']).toList(), <Object?>[
+          'pause',
+          'resume',
+        ]);
+        expect(bodies[0]['sessionId'], session!.id);
+        expect(bodies[0]['sessionRelativeTimeMs'], 3000);
+        expect(bodies[1]['sessionId'], session.id);
+        expect(bodies[1]['sessionRelativeTimeMs'], 6000);
+      },
+    );
   });
 }
 

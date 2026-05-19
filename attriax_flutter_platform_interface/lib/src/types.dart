@@ -1705,7 +1705,7 @@ class AttriaxConfig {
     this.clock,
     this.enableDebugLogs,
     this.requestTimeout = const Duration(seconds: 12),
-    this.maxQueueSize = 200,
+    this.maxQueueSize = 500,
     this.eventFlushInterval = const Duration(seconds: 60),
     this.flushEventsImmediatelyOnFirstLaunch = true,
     this.collectAdvertisingId = true,
@@ -1714,8 +1714,8 @@ class AttriaxConfig {
     this.trackingAuthorizationStatusTimeout = const Duration(seconds: 60),
     this.automaticBrowserHandling = true,
     this.sessionTrackingEnabled = true,
-    this.sessionHeartbeatInterval = const Duration(seconds: 60),
-    this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 5),
+    this.sessionHeartbeatInterval = const Duration(minutes: 5),
+    this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 30),
     this.skan,
   });
 

@@ -20,6 +20,7 @@ import 'attriax_generated_transport.dart';
 import 'attriax_logger.dart';
 import 'attriax_platform_install_referrer_manager.dart';
 import 'attriax_preferences_store.dart';
+import 'attriax_queue.dart';
 import 'attriax_request_manager.dart';
 import 'attriax_referrer_manager.dart';
 import 'attriax_runtime_settings_state.dart';
@@ -302,6 +303,8 @@ class AttriaxRuntime {
       maxQueueSize: config.maxQueueSize,
       eventFlushInterval: config.eventFlushInterval,
       logger: _logger,
+      buildSessionKeepAliveBatchRequest: _buildSessionKeepAliveBatchRequest,
+      onSessionKeepAliveDelivered: _handleSessionKeepAliveDelivered,
     );
     final synchronizer = _synchronizer!;
     _requestManager.synchronizer = synchronizer;
@@ -701,6 +704,34 @@ class AttriaxRuntime {
   }
 
   String _requireDeviceIdSource() => _contextManager.requireDeviceIdSource();
+
+  AttriaxTrackSessionRequest? _buildSessionKeepAliveBatchRequest(
+    List<AttriaxQueuedRequest> requests,
+  ) {
+    final currentSession = _sessionManager.currentSession;
+    if (currentSession == null || _sessionManager.isInBackground) {
+      return null;
+    }
+
+    final includesCurrentSessionEvent = requests.any((queuedRequest) {
+      final request = queuedRequest.request;
+      return request is AttriaxTrackEventRequest &&
+          request.payload.sessionId == currentSession.id;
+    });
+    if (!includesCurrentSessionEvent) {
+      return null;
+    }
+
+    return _sessionManager.buildHeartbeatKeepAliveRequest(
+      session: currentSession,
+      occurredAt: _clock.now(),
+    );
+  }
+
+  Future<void> _handleSessionKeepAliveDelivered(
+    String sessionId,
+    DateTime occurredAt,
+  ) => _sessionManager.handleSuccessfulForegroundFlush(sessionId, occurredAt);
 
   Future<void> _applyEnabledState(bool enabled) async {
     if (!enabled) {

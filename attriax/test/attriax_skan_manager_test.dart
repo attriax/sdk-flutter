@@ -51,6 +51,42 @@ void main() {
       expect((await store.readSkanState())?.fineValue, 0);
     });
 
+    test('ignores SKAN state and events on non-iOS platforms', () async {
+      await store.setSkanState(
+        state: const AttriaxSkanState(enabled: true, fineValue: 7),
+      );
+
+      final manager = AttriaxSkanManager(
+        config: const AttriaxConfig(
+          appToken: 'ax_test_token',
+          skan: AttriaxSkanConfig(),
+        ),
+        preferencesStore: store,
+        platform: platform,
+        platformType: AttriaxPlatformType.android,
+        clock: clock,
+        logger: AttriaxLogger(enableDebugLogs: false),
+      );
+
+      await manager.init(isFirstLaunch: true);
+      await manager.applyAppOpenResult(
+        AttriaxAppOpenResult(
+          userId: 'user_1',
+          isNewUser: false,
+          isFirstLaunch: false,
+          acceptedAt: clock.now(),
+          skan: _runtimeConfiguration(version: 1),
+        ),
+      );
+
+      final result = await manager.handleTrackedEvent('purchase');
+
+      expect(result, isNull);
+      expect(platform.calls, isEmpty);
+      expect(manager.state, isNull);
+      expect(await store.readSkanState(), isNull);
+    });
+
     test('encodes window 1 event ranks into fine-value bit ranges', () async {
       final manager = AttriaxSkanManager(
         config: const AttriaxConfig(

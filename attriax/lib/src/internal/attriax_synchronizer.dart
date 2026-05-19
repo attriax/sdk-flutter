@@ -23,6 +23,10 @@ class AttriaxSynchronizer {
     required int maxQueueSize,
     required Duration eventFlushInterval,
     required AttriaxLogger logger,
+    AttriaxTrackSessionRequest? Function(List<AttriaxQueuedRequest> requests)?
+    buildSessionKeepAliveBatchRequest,
+    FutureOr<void> Function(String sessionId, DateTime occurredAt)?
+    onSessionKeepAliveDelivered,
     void Function(AttriaxApiRequest request, int statusCode)?
     onRequestDelivered,
     void Function(AttriaxApiRequest request, Object error)? onRequestFailed,
@@ -39,6 +43,8 @@ class AttriaxSynchronizer {
       appOpenMonitor: appOpenMonitor,
       queueManager: _queueManager,
       logger: logger,
+      buildSessionKeepAliveBatchRequest: buildSessionKeepAliveBatchRequest,
+      onSessionKeepAliveDelivered: onSessionKeepAliveDelivered,
       onDelivered: onRequestDelivered,
       onFailed: (kind, error) {
         _lastFlushHadFailure = true;
@@ -184,6 +190,11 @@ class AttriaxSynchronizer {
     if (inFlightRefresh != null) {
       await inFlightRefresh;
     }
+  }
+
+  Future<void> flush() {
+    scheduleFlush();
+    return _synchronizationRefreshFuture ?? Future<void>.value();
   }
 
   Future<void> reset({required Object error}) async {

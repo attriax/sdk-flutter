@@ -1,6 +1,7 @@
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 import 'package:flutter/widgets.dart';
 
+import 'attriax_api_models.dart';
 import 'attriax_context_manager.dart';
 import 'attriax_id_generator.dart';
 import 'attriax_logger.dart';
@@ -63,6 +64,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
   AttriaxSessionSnapshot? get currentSession => _currentSession;
   AttriaxContextSnapshot? get context => _contextManager.snapshot;
   bool get isTrackingEnabled => _trackingEnabled;
+  bool get isInBackground => _lifecycleManager.isInBackground;
 
   Future<AttriaxSessionRestoreResult?> init({required bool enabled}) async {
     _trackingEnabled = enabled;
@@ -203,10 +205,26 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
   void handleLifecycleState(AppLifecycleState state) =>
       _lifecycleManager.handleLifecycleState(state);
 
+  Future<void> handleSuccessfulForegroundFlush(
+    String sessionId,
+    DateTime occurredAt,
+  ) => _lifecycleManager.handleSuccessfulForegroundFlush(sessionId, occurredAt);
+
   @override
   Future<AttriaxSessionSnapshot?> prepareTrackedSessionAt(
     DateTime occurredAt,
   ) => _lifecycleManager.prepareTrackedSessionAt(occurredAt);
+
+  AttriaxTrackSessionRequest buildHeartbeatKeepAliveRequest({
+    required AttriaxSessionSnapshot session,
+    required DateTime occurredAt,
+  }) => attriaxBuildTrackSessionRequest(
+    appToken: _config.appToken,
+    deviceIdSource: requireDeviceIdSource(),
+    session: session,
+    kind: AttriaxSessionLifecycleKind.heartbeat,
+    occurredAt: occurredAt,
+  );
 
   AttriaxSessionSnapshot _buildSession({
     required String deviceId,

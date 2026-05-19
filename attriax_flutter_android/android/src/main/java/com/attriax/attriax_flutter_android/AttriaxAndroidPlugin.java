@@ -145,7 +145,7 @@ public class AttriaxAndroidPlugin implements
         }
 
         try {
-            Intent intent;
+            final Intent intent;
             if ("external".equals(openMode)) {
                 intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
             } else {

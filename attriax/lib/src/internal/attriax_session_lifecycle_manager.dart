@@ -35,6 +35,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
   AttriaxSessionSnapshot? _pendingRecoveredSessionEnd;
 
   AttriaxSessionSnapshot? get currentSession => _sessionManager.currentSession;
+  bool get isInBackground => _isInBackground;
 
   void syncLifecycleState(AppLifecycleState? state) {
     _isInBackground = _isBackgroundLifecycleState(state);
@@ -72,8 +73,10 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
         unawaited(_handleLifecycleResumed());
         break;
       case AppLifecycleState.inactive:
+        unawaited(_flushLifecycleQueue());
         break;
       case AppLifecycleState.hidden:
+        unawaited(_handleLifecyclePaused());
         break;
       case AppLifecycleState.paused:
         unawaited(_handleLifecyclePaused());
@@ -124,6 +127,25 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
     _heartbeatTimer = null;
   }
 
+  Future<void> handleSuccessfulForegroundFlush(
+    String sessionId,
+    DateTime occurredAt,
+  ) async {
+    if (!_sessionManager.isTrackingEnabled ||
+        !_settingsState.isEnabled ||
+        _isInBackground) {
+      return;
+    }
+
+    final currentSession = _sessionManager.currentSession;
+    if (currentSession == null || currentSession.id != sessionId) {
+      return;
+    }
+
+    await _sessionManager.recordActivity(at: occurredAt);
+    _restartHeartbeatTimer();
+  }
+
   Future<void> _sendSessionHeartbeat() async {
     if (!_sessionManager.isTrackingEnabled || !_settingsState.isEnabled) {
       return;
@@ -144,82 +166,94 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
   }
 
   Future<void> _handleLifecyclePaused() async {
-    final wasInBackground = _isInBackground;
-    _isInBackground = true;
-    _stopHeartbeatTimer();
-    if (wasInBackground ||
-        !_sessionManager.isTrackingEnabled ||
-        !_settingsState.isEnabled) {
-      return;
-    }
+    try {
+      final wasInBackground = _isInBackground;
+      _isInBackground = true;
+      _stopHeartbeatTimer();
+      if (wasInBackground ||
+          !_sessionManager.isTrackingEnabled ||
+          !_settingsState.isEnabled) {
+        return;
+      }
 
-    final occurredAt = _clock.now();
-    final session = await _sessionManager.recordActivity(at: occurredAt);
-    if (session == null) {
-      return;
-    }
+      final occurredAt = _clock.now();
+      final session = await _sessionManager.recordActivity(at: occurredAt);
+      if (session == null) {
+        return;
+      }
 
-    await _flushPendingRecoveredSessionEnd();
-    await _enqueueSessionLifecycle(
-      kind: AttriaxSessionLifecycleKind.pause,
-      session: session,
-      occurredAt: occurredAt,
-    );
+      await _flushPendingRecoveredSessionEnd();
+      await _enqueueSessionLifecycle(
+        kind: AttriaxSessionLifecycleKind.pause,
+        session: session,
+        occurredAt: occurredAt,
+      );
+    } finally {
+      await _flushLifecycleQueue();
+    }
   }
 
   Future<void> _handleLifecycleResumed() async {
-    final wasInBackground = _isInBackground;
-    _isInBackground = false;
-    final context = _sessionManager.context;
-    if (!_sessionManager.isTrackingEnabled ||
-        !_settingsState.isEnabled ||
-        context == null) {
+    try {
+      final wasInBackground = _isInBackground;
+      _isInBackground = false;
+      final context = _sessionManager.context;
+      if (!_sessionManager.isTrackingEnabled ||
+          !_settingsState.isEnabled ||
+          context == null) {
+        _restartHeartbeatTimer();
+        return;
+      }
+      if (!wasInBackground) {
+        _restartHeartbeatTimer();
+        return;
+      }
+
+      final occurredAt = _clock.now();
+      final sessionResult = await _sessionManager.resumeOrStart(at: occurredAt);
+
+      if (sessionResult.replacedSession != null) {
+        await _enqueueRecoveredSessionEnd(sessionResult.replacedSession!);
+      }
+
+      await _enqueueSessionLifecycle(
+        kind: sessionResult.startedNewSession
+            ? AttriaxSessionLifecycleKind.start
+            : AttriaxSessionLifecycleKind.resume,
+        session: sessionResult.currentSession,
+        occurredAt: sessionResult.startedNewSession
+            ? sessionResult.currentSession.startedAt
+            : occurredAt,
+      );
+
       _restartHeartbeatTimer();
-      return;
+    } finally {
+      await _flushLifecycleQueue();
     }
-    if (!wasInBackground) {
-      _restartHeartbeatTimer();
-      return;
-    }
-
-    final occurredAt = _clock.now();
-    final sessionResult = await _sessionManager.resumeOrStart(at: occurredAt);
-
-    if (sessionResult.replacedSession != null) {
-      await _enqueueRecoveredSessionEnd(sessionResult.replacedSession!);
-    }
-
-    await _enqueueSessionLifecycle(
-      kind: sessionResult.startedNewSession
-          ? AttriaxSessionLifecycleKind.start
-          : AttriaxSessionLifecycleKind.resume,
-      session: sessionResult.currentSession,
-      occurredAt: sessionResult.startedNewSession
-          ? sessionResult.currentSession.startedAt
-          : occurredAt,
-    );
-
-    _restartHeartbeatTimer();
   }
 
   Future<void> _handleLifecycleDetached() async {
-    _isInBackground = true;
-    _stopHeartbeatTimer();
-    if (!_sessionManager.isTrackingEnabled || !_settingsState.isEnabled) {
-      return;
-    }
+    try {
+      _isInBackground = true;
+      _stopHeartbeatTimer();
+      if (!_sessionManager.isTrackingEnabled || !_settingsState.isEnabled) {
+        return;
+      }
 
-    final occurredAt = _clock.now();
-    final session = await _sessionManager.end(at: occurredAt);
-    if (session == null) {
-      return;
-    }
+      final occurredAt = _clock.now();
+      final session = await _sessionManager.end(at: occurredAt);
+      if (session == null) {
+        return;
+      }
 
-    await _enqueueSessionLifecycle(
-      kind: AttriaxSessionLifecycleKind.end,
-      session: session,
-      occurredAt: occurredAt,
-    );
+      await _enqueueSessionLifecycle(
+        kind: AttriaxSessionLifecycleKind.end,
+        session: session,
+        occurredAt: occurredAt,
+      );
+    } finally {
+      await _flushLifecycleQueue();
+    }
   }
 
   Future<void> _enqueueRecoveredSessionEnd(
@@ -297,5 +331,13 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
 
     WidgetsBinding.instance.removeObserver(this);
     _isObserverRegistered = false;
+  }
+
+  Future<void> _flushLifecycleQueue() async {
+    if (!_settingsState.isEnabled) {
+      return;
+    }
+
+    await _requestManager.flush();
   }
 }

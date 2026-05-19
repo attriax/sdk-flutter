@@ -96,6 +96,63 @@ void main() {
         sessionManager.dispose();
       },
     );
+
+    test(
+      'treats hidden as a background transition for lifecycle telemetry',
+      () async {
+        var now = DateTime.utc(2026, 5, 3, 12);
+        final requests = <AttriaxApiRequest>[];
+        final clock = AttriaxMutableClock(now);
+        final sessionManager = await _createSessionManager(
+          clock: clock,
+          requestManager: _RecordingRequestManager(requests),
+        );
+
+        sessionManager.syncLifecycleState(AppLifecycleState.resumed);
+
+        now = now.add(const Duration(seconds: 3));
+        clock.currentTime = now;
+        sessionManager.handleLifecycleState(AppLifecycleState.hidden);
+        await pumpEventQueue();
+
+        now = now.add(const Duration(seconds: 3));
+        clock.currentTime = now;
+        sessionManager.handleLifecycleState(AppLifecycleState.resumed);
+        await pumpEventQueue();
+
+        expect(
+          requests.map((request) => request.toQueueBody()['kind']).toList(),
+          <Object?>['pause', 'resume'],
+        );
+
+        expect(requests[0].toQueueBody()['sessionRelativeTimeMs'], 3000);
+        expect(requests[1].toQueueBody()['sessionRelativeTimeMs'], 6000);
+
+        sessionManager.dispose();
+      },
+    );
+
+    test(
+      'marks the active session alive after a successful foreground flush',
+      () async {
+        final now = DateTime.utc(2026, 5, 3, 12);
+        final clock = AttriaxMutableClock(now);
+        final requestManager = _RecordingRequestManager(<AttriaxApiRequest>[]);
+        final sessionManager = await _createSessionManager(
+          clock: clock,
+          requestManager: requestManager,
+        );
+        final currentSession = sessionManager.currentSession!;
+
+        final flushAt = now.add(const Duration(minutes: 2));
+        await sessionManager.handleSuccessfulForegroundFlush(
+          currentSession.id,
+          flushAt,
+        );
+
+        expect(sessionManager.currentSession?.lastActivityAt, flushAt);
+      },
+    );
   });
 }
 
@@ -135,6 +192,7 @@ class _RecordingRequestManager extends AttriaxRequestManager {
   _RecordingRequestManager(this._requests);
 
   final List<AttriaxApiRequest> _requests;
+  int flushCallCount = 0;
 
   @override
   Future<void> enqueue(
@@ -144,6 +202,11 @@ class _RecordingRequestManager extends AttriaxRequestManager {
     bool flushImmediately = true,
   }) async {
     _requests.add(request);
+  }
+
+  @override
+  Future<void> flush() async {
+    flushCallCount += 1;
   }
 }
 

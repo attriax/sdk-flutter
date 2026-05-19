@@ -46,6 +46,7 @@ android {
 }
 
 dependencies {
+    implementation 'androidx.activity:activity:1.9.0'
     implementation 'com.android.installreferrer:installreferrer:2.2'
     testImplementation 'junit:junit:4.13.2'
 }

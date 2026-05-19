@@ -45,12 +45,19 @@ class AttriaxSkanManager {
 
   AttriaxSkanState? _state;
 
-  AttriaxSkanState? get state => _state;
+  bool get _supportsSkan => _platformType == AttriaxPlatformType.ios;
+
+  AttriaxSkanState? get state => _supportsSkan ? _state : null;
 
   AttriaxSkanConfig get _effectiveConfig =>
       _config.skan ?? const AttriaxSkanConfig();
 
   Future<void> init({required bool isFirstLaunch}) async {
+    if (!_supportsSkan) {
+      await reset();
+      return;
+    }
+
     final config = _effectiveConfig;
     final restoredState = await _preferencesStore.readSkanState();
     _state = (restoredState ?? AttriaxSkanState(enabled: config.enabled))
@@ -91,6 +98,11 @@ class AttriaxSkanManager {
   }
 
   Future<void> applyAppOpenResult(AttriaxAppOpenResult? result) async {
+    if (!_supportsSkan) {
+      await reset();
+      return;
+    }
+
     final currentState = _ensureState();
     final runtimeConfiguration = result?.skan;
     final installState = result?.installState ?? AttriaxInstallState.existing;
@@ -149,6 +161,14 @@ class AttriaxSkanManager {
     AttriaxSkanCoarseValue? coarseValue,
     bool lockWindow = false,
   }) async {
+    if (!_supportsSkan) {
+      return AttriaxSkanUpdateResult(
+        status: AttriaxSkanUpdateStatus.notSupported,
+        message: 'SKAdNetwork updates are only supported on iOS.',
+        state: state,
+      );
+    }
+
     final currentState = _ensureState();
 
     if (!currentState.enabled) {
@@ -163,14 +183,6 @@ class AttriaxSkanManager {
       return AttriaxSkanUpdateResult(
         status: AttriaxSkanUpdateStatus.invalidValue,
         message: 'fineValue must be between 0 and 63.',
-        state: currentState,
-      );
-    }
-
-    if (_platformType != AttriaxPlatformType.ios) {
-      return AttriaxSkanUpdateResult(
-        status: AttriaxSkanUpdateStatus.notSupported,
-        message: 'SKAdNetwork updates are only supported on iOS.',
         state: currentState,
       );
     }
@@ -242,7 +254,9 @@ class AttriaxSkanManager {
   Future<AttriaxSkanUpdateResult?> handleTrackedEvent(
     String eventName, {
     Map<String, Object?>? eventData,
-  }) async => _applyEventCandidates(eventName: eventName, eventData: eventData);
+  }) async => !_supportsSkan
+      ? null
+      : _applyEventCandidates(eventName: eventName, eventData: eventData);
 
   AttriaxSkanState _ensureState() {
     final existingState = _state;

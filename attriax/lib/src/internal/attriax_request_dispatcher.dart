@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
@@ -6,6 +7,7 @@ import 'package:dio/dio.dart';
 import 'attriax_api_models.dart';
 import 'attriax_app_open_monitor.dart';
 import 'attriax_generated_transport.dart';
+import 'attriax_json_utils.dart';
 import 'attriax_logger.dart';
 import 'attriax_queue.dart';
 
@@ -36,6 +38,30 @@ class _BatchDispatchResult {
   final bool shouldStop;
 }
 
+class _BatchKeepAliveRequest {
+  const _BatchKeepAliveRequest({
+    required this.sessionId,
+    required this.occurredAt,
+    required this.request,
+  });
+
+  final String sessionId;
+  final DateTime occurredAt;
+  final AttriaxQueuedRequest request;
+}
+
+class _PreparedBatchRequest {
+  const _PreparedBatchRequest({
+    required this.queuedRequests,
+    required this.transportRequests,
+    required this.keepAlive,
+  });
+
+  final List<AttriaxQueuedRequest> queuedRequests;
+  final List<AttriaxQueuedRequest> transportRequests;
+  final _BatchKeepAliveRequest? keepAlive;
+}
+
 /// Dispatches queued requests to the Attriax backend through the generated SDK client.
 ///
 /// Retries on transient errors (rate-limit, 5xx, network timeout) and
@@ -47,6 +73,8 @@ class AttriaxRequestDispatcher {
     required AttriaxAppOpenMonitor appOpenMonitor,
     required AttriaxQueueManager queueManager,
     required AttriaxLogger logger,
+    this.buildSessionKeepAliveBatchRequest,
+    this.onSessionKeepAliveDelivered,
     this.onDelivered,
     this.onFailed,
   }) : _transport = transport,
@@ -60,6 +88,14 @@ class AttriaxRequestDispatcher {
   final AttriaxAppOpenMonitor _appOpenMonitor;
   final AttriaxQueueManager _queueManager;
   final AttriaxLogger _logger;
+
+  final AttriaxTrackSessionRequest? Function(
+    List<AttriaxQueuedRequest> requests,
+  )?
+  buildSessionKeepAliveBatchRequest;
+
+  final FutureOr<void> Function(String sessionId, DateTime occurredAt)?
+  onSessionKeepAliveDelivered;
 
   /// Called after a request is successfully delivered to the server.
   /// Receives the request kind and the HTTP status code.
@@ -160,26 +196,16 @@ class AttriaxRequestDispatcher {
         }
 
         if (attriaxCanBatchRequest(request)) {
-          final batch = <AttriaxQueuedRequest>[queuedRequest];
-          var batchEnd = i + 1;
-          while (batchEnd < queue.length &&
-              attriaxCanBatchRequest(queue[batchEnd].request) &&
-              attriaxCanShareBatchRequest(
-                queuedRequest.request,
-                queue[batchEnd].request,
-              )) {
-            batch.add(queue[batchEnd]);
-            batchEnd += 1;
-          }
+          final batch = _collectSendableBatchRequests(queue, startIndex: i);
 
           final batchResult = await _flushBatchRequests(batch);
           if (batchResult.shouldStop) {
             remaining.addAll(batchResult.remaining);
-            i = batchEnd;
+            i += batch.length;
             continue;
           }
 
-          i = batchEnd;
+          i += batch.length;
           continue;
         }
 
@@ -333,19 +359,31 @@ class AttriaxRequestDispatcher {
   Future<_BatchDispatchResult> _flushBatchRequests(
     List<AttriaxQueuedRequest> requests,
   ) async {
+    final preparedBatch = _prepareBatchRequest(requests);
+
     try {
       _logger.verbose(
-        'Sending batch request with ${requests.length} queued Attriax request(s).',
+        'Sending batch request with ${preparedBatch.transportRequests.length} queued Attriax request(s).',
       );
-      final delivery = await _transport.sendBatch(requests);
+      final delivery = await _transport.sendBatch(
+        preparedBatch.transportRequests,
+      );
       _logger.verbose(
-        'Batch request succeeded with HTTP ${delivery.statusCode} for ${requests.length} request(s).',
+        'Batch request succeeded with HTTP ${delivery.statusCode} for ${preparedBatch.transportRequests.length} request(s).',
       );
 
-      for (final queuedRequest in requests) {
+      for (final queuedRequest in preparedBatch.queuedRequests) {
         onDelivered?.call(queuedRequest.request, delivery.statusCode);
         _successHandlers.remove(queuedRequest.id)?.call(delivery.response);
         _errorHandlers.remove(queuedRequest.id);
+      }
+
+      final keepAlive = preparedBatch.keepAlive;
+      if (keepAlive != null) {
+        await onSessionKeepAliveDelivered?.call(
+          keepAlive.sessionId,
+          keepAlive.occurredAt,
+        );
       }
 
       return const _BatchDispatchResult.success();
@@ -408,6 +446,116 @@ class AttriaxRequestDispatcher {
 
       return const _BatchDispatchResult.success();
     }
+  }
+
+  List<AttriaxQueuedRequest> _collectSendableBatchRequests(
+    List<AttriaxQueuedRequest> queue, {
+    required int startIndex,
+  }) {
+    final requests = <AttriaxQueuedRequest>[];
+
+    for (var index = startIndex; index < queue.length; index += 1) {
+      final queuedRequest = queue[index];
+      if (!attriaxCanBatchRequest(queuedRequest.request)) {
+        break;
+      }
+
+      final firstQueuedRequest = requests.isEmpty ? null : requests.first;
+      if (firstQueuedRequest != null &&
+          !attriaxCanShareBatchRequest(
+            firstQueuedRequest.request,
+            queuedRequest.request,
+          )) {
+        break;
+      }
+
+      requests.add(queuedRequest);
+      if (!_fitsBatchRequest(requests)) {
+        requests.removeLast();
+        break;
+      }
+    }
+
+    if (requests.isNotEmpty) {
+      return requests;
+    }
+
+    return <AttriaxQueuedRequest>[queue[startIndex]];
+  }
+
+  bool _fitsBatchRequest(List<AttriaxQueuedRequest> requests) {
+    final preparedBatch = _prepareBatchRequest(requests);
+    if (preparedBatch.transportRequests.isEmpty) {
+      return false;
+    }
+
+    if (preparedBatch.transportRequests.length > 100) {
+      return false;
+    }
+
+    final encodedBody = utf8.encode(
+      jsonEncode(
+        attriaxNormalizeJsonMap(
+          _buildBatchBody(preparedBatch.transportRequests),
+        ),
+      ),
+    );
+    return encodedBody.length <= 48 * 1024;
+  }
+
+  _PreparedBatchRequest _prepareBatchRequest(
+    List<AttriaxQueuedRequest> requests,
+  ) {
+    final keepAliveRequest = buildSessionKeepAliveBatchRequest?.call(requests);
+    if (keepAliveRequest == null) {
+      return _PreparedBatchRequest(
+        queuedRequests: List<AttriaxQueuedRequest>.from(requests),
+        transportRequests: List<AttriaxQueuedRequest>.from(requests),
+        keepAlive: null,
+      );
+    }
+
+    final syntheticKeepAliveRequest = AttriaxQueuedRequest(
+      id: 'keepalive_${keepAliveRequest.payload.sessionId}_${keepAliveRequest.payload.clientOccurredAt.microsecondsSinceEpoch}',
+      request: keepAliveRequest,
+      createdAt: keepAliveRequest.payload.clientOccurredAt,
+    );
+
+    return _PreparedBatchRequest(
+      queuedRequests: List<AttriaxQueuedRequest>.from(requests),
+      transportRequests: <AttriaxQueuedRequest>[
+        ...requests,
+        syntheticKeepAliveRequest,
+      ],
+      keepAlive: _BatchKeepAliveRequest(
+        sessionId: keepAliveRequest.payload.sessionId,
+        occurredAt: keepAliveRequest.payload.clientOccurredAt,
+        request: syntheticKeepAliveRequest,
+      ),
+    );
+  }
+
+  Map<String, Object?> _buildBatchBody(List<AttriaxQueuedRequest> requests) {
+    final firstQueuedRequest = requests.first;
+    final sharedIdentity = attriaxBatchRequestIdentity(
+      firstQueuedRequest.request,
+    );
+
+    return <String, Object?>{
+      'requestId': attriaxBatchRequestId(firstQueuedRequest.id),
+      'appToken': sharedIdentity.appToken,
+      'deviceId': sharedIdentity.deviceId,
+      if (sharedIdentity.deviceIdSource != null)
+        'deviceIdSource': sharedIdentity.deviceIdSource,
+      'items': requests
+          .map(
+            (queuedRequest) => <String, Object?>{
+              'kind': attriaxBatchKindName(queuedRequest.request),
+              'body': attriaxBatchBody(queuedRequest.request),
+            },
+          )
+          .toList(growable: false),
+    };
   }
 
   bool _isRetryableBatchError(Object error) => switch (error) {
