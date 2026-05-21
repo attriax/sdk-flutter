@@ -10,6 +10,7 @@ import 'example_events_page.dart';
 import 'example_game_page.dart';
 import 'example_push_tokens_page.dart';
 import 'example_recent_activity_page.dart';
+import 'example_skan_page.dart';
 
 class ExampleHomePage extends StatelessWidget {
   const ExampleHomePage({super.key, required this.controller});
@@ -216,6 +217,16 @@ class ExampleHomePage extends StatelessWidget {
                         context,
                       ).pushNamed(ExampleRecentActivityPage.routeName),
                     ),
+                    if (controller.skanTestingAvailable)
+                      ExampleNavigationTile(
+                        title: 'SKAN testing',
+                        subtitle:
+                            'iOS-only manual controls for reading local SKAdNetwork state and trying any fine or coarse conversion value.',
+                        icon: Icons.developer_mode_outlined,
+                        onTap: () => Navigator.of(
+                          context,
+                        ).pushNamed(ExampleSkanPage.routeName),
+                      ),
                   ],
                 ),
               ),

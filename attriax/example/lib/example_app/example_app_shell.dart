@@ -15,6 +15,7 @@ import 'example_game_page.dart';
 import 'example_home_page.dart';
 import 'example_push_tokens_page.dart';
 import 'example_recent_activity_page.dart';
+import 'example_skan_page.dart';
 
 final GlobalKey<NavigatorState> _exampleNavigatorKey =
     GlobalKey<NavigatorState>();
@@ -27,6 +28,7 @@ class AttriaxPackageExampleApp extends StatefulWidget {
     this.bootstrapError,
     this.pushTokenService,
     this.platformBridge,
+    this.targetPlatformOverride,
   });
 
   final Attriax sdk;
@@ -34,6 +36,7 @@ class AttriaxPackageExampleApp extends StatefulWidget {
   final String? bootstrapError;
   final ExamplePushTokenService? pushTokenService;
   final ExamplePlatformBridge? platformBridge;
+  final TargetPlatform? targetPlatformOverride;
 
   @override
   State<AttriaxPackageExampleApp> createState() =>
@@ -45,6 +48,7 @@ class _AttriaxPackageExampleAppState extends State<AttriaxPackageExampleApp> {
     sdk: widget.sdk,
     pushTokenService: widget.pushTokenService,
     platformBridge: widget.platformBridge,
+    targetPlatform: widget.targetPlatformOverride,
   );
 
   @override
@@ -117,6 +121,11 @@ class _AttriaxPackageExampleAppState extends State<AttriaxPackageExampleApp> {
       case ExampleRecentActivityPage.routeName:
         return MaterialPageRoute<void>(
           builder: (_) => ExampleRecentActivityPage(controller: _controller),
+          settings: settings,
+        );
+      case ExampleSkanPage.routeName:
+        return MaterialPageRoute<void>(
+          builder: (_) => ExampleSkanPage(controller: _controller),
           settings: settings,
         );
       case ExampleDeepLinkResultPage.routeName:

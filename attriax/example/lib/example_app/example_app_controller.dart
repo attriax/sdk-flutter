@@ -14,13 +14,16 @@ class ExampleAppController extends ChangeNotifier {
     required this.sdk,
     ExamplePushTokenService? pushTokenService,
     ExamplePlatformBridge? platformBridge,
+    TargetPlatform? targetPlatform,
   }) : _pushTokenService =
            pushTokenService ?? LiveExamplePushTokenService(sdk: sdk),
-       _platformBridge = platformBridge ?? MethodChannelExamplePlatformBridge();
+       _platformBridge = platformBridge ?? MethodChannelExamplePlatformBridge(),
+       _targetPlatform = targetPlatform;
 
   final Attriax sdk;
   final ExamplePushTokenService _pushTokenService;
   final ExamplePlatformBridge _platformBridge;
+  final TargetPlatform? _targetPlatform;
 
   void Function(AttriaxRawDeepLinkEvent event)? onDeepLinkNavigation;
 
@@ -46,6 +49,8 @@ class ExampleAppController extends ChangeNotifier {
   bool initialDeepLinkResolved = false;
   String? deviceId;
   AttriaxSdkSnapshot? sdkSnapshot;
+  AttriaxSkanState? skanState;
+  AttriaxSkanUpdateResult? lastSkanUpdateResult;
   AttriaxInstallReferrerDetails? originalInstallReferrer;
   AttriaxInstallReferrerDetails? reinstallReferrer;
   AttriaxRawDeepLinkEvent? rawInitialDeepLink;
@@ -95,6 +100,10 @@ class ExampleAppController extends ChangeNotifier {
         'attribution ${currentValues.attribution ? 'on' : 'off'} · '
         'ad events ${currentValues.adEvents ? 'on' : 'off'}';
   }
+
+  bool get skanTestingAvailable =>
+      !kIsWeb &&
+      (_targetPlatform ?? defaultTargetPlatform) == TargetPlatform.iOS;
 
   String get activeGamePlayerName {
     final trimmed = gamePlayerName.trim();
@@ -530,6 +539,77 @@ class ExampleAppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> refreshSkanState() async {
+    if (!skanTestingAvailable) {
+      statusMessage = 'SKAN testing is available on iOS only.';
+      _pushActivity(
+        'SKAN state refresh unavailable',
+        detail: 'ios only',
+        isError: true,
+      );
+      notifyListeners();
+      return;
+    }
+
+    _syncFromSdk();
+    statusMessage = 'Refreshed the local SKAN state snapshot.';
+    _pushActivity(
+      'SKAN state refreshed',
+      detail:
+          'fine=${skanState?.fineValue ?? 'unset'} coarse=${skanState?.coarseValue?.name ?? 'unset'}',
+    );
+    notifyListeners();
+  }
+
+  Future<AttriaxSkanUpdateResult?> updateSkanConversionValue({
+    required int fineValue,
+    AttriaxSkanCoarseValue? coarseValue,
+    bool lockWindow = false,
+  }) async {
+    if (!skanTestingAvailable) {
+      statusMessage = 'SKAN testing is available on iOS only.';
+      _pushActivity(
+        'SKAN update unavailable',
+        detail: 'ios only',
+        isError: true,
+      );
+      notifyListeners();
+      return null;
+    }
+
+    try {
+      final result = await sdk.skan.updateConversionValue(
+        fineValue: fineValue,
+        coarseValue: coarseValue,
+        lockWindow: lockWindow,
+      );
+
+      lastSkanUpdateResult = result;
+      skanState = result.state ?? sdk.skan.state;
+      statusMessage = result.message == null
+          ? 'SKAN update ${describeExampleSkanUpdateStatus(result.status)}.'
+          : 'SKAN update ${describeExampleSkanUpdateStatus(result.status)}: ${result.message}';
+      _pushActivity(
+        'SKAN update',
+        detail: result.message == null
+            ? describeExampleSkanUpdateStatus(result.status)
+            : '${describeExampleSkanUpdateStatus(result.status)}: ${result.message}',
+        isError: result.status == AttriaxSkanUpdateStatus.error,
+      );
+      notifyListeners();
+      return result;
+    } catch (error) {
+      statusMessage = 'SKAN update failed: ${formatExampleError(error)}';
+      _pushActivity(
+        'SKAN update failed',
+        detail: formatExampleError(error),
+        isError: true,
+      );
+      notifyListeners();
+      rethrow;
+    }
+  }
+
   Future<void> openAppLinkSettings() async {
     final opened = await _platformBridge.openAppLinkSettings();
     statusMessage = opened
@@ -711,6 +791,7 @@ class ExampleAppController extends ChangeNotifier {
     consentValues = sdk.consent.gdpr.values;
     deviceId = sdk.deviceId;
     sdkSnapshot = sdk.sdkSnapshot;
+    skanState = skanTestingAvailable ? sdk.skan.state : null;
     synchronizationState = sdk.synchronization.state;
   }
 

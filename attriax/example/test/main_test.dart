@@ -42,6 +42,7 @@ void main() {
   Future<void> pumpExampleApp(
     WidgetTester tester, {
     String? bootstrapError,
+    TargetPlatform? targetPlatformOverride,
   }) async {
     addTearDown(() async {
       await tester.pumpWidget(const SizedBox.shrink());
@@ -56,6 +57,7 @@ void main() {
         bootstrapError: bootstrapError,
         pushTokenService: pushTokens,
         platformBridge: platformBridge,
+        targetPlatformOverride: targetPlatformOverride,
       ),
     );
     await tester.pump();
@@ -118,6 +120,38 @@ void main() {
       ),
     );
     expect(find.text('Accept analytics'), findsNothing);
+    expect(find.text('SKAN testing'), findsNothing);
+    expect(find.textContaining('FCM token synced with Attriax.'), findsWidgets);
+  });
+
+  testWidgets('shows the iOS-only SKAN page and sends manual updates', (
+    tester,
+  ) async {
+    await pumpExampleApp(tester, targetPlatformOverride: TargetPlatform.iOS);
+
+    expect(find.text('SKAN testing'), findsOneWidget);
+
+    await tapNavigationTile(tester, 'SKAN testing');
+
+    expect(find.text('SKAdNetwork Testing'), findsWidgets);
+    expect(find.text('Current SKAN state'), findsOneWidget);
+
+    await tester.enterText(
+      find.byKey(const ValueKey<String>('skan_fine_value_field')),
+      '42',
+    );
+    await tapVisibleText(tester, 'Apply SKAN value');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(sdk.recordedSkanUpdates, hasLength(1));
+    expect(sdk.recordedSkanUpdates.single['fineValue'], 42);
+    expect(
+      sdk.recordedSkanUpdates.single['coarseValue'],
+      AttriaxSkanCoarseValue.low,
+    );
+    expect(find.textContaining('updated'), findsWidgets);
+    expect(find.textContaining('42'), findsWidgets);
   });
 
   testWidgets('shows the bootstrap error page and skips startup refreshes', (
@@ -347,6 +381,19 @@ class FakeAttriax extends Fake implements Attriax {
   final List<Map<String, Object?>> recordedEvents = <Map<String, Object?>>[];
   final List<Map<String, Object?>> recordedPurchases = <Map<String, Object?>>[];
   final List<Map<String, Object?>> recordedAdRevenue = <Map<String, Object?>>[];
+  final List<Map<String, Object?>> recordedSkanUpdates =
+      <Map<String, Object?>>[];
+
+  AttriaxSkanState currentSkanState = const AttriaxSkanState(
+    enabled: true,
+    schemaVersion: 2,
+    fineValue: 0,
+    coarseValue: AttriaxSkanCoarseValue.low,
+    firstLaunchValueRegistered: true,
+    completedRetentionDays: <int>[1],
+    purchaseCount: 2,
+    adShowCount: 5,
+  );
 
   AttriaxInstallReferrerDetails? originalInstallReferrerResult =
       const AttriaxInstallReferrerDetails(
@@ -377,6 +424,7 @@ class FakeAttriax extends Fake implements Attriax {
 
   AttriaxGdprConsentState consentState = AttriaxGdprConsentState.pending;
   AttriaxGdprConsentValues? consentValues;
+  late final AttriaxSkan skan = _FakeAttriaxSkan(this);
 
   @override
   bool get isInitialized => true;
