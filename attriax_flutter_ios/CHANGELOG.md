@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0
+
+### Added
+- Native context collection now includes the precise Apple hardware model identifier where available for richer device diagnostics.
+
+### Changed
+- Package version alignment for the federated 0.3.0 GDPR consent release.
+
 ## 0.2.0
 
 ### Added

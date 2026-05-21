@@ -1,3 +1,4 @@
+import 'package:attriax_flutter/attriax_flutter.dart';
 import 'package:flutter/material.dart';
 
 import 'example_app_controller.dart';
@@ -21,6 +22,10 @@ class _ExampleControlsPageState extends State<ExampleControlsPage> {
   late final TextEditingController _userNameController = TextEditingController(
     text: 'Taylor',
   );
+  bool _analyticsConsent = true;
+  bool _attributionConsent = true;
+  bool _adEventsConsent = false;
+  AttriaxGdprConsentValues? _lastSyncedConsentValues;
 
   @override
   void dispose() {
@@ -29,11 +34,38 @@ class _ExampleControlsPageState extends State<ExampleControlsPage> {
     super.dispose();
   }
 
+  void _syncConsentDraft() {
+    final currentValues = widget.controller.consentValues;
+    if (currentValues == null || currentValues == _lastSyncedConsentValues) {
+      return;
+    }
+
+    _analyticsConsent = currentValues.analytics;
+    _attributionConsent = currentValues.attribution;
+    _adEventsConsent = currentValues.adEvents;
+    _lastSyncedConsentValues = currentValues;
+  }
+
+  Future<void> _runConsentAction(Future<void> Function() action) async {
+    await action();
+    if (!mounted) {
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    messenger.hideCurrentSnackBar();
+    messenger.showSnackBar(
+      SnackBar(content: Text(widget.controller.statusMessage)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: widget.controller,
       builder: (context, _) {
+        _syncConsentDraft();
+
         return ExamplePageScaffold(
           title: 'Controls',
           subtitle:
@@ -63,6 +95,105 @@ class _ExampleControlsPageState extends State<ExampleControlsPage> {
                       subtitle: const Text(
                         'This only affects recordEvent()/recordPageView()/revenue helpers, not the whole SDK.',
                       ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              ExampleSectionCard(
+                title: 'GDPR consent',
+                subtitle:
+                    'This example enables gdprEnabled so you can inspect pending, granted, and not-required states directly from the public SDK API.',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    ExampleKeyValueRow(
+                      label: 'Current state',
+                      value: widget.controller.consentStateLabel,
+                    ),
+                    ExampleKeyValueRow(
+                      label: 'Waiting for consent',
+                      value: widget.controller.isWaitingForConsent
+                          ? 'Yes'
+                          : 'No',
+                    ),
+                    ExampleKeyValueRow(
+                      label: 'Current values',
+                      value: widget.controller.consentValuesLabel,
+                    ),
+                    ExampleKeyValueRow(
+                      label: 'Last result',
+                      value: widget.controller.statusMessage,
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile.adaptive(
+                      value: _analyticsConsent,
+                      onChanged: (value) {
+                        setState(() {
+                          _analyticsConsent = value;
+                        });
+                      },
+                      title: const Text('Analytics consent'),
+                    ),
+                    SwitchListTile.adaptive(
+                      value: _attributionConsent,
+                      onChanged: (value) {
+                        setState(() {
+                          _attributionConsent = value;
+                        });
+                      },
+                      title: const Text('Attribution consent'),
+                    ),
+                    SwitchListTile.adaptive(
+                      value: _adEventsConsent,
+                      onChanged: (value) {
+                        setState(() {
+                          _adEventsConsent = value;
+                        });
+                      },
+                      title: const Text('Ad-events consent'),
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: <Widget>[
+                        ExampleActionButton(
+                          label: 'Check consent (remote)',
+                          onPressed: () => _runConsentAction(
+                            () => widget.controller.refreshConsentStatus(),
+                          ),
+                        ),
+                        ExampleActionButton(
+                          label: 'Check consent (local)',
+                          onPressed: () => _runConsentAction(
+                            () => widget.controller.refreshConsentStatus(
+                              localOnly: true,
+                            ),
+                          ),
+                        ),
+                        ExampleActionButton(
+                          label: 'Apply consent',
+                          onPressed: () => _runConsentAction(
+                            () => widget.controller.applyConsentSelection(
+                              analytics: _analyticsConsent,
+                              attribution: _attributionConsent,
+                              adEvents: _adEventsConsent,
+                            ),
+                          ),
+                        ),
+                        ExampleActionButton(
+                          label: 'Mark not required',
+                          onPressed: () => _runConsentAction(
+                            widget.controller.markConsentNotRequired,
+                          ),
+                        ),
+                        ExampleActionButton(
+                          label: 'Reset consent',
+                          onPressed: () =>
+                              _runConsentAction(widget.controller.resetConsent),
+                        ),
+                      ],
                     ),
                   ],
                 ),

@@ -19,7 +19,7 @@ class SdkV1DeepLinkResolveDto {
   SdkV1DeepLinkResolveDto({
     required this.appToken,
 
-    required this.deviceId,
+    this.deviceId,
 
     this.deviceIdSource,
 
@@ -39,8 +39,8 @@ class SdkV1DeepLinkResolveDto {
   @JsonKey(name: r'appToken', required: true, includeIfNull: false)
   final String appToken;
 
-  @JsonKey(name: r'deviceId', required: true, includeIfNull: false)
-  final String deviceId;
+  @JsonKey(name: r'deviceId', required: false, includeIfNull: false)
+  final String? deviceId;
 
   @JsonKey(name: r'deviceIdSource', required: false, includeIfNull: false)
   final String? deviceIdSource;

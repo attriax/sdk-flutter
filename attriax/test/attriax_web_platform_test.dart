@@ -15,6 +15,7 @@ void main() {
           assetBaseUrl: 'https://demo.attriax.com/app/',
           documentBaseUrl: 'https://demo.attriax.com/app/index.html',
           locationBaseUrl: 'https://demo.attriax.com/app/install?code=1',
+          timezone: 'Europe/Berlin',
           appName: 'Netscape',
           browserName: 'Mozilla',
           userAgent: 'Mozilla/5.0 Test',
@@ -31,6 +32,7 @@ void main() {
       expect(context.metadata['appVersion'], '4.5.6');
       expect(context.metadata['appBuildNumber'], '21');
       expect(context.metadata['packageName'], 'com.example.attriax.web');
+      expect(context.metadata['timezone'], 'Europe/Berlin');
       expect(context.metadata['browserName'], 'Mozilla');
       expect(context.metadata['title'], 'Attriax Demo');
       expect(

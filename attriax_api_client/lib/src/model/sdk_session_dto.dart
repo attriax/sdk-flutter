@@ -28,7 +28,7 @@ class SdkSessionDto {
 
     this.clientOccurredAt,
 
-    required this.deviceId,
+    this.deviceId,
 
     this.deviceIdSource,
 
@@ -66,8 +66,8 @@ class SdkSessionDto {
   @JsonKey(name: r'clientOccurredAt', required: false, includeIfNull: false)
   final DateTime? clientOccurredAt;
 
-  @JsonKey(name: r'deviceId', required: true, includeIfNull: false)
-  final String deviceId;
+  @JsonKey(name: r'deviceId', required: false, includeIfNull: false)
+  final String? deviceId;
 
   @JsonKey(name: r'deviceIdSource', required: false, includeIfNull: false)
   final String? deviceIdSource;

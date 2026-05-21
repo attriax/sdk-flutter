@@ -8,10 +8,7 @@ part of 'sdk_session_dto.dart';
 
 SdkSessionDto _$SdkSessionDtoFromJson(Map<String, dynamic> json) =>
     $checkedCreate('SdkSessionDto', json, ($checkedConvert) {
-      $checkKeys(
-        json,
-        requiredKeys: const ['appToken', 'deviceId', 'kind', 'sessionId'],
-      );
+      $checkKeys(json, requiredKeys: const ['appToken', 'kind', 'sessionId']);
       final val = SdkSessionDto(
         appBuildNumber: $checkedConvert('appBuildNumber', (v) => v as String?),
         appPackageName: $checkedConvert('appPackageName', (v) => v as String?),
@@ -21,7 +18,7 @@ SdkSessionDto _$SdkSessionDtoFromJson(Map<String, dynamic> json) =>
           'clientOccurredAt',
           (v) => v == null ? null : DateTime.parse(v as String),
         ),
-        deviceId: $checkedConvert('deviceId', (v) => v as String),
+        deviceId: $checkedConvert('deviceId', (v) => v as String?),
         deviceIdSource: $checkedConvert('deviceIdSource', (v) => v as String?),
         isFirstLaunch: $checkedConvert('isFirstLaunch', (v) => v as bool?),
         kind: $checkedConvert(
@@ -60,7 +57,7 @@ Map<String, dynamic> _$SdkSessionDtoToJson(SdkSessionDto instance) =>
       'appToken': instance.appToken,
       'appVersion': ?instance.appVersion,
       'clientOccurredAt': ?instance.clientOccurredAt?.toIso8601String(),
-      'deviceId': instance.deviceId,
+      'deviceId': ?instance.deviceId,
       'deviceIdSource': ?instance.deviceIdSource,
       'isFirstLaunch': ?instance.isFirstLaunch,
       'kind': _$SdkSessionLifecycleKindEnumMap[instance.kind]!,

@@ -9,6 +9,9 @@ import 'package:attriax_api_client/src/model/sdk_create_dynamic_link_response_dt
 import 'package:attriax_api_client/src/model/sdk_create_dynamic_link_response_envelope_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_dynamic_link_record_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_event_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_gdpr_consent_response_envelope_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_gdpr_consent_status_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_gdpr_consent_values_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_install_referrer_result_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_register_uninstall_token_dto.dart';
@@ -26,6 +29,9 @@ import 'package:attriax_api_client/src/model/sdk_v1_batch_response_envelope_dto.
 import 'package:attriax_api_client/src/model/sdk_v1_deep_link_resolve_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_deep_link_resolve_response_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_deep_link_resolve_response_envelope_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_gdpr_consent_check_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_gdpr_consent_values_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_gdpr_consent_write_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_open_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_open_response_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_open_response_envelope_dto.dart';
@@ -63,6 +69,7 @@ ReturnType deserialize<ReturnType, BaseType>(
       return (valueString == 'true' || valueString == '1') as ReturnType;
     case 'double':
       return (value is double ? value : double.parse('$value')) as ReturnType;
+    case 'AppUserGdprConsentState':
     case 'AppUserUninstallTokenProvider':
     case 'AppVersionContextDto':
       return AppVersionContextDto.fromJson(value as Map<String, dynamic>)
@@ -106,6 +113,17 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'SdkEventDto':
       return SdkEventDto.fromJson(value as Map<String, dynamic>) as ReturnType;
+    case 'SdkGdprConsentResponseEnvelopeDto':
+      return SdkGdprConsentResponseEnvelopeDto.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
+    case 'SdkGdprConsentStatusDto':
+      return SdkGdprConsentStatusDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SdkGdprConsentValuesDto':
+      return SdkGdprConsentValuesDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
     case 'SdkInstallReferrerResultDto':
       return SdkInstallReferrerResultDto.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -173,6 +191,15 @@ ReturnType deserialize<ReturnType, BaseType>(
       return SdkV1DeepLinkResolveResponseEnvelopeDto.fromJson(
             value as Map<String, dynamic>,
           )
+          as ReturnType;
+    case 'SdkV1GdprConsentCheckDto':
+      return SdkV1GdprConsentCheckDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SdkV1GdprConsentValuesDto':
+      return SdkV1GdprConsentValuesDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SdkV1GdprConsentWriteDto':
+      return SdkV1GdprConsentWriteDto.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'SdkV1OpenDto':
       return SdkV1OpenDto.fromJson(value as Map<String, dynamic>) as ReturnType;

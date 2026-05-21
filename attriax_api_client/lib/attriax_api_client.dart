@@ -10,6 +10,7 @@ export 'package:attriax_api_client/src/auth/oauth.dart';
 
 export 'package:attriax_api_client/src/api/sdk_api.dart';
 
+export 'package:attriax_api_client/src/model/app_user_gdpr_consent_state.dart';
 export 'package:attriax_api_client/src/model/app_user_uninstall_token_provider.dart';
 export 'package:attriax_api_client/src/model/app_version_context_dto.dart';
 export 'package:attriax_api_client/src/model/attribution_type.dart';
@@ -27,6 +28,9 @@ export 'package:attriax_api_client/src/model/sdk_create_dynamic_link_response_dt
 export 'package:attriax_api_client/src/model/sdk_create_dynamic_link_response_envelope_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_dynamic_link_record_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_event_dto.dart';
+export 'package:attriax_api_client/src/model/sdk_gdpr_consent_response_envelope_dto.dart';
+export 'package:attriax_api_client/src/model/sdk_gdpr_consent_status_dto.dart';
+export 'package:attriax_api_client/src/model/sdk_gdpr_consent_values_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_install_referrer_result_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_install_state.dart';
 export 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
@@ -46,6 +50,9 @@ export 'package:attriax_api_client/src/model/sdk_v1_batch_response_envelope_dto.
 export 'package:attriax_api_client/src/model/sdk_v1_deep_link_resolve_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_v1_deep_link_resolve_response_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_v1_deep_link_resolve_response_envelope_dto.dart';
+export 'package:attriax_api_client/src/model/sdk_v1_gdpr_consent_check_dto.dart';
+export 'package:attriax_api_client/src/model/sdk_v1_gdpr_consent_values_dto.dart';
+export 'package:attriax_api_client/src/model/sdk_v1_gdpr_consent_write_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_v1_open_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_v1_open_response_dto.dart';
 export 'package:attriax_api_client/src/model/sdk_v1_open_response_envelope_dto.dart';

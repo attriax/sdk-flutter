@@ -32,6 +32,7 @@ class AttriaxContextManager implements AttriaxTrackingContext {
   AttriaxContextSnapshot? _snapshot;
 
   String? get deviceId => _deviceId;
+  String? get deviceIdSource => _deviceIdSource;
   bool get isFirstLaunch => _isFirstLaunch;
   AttriaxSdkSnapshot? get sdkSnapshot => _snapshot?.sdk;
   AttriaxContextSnapshot? get snapshot => _snapshot;
@@ -56,6 +57,22 @@ class AttriaxContextManager implements AttriaxTrackingContext {
     return value;
   }
 
+  Future<void> ensureDeviceIdentity() async {
+    if (_deviceId != null && _deviceId!.isNotEmpty && _deviceIdSource != null) {
+      return;
+    }
+
+    final storedDeviceIdentity = await _preferencesStore.ensureDeviceIdentity(
+      deviceIdFactory: attriaxGenerateId,
+    );
+
+    _deviceId ??= storedDeviceIdentity.deviceId;
+    _deviceIdSource ??= storedDeviceIdentity.deviceIdSource;
+    await _ensureResolvedDeviceIdentity(
+      hasPersistedDeviceId: storedDeviceIdentity.hasPersistedDeviceId,
+    );
+  }
+
   Future<void> init() async {
     final storedDeviceData = await _preferencesStore.restoreDeviceData(
       deviceIdFactory: attriaxGenerateId,
@@ -63,36 +80,8 @@ class AttriaxContextManager implements AttriaxTrackingContext {
 
     _deviceId ??= storedDeviceData.deviceId;
     _deviceIdSource ??= storedDeviceData.deviceIdSource;
-
-    late final AttriaxResolvedDeviceId resolvedDeviceId;
-    if (_deviceIdSource != null) {
-      resolvedDeviceId = AttriaxResolvedDeviceId(
-        value: requiredDeviceId,
-        source: _deviceIdSource!,
-        isFallback: _deviceIdSource == attriaxPersistentStorageDeviceIdSource,
-      );
-    } else if (storedDeviceData.hasPersistedDeviceId) {
-      resolvedDeviceId = AttriaxResolvedDeviceId(
-        value: requiredDeviceId,
-        source: attriaxPersistentStorageDeviceIdSource,
-        isFallback: true,
-      );
-    } else {
-      resolvedDeviceId = await _contextCollector.resolvePreferredDeviceId(
-        fallbackDeviceId: requiredDeviceId,
-      );
-    }
-
-    if (_deviceId != resolvedDeviceId.value) {
-      _deviceId = resolvedDeviceId.value;
-    }
-    _deviceIdSource = resolvedDeviceId.source;
-    await _preferencesStore.setResolvedDeviceIdentity(
-      deviceId: requiredDeviceId,
-      deviceIdSource: _deviceIdSource,
-    );
-    _logger.verbose(
-      'Using device ID (${resolvedDeviceId.source}): $requiredDeviceId',
+    await _ensureResolvedDeviceIdentity(
+      hasPersistedDeviceId: storedDeviceData.hasPersistedDeviceId,
     );
 
     _isFirstLaunch = storedDeviceData.isFirstLaunch;
@@ -108,6 +97,9 @@ class AttriaxContextManager implements AttriaxTrackingContext {
 
   Future<AttriaxTrackingAuthorizationStatus> getTrackingAuthorizationStatus() =>
       _contextCollector.getTrackingAuthorizationStatus();
+
+  Future<String?> resolveTimezone() =>
+      _contextCollector.resolveDeviceTimezone();
 
   Future<void> setAutomaticCrashReportingEnabled({required bool enabled}) =>
       _contextCollector.setAutomaticCrashReportingEnabled(enabled: enabled);
@@ -130,5 +122,40 @@ class AttriaxContextManager implements AttriaxTrackingContext {
     }
 
     return source;
+  }
+
+  Future<void> _ensureResolvedDeviceIdentity({
+    required bool hasPersistedDeviceId,
+  }) async {
+    late final AttriaxResolvedDeviceId resolvedDeviceId;
+    if (_deviceIdSource != null) {
+      resolvedDeviceId = AttriaxResolvedDeviceId(
+        value: requiredDeviceId,
+        source: _deviceIdSource!,
+        isFallback: _deviceIdSource == attriaxPersistentStorageDeviceIdSource,
+      );
+    } else if (hasPersistedDeviceId) {
+      resolvedDeviceId = AttriaxResolvedDeviceId(
+        value: requiredDeviceId,
+        source: attriaxPersistentStorageDeviceIdSource,
+        isFallback: true,
+      );
+    } else {
+      resolvedDeviceId = await _contextCollector.resolvePreferredDeviceId(
+        fallbackDeviceId: requiredDeviceId,
+      );
+    }
+
+    if (_deviceId != resolvedDeviceId.value) {
+      _deviceId = resolvedDeviceId.value;
+    }
+    _deviceIdSource = resolvedDeviceId.source;
+    await _preferencesStore.setResolvedDeviceIdentity(
+      deviceId: requiredDeviceId,
+      deviceIdSource: _deviceIdSource,
+    );
+    _logger.verbose(
+      'Using device ID (${resolvedDeviceId.source}): $requiredDeviceId',
+    );
   }
 }

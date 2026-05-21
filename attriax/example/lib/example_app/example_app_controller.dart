@@ -41,6 +41,8 @@ class ExampleAppController extends ChangeNotifier {
   bool eventsEnabled = true;
   bool isFirstLaunch = false;
   bool isInitialized = false;
+  AttriaxGdprConsentState consentState = AttriaxGdprConsentState.unknown;
+  AttriaxGdprConsentValues? consentValues;
   bool initialDeepLinkResolved = false;
   String? deviceId;
   AttriaxSdkSnapshot? sdkSnapshot;
@@ -65,6 +67,34 @@ class ExampleAppController extends ChangeNotifier {
       <String, Map<String, int>>{};
 
   bool get isRefreshing => _isRefreshing;
+
+  bool get isWaitingForConsent => sdk.consent.gdpr.isWaitingForConsent;
+
+  String get consentStateLabel {
+    switch (consentState) {
+      case AttriaxGdprConsentState.unknown:
+        return 'Unknown';
+      case AttriaxGdprConsentState.notRequired:
+        return 'Not required';
+      case AttriaxGdprConsentState.pending:
+        return 'Pending';
+      case AttriaxGdprConsentState.granted:
+        return 'Granted';
+    }
+  }
+
+  String get consentValuesLabel {
+    final currentValues = consentValues;
+    if (currentValues == null) {
+      return consentState == AttriaxGdprConsentState.notRequired
+          ? 'Not required'
+          : 'Unset';
+    }
+
+    return 'analytics ${currentValues.analytics ? 'on' : 'off'} · '
+        'attribution ${currentValues.attribution ? 'on' : 'off'} · '
+        'ad events ${currentValues.adEvents ? 'on' : 'off'}';
+  }
 
   String get activeGamePlayerName {
     final trimmed = gamePlayerName.trim();
@@ -132,6 +162,15 @@ class ExampleAppController extends ChangeNotifier {
     latestResolution = latestDeepLink;
 
     try {
+      if (sdk.consent.gdpr.isWaitingForConsent) {
+        await refreshDomainStatus();
+        await refreshPushTokenStatus();
+        statusMessage =
+            'GDPR consent is pending. Use Controls to resolve consent before tracking starts.';
+        _pushActivity('GDPR consent pending', detail: consentStateLabel);
+        return;
+      }
+
       final initialEvent = await sdk.deepLinks.waitForInitialDeepLink();
       initialDeepLinkResolved = sdk.deepLinks.initialDeepLinkResolved;
       if (initialEvent != null) {
@@ -178,6 +217,74 @@ class ExampleAppController extends ChangeNotifier {
         ? 'SDK enabled. Tracking and deep-link handling are active.'
         : 'SDK disabled. Tracking and deep-link handling stop until re-enabled.';
     _pushActivity('SDK ${value ? 'enabled' : 'disabled'}');
+    notifyListeners();
+  }
+
+  Future<void> refreshConsentStatus({bool localOnly = false}) async {
+    try {
+      final needsConsent = await sdk.consent.gdpr.needsConsent(
+        localOnly: localOnly,
+      );
+      _syncFromSdk();
+      statusMessage = needsConsent
+          ? (localOnly
+                ? 'Local GDPR check says consent is required before tracking starts.'
+                : 'Remote GDPR check says consent is required before tracking starts.')
+          : consentState == AttriaxGdprConsentState.granted
+          ? 'GDPR consent is granted.'
+          : 'GDPR consent is not required for this device.';
+      _pushActivity(
+        'consent.gdpr.needsConsent',
+        detail: '${localOnly ? 'local' : 'remote'} -> $consentStateLabel',
+      );
+    } catch (error) {
+      _syncFromSdk();
+      statusMessage =
+          'Failed to run ${localOnly ? 'local' : 'remote'} GDPR check: ${formatExampleError(error)}';
+      _pushActivity(
+        'consent.gdpr.needsConsent',
+        detail: statusMessage,
+        isError: true,
+      );
+    }
+
+    notifyListeners();
+  }
+
+  Future<void> applyConsentSelection({
+    required bool analytics,
+    required bool attribution,
+    required bool adEvents,
+  }) async {
+    sdk.consent.gdpr.setConsent(
+      analytics: analytics,
+      attribution: attribution,
+      adEvents: adEvents,
+    );
+    _syncFromSdk();
+    statusMessage = 'Stored GDPR consent locally and queued a sync to Attriax.';
+    _pushActivity(
+      'consent.gdpr.setConsent',
+      detail:
+          'analytics=$analytics attribution=$attribution adEvents=$adEvents',
+    );
+    notifyListeners();
+  }
+
+  Future<void> markConsentNotRequired() async {
+    sdk.consent.gdpr.setNotRequired();
+    _syncFromSdk();
+    statusMessage = 'Marked GDPR consent as not required.';
+    _pushActivity('consent.gdpr.setNotRequired', detail: consentStateLabel);
+    notifyListeners();
+  }
+
+  Future<void> resetConsent() async {
+    sdk.consent.gdpr.reset();
+    _syncFromSdk();
+    statusMessage =
+        'Reset GDPR consent. Tracking waits until consent is resolved again.';
+    _pushActivity('consent.gdpr.reset', detail: consentStateLabel);
     notifyListeners();
   }
 
@@ -566,15 +673,14 @@ class ExampleAppController extends ChangeNotifier {
     );
     notifyListeners();
 
-    if (shouldNavigate) {
-      onDeepLinkNavigation?.call(event);
-    }
-
     try {
       latestResolution = await sdk.deepLinks.waitResolution(event);
       latestDeepLink = latestResolution;
       if (latestResolution!.isColdStart && initialDeepLink == null) {
         initialDeepLink = latestResolution;
+      }
+      if (shouldNavigate && latestResolution!.found) {
+        onDeepLinkNavigation?.call(event);
       }
       statusMessage = latestResolution!.found
           ? 'Deep link matched ${latestResolution!.uri}.'
@@ -601,6 +707,8 @@ class ExampleAppController extends ChangeNotifier {
     enabled = sdk.enabled;
     eventsEnabled = sdk.eventsEnabled;
     isFirstLaunch = sdk.isFirstLaunch;
+    consentState = sdk.consent.gdpr.state;
+    consentValues = sdk.consent.gdpr.values;
     deviceId = sdk.deviceId;
     sdkSnapshot = sdk.sdkSnapshot;
     synchronizationState = sdk.synchronization.state;

@@ -27,9 +27,9 @@ class SdkCrashDto {
 
     required this.clientOccurredAt,
 
-    required this.deviceId,
+    this.deviceId,
 
-    required this.deviceIdSource,
+    this.deviceIdSource,
 
     required this.exceptionType,
 
@@ -75,11 +75,11 @@ class SdkCrashDto {
   @JsonKey(name: r'clientOccurredAt', required: true, includeIfNull: false)
   final DateTime clientOccurredAt;
 
-  @JsonKey(name: r'deviceId', required: true, includeIfNull: false)
-  final String deviceId;
+  @JsonKey(name: r'deviceId', required: false, includeIfNull: false)
+  final String? deviceId;
 
-  @JsonKey(name: r'deviceIdSource', required: true, includeIfNull: false)
-  final String deviceIdSource;
+  @JsonKey(name: r'deviceIdSource', required: false, includeIfNull: false)
+  final String? deviceIdSource;
 
   @JsonKey(name: r'exceptionType', required: true, includeIfNull: false)
   final String exceptionType;

@@ -41,6 +41,7 @@ class AttriaxWebPlatform extends AttriaxPlatform {
         'appVersion': ?appInfo?.version,
         'appBuildNumber': ?appInfo?.buildNumber,
         'packageName': ?appInfo?.packageName,
+        'timezone': ?environment.timezone,
         'appName': ?environment.appName,
         'browserName': ?environment.browserName,
         'userAgent': ?environment.userAgent,

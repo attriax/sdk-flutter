@@ -1,4 +1,5 @@
 export 'src/attriax.dart';
+export 'src/attriax_consent.dart';
 export 'src/attriax_ad_event_type.dart';
 export 'src/attriax_analytics_keys.dart';
 export 'src/attriax_clock.dart';

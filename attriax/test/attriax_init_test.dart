@@ -302,9 +302,13 @@ void main() {
         expect(batchBodies, hasLength(1));
 
         final items = batchBodies.single['items']! as List<Object?>;
-        expect(items, hasLength(1));
-        final item = items.single! as Map<String, Object?>;
-        expect(item['kind'], 'event');
+        final eventItems = items
+            .cast<Map<String, Object?>>()
+            .where((item) => item['kind'] == 'event')
+            .toList(growable: false);
+        expect(eventItems, hasLength(1));
+        final eventBody = eventItems.single['body']! as Map<String, Object?>;
+        expect(eventBody['eventName'], 'purchase');
       },
     );
 
@@ -421,8 +425,9 @@ void main() {
     test('creates and persists a current session snapshot', () async {
       final now = DateTime.utc(2026, 5, 3, 12);
       final clock = AttriaxMutableClock(now);
+      final config = AttriaxConfig(appToken: 'ax_test_token', clock: clock);
       sdk = Attriax.test(
-        config: AttriaxConfig(appToken: 'ax_test_token', clock: clock),
+        config: config,
         client: client,
         deepLinkSource: deepLinkSource,
         connectivity: connectivity,
@@ -439,7 +444,10 @@ void main() {
       expect(session.platform, AttriaxPlatformType.android);
       expect(session.startedAt, now);
       expect(session.lastActivityAt, now);
-      expect(session.heartbeatInterval, const Duration(seconds: 5));
+      expect(
+        session.heartbeatInterval,
+        config.firstLaunchSessionHeartbeatInterval,
+      );
     });
 
     test('restores the current session while it is still active', () async {
@@ -496,8 +504,12 @@ void main() {
       () async {
         final now = DateTime.utc(2026, 5, 3, 12);
         final firstClock = AttriaxMutableClock(now);
+        final firstConfig = AttriaxConfig(
+          appToken: 'ax_test_token',
+          clock: firstClock,
+        );
         sdk = Attriax.test(
-          config: AttriaxConfig(appToken: 'ax_test_token', clock: firstClock),
+          config: firstConfig,
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -513,10 +525,14 @@ void main() {
         final secondDeepLinkSource = FakeDeepLinkSource();
         final secondClient = http.Client();
         final secondContextCollector = CountingContextCollector();
+        final resumedAt = now.add(
+          firstConfig.firstLaunchSessionHeartbeatInterval * 2 +
+              const Duration(seconds: 1),
+        );
         final secondSdk = Attriax.test(
           config: AttriaxConfig(
             appToken: 'ax_test_token',
-            clock: AttriaxMutableClock(now.add(const Duration(seconds: 11))),
+            clock: AttriaxMutableClock(resumedAt),
           ),
           client: secondClient,
           deepLinkSource: secondDeepLinkSource,
@@ -531,7 +547,7 @@ void main() {
         final newSession = _storedSessionSnapshot(prefs);
         expect(newSession, isNotNull);
         expect(newSession!.id, isNot(initialSession!.id));
-        expect(newSession.startedAt, now.add(const Duration(seconds: 11)));
+        expect(newSession.startedAt, resumedAt);
 
         await secondSdk.dispose();
         await secondDeepLinkSource.dispose();

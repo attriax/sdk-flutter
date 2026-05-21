@@ -14,6 +14,20 @@ abstract class AttriaxDeepLinkSource {
 AttriaxDeepLinkSource createDefaultAttriaxDeepLinkSource() =>
     _DefaultAttriaxDeepLinkSource();
 
+@visibleForTesting
+bool attriaxShouldIgnoreAutomaticWebInitialUri(Uri uri) {
+  if (!uri.isScheme('http') && !uri.isScheme('https')) {
+    return false;
+  }
+
+  final normalizedPath = uri.path.trim();
+  if (normalizedPath.isNotEmpty && normalizedPath != '/') {
+    return false;
+  }
+
+  return uri.fragment.trim().startsWith('/');
+}
+
 class _DefaultAttriaxDeepLinkSource implements AttriaxDeepLinkSource {
   static const MethodChannel _methodChannel = MethodChannel('attriax');
   static const EventChannel _eventChannel = EventChannel(
@@ -25,7 +39,11 @@ class _DefaultAttriaxDeepLinkSource implements AttriaxDeepLinkSource {
   @override
   Future<Uri?> getInitialLink() async {
     if (kIsWeb) {
-      return _parseUri(Uri.base.toString());
+      final uri = _parseUri(Uri.base.toString());
+      if (uri != null && attriaxShouldIgnoreAutomaticWebInitialUri(uri)) {
+        return null;
+      }
+      return uri;
     }
 
     if (!_supportsAutomaticPlatformDeepLinks) {

@@ -2,6 +2,7 @@ import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_inte
 import 'package:flutter/widgets.dart';
 
 import 'attriax_api_models.dart';
+import 'attriax_consent_manager.dart';
 import 'attriax_context_manager.dart';
 import 'attriax_id_generator.dart';
 import 'attriax_logger.dart';
@@ -35,6 +36,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
     required AttriaxLogger logger,
     required AttriaxRuntimeSettingsView settingsState,
     required AttriaxRequestManager requestManager,
+    required AttriaxTrackingDecision Function() trackingDecision,
     AttriaxClock? clock,
   }) : _config = config,
        _contextManager = contextManager,
@@ -47,7 +49,9 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
       clock: _clock,
       settingsState: settingsState,
       requestManager: requestManager,
+      trackingDecision: trackingDecision,
     );
+    _trackingDecision = trackingDecision;
   }
 
   final AttriaxConfig _config;
@@ -57,6 +61,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
   final AttriaxClock _clock;
 
   late final AttriaxSessionLifecycleManager _lifecycleManager;
+  late final AttriaxTrackingDecision Function() _trackingDecision;
 
   AttriaxSessionSnapshot? _currentSession;
   bool _trackingEnabled = false;
@@ -223,6 +228,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
     deviceIdSource: requireDeviceIdSource(),
     session: session,
     kind: AttriaxSessionLifecycleKind.heartbeat,
+    attachDeviceIdentity: _trackingDecision().attachDeviceIdentity,
     occurredAt: occurredAt,
   );
 

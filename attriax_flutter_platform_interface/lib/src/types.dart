@@ -1,5 +1,5 @@
 const String attriaxSdkApiVersion = 'v1';
-const String attriaxSdkPackageVersion = '0.2.0';
+const String attriaxSdkPackageVersion = '0.3.0';
 
 /// Attribution classification returned by Attriax.
 enum AttributionType {
@@ -1713,6 +1713,8 @@ class AttriaxConfig {
     this.requestTrackingAuthorizationOnInit = false,
     this.trackingAuthorizationStatusTimeout = const Duration(seconds: 60),
     this.automaticBrowserHandling = true,
+    this.gdprEnabled = false,
+    this.gdprAutoDetect = true,
     this.sessionTrackingEnabled = true,
     this.sessionHeartbeatInterval = const Duration(minutes: 5),
     this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 30),
@@ -1799,6 +1801,21 @@ class AttriaxConfig {
 
   /// Whether the SDK opens backend-provided browser actions automatically.
   final bool automaticBrowserHandling;
+
+  /// Whether the SDK should gate tracking until GDPR consent is resolved.
+  ///
+  /// When `true`, network delivery stays paused while consent is `pending`
+  /// or `unknown`. Manual consent checks remain available even when this is
+  /// `false`, and locally buffered requests may still be captured while the
+  /// SDK is waiting for consent.
+  final bool gdprEnabled;
+
+  /// Whether the SDK should derive an initial GDPR state automatically.
+  ///
+  /// When `true`, the SDK can prefill the GDPR state when consent is still
+  /// unknown. Use `AttriaxConsent.gdpr.needsConsent()` when your app wants to
+  /// refresh that decision explicitly.
+  final bool gdprAutoDetect;
 
   /// Enables automatic session lifecycle tracking and session enrichment.
   final bool sessionTrackingEnabled;

@@ -571,6 +571,10 @@ class AttriaxRequestDispatcher {
       return true;
     }
 
+    if (!_appOpenMonitor.shouldGateRequestsOnSuccessfulAppOpen) {
+      return true;
+    }
+
     return _appOpenMonitor.hasSuccessfulResult;
   }
 

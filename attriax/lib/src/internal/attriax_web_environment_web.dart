@@ -13,6 +13,27 @@ extension type _NavigatorUserAgentData._(JSObject _) implements JSObject {
   external String? get platform;
 }
 
+@JS('Intl')
+external _IntlNamespace get _intl;
+
+extension type _IntlNamespace._(JSObject _) implements JSObject {
+  // ignore: non_constant_identifier_names
+  external _IntlDateTimeFormatFactory get DateTimeFormat;
+}
+
+extension type _IntlDateTimeFormatFactory._(JSFunction _)
+    implements JSFunction {
+  external _IntlDateTimeFormat call();
+}
+
+extension type _IntlDateTimeFormat._(JSObject _) implements JSObject {
+  external _IntlResolvedOptions resolvedOptions();
+}
+
+extension type _IntlResolvedOptions._(JSObject _) implements JSObject {
+  external JSString? get timeZone;
+}
+
 AttriaxWebEnvironmentSnapshot currentAttriaxWebEnvironment() {
   final assetUrl = ui_web.assetManager.getAssetUrl('');
   final navigatorWithUserAgentData = _NavigatorWithUserAgentData._(
@@ -25,6 +46,7 @@ AttriaxWebEnvironmentSnapshot currentAttriaxWebEnvironment() {
     ),
     documentBaseUrl: _normalizeString(web.window.document.baseURI),
     locationBaseUrl: _normalizeString(web.window.location.href),
+    timezone: _resolveTimezone(),
     appName: _normalizeString(web.window.navigator.appName),
     browserName: _normalizeString(web.window.navigator.appCodeName),
     userAgent: _normalizeString(web.window.navigator.userAgent),
@@ -35,6 +57,16 @@ AttriaxWebEnvironmentSnapshot currentAttriaxWebEnvironment() {
     title: _normalizeString(web.window.document.title),
     referrer: _normalizeString(web.window.document.referrer),
   );
+}
+
+String? _resolveTimezone() {
+  try {
+    return _normalizeString(
+      _intl.DateTimeFormat().resolvedOptions().timeZone?.toDart,
+    );
+  } catch (_) {
+    return null;
+  }
 }
 
 String? _normalizeString(String? value) {

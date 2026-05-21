@@ -1,7 +1,8 @@
 # Changelog
 
-## 0.2.0
-- Reworked library generation
+## 0.3.0
+
+- GDPR consent support
 
 ## 0.1.0
 

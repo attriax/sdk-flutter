@@ -26,4 +26,36 @@ void main() {
       await expectLater(source.uriLinkStream.toList(), completion(isEmpty));
     });
   });
+
+  group('attriaxShouldIgnoreAutomaticWebInitialUri', () {
+    test('ignores Flutter web hash-router URLs at the site root', () {
+      expect(
+        attriaxShouldIgnoreAutomaticWebInitialUri(
+          Uri.parse('http://127.0.0.1:7357/#/controls'),
+        ),
+        isTrue,
+      );
+      expect(
+        attriaxShouldIgnoreAutomaticWebInitialUri(
+          Uri.parse('https://example.com/?debug=true#/deeplinks/result'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('keeps actual path-based web deep links', () {
+      expect(
+        attriaxShouldIgnoreAutomaticWebInitialUri(
+          Uri.parse('https://example.attriax.com/campaign/spring-launch'),
+        ),
+        isFalse,
+      );
+      expect(
+        attriaxShouldIgnoreAutomaticWebInitialUri(
+          Uri.parse('myapp://promo/spring-launch'),
+        ),
+        isFalse,
+      );
+    });
+  });
 }

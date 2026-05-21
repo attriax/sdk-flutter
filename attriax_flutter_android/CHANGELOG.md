@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+### Changed
+- Package version alignment for the federated 0.3.0 GDPR consent release. No Android-only API changes are required.
+
 ## 0.2.0
 
 ### Added

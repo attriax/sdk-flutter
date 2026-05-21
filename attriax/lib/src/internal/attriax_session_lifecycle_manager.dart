@@ -4,6 +4,7 @@ import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_inte
 import 'package:flutter/widgets.dart';
 
 import 'attriax_api_models.dart';
+import 'attriax_consent_manager.dart';
 import 'attriax_request_manager.dart';
 import 'attriax_runtime_settings_state.dart';
 import 'attriax_session_manager.dart';
@@ -17,22 +18,32 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
     required AttriaxClock clock,
     required AttriaxRuntimeSettingsView settingsState,
     required AttriaxRequestManager requestManager,
+    AttriaxTrackingDecision Function()? trackingDecision,
   }) : _config = config,
        _sessionManager = sessionManager,
        _clock = clock,
        _settingsState = settingsState,
-       _requestManager = requestManager;
+       _requestManager = requestManager,
+       _trackingDecision = trackingDecision ?? _identifiedTrackingDecision;
 
   final AttriaxConfig _config;
   final AttriaxSessionManager _sessionManager;
   final AttriaxClock _clock;
   final AttriaxRuntimeSettingsView _settingsState;
   final AttriaxRequestManager _requestManager;
+  final AttriaxTrackingDecision Function() _trackingDecision;
 
   Timer? _heartbeatTimer;
   bool _isInBackground = false;
   bool _isObserverRegistered = false;
   AttriaxSessionSnapshot? _pendingRecoveredSessionEnd;
+
+  static AttriaxTrackingDecision _identifiedTrackingDecision() =>
+      const AttriaxTrackingDecision(
+        capture: true,
+        identityMode: AttriaxTrackingIdentityMode.identified,
+        deferNetwork: false,
+      );
 
   AttriaxSessionSnapshot? get currentSession => _sessionManager.currentSession;
   bool get isInBackground => _isInBackground;
@@ -304,6 +315,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
         deviceIdSource: _sessionManager.requireDeviceIdSource(),
         session: session,
         kind: kind,
+        attachDeviceIdentity: _trackingDecision().attachDeviceIdentity,
         occurredAt: occurredAt,
         metadata: metadata,
       ),

@@ -45,8 +45,6 @@ final class AttriaxTrackEventRequest extends AttriaxApiRequest {
 final class AttriaxCrashReportPayload {
   const AttriaxCrashReportPayload({
     required this.appToken,
-    required this.deviceId,
-    required this.deviceIdSource,
     required this.source,
     required this.clientOccurredAt,
     required this.platform,
@@ -55,6 +53,8 @@ final class AttriaxCrashReportPayload {
     required this.message,
     required this.stackTrace,
     required this.isFirstLaunch,
+    this.deviceId,
+    this.deviceIdSource,
     this.reason,
     this.sessionId,
     this.sessionRelativeTimeMs,
@@ -70,8 +70,8 @@ final class AttriaxCrashReportPayload {
   factory AttriaxCrashReportPayload.fromJson(Map<String, Object?> json) =>
       AttriaxCrashReportPayload(
         appToken: attriaxRequireString(json, 'appToken'),
-        deviceId: attriaxRequireString(json, 'deviceId'),
-        deviceIdSource: attriaxRequireString(json, 'deviceIdSource'),
+        deviceId: attriaxStringValue(json['deviceId']),
+        deviceIdSource: attriaxStringValue(json['deviceIdSource']),
         source: attriaxRequireString(json, 'source'),
         clientOccurredAt:
             attriaxDateTimeValue(json['clientOccurredAt'])?.toUtc() ??
@@ -97,8 +97,8 @@ final class AttriaxCrashReportPayload {
       );
 
   final String appToken;
-  final String deviceId;
-  final String deviceIdSource;
+  final String? deviceId;
+  final String? deviceIdSource;
   final String source;
   final DateTime clientOccurredAt;
   final AttriaxPlatformType platform;
@@ -120,8 +120,8 @@ final class AttriaxCrashReportPayload {
 
   Map<String, Object?> toJson() => <String, Object?>{
     'appToken': appToken,
-    'deviceId': deviceId,
-    'deviceIdSource': deviceIdSource,
+    if (deviceId != null) 'deviceId': deviceId,
+    if (deviceIdSource != null) 'deviceIdSource': deviceIdSource,
     'source': source,
     'clientOccurredAt': clientOccurredAt.toUtc().toIso8601String(),
     'platform': platform.name,
@@ -165,12 +165,12 @@ enum AttriaxSessionLifecycleKind { start, heartbeat, pause, resume, end }
 final class AttriaxSessionLifecyclePayload {
   const AttriaxSessionLifecyclePayload({
     required this.appToken,
-    required this.deviceId,
     required this.kind,
     required this.sessionId,
     required this.clientOccurredAt,
     required this.platform,
     required this.isFirstLaunch,
+    this.deviceId,
     this.deviceIdSource,
     this.sessionRelativeTimeMs,
     this.locale,
@@ -185,7 +185,7 @@ final class AttriaxSessionLifecyclePayload {
   factory AttriaxSessionLifecyclePayload.fromJson(Map<String, Object?> json) =>
       AttriaxSessionLifecyclePayload(
         appToken: attriaxRequireString(json, 'appToken'),
-        deviceId: attriaxRequireString(json, 'deviceId'),
+        deviceId: attriaxStringValue(json['deviceId']),
         deviceIdSource: attriaxStringValue(json['deviceIdSource']),
         kind: _parseSessionLifecycleKind(attriaxRequireString(json, 'kind')),
         sessionId: attriaxRequireString(json, 'sessionId'),
@@ -207,7 +207,7 @@ final class AttriaxSessionLifecyclePayload {
       );
 
   final String appToken;
-  final String deviceId;
+  final String? deviceId;
   final String? deviceIdSource;
   final AttriaxSessionLifecycleKind kind;
   final String sessionId;
@@ -225,7 +225,7 @@ final class AttriaxSessionLifecyclePayload {
 
   Map<String, Object?> toJson() => <String, Object?>{
     'appToken': appToken,
-    'deviceId': deviceId,
+    if (deviceId != null) 'deviceId': deviceId,
     if (deviceIdSource != null) 'deviceIdSource': deviceIdSource,
     'kind': kind.name,
     'sessionId': sessionId,
@@ -305,11 +305,26 @@ final class AttriaxCreateDynamicLinkRequest extends AttriaxApiRequest {
   Map<String, Object?> toQueueBody() => _generatedQueueBody(payload);
 }
 
+final class AttriaxRegisterUninstallTokenRequest extends AttriaxApiRequest {
+  const AttriaxRegisterUninstallTokenRequest(this.payload);
+
+  final Map<String, Object?> payload;
+
+  @override
+  String get kindName => 'registerUninstallToken';
+
+  @override
+  String get label => 'uninstall token registration';
+
+  @override
+  Map<String, Object?> toQueueBody() => attriaxNormalizeJsonMap(payload);
+}
+
 String attriaxApiRequestLabel(AttriaxApiRequest request) => request.label;
 
 bool attriaxCanBatchRequest(AttriaxApiRequest request) => switch (request) {
-  AttriaxTrackEventRequest() => true,
-  AttriaxTrackSessionRequest() => true,
+  AttriaxTrackEventRequest(:final payload) => payload.deviceId != null,
+  AttriaxTrackSessionRequest(:final payload) => payload.deviceId != null,
   AttriaxUserRequest() => true,
   _ => false,
 };
@@ -333,13 +348,13 @@ AttriaxBatchRequestIdentity attriaxBatchRequestIdentity(
     case AttriaxTrackEventRequest(:final payload):
       return AttriaxBatchRequestIdentity(
         appToken: payload.appToken,
-        deviceId: payload.deviceId,
+        deviceId: payload.deviceId!,
         deviceIdSource: attriaxStringValue(payload.deviceIdSource),
       );
     case AttriaxTrackSessionRequest(:final payload):
       return AttriaxBatchRequestIdentity(
         appToken: payload.appToken,
-        deviceId: payload.deviceId,
+        deviceId: payload.deviceId!,
         deviceIdSource: attriaxStringValue(payload.deviceIdSource),
       );
     case AttriaxUserRequest(:final payload):
@@ -396,6 +411,157 @@ String attriaxBatchKindName(AttriaxApiRequest request) => switch (request) {
   ),
 };
 
+AttriaxApiRequest attriaxAnonymizeRequestForConsent(
+  AttriaxApiRequest request,
+) => switch (request) {
+  AttriaxTrackEventRequest(:final payload) => AttriaxTrackEventRequest(
+    sdk.SdkEventDto(
+      appToken: payload.appToken,
+      clientOccurredAt: payload.clientOccurredAt,
+      eventData: payload.eventData,
+      eventName: payload.eventName,
+      sessionId: payload.sessionId,
+      sessionRelativeTimeMs: payload.sessionRelativeTimeMs,
+    ),
+  ),
+  AttriaxTrackCrashRequest(:final payload) => AttriaxTrackCrashRequest(
+    AttriaxCrashReportPayload(
+      appToken: payload.appToken,
+      source: payload.source,
+      clientOccurredAt: payload.clientOccurredAt,
+      platform: payload.platform,
+      isFatal: payload.isFatal,
+      exceptionType: payload.exceptionType,
+      message: payload.message,
+      stackTrace: payload.stackTrace,
+      isFirstLaunch: payload.isFirstLaunch,
+      reason: payload.reason,
+      sessionId: payload.sessionId,
+      sessionRelativeTimeMs: payload.sessionRelativeTimeMs,
+      locale: payload.locale,
+      appVersion: payload.appVersion,
+      appBuildNumber: payload.appBuildNumber,
+      appPackageName: payload.appPackageName,
+      sdkApiVersion: payload.sdkApiVersion,
+      sdkPackageVersion: payload.sdkPackageVersion,
+      metadata: payload.metadata,
+    ),
+  ),
+  AttriaxTrackSessionRequest(:final payload) => AttriaxTrackSessionRequest(
+    AttriaxSessionLifecyclePayload(
+      appToken: payload.appToken,
+      kind: payload.kind,
+      sessionId: payload.sessionId,
+      sessionRelativeTimeMs: payload.sessionRelativeTimeMs,
+      clientOccurredAt: payload.clientOccurredAt,
+      platform: payload.platform,
+      locale: payload.locale,
+      isFirstLaunch: payload.isFirstLaunch,
+      appVersion: payload.appVersion,
+      appBuildNumber: payload.appBuildNumber,
+      appPackageName: payload.appPackageName,
+      sdkApiVersion: payload.sdkApiVersion,
+      sdkPackageVersion: payload.sdkPackageVersion,
+      metadata: payload.metadata,
+    ),
+  ),
+  AttriaxResolveDeepLinkRequest(:final payload) =>
+    AttriaxResolveDeepLinkRequest(
+      sdk.SdkV1DeepLinkResolveDto(
+        appToken: payload.appToken,
+        isFirstLaunch: payload.isFirstLaunch,
+        linkPath: payload.linkPath,
+        metadata: payload.metadata,
+        platform: payload.platform,
+        rawUrl: payload.rawUrl,
+        source_: payload.source_,
+      ),
+    ),
+  _ => request,
+};
+
+AttriaxApiRequest? attriaxIdentifyRequestForConsentNotRequired(
+  AttriaxApiRequest request, {
+  required String deviceId,
+  required String deviceIdSource,
+}) => switch (request) {
+  AttriaxTrackEventRequest(:final payload) when payload.deviceId == null =>
+    AttriaxTrackEventRequest(
+      sdk.SdkEventDto(
+        appToken: payload.appToken,
+        clientOccurredAt: payload.clientOccurredAt,
+        deviceId: deviceId,
+        deviceIdSource: deviceIdSource,
+        eventData: payload.eventData,
+        eventName: payload.eventName,
+        sessionId: payload.sessionId,
+        sessionRelativeTimeMs: payload.sessionRelativeTimeMs,
+      ),
+    ),
+  AttriaxTrackCrashRequest(:final payload) when payload.deviceId == null =>
+    AttriaxTrackCrashRequest(
+      AttriaxCrashReportPayload(
+        appToken: payload.appToken,
+        deviceId: deviceId,
+        deviceIdSource: deviceIdSource,
+        source: payload.source,
+        clientOccurredAt: payload.clientOccurredAt,
+        platform: payload.platform,
+        isFatal: payload.isFatal,
+        exceptionType: payload.exceptionType,
+        message: payload.message,
+        stackTrace: payload.stackTrace,
+        isFirstLaunch: payload.isFirstLaunch,
+        reason: payload.reason,
+        sessionId: payload.sessionId,
+        sessionRelativeTimeMs: payload.sessionRelativeTimeMs,
+        locale: payload.locale,
+        appVersion: payload.appVersion,
+        appBuildNumber: payload.appBuildNumber,
+        appPackageName: payload.appPackageName,
+        sdkApiVersion: payload.sdkApiVersion,
+        sdkPackageVersion: payload.sdkPackageVersion,
+        metadata: payload.metadata,
+      ),
+    ),
+  AttriaxTrackSessionRequest(:final payload) when payload.deviceId == null =>
+    AttriaxTrackSessionRequest(
+      AttriaxSessionLifecyclePayload(
+        appToken: payload.appToken,
+        deviceId: deviceId,
+        deviceIdSource: deviceIdSource,
+        kind: payload.kind,
+        sessionId: payload.sessionId,
+        sessionRelativeTimeMs: payload.sessionRelativeTimeMs,
+        clientOccurredAt: payload.clientOccurredAt,
+        platform: payload.platform,
+        locale: payload.locale,
+        isFirstLaunch: payload.isFirstLaunch,
+        appVersion: payload.appVersion,
+        appBuildNumber: payload.appBuildNumber,
+        appPackageName: payload.appPackageName,
+        sdkApiVersion: payload.sdkApiVersion,
+        sdkPackageVersion: payload.sdkPackageVersion,
+        metadata: payload.metadata,
+      ),
+    ),
+  AttriaxResolveDeepLinkRequest(:final payload) when payload.deviceId == null =>
+    AttriaxResolveDeepLinkRequest(
+      sdk.SdkV1DeepLinkResolveDto(
+        appToken: payload.appToken,
+        deviceId: deviceId,
+        deviceIdSource: deviceIdSource,
+        isFirstLaunch: payload.isFirstLaunch,
+        linkPath: payload.linkPath,
+        metadata: payload.metadata,
+        platform: payload.platform,
+        rawUrl: payload.rawUrl,
+        source_: payload.source_,
+      ),
+    ),
+  _ => null,
+};
+
 AttriaxApiRequest attriaxApiRequestFromJson(
   String kindName,
   Map<String, Object?> body,
@@ -428,6 +594,8 @@ AttriaxApiRequest attriaxApiRequestFromJson(
       return AttriaxCreateDynamicLinkRequest(
         _parseGeneratedPayload(body, sdk.SdkCreateDynamicLinkDto.fromJson),
       );
+    case 'registerUninstallToken':
+      return AttriaxRegisterUninstallTokenRequest(body);
   }
 
   throw FormatException('Unsupported Attriax request kind: $kindName');
@@ -471,11 +639,67 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
   return AttriaxOpenRequest(requestDto);
 }
 
+AttriaxInstallReferrerDetails? attriaxBuildLocalInstallReferrerDetails(
+  AttriaxInstallReferrerContext context,
+) {
+  final rawReferrer = attriaxStringValue(context.installReferrer);
+  if (rawReferrer == null || rawReferrer.isEmpty) {
+    return null;
+  }
+
+  final query = Uri.splitQueryString(rawReferrer);
+  String? firstValue(List<String> keys) {
+    for (final key in keys) {
+      final value = attriaxStringValue(query[key]);
+      if (value != null && value.isNotEmpty) {
+        return value;
+      }
+    }
+
+    return null;
+  }
+
+  final deepLinkUrl = firstValue(const <String>[
+    'deep_link_uri',
+    'deep_link_url',
+    'deep_link',
+    'af_dp',
+  ]);
+
+  return AttriaxInstallReferrerDetails(
+    rawPlatformInstallReferrer: rawReferrer,
+    source: firstValue(const <String>['utm_source', 'source']),
+    medium: firstValue(const <String>['utm_medium', 'medium']),
+    campaign: firstValue(const <String>['utm_campaign', 'campaign']),
+    term: firstValue(const <String>['utm_term', 'term']),
+    content: firstValue(const <String>['utm_content', 'content']),
+    adClickId: firstValue(const <String>[
+      'gclid',
+      'gbraid',
+      'wbraid',
+      'fbclid',
+    ]),
+    attributionType: AttributionType.referrer,
+    deepLinkUrl: deepLinkUrl,
+    deepLinkUri: deepLinkUrl == null ? null : Uri.tryParse(deepLinkUrl),
+    installBeginTimestampSeconds: _attriaxIntValue(
+      context.metadata['installBeginTimestampSeconds'],
+    ),
+    referrerClickTimestampSeconds: _attriaxIntValue(
+      context.metadata['referrerClickTimestampSeconds'],
+    ),
+    googlePlayInstantParam: attriaxBoolValue(
+      context.metadata['googlePlayInstantParam'],
+    ),
+    precision: 0.5,
+  );
+}
+
 AttriaxTrackEventRequest attriaxBuildTrackEventRequest({
   required String appToken,
-  required String deviceId,
-  required String deviceIdSource,
   required String eventName,
+  String? deviceId,
+  String? deviceIdSource,
   Map<String, Object?>? eventData,
   String? sessionId,
   int? sessionRelativeTimeMs,
@@ -498,13 +722,13 @@ AttriaxTrackEventRequest attriaxBuildTrackEventRequest({
 AttriaxTrackCrashRequest attriaxBuildTrackCrashRequest({
   required String appToken,
   required AttriaxContextSnapshot context,
-  required String deviceId,
-  required String deviceIdSource,
   required String source,
   required bool isFatal,
   required String exceptionType,
   required String message,
   required String stackTrace,
+  String? deviceId,
+  String? deviceIdSource,
   AttriaxSessionSnapshot? session,
   DateTime? clientOccurredAt,
   String? reason,
@@ -547,9 +771,10 @@ AttriaxTrackCrashRequest attriaxBuildTrackCrashRequest({
 
 AttriaxTrackSessionRequest attriaxBuildTrackSessionRequest({
   required String appToken,
-  required String deviceIdSource,
   required AttriaxSessionSnapshot session,
   required AttriaxSessionLifecycleKind kind,
+  String? deviceIdSource,
+  bool attachDeviceIdentity = true,
   DateTime? occurredAt,
   Map<String, Object?>? metadata,
 }) {
@@ -562,8 +787,8 @@ AttriaxTrackSessionRequest attriaxBuildTrackSessionRequest({
   return AttriaxTrackSessionRequest(
     AttriaxSessionLifecyclePayload(
       appToken: appToken,
-      deviceId: session.deviceId,
-      deviceIdSource: deviceIdSource,
+      deviceId: attachDeviceIdentity ? session.deviceId : null,
+      deviceIdSource: attachDeviceIdentity ? deviceIdSource : null,
       kind: kind,
       sessionId: session.id,
       sessionRelativeTimeMs: sessionRelativeTimeMs,
@@ -651,11 +876,11 @@ AttriaxUserRequest attriaxBuildUserRequest({
 
 AttriaxResolveDeepLinkRequest attriaxBuildResolveDeepLinkRequest({
   required String appToken,
-  required String deviceId,
-  required String deviceIdSource,
   required AttriaxPlatformType platform,
   required String source,
   required bool isFirstLaunch,
+  String? deviceId,
+  String? deviceIdSource,
   String? rawUrl,
   String? linkPath,
   Map<String, Object?>? metadata,
@@ -759,6 +984,27 @@ Map<String, Object?> attriaxBuildRegisterUninstallTokenRequest({
   'token': ?attriaxStringValue(token),
   'metadata': ?metadata,
 };
+
+AttriaxRegisterUninstallTokenRequest
+attriaxBuildRegisterUninstallTokenQueueRequest({
+  required String appToken,
+  required String deviceId,
+  required String deviceIdSource,
+  required AttriaxPlatformType platform,
+  required String provider,
+  String? token,
+  Map<String, Object?>? metadata,
+}) => AttriaxRegisterUninstallTokenRequest(
+  attriaxBuildRegisterUninstallTokenRequest(
+    appToken: appToken,
+    deviceId: deviceId,
+    deviceIdSource: deviceIdSource,
+    platform: platform,
+    provider: provider,
+    token: token,
+    metadata: metadata,
+  ),
+);
 
 String _uninstallTrackingPlatformName(AttriaxPlatformType platform) =>
     switch (platform) {

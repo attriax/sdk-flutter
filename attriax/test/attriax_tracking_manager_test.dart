@@ -1,4 +1,6 @@
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
+import 'package:attriax_flutter/src/attriax_consent.dart';
+import 'package:attriax_flutter/src/internal/attriax_consent_manager.dart';
 import 'package:attriax_flutter/src/internal/attriax_context_manager.dart';
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
 import 'package:attriax_flutter/src/internal/attriax_request_manager.dart';
@@ -33,6 +35,7 @@ void main() {
         logger: AttriaxLogger(enableDebugLogs: false),
         clock: AttriaxMutableClock(occurredAt),
         contextManager: const _StaticTrackingContext(),
+        consentState: const _FakeConsentReadView(),
         settingsState: const _FakeRuntimeSettingsView(),
         requestManager: requestManager,
         sessionManager: _FakeTrackedSessionPreparer((time) async {
@@ -64,6 +67,7 @@ void main() {
         logger: AttriaxLogger(enableDebugLogs: false),
         clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
         contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+        consentState: const _FakeConsentReadView(),
         settingsState: const _FakeRuntimeSettingsView(),
         requestManager: requestManager,
         sessionManager: _FakeTrackedSessionPreparer((_) async => null),
@@ -81,6 +85,7 @@ void main() {
         logger: AttriaxLogger(enableDebugLogs: false),
         clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
         contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+        consentState: const _FakeConsentReadView(),
         settingsState: const _FakeRuntimeSettingsView(),
         requestManager: requestManager,
         sessionManager: _FakeTrackedSessionPreparer((_) async => null),
@@ -100,6 +105,7 @@ void main() {
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+          consentState: const _FakeConsentReadView(),
           settingsState: const _FakeRuntimeSettingsView(),
           requestManager: requestManager,
           sessionManager: _FakeTrackedSessionPreparer((_) async => null),
@@ -135,6 +141,7 @@ void main() {
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+          consentState: const _FakeConsentReadView(),
           settingsState: const _FakeRuntimeSettingsView(),
           requestManager: requestManager,
           sessionManager: _FakeTrackedSessionPreparer((_) async => null),
@@ -155,6 +162,7 @@ void main() {
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+          consentState: const _FakeConsentReadView(),
           settingsState: const _FakeRuntimeSettingsView(),
           requestManager: requestManager,
           sessionManager: _FakeTrackedSessionPreparer((_) async => null),
@@ -174,6 +182,7 @@ void main() {
         logger: AttriaxLogger(enableDebugLogs: false),
         clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
         contextManager: const _StaticTrackingContext(),
+        consentState: const _FakeConsentReadView(),
         settingsState: const _FakeRuntimeSettingsView(isEnabled: false),
         requestManager: requestManager,
         sessionManager: _FakeTrackedSessionPreparer((_) async {
@@ -197,6 +206,7 @@ void main() {
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(),
+          consentState: const _FakeConsentReadView(),
           settingsState: const _FakeRuntimeSettingsView(),
           requestManager: requestManager,
           sessionManager: _FakeTrackedSessionPreparer((_) async => null),
@@ -221,6 +231,7 @@ void main() {
         logger: AttriaxLogger(enableDebugLogs: false),
         clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
         contextManager: const _StaticTrackingContext(),
+        consentState: const _FakeConsentReadView(),
         settingsState: const _FakeRuntimeSettingsView(),
         requestManager: requestManager,
         sessionManager: _FakeTrackedSessionPreparer(
@@ -266,6 +277,67 @@ void main() {
     });
 
     test(
+      'recordPageView enqueues anonymously when analytics consent is denied',
+      () async {
+        final requestManager = _RecordingRequestManager();
+        final manager = AttriaxTrackingManager(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          logger: AttriaxLogger(enableDebugLogs: false),
+          clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
+          contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+          consentState: const _FakeConsentReadView(
+            allowsAnalyticsTracking: false,
+            gdprConsentValues: AttriaxGdprConsentValues(
+              analytics: false,
+              attribution: true,
+              adEvents: true,
+            ),
+          ),
+          settingsState: const _FakeRuntimeSettingsView(),
+          requestManager: requestManager,
+          sessionManager: _FakeTrackedSessionPreparer((_) async => null),
+        );
+
+        await manager.recordPageView('Checkout');
+
+        expect(requestManager.enqueueCalls, 1);
+        final body = requestManager.lastRequest!.toQueueBody();
+        expect(body['eventName'], 'page_view');
+        expect(body['deviceId'], isNull);
+        expect(body['deviceIdSource'], isNull);
+      },
+    );
+
+    test(
+      'setUserProperties skips enqueueing when attribution consent is denied',
+      () async {
+        final requestManager = _RecordingRequestManager();
+        final manager = AttriaxTrackingManager(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          logger: AttriaxLogger(enableDebugLogs: false),
+          clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
+          contextManager: const _StaticTrackingContext(),
+          consentState: const _FakeConsentReadView(
+            allowsAttributionTracking: false,
+            gdprConsentValues: AttriaxGdprConsentValues(
+              analytics: true,
+              attribution: false,
+              adEvents: true,
+            ),
+          ),
+          settingsState: const _FakeRuntimeSettingsView(),
+          requestManager: requestManager,
+          sessionManager: _FakeTrackedSessionPreparer((_) async => null),
+        );
+
+        await manager.setUserProperties(<String, Object?>{'plan': 'pro'});
+
+        expect(requestManager.enqueueCalls, 0);
+        expect(requestManager.lastRequest, isNull);
+      },
+    );
+
+    test(
       'setUserProperties enforces flat primitive values within the configured caps',
       () async {
         final requestManager = _RecordingRequestManager();
@@ -274,6 +346,7 @@ void main() {
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(),
+          consentState: const _FakeConsentReadView(),
           settingsState: const _FakeRuntimeSettingsView(),
           requestManager: requestManager,
           sessionManager: _FakeTrackedSessionPreparer((_) async => null),
@@ -348,6 +421,95 @@ class _FakeRuntimeSettingsView implements AttriaxRuntimeSettingsView {
 
   @override
   bool get areEventsEnabled => true;
+}
+
+class _FakeConsentReadView implements AttriaxConsentReadView {
+  const _FakeConsentReadView({
+    this.allowsAnalyticsTracking = true,
+    this.allowsAttributionTracking = true,
+    this.gdprConsentValues,
+  });
+
+  @override
+  final bool allowsAnalyticsTracking;
+
+  @override
+  final bool allowsAttributionTracking;
+
+  @override
+  bool get allowsAdEventsTracking => true;
+
+  @override
+  AttriaxGdprConsentState get gdprConsentState =>
+      AttriaxGdprConsentState.granted;
+
+  @override
+  final AttriaxGdprConsentValues? gdprConsentValues;
+
+  @override
+  bool get isWaitingForGdprConsent =>
+      gdprConsentState == AttriaxGdprConsentState.pending ||
+      gdprConsentState == AttriaxGdprConsentState.unknown;
+
+  @override
+  bool get shouldDeferNetworkDispatch => isWaitingForGdprConsent;
+
+  @override
+  bool get canCaptureAnalytics => true;
+
+  @override
+  bool get canCaptureAttribution => allowsAttributionTracking;
+
+  @override
+  bool get canCaptureAdEvents => true;
+
+  @override
+  bool get canCaptureUninstallTracking => allowsAttributionTracking;
+
+  @override
+  AttriaxTrackingDecision trackingDecisionFor(AttriaxTrackingSignal signal) {
+    if (_isSignalGranted(signal)) {
+      return const AttriaxTrackingDecision(
+        capture: true,
+        identityMode: AttriaxTrackingIdentityMode.identified,
+        deferNetwork: false,
+      );
+    }
+
+    if (_isAnonymousCapableSignal(signal)) {
+      return const AttriaxTrackingDecision(
+        capture: true,
+        identityMode: AttriaxTrackingIdentityMode.anonymous,
+        deferNetwork: false,
+      );
+    }
+
+    return const AttriaxTrackingDecision(
+      capture: false,
+      identityMode: AttriaxTrackingIdentityMode.withheld,
+      deferNetwork: false,
+    );
+  }
+
+  bool _isSignalGranted(AttriaxTrackingSignal signal) => switch (signal) {
+    AttriaxTrackingSignal.analytics => allowsAnalyticsTracking,
+    AttriaxTrackingSignal.adEvents => allowsAdEventsTracking,
+    AttriaxTrackingSignal.attribution => allowsAttributionTracking,
+    AttriaxTrackingSignal.session =>
+      allowsAnalyticsTracking || allowsAdEventsTracking,
+    AttriaxTrackingSignal.deepLink => allowsAttributionTracking,
+    AttriaxTrackingSignal.uninstallTracking => allowsAttributionTracking,
+  };
+
+  bool _isAnonymousCapableSignal(AttriaxTrackingSignal signal) =>
+      switch (signal) {
+        AttriaxTrackingSignal.analytics ||
+        AttriaxTrackingSignal.adEvents ||
+        AttriaxTrackingSignal.session ||
+        AttriaxTrackingSignal.deepLink => true,
+        AttriaxTrackingSignal.attribution ||
+        AttriaxTrackingSignal.uninstallTracking => false,
+      };
 }
 
 class _StaticTrackingContext implements AttriaxTrackingContext {

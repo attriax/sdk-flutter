@@ -30,6 +30,18 @@ class AttriaxStoredDeviceData {
   final String? deviceIdSource;
 }
 
+class AttriaxStoredDeviceIdentity {
+  const AttriaxStoredDeviceIdentity({
+    required this.deviceId,
+    required this.hasPersistedDeviceId,
+    this.deviceIdSource,
+  });
+
+  final String deviceId;
+  final bool hasPersistedDeviceId;
+  final String? deviceIdSource;
+}
+
 class AttriaxStoredPlatformInstallReferrer {
   const AttriaxStoredPlatformInstallReferrer({
     required this.isLoaded,
@@ -48,6 +60,42 @@ class AttriaxStoredInstallReferrerDetails {
 
   final bool isLoaded;
   final AttriaxInstallReferrerDetails? value;
+}
+
+class AttriaxStoredGdprConsentValues {
+  const AttriaxStoredGdprConsentValues({
+    required this.analytics,
+    required this.attribution,
+    required this.adEvents,
+  });
+
+  final bool analytics;
+  final bool attribution;
+  final bool adEvents;
+
+  Map<String, Object?> toJson() => <String, Object?>{
+    'analytics': analytics,
+    'attribution': attribution,
+    'adEvents': adEvents,
+  };
+}
+
+class AttriaxStoredGdprConsentData {
+  const AttriaxStoredGdprConsentData({
+    required this.state,
+    required this.pendingSync,
+    this.values,
+    this.countryCode,
+    this.regionSource,
+    this.checkedAt,
+  });
+
+  final String state;
+  final bool pendingSync;
+  final AttriaxStoredGdprConsentValues? values;
+  final String? countryCode;
+  final String? regionSource;
+  final DateTime? checkedAt;
 }
 
 class _StoredDeviceIdState {
@@ -94,6 +142,8 @@ class AttriaxPreferencesStore {
       'attriax.queue.diagnostics.v1';
   static const String pendingCrashReportStorageKey = 'attriax.crash.pending';
   static const String skanStateStorageKey = 'attriax.skan.state.v1';
+  static const String gdprConsentStorageKey = 'attriax.gdpr.consent.v1';
+  static const String gdprConsentIdStorageKey = 'attriax.gdpr.consent_id.v1';
 
   final SharedPreferences? _prefsOverride;
   final Future<SharedPreferences> Function()? _preferencesLoader;
@@ -132,11 +182,8 @@ class AttriaxPreferencesStore {
   Future<AttriaxStoredDeviceData> restoreDeviceData({
     required String Function() deviceIdFactory,
   }) async {
-    final storedDeviceId = await _loadOrCreateDeviceId(
+    final storedDeviceIdentity = await ensureDeviceIdentity(
       deviceIdFactory: deviceIdFactory,
-    );
-    final deviceIdSource = _sanitizeString(
-      await _readString(deviceIdSourceStorageKey),
     );
 
     final hasSeenFirstLaunch =
@@ -147,9 +194,26 @@ class AttriaxPreferencesStore {
     }
 
     return AttriaxStoredDeviceData(
+      deviceId: storedDeviceIdentity.deviceId,
+      hasPersistedDeviceId: storedDeviceIdentity.hasPersistedDeviceId,
+      isFirstLaunch: isFirstLaunch,
+      deviceIdSource: storedDeviceIdentity.deviceIdSource,
+    );
+  }
+
+  Future<AttriaxStoredDeviceIdentity> ensureDeviceIdentity({
+    required String Function() deviceIdFactory,
+  }) async {
+    final storedDeviceId = await _loadOrCreateDeviceId(
+      deviceIdFactory: deviceIdFactory,
+    );
+    final deviceIdSource = _sanitizeString(
+      await _readString(deviceIdSourceStorageKey),
+    );
+
+    return AttriaxStoredDeviceIdentity(
       deviceId: storedDeviceId.value,
       hasPersistedDeviceId: storedDeviceId.hasPersistedValue,
-      isFirstLaunch: isFirstLaunch,
       deviceIdSource: deviceIdSource,
     );
   }
@@ -188,6 +252,21 @@ class AttriaxPreferencesStore {
     }
 
     await _writeString(deviceIdSourceStorageKey, normalized);
+  }
+
+  Future<String> ensureGdprConsentId({
+    required String Function() consentIdFactory,
+  }) async {
+    final existing = _sanitizeString(
+      await _readString(gdprConsentIdStorageKey),
+    );
+    if (existing != null) {
+      return existing;
+    }
+
+    final generated = consentIdFactory();
+    await _writeString(gdprConsentIdStorageKey, generated);
+    return generated;
   }
 
   Future<void> setRuntimeFlags({
@@ -383,6 +462,84 @@ class AttriaxPreferencesStore {
     await _writeString(skanStateStorageKey, jsonEncode(state.toJson()));
   }
 
+  Future<AttriaxStoredGdprConsentData?> readGdprConsentData() async {
+    final rawValue = await _readString(gdprConsentStorageKey);
+    if (rawValue == null || rawValue.isEmpty) {
+      return null;
+    }
+
+    try {
+      final decoded = jsonDecode(rawValue);
+      if (decoded is! Map) {
+        return null;
+      }
+
+      final data = decoded.map(
+        (key, value) => MapEntry(key.toString(), value as Object?),
+      );
+      final valuesRaw = data['values'];
+      AttriaxStoredGdprConsentValues? values;
+      if (valuesRaw is Map) {
+        final mappedValues = valuesRaw.map(
+          (key, value) => MapEntry(key.toString(), value as Object?),
+        );
+        final analytics = mappedValues['analytics'];
+        final attribution = mappedValues['attribution'];
+        final adEvents = mappedValues['adEvents'];
+        if (analytics is bool && attribution is bool && adEvents is bool) {
+          values = AttriaxStoredGdprConsentValues(
+            analytics: analytics,
+            attribution: attribution,
+            adEvents: adEvents,
+          );
+        }
+      }
+
+      final checkedAtRaw = data['checkedAt'];
+      final checkedAt = checkedAtRaw is String
+          ? DateTime.tryParse(checkedAtRaw)
+          : null;
+      final pendingSync = data['pendingSync'];
+      final state = data['state'];
+      if (pendingSync is! bool || state is! String || state.trim().isEmpty) {
+        return null;
+      }
+
+      return AttriaxStoredGdprConsentData(
+        state: state,
+        pendingSync: pendingSync,
+        values: values,
+        countryCode: _sanitizeString(data['countryCode'] as String?),
+        regionSource: _sanitizeString(data['regionSource'] as String?),
+        checkedAt: checkedAt,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> setGdprConsentData({
+    required AttriaxStoredGdprConsentData? data,
+  }) async {
+    if (data == null) {
+      await _remove(gdprConsentStorageKey);
+      return;
+    }
+
+    await _writeString(
+      gdprConsentStorageKey,
+      jsonEncode(<String, Object?>{
+        'state': data.state,
+        'pendingSync': data.pendingSync,
+        if (data.values != null) 'values': data.values!.toJson(),
+        if (data.countryCode != null) 'countryCode': data.countryCode,
+        if (data.regionSource != null) 'regionSource': data.regionSource,
+        if (data.checkedAt != null)
+          'checkedAt': data.checkedAt!.toUtc().toIso8601String(),
+      }),
+    );
+  }
+
   Future<String?> readQueuePayload() => _readString(queueStorageKey);
 
   Future<void> writeQueuePayload(String? value) async {
@@ -437,6 +594,8 @@ class AttriaxPreferencesStore {
       queueStorageKey,
       queueDiagnosticsStorageKey,
       pendingCrashReportStorageKey,
+      gdprConsentStorageKey,
+      gdprConsentIdStorageKey,
     ];
 
     for (final key in keys) {

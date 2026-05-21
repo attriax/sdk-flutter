@@ -1,4 +1,5 @@
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
+import 'package:attriax_flutter/src/internal/attriax_consent_manager.dart';
 import 'package:attriax_flutter/src/internal/attriax_context_collector.dart';
 import 'package:attriax_flutter/src/internal/attriax_context_manager.dart';
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
@@ -182,6 +183,11 @@ Future<AttriaxSessionManager> _createSessionManager({
     logger: logger,
     settingsState: const _FakeRuntimeSettingsView(),
     requestManager: requestManager,
+    trackingDecision: () => const AttriaxTrackingDecision(
+      capture: true,
+      identityMode: AttriaxTrackingIdentityMode.identified,
+      deferNetwork: false,
+    ),
     clock: clock,
   );
   await sessionManager.init(enabled: true);

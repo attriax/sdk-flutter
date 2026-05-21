@@ -38,11 +38,20 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
   final AttriaxAppOpenTracker _tracker;
   Completer<void>? _scheduledCompleter;
   bool _isResultObservationScheduled = false;
+  bool _shouldGateRequestsOnSuccessfulAppOpen = true;
 
   bool get didSchedule => _tracker.didSchedule;
   @override
   bool get hasSuccessfulResult => _tracker.lastResult != null;
+  @override
+  bool get shouldGateRequestsOnSuccessfulAppOpen =>
+      _shouldGateRequestsOnSuccessfulAppOpen;
   AttriaxAppOpenResult? get lastResult => _tracker.lastResult;
+
+  // ignore: use_setters_to_change_properties
+  void setDispatchGateEnabled({required bool enabled}) {
+    _shouldGateRequestsOnSuccessfulAppOpen = enabled;
+  }
 
   Future<void> schedule({
     Future<void> Function(AttriaxAppOpenResult? result)? onCompleted,

@@ -61,6 +61,14 @@ class ExampleHomePage extends StatelessWidget {
                       value: controller.eventsEnabled ? 'Yes' : 'No',
                     ),
                     ExampleMetricChip(
+                      label: 'GDPR state',
+                      value: controller.consentStateLabel,
+                    ),
+                    ExampleMetricChip(
+                      label: 'Waiting for consent',
+                      value: controller.isWaitingForConsent ? 'Yes' : 'No',
+                    ),
+                    ExampleMetricChip(
                       label: 'First launch',
                       value: controller.isFirstLaunch ? 'Yes' : 'No',
                     ),
@@ -80,6 +88,68 @@ class ExampleHomePage extends StatelessWidget {
                           controller.sdkSnapshot?.packageVersion ??
                           'Unavailable',
                     ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              ExampleSectionCard(
+                title: 'GDPR consent',
+                subtitle:
+                    'The example runs with gdprEnabled enabled so you can inspect consent state before tracking starts.',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    ExampleKeyValueRow(
+                      label: 'Current state',
+                      value: controller.consentStateLabel,
+                    ),
+                    ExampleKeyValueRow(
+                      label: 'Current values',
+                      value: controller.consentValuesLabel,
+                    ),
+                    ExampleKeyValueRow(
+                      label: 'Tracking blocked',
+                      value: controller.isWaitingForConsent ? 'Yes' : 'No',
+                    ),
+                    if (controller.isWaitingForConsent) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: <Widget>[
+                          FilledButton.icon(
+                            onPressed: () => controller.applyConsentSelection(
+                              analytics: true,
+                              attribution: true,
+                              adEvents: false,
+                            ),
+                            icon: const Icon(Icons.check_circle_outline),
+                            label: const Text('Accept analytics'),
+                          ),
+                          FilledButton.tonalIcon(
+                            onPressed: () => controller.applyConsentSelection(
+                              analytics: false,
+                              attribution: false,
+                              adEvents: false,
+                            ),
+                            icon: const Icon(Icons.block_outlined),
+                            label: const Text('Reject analytics'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => controller.refreshConsentStatus(),
+                            icon: const Icon(Icons.travel_explore_outlined),
+                            label: const Text('Check remote need'),
+                          ),
+                          OutlinedButton.icon(
+                            onPressed: () => Navigator.of(
+                              context,
+                            ).pushNamed(ExampleControlsPage.routeName),
+                            icon: const Icon(Icons.tune),
+                            label: const Text('Open Controls'),
+                          ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -122,7 +192,7 @@ class ExampleHomePage extends StatelessWidget {
                     ExampleNavigationTile(
                       title: 'Controls',
                       subtitle:
-                          'Toggle SDK runtime settings and exercise identification and user-property helpers.',
+                          'Toggle runtime flags, resolve GDPR consent, and exercise identification and user-property helpers.',
                       icon: Icons.tune,
                       onTap: () => Navigator.of(
                         context,

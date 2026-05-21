@@ -85,6 +85,7 @@ await attriax.recordAdEvent(
 - Install-referrer access on Android when it is available.
 - Firebase and APNs token registration for uninstall-tracking flows.
 - Dynamic-link creation from the app runtime.
+- GDPR-aware consent helpers under `attriax.consent.gdpr`, including pending dispatch gates and anonymous analytics-capable delivery for denied analytics paths.
 
 ## Platform Notes
 
@@ -96,6 +97,7 @@ await attriax.recordAdEvent(
 ## More Documentation
 
 - [attriax/README.md](attriax/README.md) — main package usage guide and API-oriented integration notes.
+- [attriax/doc/gdpr-and-anonymous-analytics.md](attriax/doc/gdpr-and-anonymous-analytics.md) — package-local GDPR consent and anonymous analytics behavior.
 - [CONTRIBUTING.md](CONTRIBUTING.md) — contributor workflow for developing inside this workspace.
 - [PUBLISHING.md](PUBLISHING.md) — package release order, dry-run checks, and publishing steps.
 - [SDK_CLIENT_GENERATION.md](SDK_CLIENT_GENERATION.md) — generated client workflow and contract regeneration details.

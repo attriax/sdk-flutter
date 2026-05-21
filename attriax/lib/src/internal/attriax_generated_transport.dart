@@ -149,6 +149,8 @@ class AttriaxGeneratedTransport {
             ),
             mapper: attriaxCreateDynamicLinkResponseFromGenerated,
           ),
+        AttriaxRegisterUninstallTokenRequest(:final payload) =>
+          await _sendUninstallTokenRequest(payload),
       };
     } on DioException catch (error) {
       _rethrowDioException(label, error);
@@ -246,6 +248,60 @@ class AttriaxGeneratedTransport {
     return response.result;
   }
 
+  Future<sdk.SdkGdprConsentStatusDto> checkGdprConsent({
+    required String appToken,
+    required String consentId,
+  }) async {
+    try {
+      final response = await _sdkApi.sdkControllerCheckGdprConsentV1(
+        sdkV1GdprConsentCheckDto: sdk.SdkV1GdprConsentCheckDto(
+          appToken: appToken,
+          consentId: consentId,
+        ),
+        validateStatus: _allowAnyStatus,
+      );
+
+      return _unwrapGdprConsentResponse(
+        label: 'gdpr consent check',
+        response: response,
+      );
+    } on DioException catch (error) {
+      _rethrowDioException('gdpr consent check', error);
+    }
+  }
+
+  Future<sdk.SdkGdprConsentStatusDto> upsertGdprConsent({
+    required String appToken,
+    required String consentId,
+    required sdk.AppUserGdprConsentState state,
+    sdk.SdkV1GdprConsentValuesDto? values,
+    String? countryCode,
+    String? regionSource,
+    DateTime? clientOccurredAt,
+  }) async {
+    try {
+      final response = await _sdkApi.sdkControllerUpsertGdprConsentV1(
+        sdkV1GdprConsentWriteDto: sdk.SdkV1GdprConsentWriteDto(
+          appToken: appToken,
+          consentId: consentId,
+          state: state,
+          values: values,
+          countryCode: countryCode,
+          regionSource: regionSource,
+          clientOccurredAt: clientOccurredAt,
+        ),
+        validateStatus: _allowAnyStatus,
+      );
+
+      return _unwrapGdprConsentResponse(
+        label: 'gdpr consent upsert',
+        response: response,
+      );
+    } on DioException catch (error) {
+      _rethrowDioException('gdpr consent upsert', error);
+    }
+  }
+
   Future<AttriaxRevenueReceiptValidationResult> validateRevenueReceipt(
     Map<String, Object?> payload,
   ) async {
@@ -294,13 +350,19 @@ class AttriaxGeneratedTransport {
   }
 
   Future<void> registerUninstallToken(Map<String, Object?> payload) async {
+    await _sendUninstallTokenRequest(payload);
+  }
+
+  Future<AttriaxTransportSuccess> _sendUninstallTokenRequest(
+    Map<String, Object?> payload,
+  ) async {
     final response = await _dio.post<Object?>(
       '/api/sdk/v1/uninstall-tokens',
       data: attriaxNormalizeJsonMap(payload),
       options: Options(validateStatus: _allowAnyStatus),
     );
 
-    _unwrapAckLikeResponse(
+    return _unwrapAckLikeResponse(
       label: 'uninstall token registration',
       response: response,
     );
@@ -416,6 +478,29 @@ class AttriaxGeneratedTransport {
       statusCode: statusCode,
       response: mapper(body),
     );
+  }
+
+  sdk.SdkGdprConsentStatusDto _unwrapGdprConsentResponse({
+    required String label,
+    required Response<sdk.SdkGdprConsentResponseEnvelopeDto> response,
+  }) {
+    final statusCode = response.statusCode ?? 0;
+    if (!_isSuccessful(statusCode)) {
+      throw AttriaxTransportHttpException(
+        statusCode: statusCode,
+        body: response.data,
+        headers: response.headers,
+      );
+    }
+
+    final envelope = response.data;
+    if (envelope == null) {
+      throw AttriaxTransportInvalidResponseException(
+        'Missing $label response body.',
+      );
+    }
+
+    return envelope.data;
   }
 
   Never _rethrowDioException(String label, DioException error) {

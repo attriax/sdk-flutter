@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.0
+
+### Changed
+- Bumped the shared SDK package version metadata to `0.3.0` for the GDPR consent release.
+
 ## 0.2.0
 
 ### Added

@@ -14,6 +14,7 @@ import 'package:attriax_api_client/src/model/sdk_crash_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_create_dynamic_link_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_create_dynamic_link_response_envelope_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_event_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_gdpr_consent_response_envelope_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_register_uninstall_token_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_revenue_receipt_validate_response_envelope_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_revenue_usd_conversion_response_envelope_dto.dart';
@@ -23,6 +24,8 @@ import 'package:attriax_api_client/src/model/sdk_v1_batch_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_batch_response_envelope_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_deep_link_resolve_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_deep_link_resolve_response_envelope_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_gdpr_consent_check_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_gdpr_consent_write_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_open_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_open_response_envelope_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_revenue_convert_to_usd_dto.dart';
@@ -108,6 +111,93 @@ class SdkApi {
     }
 
     return Response<SdkV1BatchResponseEnvelopeDto>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// sdkControllerCheckGdprConsentV1
+  ///
+  ///
+  /// Parameters:
+  /// * [sdkV1GdprConsentCheckDto]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [SdkGdprConsentResponseEnvelopeDto] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<SdkGdprConsentResponseEnvelopeDto>>
+  sdkControllerCheckGdprConsentV1({
+    required SdkV1GdprConsentCheckDto sdkV1GdprConsentCheckDto,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/api/sdk/v1/consent/gdpr/check';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      _bodyData = jsonEncode(sdkV1GdprConsentCheckDto);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _options.compose(_dio.options, _path),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    SdkGdprConsentResponseEnvelopeDto? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<
+              SdkGdprConsentResponseEnvelopeDto,
+              SdkGdprConsentResponseEnvelopeDto
+            >(rawData, 'SdkGdprConsentResponseEnvelopeDto', growable: true);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<SdkGdprConsentResponseEnvelopeDto>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,
@@ -901,6 +991,93 @@ class SdkApi {
     }
 
     return Response<SdkAcknowledgeResponseEnvelopeDto>(
+      data: _responseData,
+      headers: _response.headers,
+      isRedirect: _response.isRedirect,
+      requestOptions: _response.requestOptions,
+      redirects: _response.redirects,
+      statusCode: _response.statusCode,
+      statusMessage: _response.statusMessage,
+      extra: _response.extra,
+    );
+  }
+
+  /// sdkControllerUpsertGdprConsentV1
+  ///
+  ///
+  /// Parameters:
+  /// * [sdkV1GdprConsentWriteDto]
+  /// * [cancelToken] - A [CancelToken] that can be used to cancel the operation
+  /// * [headers] - Can be used to add additional headers to the request
+  /// * [extras] - Can be used to add flags to the request
+  /// * [validateStatus] - A [ValidateStatus] callback that can be used to determine request success based on the HTTP status of the response
+  /// * [onSendProgress] - A [ProgressCallback] that can be used to get the send progress
+  /// * [onReceiveProgress] - A [ProgressCallback] that can be used to get the receive progress
+  ///
+  /// Returns a [Future] containing a [Response] with a [SdkGdprConsentResponseEnvelopeDto] as data
+  /// Throws [DioException] if API call or serialization fails
+  Future<Response<SdkGdprConsentResponseEnvelopeDto>>
+  sdkControllerUpsertGdprConsentV1({
+    required SdkV1GdprConsentWriteDto sdkV1GdprConsentWriteDto,
+    CancelToken? cancelToken,
+    Map<String, dynamic>? headers,
+    Map<String, dynamic>? extra,
+    ValidateStatus? validateStatus,
+    ProgressCallback? onSendProgress,
+    ProgressCallback? onReceiveProgress,
+  }) async {
+    final _path = r'/api/sdk/v1/consent/gdpr';
+    final _options = Options(
+      method: r'POST',
+      headers: <String, dynamic>{...?headers},
+      extra: <String, dynamic>{'secure': <Map<String, String>>[], ...?extra},
+      contentType: 'application/json',
+      validateStatus: validateStatus,
+    );
+
+    dynamic _bodyData;
+
+    try {
+      _bodyData = jsonEncode(sdkV1GdprConsentWriteDto);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _options.compose(_dio.options, _path),
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    final _response = await _dio.request<Object>(
+      _path,
+      data: _bodyData,
+      options: _options,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      onReceiveProgress: onReceiveProgress,
+    );
+
+    SdkGdprConsentResponseEnvelopeDto? _responseData;
+
+    try {
+      final rawData = _response.data;
+      _responseData = rawData == null
+          ? null
+          : deserialize<
+              SdkGdprConsentResponseEnvelopeDto,
+              SdkGdprConsentResponseEnvelopeDto
+            >(rawData, 'SdkGdprConsentResponseEnvelopeDto', growable: true);
+    } catch (error, stackTrace) {
+      throw DioException(
+        requestOptions: _response.requestOptions,
+        response: _response,
+        type: DioExceptionType.unknown,
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
+
+    return Response<SdkGdprConsentResponseEnvelopeDto>(
       data: _responseData,
       headers: _response.headers,
       isRedirect: _response.isRedirect,

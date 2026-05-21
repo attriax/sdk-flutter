@@ -197,6 +197,76 @@ class AttriaxSynchronizer {
     return _synchronizationRefreshFuture ?? Future<void>.value();
   }
 
+  Future<int> discardQueuedRequestsWhere(
+    bool Function(AttriaxQueuedRequest request) shouldDiscard, {
+    required String reason,
+  }) async {
+    var droppedCount = 0;
+    await _withQueueOperationLock(() async {
+      final queue = await _queueManager.readAll();
+      if (queue.isEmpty) {
+        return;
+      }
+
+      final kept = <AttriaxQueuedRequest>[];
+      final dropped = <AttriaxQueuedRequest>[];
+      for (final queuedRequest in queue) {
+        if (shouldDiscard(queuedRequest)) {
+          dropped.add(queuedRequest);
+        } else {
+          kept.add(queuedRequest);
+        }
+      }
+
+      if (dropped.isEmpty) {
+        return;
+      }
+
+      droppedCount = dropped.length;
+      await _queueManager.writeAll(kept);
+      await _queueManager.recordTerminalDrop(dropped, reason: reason);
+    });
+    return droppedCount;
+  }
+
+  Future<int> rewriteQueuedRequestsWhere(
+    AttriaxApiRequest? Function(AttriaxQueuedRequest request) rewrite,
+  ) async {
+    var rewrittenCount = 0;
+    await _withQueueOperationLock(() async {
+      final queue = await _queueManager.readAll();
+      if (queue.isEmpty) {
+        return;
+      }
+
+      final rewritten = <AttriaxQueuedRequest>[];
+      for (final queuedRequest in queue) {
+        final replacement = rewrite(queuedRequest);
+        if (replacement == null) {
+          rewritten.add(queuedRequest);
+          continue;
+        }
+
+        rewrittenCount += 1;
+        rewritten.add(
+          queuedRequest.copyWith(
+            request: replacement,
+            attemptCount: 0,
+            lastAttemptAt: null,
+            lastErrorClass: null,
+            lastHttpStatusCode: null,
+            nextRetryAt: null,
+          ),
+        );
+      }
+
+      if (rewrittenCount > 0) {
+        await _queueManager.writeAll(rewritten);
+      }
+    });
+    return rewrittenCount;
+  }
+
   Future<void> reset({required Object error}) async {
     _active = false;
     _deferredFlushTimer?.cancel();

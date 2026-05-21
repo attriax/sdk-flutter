@@ -52,11 +52,6 @@ class AttriaxLogger {
   }
 
   void _emitLine(String line) {
-    if (kDebugMode) {
-      debugPrint(line);
-      return;
-    }
-
-    print(line);
+    debugPrint(line);
   }
 }

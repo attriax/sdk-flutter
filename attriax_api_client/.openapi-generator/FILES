@@ -12,6 +12,7 @@ lib/src/auth/basic_auth.dart
 lib/src/auth/bearer_auth.dart
 lib/src/auth/oauth.dart
 lib/src/deserialize.dart
+lib/src/model/app_user_gdpr_consent_state.dart
 lib/src/model/app_user_uninstall_token_provider.dart
 lib/src/model/app_version_context_dto.dart
 lib/src/model/attribution_type.dart
@@ -29,6 +30,9 @@ lib/src/model/sdk_create_dynamic_link_response_dto.dart
 lib/src/model/sdk_create_dynamic_link_response_envelope_dto.dart
 lib/src/model/sdk_dynamic_link_record_dto.dart
 lib/src/model/sdk_event_dto.dart
+lib/src/model/sdk_gdpr_consent_response_envelope_dto.dart
+lib/src/model/sdk_gdpr_consent_status_dto.dart
+lib/src/model/sdk_gdpr_consent_values_dto.dart
 lib/src/model/sdk_install_referrer_result_dto.dart
 lib/src/model/sdk_install_state.dart
 lib/src/model/sdk_json_deep_link_dto.dart
@@ -48,6 +52,9 @@ lib/src/model/sdk_v1_batch_response_envelope_dto.dart
 lib/src/model/sdk_v1_deep_link_resolve_dto.dart
 lib/src/model/sdk_v1_deep_link_resolve_response_dto.dart
 lib/src/model/sdk_v1_deep_link_resolve_response_envelope_dto.dart
+lib/src/model/sdk_v1_gdpr_consent_check_dto.dart
+lib/src/model/sdk_v1_gdpr_consent_values_dto.dart
+lib/src/model/sdk_v1_gdpr_consent_write_dto.dart
 lib/src/model/sdk_v1_open_dto.dart
 lib/src/model/sdk_v1_open_response_dto.dart
 lib/src/model/sdk_v1_open_response_envelope_dto.dart

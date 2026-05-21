@@ -1,4 +1,6 @@
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
+import 'package:attriax_flutter/src/attriax_consent.dart';
+import 'package:attriax_flutter/src/internal/attriax_consent_manager.dart';
 import 'package:attriax_flutter/src/internal/attriax_context_manager.dart';
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
@@ -146,6 +148,7 @@ void main() {
         logger: AttriaxLogger(enableDebugLogs: false),
         clock: clock,
         contextManager: const _FakeTrackingContext(),
+        consentState: const _FakeConsentReadView(),
         settingsState: const _FakeSettingsState(),
         requestManager: requestManager,
         sessionManager: _FakeSessionManager(),
@@ -591,6 +594,7 @@ void main() {
         logger: AttriaxLogger(enableDebugLogs: false),
         clock: clock,
         contextManager: const _FakeTrackingContext(),
+        consentState: const _FakeConsentReadView(),
         settingsState: const _FakeSettingsState(areEventsEnabled: false),
         requestManager: requestManager,
         sessionManager: _FakeSessionManager(),
@@ -708,6 +712,57 @@ class _FakeSettingsState implements AttriaxRuntimeSettingsView {
 
   @override
   final bool areEventsEnabled;
+}
+
+class _FakeConsentReadView implements AttriaxConsentReadView {
+  const _FakeConsentReadView();
+
+  @override
+  bool get allowsAdEventsTracking => true;
+
+  @override
+  bool get allowsAnalyticsTracking => true;
+
+  @override
+  bool get allowsAttributionTracking => true;
+
+  @override
+  AttriaxGdprConsentState get gdprConsentState =>
+      AttriaxGdprConsentState.granted;
+
+  @override
+  AttriaxGdprConsentValues? get gdprConsentValues =>
+      const AttriaxGdprConsentValues(
+        analytics: true,
+        attribution: true,
+        adEvents: true,
+      );
+
+  @override
+  bool get isWaitingForGdprConsent => false;
+
+  @override
+  bool get shouldDeferNetworkDispatch => false;
+
+  @override
+  bool get canCaptureAdEvents => true;
+
+  @override
+  bool get canCaptureAnalytics => true;
+
+  @override
+  bool get canCaptureAttribution => true;
+
+  @override
+  bool get canCaptureUninstallTracking => true;
+
+  @override
+  AttriaxTrackingDecision trackingDecisionFor(AttriaxTrackingSignal signal) =>
+      const AttriaxTrackingDecision(
+        capture: true,
+        identityMode: AttriaxTrackingIdentityMode.identified,
+        deferNetwork: false,
+      );
 }
 
 class _FakeRequestManager extends AttriaxRequestManager {

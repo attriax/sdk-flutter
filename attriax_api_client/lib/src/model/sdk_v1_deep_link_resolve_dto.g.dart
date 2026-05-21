@@ -9,10 +9,10 @@ part of 'sdk_v1_deep_link_resolve_dto.dart';
 SdkV1DeepLinkResolveDto _$SdkV1DeepLinkResolveDtoFromJson(
   Map<String, dynamic> json,
 ) => $checkedCreate('SdkV1DeepLinkResolveDto', json, ($checkedConvert) {
-  $checkKeys(json, requiredKeys: const ['appToken', 'deviceId', 'platform']);
+  $checkKeys(json, requiredKeys: const ['appToken', 'platform']);
   final val = SdkV1DeepLinkResolveDto(
     appToken: $checkedConvert('appToken', (v) => v as String),
-    deviceId: $checkedConvert('deviceId', (v) => v as String),
+    deviceId: $checkedConvert('deviceId', (v) => v as String?),
     deviceIdSource: $checkedConvert('deviceIdSource', (v) => v as String?),
     isFirstLaunch: $checkedConvert('isFirstLaunch', (v) => v as bool?),
     linkPath: $checkedConvert('linkPath', (v) => v as String?),
@@ -35,7 +35,7 @@ Map<String, dynamic> _$SdkV1DeepLinkResolveDtoToJson(
   SdkV1DeepLinkResolveDto instance,
 ) => <String, dynamic>{
   'appToken': instance.appToken,
-  'deviceId': instance.deviceId,
+  'deviceId': ?instance.deviceId,
   'deviceIdSource': ?instance.deviceIdSource,
   'isFirstLaunch': ?instance.isFirstLaunch,
   'linkPath': ?instance.linkPath,

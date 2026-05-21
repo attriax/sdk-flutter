@@ -94,7 +94,30 @@ void main() {
     expect(find.text('Controls'), findsOneWidget);
     expect(find.text('Mini games'), findsOneWidget);
     expect(find.text('Recent activity'), findsOneWidget);
+    expect(find.text('Accept analytics'), findsOneWidget);
+    expect(find.text('Reject analytics'), findsOneWidget);
     expect(find.textContaining('FCM token synced with Attriax.'), findsWidgets);
+  });
+
+  testWidgets('home consent prompt resolves GDPR consent directly', (
+    tester,
+  ) async {
+    await pumpExampleApp(tester);
+
+    await tapVisibleText(tester, 'Reject analytics');
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(sdk.consentState, AttriaxGdprConsentState.granted);
+    expect(
+      sdk.consentValues,
+      const AttriaxGdprConsentValues(
+        analytics: false,
+        attribution: false,
+        adEvents: false,
+      ),
+    );
+    expect(find.text('Accept analytics'), findsNothing);
   });
 
   testWidgets('shows the bootstrap error page and skips startup refreshes', (
@@ -152,6 +175,39 @@ void main() {
     expect(find.text('Deep Link Result'), findsWidgets);
     expect(find.text('Deep link matched successfully'), findsOneWidget);
     expect(find.textContaining('spring-launch'), findsWidgets);
+  });
+
+  testWidgets('unmatched deep link events stay on the current page', (
+    tester,
+  ) async {
+    await pumpExampleApp(tester);
+
+    final rawEvent = AttriaxRawDeepLinkEvent(
+      uri: Uri.parse('http://127.0.0.1:7357/#/controls'),
+      receivedAt: DateTime.utc(2026, 5, 14, 10),
+      isInitial: true,
+    );
+    final resolution = AttriaxDeepLinkEvent(
+      uri: Uri.parse('http://127.0.0.1:7357/#/controls'),
+      clickedAt: DateTime.utc(2026, 5, 14, 10),
+      consumedAt: DateTime.utc(2026, 5, 14, 10, 0, 1),
+      found: false,
+      trigger: AttriaxDeepLinkTrigger.coldStart,
+      isAttriaxSubDomain: false,
+      rawEvent: rawEvent,
+    );
+
+    sdk.emitDeepLink(rawEvent: rawEvent, resolvedEvent: resolution);
+
+    await pumpRouteTransition(tester);
+    await tester.pump();
+
+    expect(find.text('Deep Link Result'), findsNothing);
+    expect(find.text('Current SDK state'), findsOneWidget);
+    expect(
+      find.textContaining('without a matching Attriax link'),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
@@ -317,6 +373,12 @@ class FakeAttriax extends Fake implements Attriax {
   late final AttriaxReferrer referrer = _FakeAttriaxReferrer(this);
 
   @override
+  late final AttriaxConsent consent = _FakeAttriaxConsent(this);
+
+  AttriaxGdprConsentState consentState = AttriaxGdprConsentState.pending;
+  AttriaxGdprConsentValues? consentValues;
+
+  @override
   bool get isInitialized => true;
 
   @override
@@ -343,7 +405,7 @@ class FakeAttriax extends Fake implements Attriax {
 
   @override
   AttriaxSdkSnapshot? get sdkSnapshot =>
-      const AttriaxSdkSnapshot(apiVersion: 'v1', packageVersion: '0.2.0');
+      const AttriaxSdkSnapshot(apiVersion: 'v1', packageVersion: '0.3.0');
 
   @override
   Future<void> init({bool? enabled, bool? eventsEnabled}) async {}
@@ -670,6 +732,62 @@ class _FakeAttriaxReferrer extends Fake implements AttriaxReferrer {
     Duration? timeout,
     bool safe = false,
   }) async => _sdk.reinstallReferrerResult;
+}
+
+class _FakeAttriaxConsent extends Fake implements AttriaxConsent {
+  _FakeAttriaxConsent(this._sdk);
+
+  final FakeAttriax _sdk;
+
+  @override
+  late final AttriaxGdprConsent gdpr = _FakeAttriaxGdprConsent(_sdk);
+}
+
+class _FakeAttriaxGdprConsent extends Fake implements AttriaxGdprConsent {
+  _FakeAttriaxGdprConsent(this._sdk);
+
+  final FakeAttriax _sdk;
+
+  @override
+  AttriaxGdprConsentState get state => _sdk.consentState;
+
+  @override
+  AttriaxGdprConsentValues? get values => _sdk.consentValues;
+
+  @override
+  bool get isWaitingForConsent =>
+      _sdk.consentState == AttriaxGdprConsentState.pending ||
+      _sdk.consentState == AttriaxGdprConsentState.unknown;
+
+  @override
+  Future<bool> needsConsent({bool localOnly = false}) async =>
+      isWaitingForConsent;
+
+  @override
+  void setConsent({
+    required bool analytics,
+    required bool attribution,
+    required bool adEvents,
+  }) {
+    _sdk.consentState = AttriaxGdprConsentState.granted;
+    _sdk.consentValues = AttriaxGdprConsentValues(
+      analytics: analytics,
+      attribution: attribution,
+      adEvents: adEvents,
+    );
+  }
+
+  @override
+  void setNotRequired() {
+    _sdk.consentState = AttriaxGdprConsentState.notRequired;
+    _sdk.consentValues = null;
+  }
+
+  @override
+  void reset() {
+    _sdk.consentState = AttriaxGdprConsentState.pending;
+    _sdk.consentValues = null;
+  }
 }
 
 class FakePushTokenService implements ExamplePushTokenService {

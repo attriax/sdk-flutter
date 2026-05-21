@@ -504,5 +504,8 @@ class _FakeAppOpenMonitor implements AttriaxAppOpenMonitor {
   bool get hasSuccessfulResult => true;
 
   @override
+  bool get shouldGateRequestsOnSuccessfulAppOpen => true;
+
+  @override
   Future<AttriaxAppOpenResult?> waitForTrackedResult() async => null;
 }

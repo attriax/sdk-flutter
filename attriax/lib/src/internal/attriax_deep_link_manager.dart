@@ -3,10 +3,12 @@ import 'dart:async';
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 
 import 'attriax_api_models.dart';
+import 'attriax_consent_manager.dart';
 import 'attriax_context_manager.dart';
 import 'attriax_deep_link_listener.dart';
 import 'attriax_deep_link_resolver.dart';
 import 'attriax_event_hub.dart';
+import 'attriax_generated_transport.dart';
 import 'attriax_logger.dart';
 import 'attriax_preferences_store.dart';
 import 'attriax_request_manager.dart';
@@ -22,6 +24,11 @@ class AttriaxDeepLinkManager {
     required AttriaxPreferencesStore preferencesStore,
     required AttriaxRequestManager requestManager,
     required AttriaxLogger logger,
+    Future<AttriaxTransportSuccess> Function(
+      AttriaxResolveDeepLinkRequest request,
+    )?
+    directSend,
+    AttriaxTrackingDecision Function()? trackingDecision,
     String? Function()? currentSessionIdProvider,
     AttriaxDeepLinkResolver resolver = const AttriaxDeepLinkResolver(),
     AttriaxPlatform? platform,
@@ -33,6 +40,8 @@ class AttriaxDeepLinkManager {
        _preferencesStore = preferencesStore,
        _currentSessionIdProvider = currentSessionIdProvider ?? _noSessionId,
        _requestManager = requestManager,
+       _directSend = directSend ?? _unsupportedDirectSend,
+       _trackingDecision = trackingDecision ?? _identifiedTrackingDecision,
        _logger = logger,
        _resolver = resolver,
        _platform = platform ?? AttriaxPlatform.instance,
@@ -45,6 +54,11 @@ class AttriaxDeepLinkManager {
   final AttriaxPreferencesStore _preferencesStore;
   final String? Function() _currentSessionIdProvider;
   final AttriaxRequestManager _requestManager;
+  final Future<AttriaxTransportSuccess> Function(
+    AttriaxResolveDeepLinkRequest request,
+  )
+  _directSend;
+  final AttriaxTrackingDecision Function() _trackingDecision;
   final AttriaxLogger _logger;
   final AttriaxDeepLinkResolver _resolver;
   final AttriaxPlatform _platform;
@@ -90,14 +104,9 @@ class AttriaxDeepLinkManager {
     final clickedAt = _clock.now();
     final completer = Completer<AttriaxDeepLinkEvent>();
 
-    await _requestManager.enqueue(
-      attriaxBuildResolveDeepLinkRequest(
-        appToken: _config.appToken,
-        deviceId: _contextManager.requiredDeviceId,
-        deviceIdSource: _contextManager.requireDeviceIdSource(),
-        platform: _contextManager.requiredSnapshot.platform,
+    await _dispatchResolveRequest(
+      _buildResolveRequest(
         source: source,
-        isFirstLaunch: _contextManager.isFirstLaunch,
         rawUrl: effectiveUri.toString(),
         linkPath: normalizedLinkPath,
         metadata: metadata,
@@ -184,14 +193,9 @@ class AttriaxDeepLinkManager {
     );
 
     try {
-      await _requestManager.enqueue(
-        attriaxBuildResolveDeepLinkRequest(
-          appToken: _config.appToken,
-          deviceId: _contextManager.requiredDeviceId,
-          deviceIdSource: _contextManager.requireDeviceIdSource(),
-          platform: _contextManager.requiredSnapshot.platform,
+      await _dispatchResolveRequest(
+        _buildResolveRequest(
           source: 'attriax_sdk',
-          isFirstLaunch: _contextManager.isFirstLaunch,
           rawUrl: uri.toString(),
           linkPath: _resolver.extractLinkPathFromUri(uri),
           metadata: <String, Object?>{
@@ -250,6 +254,55 @@ class AttriaxDeepLinkManager {
         error: error,
         stackTrace: stackTrace,
       );
+    }
+  }
+
+  AttriaxResolveDeepLinkRequest _buildResolveRequest({
+    required String source,
+    String? rawUrl,
+    String? linkPath,
+    Map<String, Object?>? metadata,
+  }) {
+    final decision = _trackingDecision();
+    return attriaxBuildResolveDeepLinkRequest(
+      appToken: _config.appToken,
+      deviceId: decision.attachDeviceIdentity
+          ? _contextManager.requiredDeviceId
+          : null,
+      deviceIdSource: decision.attachDeviceIdentity
+          ? _contextManager.requireDeviceIdSource()
+          : null,
+      platform: _contextManager.requiredSnapshot.platform,
+      source: source,
+      isFirstLaunch: _contextManager.isFirstLaunch,
+      rawUrl: rawUrl,
+      linkPath: linkPath,
+      metadata: metadata,
+    );
+  }
+
+  Future<void> _dispatchResolveRequest(
+    AttriaxResolveDeepLinkRequest request, {
+    required void Function(AttriaxApiResponse response) onSuccess,
+    required void Function(Object error, StackTrace? stackTrace) onError,
+  }) async {
+    final decision = _trackingDecision();
+    final shouldSendDirectly =
+        decision.sendNetworkDirectly && !decision.attachDeviceIdentity;
+    if (!shouldSendDirectly) {
+      await _requestManager.enqueue(
+        request,
+        onSuccess: onSuccess,
+        onError: onError,
+      );
+      return;
+    }
+
+    try {
+      final delivery = await _directSend(request);
+      onSuccess(delivery.response);
+    } catch (error, stackTrace) {
+      onError(error, stackTrace);
     }
   }
 
@@ -394,3 +447,14 @@ class AttriaxDeepLinkManager {
 }
 
 String? _noSessionId() => null;
+AttriaxTrackingDecision _identifiedTrackingDecision() =>
+    const AttriaxTrackingDecision(
+      capture: true,
+      identityMode: AttriaxTrackingIdentityMode.identified,
+      deferNetwork: false,
+    );
+Future<AttriaxTransportSuccess> _unsupportedDirectSend(
+  AttriaxResolveDeepLinkRequest request,
+) => Future<AttriaxTransportSuccess>.error(
+  StateError('Direct deep-link resolution is not configured.'),
+);

@@ -42,6 +42,33 @@ void main() {
     });
 
     test(
+      'ensuring device identity does not consume the first-launch marker',
+      () async {
+        final restoredIdentity = await store.ensureDeviceIdentity(
+          deviceIdFactory: () => 'generated_device',
+        );
+
+        expect(restoredIdentity.deviceId, 'generated_device');
+        expect(restoredIdentity.hasPersistedDeviceId, isFalse);
+        expect(
+          prefs.getBool(AttriaxPreferencesStore.firstLaunchSeenStorageKey),
+          isNull,
+        );
+
+        final restoredDevice = await store.restoreDeviceData(
+          deviceIdFactory: () => 'unused_device',
+        );
+
+        expect(restoredDevice.deviceId, 'generated_device');
+        expect(restoredDevice.isFirstLaunch, isTrue);
+        expect(
+          prefs.getBool(AttriaxPreferencesStore.firstLaunchSeenStorageKey),
+          isTrue,
+        );
+      },
+    );
+
+    test(
       'setResolvedDeviceIdentity persists both device id and source',
       () async {
         await store.setResolvedDeviceIdentity(

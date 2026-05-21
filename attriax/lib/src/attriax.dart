@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'attriax_ad_event_type.dart';
 import 'attriax_analytics_keys.dart';
+import 'attriax_consent.dart';
 import 'attriax_deep_link_source.dart';
 import 'internal/attriax_context_collector.dart';
 import 'internal/attriax_deep_link_listener.dart';
@@ -101,6 +102,9 @@ class Attriax {
     _runtime,
   );
 
+  /// Regulation-scoped consent helpers exposed through a focused facade.
+  late final AttriaxConsent consent = AttriaxConsent(_runtime);
+
   /// Startup and deep-link referrer lookups exposed through a focused facade.
   late final AttriaxReferrer referrer = AttriaxReferrer._(_runtime);
 
@@ -167,6 +171,7 @@ class Attriax {
   /// the real platform ATT request when one is available, even when
   /// [AttriaxConfig.collectAdvertisingId] is false, and refreshes the SDK's
   /// cached ATT status with the result.
+  @Deprecated('Use attriax.consent.att.requestTrackingAuthorization() instead.')
   Future<AttriaxTrackingAuthorizationStatus> requestTrackingAuthorization({
     Duration? timeout,
   }) => _runtime.requestTrackingAuthorization(timeout: timeout);
@@ -176,6 +181,9 @@ class Attriax {
   /// On non-Apple platforms this resolves to
   /// [AttriaxTrackingAuthorizationStatus.notSupported]. This queries the
   /// platform directly and refreshes the SDK's cached ATT status.
+  @Deprecated(
+    'Use attriax.consent.att.getTrackingAuthorizationStatus() instead.',
+  )
   Future<AttriaxTrackingAuthorizationStatus> getTrackingAuthorizationStatus() =>
       _runtime.getTrackingAuthorizationStatus();
 

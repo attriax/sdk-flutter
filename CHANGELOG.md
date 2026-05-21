@@ -5,6 +5,20 @@ All notable changes to the Attriax Flutter SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-05-21
+
+### Added
+- Regulation-scoped GDPR consent APIs under `attriax.consent.gdpr`, including local and remote `needsConsent()` checks, explicit category decisions, `setNotRequired()`, and `reset()`.
+- Consent-id-only GDPR check/write transport models in the generated `attriax_api_client` package.
+- Anonymous analytics-capable dispatch for denied analytics paths without attaching Attriax device identity or app-user identity.
+- Package-local GDPR and anonymous analytics documentation plus a simple custom consent prompt in the public Flutter example app.
+
+### Changed
+- GDPR-enabled runtimes now defer network dispatch while consent is pending and resume only after consent resolves to granted or not required.
+- Requests buffered while GDPR is pending now regain device identity before dispatch when the final GDPR state is not required.
+- Attribution, user identity, uninstall-token, and app-open attribution paths are withheld until attribution consent is granted or GDPR is not required.
+- Analytics, crash, session, and deep-link diagnostics can use the anonymous/no-device path when the corresponding identified category is denied.
+
 ## [0.2.0] - 2026-05-18
 
 ### Added

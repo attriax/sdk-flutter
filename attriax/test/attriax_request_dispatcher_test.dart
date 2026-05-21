@@ -7,6 +7,7 @@ import 'package:attriax_flutter/src/internal/attriax_logger.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
 import 'package:attriax_flutter/src/internal/attriax_queue.dart';
 import 'package:attriax_flutter/src/internal/attriax_request_dispatcher.dart';
+import 'package:attriax_api_client/attriax_api_client.dart' as sdk;
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
@@ -810,6 +811,44 @@ class FakeTransport implements AttriaxGeneratedTransport {
   ) {
     throw UnimplementedError();
   }
+
+  @override
+  Future<sdk.SdkGdprConsentStatusDto> checkGdprConsent({
+    required String appToken,
+    required String consentId,
+    String? deviceId,
+    String? deviceIdSource,
+  }) async => sdk.SdkGdprConsentStatusDto(
+    checkedAt: DateTime.utc(2026, 5, 20),
+    needsConsent: false,
+    state: sdk.AppUserGdprConsentState.notRequired,
+  );
+
+  @override
+  Future<sdk.SdkGdprConsentStatusDto> upsertGdprConsent({
+    required String appToken,
+    required String consentId,
+    required sdk.AppUserGdprConsentState state,
+    String? deviceId,
+    String? deviceIdSource,
+    sdk.SdkV1GdprConsentValuesDto? values,
+    String? countryCode,
+    String? regionSource,
+    DateTime? clientOccurredAt,
+  }) async => sdk.SdkGdprConsentStatusDto(
+    checkedAt: clientOccurredAt ?? DateTime.utc(2026, 5, 20),
+    countryCode: countryCode,
+    needsConsent: state == sdk.AppUserGdprConsentState.pending,
+    regionSource: regionSource,
+    state: state,
+    values: values == null
+        ? null
+        : sdk.SdkGdprConsentValuesDto(
+            analytics: values.analytics,
+            attribution: values.attribution,
+            adEvents: values.adEvents,
+          ),
+  );
 }
 
 class FakeConnectivityPlatform extends ConnectivityPlatform {
@@ -825,10 +864,16 @@ class FakeConnectivityPlatform extends ConnectivityPlatform {
 }
 
 class FakeAppOpenMonitor implements AttriaxAppOpenMonitor {
-  FakeAppOpenMonitor({this.hasSuccessfulResult = true});
+  FakeAppOpenMonitor({
+    this.hasSuccessfulResult = true,
+    this.shouldGateRequestsOnSuccessfulAppOpen = true,
+  });
 
   @override
   bool hasSuccessfulResult;
+
+  @override
+  bool shouldGateRequestsOnSuccessfulAppOpen;
 
   @override
   Future<AttriaxAppOpenResult?> waitForTrackedResult() async => null;

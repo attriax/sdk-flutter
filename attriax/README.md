@@ -12,7 +12,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  attriax_flutter: ^0.2.0
+  attriax_flutter: ^0.3.0
 ```
 
 For local workspace development inside this repository, keep using the existing path-based workspace setup instead of a hosted dependency.
@@ -38,6 +38,8 @@ final navigatorKey = GlobalKey<NavigatorState>();
 final attriax = Attriax(
   config: const AttriaxConfig(
     appToken: 'ax_your_app_token',
+    gdprEnabled: true,
+    gdprAutoDetect: true,
   ),
 );
 
@@ -127,6 +129,41 @@ The `appVersion`, `appBuildNumber`, and `appPackageName` fields let you override
 
 If your app consumes the incoming URL before Attriax sees it, forward the accepted
 route manually with `recordDeepLink(uri: incomingUri, source: 'custom_router')`.
+
+## GDPR Consent
+
+`gdprEnabled` defaults to `false`. Enable it when your app wants Attriax to
+wait for a GDPR decision before sending GDPR-gated tracking activity.
+`gdprAutoDetect` defaults to `true` and lets the SDK derive an initial GDPR
+state automatically.
+
+```dart
+final needsLocalConsent = await attriax.consent.gdpr.needsConsent(
+  localOnly: true,
+);
+if (needsLocalConsent) {
+  // Present the app's consent UI here.
+}
+
+final needsConsent = await attriax.consent.gdpr.needsConsent();
+
+attriax.consent.gdpr.setConsent(
+  analytics: true,
+  attribution: true,
+  adEvents: false,
+);
+
+// Or, when the device should not be gated at all:
+attriax.consent.gdpr.setNotRequired();
+
+// Reset later if the app needs to re-ask:
+attriax.consent.gdpr.reset();
+```
+
+Use `state`, `values`, and `isWaitingForConsent` to drive your privacy UI and
+settings screen.
+
+See [doc/gdpr-and-anonymous-analytics.md](doc/gdpr-and-anonymous-analytics.md) for the full GDPR and anonymous analytics behavior, including how pending consent defers network dispatch and how denied analytics is stored without device identity.
 
 ## Dynamic Link Creation
 

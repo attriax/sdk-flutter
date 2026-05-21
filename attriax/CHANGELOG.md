@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0
+
+### Added
+- `Attriax.consent.gdpr` for regulation-scoped GDPR consent state, `needsConsent()` checks, `setConsent()`, `setNotRequired()`, and `reset()`.
+- GDPR-aware tracking policy that queues network work while consent is pending and resumes after a granted or not-required decision.
+- Anonymous analytics-capable delivery for denied analytics paths without sending Attriax device identity or app-user identity.
+- Package-local GDPR and anonymous analytics documentation.
+- A simple custom GDPR consent prompt on the public example home page, with the fuller controls still available from the Controls page.
+
+### Changed
+- App-open attribution, identity, uninstall-token, and attribution-sensitive deep-link work now require attribution consent when GDPR gating is enabled.
+- Requests buffered while GDPR is pending now regain device identity before dispatch when the final GDPR state is not required.
+- The public example app starts with `gdprEnabled: true` so clients can see the recommended consent flow in a real Flutter app.
+
 ## 0.2.0
 
 ### Added

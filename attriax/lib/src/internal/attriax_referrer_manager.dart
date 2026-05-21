@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 
 import 'attriax_app_open_monitor.dart';
+import 'attriax_api_models.dart';
 import 'attriax_deep_link_manager.dart';
+import 'attriax_platform_install_referrer_manager.dart';
 import 'attriax_preferences_store.dart';
 
 class AttriaxReferrerManager {
@@ -11,19 +13,24 @@ class AttriaxReferrerManager {
     required AttriaxPreferencesStore preferencesStore,
     required AttriaxAppOpenMonitor appOpenMonitor,
     required AttriaxDeepLinkManager deepLinkManager,
+    required AttriaxPlatformInstallReferrerManager
+    platformInstallReferrerManager,
     String? Function()? currentSessionIdProvider,
   }) : _preferencesStore = preferencesStore,
        _appOpenMonitor = appOpenMonitor,
        _deepLinkManager = deepLinkManager,
+       _platformInstallReferrerManager = platformInstallReferrerManager,
        _currentSessionIdProvider = currentSessionIdProvider ?? _noSessionId;
 
   final AttriaxPreferencesStore _preferencesStore;
   final AttriaxAppOpenMonitor _appOpenMonitor;
   final AttriaxDeepLinkManager _deepLinkManager;
+  final AttriaxPlatformInstallReferrerManager _platformInstallReferrerManager;
   final String? Function() _currentSessionIdProvider;
 
   bool _didInit = false;
   bool _enabled = false;
+  bool _localInstallReferrerOnly = false;
   String? _observedSessionId;
 
   Completer<AttriaxInstallReferrerDetails?>? _originalInstallCompleter;
@@ -58,6 +65,7 @@ class AttriaxReferrerManager {
   Future<void> init({required bool enabled}) async {
     _didInit = true;
     _enabled = enabled;
+    _localInstallReferrerOnly = false;
     await _restoreStoredInstallReferrers();
     _ensureDeepLinkSubscription();
     _syncSessionScope(forceReset: true);
@@ -72,6 +80,9 @@ class AttriaxReferrerManager {
 
   Future<void> prepareForEnabledState() async {
     _enabled = true;
+    _localInstallReferrerOnly = false;
+    _installObservationGeneration += 1;
+    _installObservationFuture = null;
     await _restoreStoredInstallReferrers();
     _ensureDeepLinkSubscription();
     _syncSessionScope();
@@ -81,6 +92,9 @@ class AttriaxReferrerManager {
 
   void prepareForReenable() {
     _enabled = true;
+    _localInstallReferrerOnly = false;
+    _installObservationGeneration += 1;
+    _installObservationFuture = null;
     _ensureDeepLinkSubscription();
     _syncSessionScope();
     _ensureInstallObservationStarted();
@@ -89,6 +103,19 @@ class AttriaxReferrerManager {
 
   void handleDisabled() {
     _enabled = false;
+    _localInstallReferrerOnly = false;
+  }
+
+  Future<void> prepareForDeniedAttributionState() async {
+    _enabled = true;
+    _localInstallReferrerOnly = true;
+    _installObservationGeneration += 1;
+    _installObservationFuture = null;
+    await _restoreStoredInstallReferrers();
+    _ensureDeepLinkSubscription();
+    _syncSessionScope();
+    _ensureInstallObservationStarted();
+    _ensureSessionStartupObservationStarted();
   }
 
   Future<AttriaxInstallReferrerDetails?> waitForOriginalInstallReferrer() {
@@ -247,6 +274,28 @@ class AttriaxReferrerManager {
 
   Future<void> _observeInstallReferrers(int generation) async {
     try {
+      if (_localInstallReferrerOnly) {
+        final context = await _platformInstallReferrerManager.load();
+        if (generation != _installObservationGeneration) {
+          return;
+        }
+
+        final details = attriaxBuildLocalInstallReferrerDetails(context);
+        _setOriginalInstallValue(details);
+        _setReinstallValue(details);
+        await Future.wait(<Future<void>>[
+          _preferencesStore.setStoredInstallReferrerDetails(
+            isLoaded: true,
+            details: details,
+          ),
+          _preferencesStore.setStoredReinstallReferrerDetails(
+            isLoaded: true,
+            details: details,
+          ),
+        ]);
+        return;
+      }
+
       final result = await _appOpenMonitor.waitForTrackedResult();
       if (generation != _installObservationGeneration) {
         return;
@@ -287,6 +336,11 @@ class AttriaxReferrerManager {
       }
 
       if (initialDeepLink != null) {
+        return;
+      }
+
+      if (_localInstallReferrerOnly) {
+        _setSessionReferrerValue(null);
         return;
       }
 

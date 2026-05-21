@@ -3,6 +3,7 @@ class AttriaxWebEnvironmentSnapshot {
     this.assetBaseUrl,
     this.documentBaseUrl,
     this.locationBaseUrl,
+    this.timezone,
     this.appName,
     this.browserName,
     this.userAgent,
@@ -15,6 +16,7 @@ class AttriaxWebEnvironmentSnapshot {
   final String? assetBaseUrl;
   final String? documentBaseUrl;
   final String? locationBaseUrl;
+  final String? timezone;
   final String? appName;
   final String? browserName;
   final String? userAgent;

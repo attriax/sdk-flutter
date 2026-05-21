@@ -1,7 +1,9 @@
 import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 
+import '../attriax_ad_event_type.dart';
 import '../attriax_analytics_keys.dart';
 import 'attriax_api_models.dart';
+import 'attriax_consent_manager.dart';
 import 'attriax_context_manager.dart';
 import 'attriax_logger.dart';
 import 'attriax_request_manager.dart';
@@ -17,6 +19,7 @@ class AttriaxTrackingManager {
     required AttriaxLogger logger,
     required AttriaxClock clock,
     required AttriaxTrackingContext contextManager,
+    required AttriaxConsentReadView consentState,
     required AttriaxRuntimeSettingsView settingsState,
     required AttriaxRequestManager requestManager,
     required AttriaxTrackedSessionPreparer sessionManager,
@@ -25,6 +28,7 @@ class AttriaxTrackingManager {
        _logger = logger,
        _clock = clock,
        _contextManager = contextManager,
+       _consentState = consentState,
        _settingsState = settingsState,
        _requestManager = requestManager,
        _sessionManager = sessionManager,
@@ -34,6 +38,7 @@ class AttriaxTrackingManager {
   final AttriaxLogger _logger;
   final AttriaxClock _clock;
   final AttriaxTrackingContext _contextManager;
+  final AttriaxConsentReadView _consentState;
   final AttriaxRuntimeSettingsView _settingsState;
   final AttriaxRequestManager _requestManager;
   final AttriaxTrackedSessionPreparer _sessionManager;
@@ -47,6 +52,20 @@ class AttriaxTrackingManager {
     if (!_settingsState.isEnabled || !_settingsState.areEventsEnabled) {
       _logger.verbose(
         'Ignoring recordEvent("$eventName") because SDK or events are disabled.',
+      );
+      return;
+    }
+
+    if (_isAdEventName(eventName)) {
+      if (!_trackingDecisionFor(AttriaxTrackingSignal.adEvents).capture) {
+        _logger.verbose(
+          'Ignoring recordEvent("$eventName") because GDPR ad-events consent is not granted.',
+        );
+        return;
+      }
+    } else if (!_trackingDecisionFor(AttriaxTrackingSignal.analytics).capture) {
+      _logger.verbose(
+        'Ignoring recordEvent("$eventName") because GDPR analytics consent is not granted.',
       );
       return;
     }
@@ -71,6 +90,13 @@ class AttriaxTrackingManager {
     String source = 'manual',
     bool flushImmediately = false,
   }) async {
+    if (!_trackingDecisionFor(AttriaxTrackingSignal.analytics).capture) {
+      _logger.verbose(
+        'Ignoring recordPageView("$pageName") because GDPR analytics consent is not granted.',
+      );
+      return;
+    }
+
     final normalizedPageName = pageName.trim();
     if (normalizedPageName.isEmpty) {
       throw ArgumentError.value(
@@ -120,6 +146,14 @@ class AttriaxTrackingManager {
       return;
     }
 
+    final decision = _trackingDecisionFor(AttriaxTrackingSignal.analytics);
+    if (!decision.capture) {
+      _logger.verbose(
+        'Ignoring recordError() because GDPR analytics consent is not granted.',
+      );
+      return;
+    }
+
     final occurredAt = _clock.now();
     final currentSession = await _sessionManager.prepareTrackedSessionAt(
       occurredAt,
@@ -129,8 +163,12 @@ class AttriaxTrackingManager {
         appToken: _config.appToken,
         clientOccurredAt: occurredAt,
         context: _contextManager.requiredSnapshot,
-        deviceId: _contextManager.requiredDeviceId,
-        deviceIdSource: _contextManager.requireDeviceIdSource(),
+        deviceId: decision.attachDeviceIdentity
+            ? _contextManager.requiredDeviceId
+            : null,
+        deviceIdSource: decision.attachDeviceIdentity
+            ? _contextManager.requireDeviceIdSource()
+            : null,
         source: _trimOrNull(source) ?? 'manual',
         isFatal: fatal,
         exceptionType: error.runtimeType.toString(),
@@ -146,6 +184,13 @@ class AttriaxTrackingManager {
   Future<void> setUser(String? userId, {String? userName}) async {
     if (!_settingsState.isEnabled) {
       _logger.verbose('Ignoring setUser("$userId") because SDK is disabled.');
+      return;
+    }
+
+    if (!_trackingDecisionFor(AttriaxTrackingSignal.attribution).capture) {
+      _logger.verbose(
+        'Ignoring setUser("$userId") because GDPR attribution consent is not granted.',
+      );
       return;
     }
 
@@ -182,6 +227,13 @@ class AttriaxTrackingManager {
       return;
     }
 
+    if (!_trackingDecisionFor(AttriaxTrackingSignal.attribution).capture) {
+      _logger.verbose(
+        'Ignoring setUserProperties() because GDPR attribution consent is not granted.',
+      );
+      return;
+    }
+
     final sanitizedUpdate = attriaxSanitizeUserPropertyUpdate(properties);
     if (sanitizedUpdate.isEmpty) {
       return;
@@ -205,6 +257,13 @@ class AttriaxTrackingManager {
       return;
     }
 
+    if (!_trackingDecisionFor(AttriaxTrackingSignal.attribution).capture) {
+      _logger.verbose(
+        'Ignoring clearUserProperties() because GDPR attribution consent is not granted.',
+      );
+      return;
+    }
+
     final normalizedPropertyNames = propertyNames
         ?.map((value) => value.trim())
         .where((value) => value.isNotEmpty)
@@ -224,6 +283,10 @@ class AttriaxTrackingManager {
     final trimmed = value?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
+
+  bool _isAdEventName(String eventName) =>
+      eventName == AttriaxAnalyticsEventKeys.adRevenue ||
+      AttriaxAdEventType.values.any((value) => value.eventName == eventName);
 
   bool _shouldFlushEventImmediately({
     required bool flushImmediately,
@@ -261,12 +324,21 @@ class AttriaxTrackingManager {
     final currentSession = await _sessionManager.prepareTrackedSessionAt(
       occurredAt,
     );
+    final decision = _trackingDecisionFor(
+      _isAdEventName(eventName)
+          ? AttriaxTrackingSignal.adEvents
+          : AttriaxTrackingSignal.analytics,
+    );
     await _requestManager.enqueue(
       attriaxBuildTrackEventRequest(
         appToken: _config.appToken,
         clientOccurredAt: occurredAt,
-        deviceId: _contextManager.requiredDeviceId,
-        deviceIdSource: _contextManager.requireDeviceIdSource(),
+        deviceId: decision.attachDeviceIdentity
+            ? _contextManager.requiredDeviceId
+            : null,
+        deviceIdSource: decision.attachDeviceIdentity
+            ? _contextManager.requireDeviceIdSource()
+            : null,
         eventName: eventName,
         eventData: eventData,
         sessionId: currentSession?.id,
@@ -278,6 +350,9 @@ class AttriaxTrackingManager {
       flushImmediately: flushImmediately,
     );
   }
+
+  AttriaxTrackingDecision _trackingDecisionFor(AttriaxTrackingSignal signal) =>
+      _consentState.trackingDecisionFor(signal);
 
   Future<void> _queueUserUpdate({
     String? externalUserId,

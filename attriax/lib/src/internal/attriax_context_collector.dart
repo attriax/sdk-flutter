@@ -130,6 +130,18 @@ class AttriaxContextCollector {
     );
   }
 
+  Future<String?> resolveDeviceTimezone() async {
+    try {
+      final nativeContext = await _platform.collectNativeContext(
+        collectAdvertisingId: _config.collectAdvertisingId,
+      );
+      return _nativeTimezone(nativeContext) ??
+          _emptyToNull(DateTime.now().timeZoneName);
+    } catch (_) {
+      return _emptyToNull(DateTime.now().timeZoneName);
+    }
+  }
+
   static AttriaxPlatformType _resolveCurrentPlatformType() {
     if (kIsWeb) {
       return AttriaxPlatformType.web;
