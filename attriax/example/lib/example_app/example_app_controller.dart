@@ -105,6 +105,10 @@ class ExampleAppController extends ChangeNotifier {
       !kIsWeb &&
       (_targetPlatform ?? defaultTargetPlatform) == TargetPlatform.iOS;
 
+  bool get _refreshesPushTokensDuringDiagnostics =>
+      !kIsWeb &&
+      (_targetPlatform ?? defaultTargetPlatform) != TargetPlatform.macOS;
+
   String get activeGamePlayerName {
     final trimmed = gamePlayerName.trim();
     return trimmed.isEmpty ? 'Guest' : trimmed;
@@ -173,7 +177,9 @@ class ExampleAppController extends ChangeNotifier {
     try {
       if (sdk.consent.gdpr.isWaitingForConsent) {
         await refreshDomainStatus();
-        await refreshPushTokenStatus();
+        if (_refreshesPushTokensDuringDiagnostics) {
+          await refreshPushTokenStatus();
+        }
         statusMessage =
             'GDPR consent is pending. Use Controls to resolve consent before tracking starts.';
         _pushActivity('GDPR consent pending', detail: consentStateLabel);
@@ -197,7 +203,9 @@ class ExampleAppController extends ChangeNotifier {
         safe: true,
       );
       await refreshDomainStatus();
-      await refreshPushTokenStatus();
+      if (_refreshesPushTokensDuringDiagnostics) {
+        await refreshPushTokenStatus();
+      }
       statusMessage =
           'SDK ready. Use the pages below to inspect deep links, token registration, events, and controls.';
       _pushActivity(

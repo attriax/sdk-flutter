@@ -101,6 +101,15 @@ void main() {
     expect(find.textContaining('FCM token synced with Attriax.'), findsWidgets);
   });
 
+  testWidgets('macOS startup skips the eager Firebase token refresh', (
+    tester,
+  ) async {
+    await pumpExampleApp(tester, targetPlatformOverride: TargetPlatform.macOS);
+
+    expect(pushTokens.refreshCalls, 0);
+    expect(find.text('Firebase token sync has not run yet.'), findsWidgets);
+  });
+
   testWidgets('home consent prompt resolves GDPR consent directly', (
     tester,
   ) async {
@@ -424,6 +433,8 @@ class FakeAttriax extends Fake implements Attriax {
 
   AttriaxGdprConsentState consentState = AttriaxGdprConsentState.pending;
   AttriaxGdprConsentValues? consentValues;
+
+  @override
   late final AttriaxSkan skan = _FakeAttriaxSkan(this);
 
   @override
@@ -708,6 +719,48 @@ class FakeAttriax extends Fake implements Attriax {
     );
     _rawDeepLinksController.add(rawEvent);
     _deepLinksController.add(resolvedEvent);
+  }
+}
+
+class _FakeAttriaxSkan implements AttriaxSkan {
+  _FakeAttriaxSkan(this._sdk);
+
+  final FakeAttriax _sdk;
+
+  @override
+  AttriaxSkanState? get state => _sdk.currentSkanState;
+
+  @override
+  Future<AttriaxSkanUpdateResult> updateConversionValue({
+    required int fineValue,
+    AttriaxSkanCoarseValue? coarseValue,
+    bool lockWindow = false,
+  }) async {
+    _sdk.recordedSkanUpdates.add(<String, Object?>{
+      'fineValue': fineValue,
+      'coarseValue': coarseValue,
+      'lockWindow': lockWindow,
+    });
+    _sdk.currentSkanState = AttriaxSkanState(
+      enabled: _sdk.currentSkanState.enabled,
+      schemaVersion: _sdk.currentSkanState.schemaVersion,
+      fineValue: fineValue,
+      coarseValue: coarseValue,
+      firstLaunchValueRegistered:
+          _sdk.currentSkanState.firstLaunchValueRegistered,
+      installAnchorAt: _sdk.currentSkanState.installAnchorAt,
+      completedRetentionDays: _sdk.currentSkanState.completedRetentionDays,
+      purchaseRevenueUsdMicros: _sdk.currentSkanState.purchaseRevenueUsdMicros,
+      purchaseCount: _sdk.currentSkanState.purchaseCount,
+      adShowCount: _sdk.currentSkanState.adShowCount,
+    );
+    return AttriaxSkanUpdateResult(
+      status: AttriaxSkanUpdateStatus.updated,
+      fineValue: fineValue,
+      coarseValue: coarseValue,
+      lockWindow: lockWindow,
+      state: _sdk.currentSkanState,
+    );
   }
 }
 

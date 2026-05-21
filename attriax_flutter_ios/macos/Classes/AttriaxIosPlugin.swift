@@ -2,6 +2,13 @@ import Cocoa
 import FlutterMacOS
 import Security
 
+private enum AttriaxMacosKeychainMode {
+    case standard
+    case dataProtection
+}
+
+private let attriaxAdhocCodeSignatureFlag: UInt32 = 0x0002
+
 public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "attriax", binaryMessenger: registrar.messenger)
@@ -88,23 +95,39 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         let newValue = UUID().uuidString
         let service = Bundle.main.bundleIdentifier ?? "com.attriax.sdk"
         let account = "attriax.device_id"
-        var addQuery = baseKeychainQuery(service: service, account: account)
-        addQuery[kSecValueData] = Data(newValue.utf8)
 
-        let status = SecItemAdd(addQuery as CFDictionary, nil)
-        if status == errSecSuccess {
-            return newValue
+        for mode in keychainModes() {
+            var addQuery = baseKeychainQuery(service: service, account: account, mode: mode)
+            addQuery[kSecValueData] = Data(newValue.utf8)
+
+            let status = SecItemAdd(addQuery as CFDictionary, nil)
+            if status == errSecSuccess {
+                return newValue
+            }
+            if status == errSecDuplicateItem,
+                let existingValue = readKeychainDeviceId(mode: mode)
+            {
+                return existingValue
+            }
         }
-        if status == errSecDuplicateItem {
-            return readKeychainDeviceId()
-        }
+
         return nil
     }
 
     private func readKeychainDeviceId() -> String? {
+        for mode in keychainModes() {
+            if let existingValue = readKeychainDeviceId(mode: mode) {
+                return existingValue
+            }
+        }
+
+        return nil
+    }
+
+    private func readKeychainDeviceId(mode: AttriaxMacosKeychainMode) -> String? {
         let service = Bundle.main.bundleIdentifier ?? "com.attriax.sdk"
         let account = "attriax.device_id"
-        var query = baseKeychainQuery(service: service, account: account)
+        var query = baseKeychainQuery(service: service, account: account, mode: mode)
         query[kSecReturnData] = true
         query[kSecMatchLimit] = kSecMatchLimitOne
 
@@ -122,14 +145,72 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         return trimmed.isEmpty ? nil : trimmed
     }
 
-    private func baseKeychainQuery(service: String, account: String) -> [CFString: Any] {
+    private func keychainModes() -> [AttriaxMacosKeychainMode] {
+        guard let signingInformation = signingInformation() else {
+            return []
+        }
+
+        let signatureFlags = (signingInformation[kSecCodeInfoFlags as String] as? NSNumber)?
+            .uint32Value ?? 0
+        if signatureFlags & attriaxAdhocCodeSignatureFlag != 0 {
+            return []
+        }
+
+        let teamIdentifier = (signingInformation[kSecCodeInfoTeamIdentifier as String] as? String)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let teamIdentifier, !teamIdentifier.isEmpty else {
+            return []
+        }
+
+        if #available(macOS 10.15, *) {
+            return [.dataProtection, .standard]
+        }
+
+        return [.standard]
+    }
+
+    private func signingInformation() -> [String: Any]? {
+        guard let executableUrl = Bundle.main.executableURL else {
+            return nil
+        }
+
+        var staticCode: SecStaticCode?
+        let staticCodeStatus = SecStaticCodeCreateWithPath(
+            executableUrl as CFURL,
+            SecCSFlags(rawValue: 0),
+            &staticCode
+        )
+        guard staticCodeStatus == errSecSuccess, let staticCode else {
+            return nil
+        }
+
+        var signingInformation: CFDictionary?
+        let signingStatus = SecCodeCopySigningInformation(
+            staticCode,
+            SecCSFlags(rawValue: kSecCSSigningInformation),
+            &signingInformation
+        )
+        guard signingStatus == errSecSuccess,
+            let signingInformation = signingInformation as? [String: Any]
+        else {
+            return nil
+        }
+
+        return signingInformation
+    }
+
+    private func baseKeychainQuery(
+        service: String,
+        account: String,
+        mode: AttriaxMacosKeychainMode
+    ) -> [CFString: Any] {
         var query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
             kSecAttrAccount: account,
         ]
 
-        if #available(macOS 10.15, *) {
+        if #available(macOS 10.15, *), mode == .dataProtection {
             // The data-protection keychain avoids login-keychain access prompts
             // for normal app-managed secrets on modern macOS.
             query[kSecUseDataProtectionKeychain] = kCFBooleanTrue

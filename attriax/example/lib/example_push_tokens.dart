@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 import 'example_firebase.dart';
 import 'package:attriax_flutter/attriax_flutter.dart';
@@ -177,12 +178,13 @@ class LiveExamplePushTokenService implements ExamplePushTokenService {
         ),
       );
     } catch (error) {
+      final pluginUnavailable = error is MissingPluginException;
       _emit(
         ExamplePushTokenSnapshot(
-          phase: error is UnsupportedError
+          phase: error is UnsupportedError || pluginUnavailable
               ? ExamplePushTokenPhase.unavailable
               : ExamplePushTokenPhase.error,
-          summary: error is UnsupportedError
+          summary: error is UnsupportedError || pluginUnavailable
               ? 'Firebase token sync is unavailable on this platform.'
               : 'Firebase token sync is not available yet.',
           permissionStatus: _snapshot.permissionStatus,
@@ -327,6 +329,10 @@ class LiveExamplePushTokenService implements ExamplePushTokenService {
     final message = error.toString();
     if (error is UnsupportedError) {
       return _setupHintForCurrentPlatform();
+    }
+    if (error is MissingPluginException &&
+        defaultTargetPlatform == TargetPlatform.macOS) {
+      return 'The macOS example only enables Firebase Messaging when the app is signed with a Team ID. Sign the app for macOS push testing, or use iOS or Android for live token registration.';
     }
     if (message.contains('Default FirebaseApp')) {
       return _setupHintForCurrentPlatform();
