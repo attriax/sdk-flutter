@@ -1,4 +1,4 @@
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
 class AttriaxDeepLinkResolver {
   const AttriaxDeepLinkResolver();

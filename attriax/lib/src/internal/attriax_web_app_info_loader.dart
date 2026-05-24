@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 import 'package:http/http.dart' as http;
 
 typedef AttriaxWebBaseUrlProvider = String? Function();

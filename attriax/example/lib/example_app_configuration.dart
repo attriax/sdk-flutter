@@ -21,4 +21,4 @@ Uri buildExampleFallbackDeepLink() =>
     });
 
 String exampleConfigurationHelpText() =>
-    'Edit lib/example_app_configuration.dart to change the app token or deep-link demo defaults.';
+    'Edit lib/example_app_configuration.dart to set the app token or deep-link demo defaults.';

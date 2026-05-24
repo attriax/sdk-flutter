@@ -14,11 +14,17 @@ import 'package:attriax_flutter_windows/attriax_flutter_windows.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('getPlatformVersion test', (WidgetTester tester) async {
-    final AttriaxFlutterWindows plugin = AttriaxFlutterWindows();
-    final String? version = await plugin.getPlatformVersion();
-    // The version string depends on the host platform running the test, so
-    // just assert that some non-empty string is returned.
-    expect(version?.isNotEmpty, true);
+  testWidgets('shared runtime methods return Windows plugin payloads', (
+    WidgetTester tester,
+  ) async {
+    final platform = AttriaxWindows();
+    final nativeContext = await platform.collectNativeContext();
+    final installReferrer = await platform.collectInstallReferrer();
+
+    expect(nativeContext.metadata['source'], 'windows_native');
+    expect(
+      installReferrer.metadata['installReferrerStatus'],
+      'unsupported_windows',
+    );
   });
 }

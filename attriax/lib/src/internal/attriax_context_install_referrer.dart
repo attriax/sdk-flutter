@@ -1,4 +1,5 @@
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
 
 import 'attriax_preferences_store.dart';
 
@@ -7,7 +8,7 @@ class AttriaxContextInstallReferrer {
     required AttriaxPlatform platform,
     required Duration installReferrerTimeout,
     required Duration installReferrerRetryDelay,
-    AttriaxPreferencesStore? preferencesStore,
+    AttriaxPlatformInstallReferrerStore? preferencesStore,
   }) : _platform = platform,
        _preferencesStore = preferencesStore ?? AttriaxPreferencesStore(),
        _installReferrerTimeout = installReferrerTimeout,
@@ -16,7 +17,7 @@ class AttriaxContextInstallReferrer {
   static const installReferrerStorageKey = 'attriax.install_referrer';
 
   final AttriaxPlatform _platform;
-  final AttriaxPreferencesStore _preferencesStore;
+  final AttriaxPlatformInstallReferrerStore _preferencesStore;
   final Duration _installReferrerTimeout;
   final Duration _installReferrerRetryDelay;
   String? _cachedInstallReferrer;

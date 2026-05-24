@@ -24,19 +24,18 @@ using flutter::MethodResultFunctions;
 
 TEST(AttriaxFlutterWindowsPlugin, GetPlatformVersion) {
   AttriaxFlutterWindowsPlugin plugin;
-  // Save the reply value from the success callback.
-  std::string result_string;
+  EncodableValue result_value;
   plugin.HandleMethodCall(
-      MethodCall("getPlatformVersion", std::make_unique<EncodableValue>()),
+      MethodCall("getTrackingAuthorizationStatus",
+                 std::make_unique<EncodableValue>()),
       std::make_unique<MethodResultFunctions<>>(
-          [&result_string](const EncodableValue* result) {
-            result_string = std::get<std::string>(*result);
+          [&result_value](const EncodableValue* result) {
+            result_value = *result;
           },
           nullptr, nullptr));
 
-  // Since the exact string varies by host, just ensure that it's a string
-  // with the expected format.
-  EXPECT_TRUE(result_string.rfind("Windows ", 0) == 0);
+  ASSERT_TRUE(std::holds_alternative<std::string>(result_value));
+  EXPECT_EQ(std::get<std::string>(result_value), "not_supported");
 }
 
 TEST(AttriaxFlutterWindowsPlugin, CollectNativeContext) {

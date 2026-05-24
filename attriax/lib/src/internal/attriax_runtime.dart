@@ -1,11 +1,10 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:ui' as ui;
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../attriax_ad_event_type.dart';
@@ -13,21 +12,29 @@ import '../attriax_analytics_keys.dart';
 import '../attriax_consent.dart';
 import 'attriax_api_models.dart';
 import 'attriax_api_base_url.dart';
+import 'attriax_app_open_launch_coordinator.dart';
 import 'attriax_app_open_manager.dart';
 import 'attriax_consent_manager.dart';
 import 'attriax_context_collector.dart';
 import 'attriax_context_manager.dart';
+import 'attriax_crash_reporting_coordinator.dart';
 import 'attriax_deep_link_manager.dart';
 import 'attriax_deep_link_listener.dart';
 import 'attriax_event_hub.dart';
 import 'attriax_generated_transport.dart';
+import 'attriax_ios_app_open_enrichment_manager.dart';
 import 'attriax_logger.dart';
 import 'attriax_platform_install_referrer_manager.dart';
 import 'attriax_preferences_store.dart';
 import 'attriax_queue.dart';
 import 'attriax_request_manager.dart';
 import 'attriax_referrer_manager.dart';
+import 'attriax_runtime_activation_coordinator.dart';
+import 'attriax_runtime_bootstrap_coordinator.dart';
 import 'attriax_runtime_settings_state.dart';
+import 'attriax_runtime_settings_store.dart';
+import 'attriax_sdk_runtime_config.dart';
+import 'attriax_sdk_runtime_config_coordinator.dart';
 import 'attriax_session_manager.dart';
 import 'attriax_skan_manager.dart';
 import 'attriax_synchronizer.dart';
@@ -66,9 +73,14 @@ class AttriaxRuntime {
          },
        ),
        _eventHub = AttriaxEventHub(),
-       _requestManager = AttriaxRequestManager() {
-    _platformInstallReferrerManager =
-        contextCollector.platformInstallReferrerManager;
+       _requestManager = AttriaxRequestManager(),
+       _platform = contextCollector.platformInstance,
+       _platformType = contextCollector.currentPlatformType {
+    _platformInstallReferrerManager = contextCollector
+        .buildRuntimePlatformInstallReferrerManager(
+          preferencesStore: _preferencesStore,
+          logger: _logger,
+        );
     _contextManager = AttriaxContextManager(
       contextCollector: contextCollector,
       preferencesStore: _preferencesStore,
@@ -143,6 +155,13 @@ class AttriaxRuntime {
   final AttriaxPreferencesStore _preferencesStore;
   final AttriaxEventHub _eventHub;
   final AttriaxRequestManager _requestManager;
+  final AttriaxPlatform _platform;
+  final AttriaxPlatformType _platformType;
+  late final AttriaxIosAppOpenEnrichmentManager _iosAppOpenEnrichmentManager =
+      AttriaxIosAppOpenEnrichmentManager(
+        platform: _platform,
+        platformType: _platformType,
+      );
   late final AttriaxPlatformInstallReferrerManager
   _platformInstallReferrerManager;
   late final AttriaxContextManager _contextManager;
@@ -159,23 +178,150 @@ class AttriaxRuntime {
   late final AttriaxTrackingManager _trackingManager;
   late final AttriaxSessionManager _sessionManager;
   late final AttriaxSkanManager _skanManager;
+  late final AttriaxCrashReportingCoordinator _crashReportingCoordinator =
+      AttriaxCrashReportingCoordinator(
+        config: config,
+        clock: _clock,
+        platform: _platform,
+        contextManager: _contextManager,
+        trackingManager: _trackingManager,
+        requestManager: _requestManager,
+        preferencesStore: _preferencesStore,
+        isRuntimeActive: () => _initialized && isEnabled,
+        analyticsTrackingDecision: () => _analyticsTrackingDecision,
+      );
+  late final AttriaxAppOpenLaunchCoordinator _appOpenLaunchCoordinator =
+      AttriaxAppOpenLaunchCoordinator(
+        didSchedule: () => _appOpenManager.didSchedule,
+        allowsAttributionTracking: () => _allowsAttributionTracking,
+        currentSessionId: () => _sessionManager.currentSession?.id,
+        ensureRuntimeConfigLoaded: _ensureSdkRuntimeConfigLoaded,
+        buildDeviceMetadataOverrides: ({required allowsAttributionTracking}) =>
+            _iosAppOpenEnrichmentManager.buildDeviceMetadataOverridesForAppOpen(
+              allowsAttributionTracking: allowsAttributionTracking,
+            ),
+        installReferrerOverrideForAppOpen:
+            ({
+              required clipboardAttributionEnabled,
+              required allowsAttributionTracking,
+            }) =>
+                _iosAppOpenEnrichmentManager.installReferrerOverrideForAppOpen(
+                  clipboardAttributionEnabled: clipboardAttributionEnabled,
+                  allowsAttributionTracking: allowsAttributionTracking,
+                ),
+        scheduleAppOpen:
+            ({
+              String? installReferrerOverride,
+              Map<String, Object?> deviceMetadataOverrides =
+                  const <String, Object?>{},
+              Future<void> Function(AttriaxAppOpenResult? result)? onCompleted,
+            }) => _appOpenManager.schedule(
+              installReferrerOverride: installReferrerOverride,
+              deviceMetadataOverrides: deviceMetadataOverrides,
+              onCompleted: onCompleted,
+            ),
+        onCompleted: _handleScheduledAppOpen,
+      );
+  late final AttriaxSdkRuntimeConfigCoordinator _sdkRuntimeConfigCoordinator =
+      AttriaxSdkRuntimeConfigCoordinator(
+        config: config,
+        contextSnapshot: () => _contextManager.snapshot,
+        fetchRuntimeConfig: (payload) =>
+            _ensureTransport().fetchSdkRuntimeConfig(payload),
+        logger: _logger,
+        onLoaded: _handleSdkRuntimeConfigLoaded,
+      );
+  late final AttriaxRuntimeBootstrapCoordinator<AttriaxSynchronizer>
+  _runtimeBootstrapCoordinator =
+      AttriaxRuntimeBootstrapCoordinator<AttriaxSynchronizer>(
+        bindConsentTransport: _consentManager.bindTransport,
+        initConsent: _consentManager.init,
+        syncRuntimePersistenceMode: _syncRuntimePersistenceMode,
+        restoreRuntimePreferences: _runtimeSettingsStore.restore,
+        restoreSettings: _settingsState.restore,
+        initContext: _contextManager.init,
+        isFirstLaunch: () => _contextManager.isFirstLaunch,
+        initSkan: ({required bool isFirstLaunch}) =>
+            _skanManager.init(isFirstLaunch: isFirstLaunch),
+        initSession: ({required bool enabled}) =>
+            _sessionManager.init(enabled: enabled),
+        initReferrer: ({required bool enabled}) =>
+            _referrerManager.init(enabled: enabled),
+        createSynchronizer: (transport) => AttriaxSynchronizer(
+          transport: transport,
+          connectivity: _connectivity,
+          appOpenMonitor: _appOpenManager,
+          preferencesStore: _preferencesStore,
+          maxQueueSize: config.maxQueueSize,
+          eventFlushInterval: config.eventFlushInterval,
+          logger: _logger,
+          buildSessionKeepAliveBatchRequest: _buildSessionKeepAliveBatchRequest,
+          onSessionKeepAliveDelivered: _handleSessionKeepAliveDelivered,
+        ),
+        bindRequestSynchronizer: (synchronizer) =>
+            _requestManager.synchronizer = synchronizer,
+        bindSynchronizationStateListener: (synchronizer) =>
+            synchronizer.onStateChanged = _eventHub.emitSynchronizationState,
+        seedRecoveredSessionEnd: _sessionManager.seedRecoveredSessionEnd,
+      );
+  late final AttriaxRuntimeActivationCoordinator
+  _runtimeActivationCoordinator = AttriaxRuntimeActivationCoordinator(
+    logger: _logger,
+    primeLaunchPreparation: _primeSdkRuntimeConfigForLaunch,
+    setAppOpenDispatchGateEnabled: ({required bool enabled}) =>
+        _appOpenManager.setDispatchGateEnabled(enabled: enabled),
+    handleDisabledReferrers: _referrerManager.handleDisabled,
+    prepareReferrerWaitersForReenable: _referrerManager.prepareForReenable,
+    prepareReferrersForEnabledState: _referrerManager.prepareForEnabledState,
+    prepareForDeniedAttributionState:
+        _referrerManager.prepareForDeniedAttributionState,
+    activateCrashReporting: ({required bool installHandlers}) =>
+        _crashReportingCoordinator.activate(installHandlers: installHandlers),
+    deactivateCrashReporting: _crashReportingCoordinator.deactivate,
+    activateSessionTracking: _sessionManager.activate,
+    deactivateSessionTracking: _sessionManager.deactivate,
+    activateSynchronizer: () => _synchronizer?.activate(),
+    deactivateSynchronizer: () => _synchronizer?.deactivate(),
+    setSynchronizationState: (state) => _synchronizer?.setState(state),
+    startConnectivitySubscription: () {
+      final synchronizer = _synchronizer;
+      if (synchronizer == null) {
+        return;
+      }
+
+      synchronizer.startConnectivitySubscription(
+        onRestored: synchronizer.scheduleFlush,
+      );
+    },
+    stopConnectivitySubscription: () async {
+      await _synchronizer?.stopConnectivitySubscription();
+    },
+    scheduleFlush: () => _synchronizer?.scheduleFlush(),
+    flushPendingSync: () {
+      unawaited(_consentManager.flushPendingSync(appToken: config.appToken));
+    },
+    scheduleAppOpenIfNeeded: () {
+      unawaited(_scheduleAppOpenIfNeeded());
+    },
+    startDeepLinks: _deepLinkManager.start,
+    stopDeepLinks: _deepLinkManager.stop,
+  );
 
   AttriaxSynchronizer? _synchronizer;
   AttriaxGeneratedTransport? _transport;
 
   bool _initialized = false;
+  late final AttriaxRuntimeSettingsStore _runtimeSettingsStore =
+      AttriaxPreferencesRuntimeSettingsStore(
+        preferencesStore: _preferencesStore,
+      );
   late final AttriaxRuntimeSettingsState _settingsState =
       AttriaxRuntimeSettingsState(
-        preferencesStore: _preferencesStore,
+        settingsStore: _runtimeSettingsStore,
         logger: _logger,
       );
   Future<void>? _initializationFuture;
   AttriaxNormalizedApiBaseUrl? _normalizedApiBaseUrl;
-  Future<void>? _appOpenSchedulingFuture;
-  FlutterExceptionHandler? _previousFlutterErrorHandler;
-  FlutterExceptionHandler? _installedFlutterErrorHandler;
-  bool Function(Object, StackTrace)? _previousPlatformErrorHandler;
-  bool Function(Object, StackTrace)? _installedPlatformErrorHandler;
 
   // ---------- getters ------------------------------------------------------- //
 
@@ -270,6 +416,16 @@ class AttriaxRuntime {
       _canCaptureAdEvents ||
       _canCaptureUninstallTracking;
 
+  AttriaxRuntimeActivationState get _runtimeActivationState =>
+      AttriaxRuntimeActivationState(
+        shouldDeferNetworkDispatch: _shouldDeferNetworkDispatch,
+        allowsAttributionTracking: _allowsAttributionTracking,
+        shouldTrackAnything: _shouldTrackAnything,
+        shouldActivateSessionTracking: _shouldActivateSessionTracking,
+        shouldInstallCrashHandlers: _shouldInstallCrashHandlers,
+        canRunActiveSynchronizationFlow: _initialized && _synchronizer != null,
+      );
+
   // ---------- streams (delegated to hub) ------------------------------------ //
 
   Stream<AttriaxRawDeepLinkEvent> get rawDeepLinks =>
@@ -308,8 +464,7 @@ class AttriaxRuntime {
       'Resetting Attriax SDK state. Call init() again before reusing this instance.',
     );
 
-    _restoreCrashHandlers();
-    await _contextManager.setAutomaticCrashReportingEnabled(enabled: false);
+    await _crashReportingCoordinator.deactivate();
     _requestManager.synchronizer = null;
     _sessionManager.dispose();
     await _referrerManager.dispose();
@@ -328,60 +483,52 @@ class AttriaxRuntime {
     await _sessionManager.reset();
     await _referrerManager.reset();
     await _skanManager.reset();
+    _iosAppOpenEnrichmentManager.reset();
 
     _settingsState.restore(enabled: true, eventsEnabled: true);
-    _appOpenSchedulingFuture = null;
+    _appOpenLaunchCoordinator.reset();
+    _sdkRuntimeConfigCoordinator.reset();
     _initializationFuture = null;
     _initialized = false;
+  }
+
+  Future<void> requestGdprDataErasure() async {
+    _assertInitialized();
+
+    final deviceId = _trimOrNull(_contextManager.deviceId);
+    if (deviceId == null) {
+      throw StateError(
+        'Attriax SDK device identity is unavailable. Call init() first.',
+      );
+    }
+
+    await _ensureTransport().eraseGdprData(
+      appToken: config.appToken,
+      deviceId: deviceId,
+    );
+
+    await reset();
   }
 
   Future<void> _runInit({bool? enabled, bool? eventsEnabled}) async {
     _logger.verbose('Initializing Attriax SDK.');
     _validateConfig();
 
-    final storedRuntimePreferences = await _preferencesStore
-        .restoreRuntimePreferences(
-          enabledOverride: enabled ?? _settingsState.requestedEnabledOverride,
-          eventsEnabledOverride:
-              eventsEnabled ?? _settingsState.requestedEventsEnabledOverride,
-        );
-    _settingsState.restore(
-      enabled: storedRuntimePreferences.isEnabled,
-      eventsEnabled: storedRuntimePreferences.areEventsEnabled,
+    _synchronizer = await _runtimeBootstrapCoordinator.bootstrap(
+      transport: _ensureTransport(),
+      enabledOverride: enabled ?? _settingsState.requestedEnabledOverride,
+      eventsEnabledOverride:
+          eventsEnabled ?? _settingsState.requestedEventsEnabledOverride,
+      sessionTrackingEnabled: _sessionTrackingEnabled,
+      seedRecoveredSessionEnd: _shouldActivateSessionTracking,
+      existingSynchronizer: _synchronizer,
     );
-
-    await _contextManager.init();
-    await _skanManager.init(isFirstLaunch: _contextManager.isFirstLaunch);
-    final sessionRestore = await _sessionManager.init(
-      enabled: _sessionTrackingEnabled,
-    );
-    await _referrerManager.init(enabled: isEnabled);
-
-    final transport = _ensureTransport();
-    _consentManager.bindTransport(transport);
-    await _consentManager.init();
-
-    _synchronizer ??= AttriaxSynchronizer(
-      transport: transport,
-      connectivity: _connectivity,
-      appOpenMonitor: _appOpenManager,
-      preferencesStore: _preferencesStore,
-      maxQueueSize: config.maxQueueSize,
-      eventFlushInterval: config.eventFlushInterval,
-      logger: _logger,
-      buildSessionKeepAliveBatchRequest: _buildSessionKeepAliveBatchRequest,
-      onSessionKeepAliveDelivered: _handleSessionKeepAliveDelivered,
-    );
-    final synchronizer = _synchronizer!;
-    _requestManager.synchronizer = synchronizer;
-    synchronizer.onStateChanged = _eventHub.emitSynchronizationState;
 
     _initialized = true;
-    if (_shouldActivateSessionTracking) {
-      _sessionManager.seedRecoveredSessionEnd(sessionRestore?.replacedSession);
-    }
-
-    await _applyEnabledState(isEnabled);
+    await _runtimeActivationCoordinator.apply(
+      enabled: isEnabled,
+      state: _runtimeActivationState,
+    );
     if (!isEnabled) {
       _logger.warning('Attriax SDK initialized in disabled mode.');
       return;
@@ -714,6 +861,15 @@ class AttriaxRuntime {
     reader: _referrerManager.waitForReinstallReferrer,
   );
 
+  Future<String?> getRawInstallReferrer({
+    Duration? timeout,
+    bool safe = false,
+  }) => _readReferrer(
+    timeout: timeout,
+    safe: safe,
+    reader: _referrerManager.waitForRawInstallReferrer,
+  );
+
   Future<AttriaxDeepLinkReferrerDetails?> getSessionReferrer({
     Duration? timeout,
     bool safe = false,
@@ -737,8 +893,11 @@ class AttriaxRuntime {
   void setEnabled({required bool enabled}) => _settingsState.setEnabled(
     enabled: enabled,
     initialized: _initialized,
-    applyState: ({required bool enabled}) => _applyEnabledState(enabled),
-    onPreparingToEnable: enabled ? _prepareReferrerWaitersForReenable : null,
+    applyState: ({required bool enabled}) => _runtimeActivationCoordinator
+        .apply(enabled: enabled, state: _runtimeActivationState),
+    onPreparingToEnable: enabled
+        ? _runtimeActivationCoordinator.prepareForReenable
+        : null,
   );
 
   void setEventsEnabled({required bool enabled}) =>
@@ -750,8 +909,7 @@ class AttriaxRuntime {
 
   Future<void> dispose() async {
     _logger.verbose('Disposing Attriax SDK runtime.');
-    _restoreCrashHandlers();
-    await _contextManager.setAutomaticCrashReportingEnabled(enabled: false);
+    await _crashReportingCoordinator.deactivate();
     _requestManager.synchronizer = null;
     _sessionManager.dispose();
     await _referrerManager.dispose();
@@ -848,6 +1006,8 @@ class AttriaxRuntime {
   }
 
   Future<void> _applyConsentStateChange() async {
+    await _syncRuntimePersistenceMode();
+
     final synchronizer = _synchronizer;
     if (config.gdprEnabled &&
         !_consentManager.isWaitingForGdprConsent &&
@@ -899,100 +1059,10 @@ class AttriaxRuntime {
       unawaited(_consentManager.flushPendingSync(appToken: config.appToken));
     }
 
-    await _applyEnabledState(true);
-  }
-
-  Future<void> _applyEnabledState(bool enabled) async {
-    if (!enabled) {
-      _appOpenManager.setDispatchGateEnabled(enabled: false);
-      _referrerManager.handleDisabled();
-      _restoreCrashHandlers();
-      await _contextManager.setAutomaticCrashReportingEnabled(enabled: false);
-      _sessionManager.deactivate();
-      _synchronizer?.deactivate();
-      _synchronizer?.setState(AttriaxSynchronizationState.disabled);
-      _logger.warning('Attriax SDK disabled.');
-      await _deepLinkManager.stop();
-      await _synchronizer?.stopConnectivitySubscription();
-      return;
-    }
-
-    if (_shouldDeferNetworkDispatch) {
-      _appOpenManager.setDispatchGateEnabled(enabled: false);
-      _referrerManager.handleDisabled();
-      await _contextManager.setAutomaticCrashReportingEnabled(
-        enabled: _shouldInstallCrashHandlers,
-      );
-      if (_shouldInstallCrashHandlers) {
-        _installCrashHandlers();
-        await _capturePendingNativeCrashReport();
-        await _replayPendingCrashReport();
-      } else {
-        _restoreCrashHandlers();
-      }
-      if (_shouldActivateSessionTracking) {
-        _sessionManager.activate();
-      } else {
-        _sessionManager.deactivate();
-      }
-      _synchronizer?.deactivate();
-      _synchronizer?.setState(AttriaxSynchronizationState.deferred);
-      _logger.warning(
-        'Attriax SDK is capturing locally and waiting for GDPR consent before sending network requests.',
-      );
-      await _deepLinkManager.start();
-      await _synchronizer?.stopConnectivitySubscription();
-      return;
-    }
-
-    if (!_shouldTrackAnything) {
-      _appOpenManager.setDispatchGateEnabled(enabled: false);
-      _restoreCrashHandlers();
-      await _contextManager.setAutomaticCrashReportingEnabled(enabled: false);
-      _sessionManager.deactivate();
-      _synchronizer?.deactivate();
-      _synchronizer?.setState(AttriaxSynchronizationState.disabled);
-      _logger.warning(
-        'Attriax SDK initialized without any GDPR tracking categories enabled.',
-      );
-      await _deepLinkManager.stop();
-      await _synchronizer?.stopConnectivitySubscription();
-      return;
-    }
-
-    _appOpenManager.setDispatchGateEnabled(enabled: _allowsAttributionTracking);
-    _synchronizer?.activate();
-    _synchronizer?.setState(AttriaxSynchronizationState.synchronizing);
-    _logger.verbose('Attriax SDK enabled.');
-    if (_initialized && _synchronizer != null) {
-      await _contextManager.setAutomaticCrashReportingEnabled(
-        enabled: _shouldInstallCrashHandlers,
-      );
-      if (_shouldInstallCrashHandlers) {
-        _installCrashHandlers();
-        await _capturePendingNativeCrashReport();
-        await _replayPendingCrashReport();
-      } else {
-        _restoreCrashHandlers();
-      }
-      _synchronizer!.startConnectivitySubscription(
-        onRestored: _synchronizer!.scheduleFlush,
-      );
-      await _deepLinkManager.start();
-      if (_allowsAttributionTracking) {
-        await _prepareReferrersForEnabledState();
-        unawaited(_scheduleAppOpenIfNeeded());
-      } else {
-        await _referrerManager.prepareForDeniedAttributionState();
-      }
-      if (_shouldActivateSessionTracking) {
-        _sessionManager.activate();
-      } else {
-        _sessionManager.deactivate();
-      }
-      unawaited(_consentManager.flushPendingSync(appToken: config.appToken));
-      _synchronizer!.scheduleFlush();
-    }
+    await _runtimeActivationCoordinator.apply(
+      enabled: true,
+      state: _runtimeActivationState,
+    );
   }
 
   bool _isRequestAllowedByResolvedConsent(AttriaxApiRequest request) =>
@@ -1029,49 +1099,58 @@ class AttriaxRuntime {
       eventName == AttriaxAnalyticsEventKeys.adRevenue ||
       AttriaxAdEventType.values.any((value) => value.eventName == eventName);
 
-  Future<void> _prepareReferrersForEnabledState() async {
-    await _referrerManager.prepareForEnabledState();
-  }
+  Future<void> _syncRuntimePersistenceMode() {
+    final values = _consentManager.gdprConsentValues;
+    final allowsRuntimePersistence =
+        !config.gdprEnabled ||
+        _consentManager.gdprConsentState ==
+            AttriaxGdprConsentState.notRequired ||
+        (_consentManager.gdprConsentState == AttriaxGdprConsentState.granted &&
+            values != null &&
+            (values.analytics || values.attribution || values.adEvents));
 
-  void _prepareReferrerWaitersForReenable() {
-    _referrerManager.prepareForReenable();
-  }
-
-  Future<void> _scheduleAppOpenIfNeeded() {
-    if (!_initialized ||
-        !isEnabled ||
-        !_allowsAttributionTracking ||
-        _synchronizer == null ||
-        _appOpenManager.didSchedule) {
-      return Future<void>.value();
-    }
-
-    final inFlight = _appOpenSchedulingFuture;
-    if (inFlight != null) {
-      return inFlight;
-    }
-
-    final scheduling = _scheduleAppOpen();
-    _appOpenSchedulingFuture = scheduling;
-    return scheduling.whenComplete(() {
-      if (identical(_appOpenSchedulingFuture, scheduling)) {
-        _appOpenSchedulingFuture = null;
-      }
-    });
-  }
-
-  Future<void> _scheduleAppOpen() async {
-    final originSessionId = _sessionManager.currentSession?.id;
-    await _appOpenManager.schedule(
-      onCompleted: (result) async {
-        await _skanManager.applyAppOpenResult(result);
-        await _deepLinkManager.handleDeferredAppOpen(
-          result,
-          originSessionId: originSessionId,
-        );
-      },
+    return _preferencesStore.setRuntimePersistenceMode(
+      mode: allowsRuntimePersistence
+          ? AttriaxRuntimePersistenceMode.fullRuntime
+          : AttriaxRuntimePersistenceMode.consentOnly,
     );
   }
+
+  Future<void> _handleSdkRuntimeConfigLoaded(
+    AttriaxSdkRuntimeConfig runtimeConfig,
+  ) => _iosAppOpenEnrichmentManager.primeForConsentState(
+    clipboardAttributionEnabled: runtimeConfig.clipboardAttributionEnabled,
+    isWaitingForGdprConsent: _isWaitingForGdprConsent,
+    allowsAttributionTracking: _allowsAttributionTracking,
+  );
+
+  Future<void> _handleScheduledAppOpen(
+    AttriaxAppOpenResult? result, {
+    String? originSessionId,
+  }) async {
+    await _skanManager.applyAppOpenResult(result);
+    await _deepLinkManager.handleDeferredAppOpen(
+      result,
+      originSessionId: originSessionId,
+    );
+  }
+
+  void _primeSdkRuntimeConfigForLaunch() {
+    _sdkRuntimeConfigCoordinator.primeForLaunch(
+      isInitialized: _initialized,
+      isEnabled: isEnabled,
+    );
+  }
+
+  Future<AttriaxSdkRuntimeConfig> _ensureSdkRuntimeConfigLoaded() =>
+      _sdkRuntimeConfigCoordinator.ensureLoaded();
+
+  Future<void> _scheduleAppOpenIfNeeded() =>
+      _appOpenLaunchCoordinator.scheduleIfNeeded(
+        isInitialized: _initialized,
+        isEnabled: isEnabled,
+        hasSynchronizer: _synchronizer != null,
+      );
 
   Future<int?> _convertSkanRevenueToUsdMicros({
     required int amountMicros,
@@ -1115,197 +1194,6 @@ class AttriaxRuntime {
       }
 
       rethrow;
-    }
-  }
-
-  void _installCrashHandlers() {
-    if (!config.automaticCrashReportingEnabled) {
-      return;
-    }
-
-    if (_installedFlutterErrorHandler == null) {
-      _previousFlutterErrorHandler = FlutterError.onError;
-      _installedFlutterErrorHandler = (details) {
-        _previousFlutterErrorHandler?.call(details);
-        final metadata = <String, Object?>{
-          if (details.library != null) 'library': details.library,
-          if (details.silent) 'silent': true,
-        };
-        unawaited(
-          _recordAutomaticFrameworkError(
-            details.exception,
-            details.stack ?? StackTrace.current,
-            reason: details.context?.toDescription(),
-            metadata: metadata.isEmpty ? null : metadata,
-          ),
-        );
-      };
-      FlutterError.onError = _installedFlutterErrorHandler;
-    }
-
-    if (_installedPlatformErrorHandler == null) {
-      _previousPlatformErrorHandler = ui.PlatformDispatcher.instance.onError;
-      _installedPlatformErrorHandler = (error, stackTrace) {
-        unawaited(
-          _persistFatalCrashForRetry(
-            error,
-            stackTrace,
-            source: 'platform_dispatcher',
-            reason: 'Unhandled root isolate error',
-          ),
-        );
-
-        final previous = _previousPlatformErrorHandler;
-        if (previous != null) {
-          return previous(error, stackTrace);
-        }
-
-        return false;
-      };
-      ui.PlatformDispatcher.instance.onError = _installedPlatformErrorHandler;
-    }
-  }
-
-  void _restoreCrashHandlers() {
-    if (identical(FlutterError.onError, _installedFlutterErrorHandler)) {
-      FlutterError.onError = _previousFlutterErrorHandler;
-    }
-    if (identical(
-      ui.PlatformDispatcher.instance.onError,
-      _installedPlatformErrorHandler,
-    )) {
-      ui.PlatformDispatcher.instance.onError = _previousPlatformErrorHandler;
-    }
-
-    _installedFlutterErrorHandler = null;
-    _previousFlutterErrorHandler = null;
-    _installedPlatformErrorHandler = null;
-    _previousPlatformErrorHandler = null;
-  }
-
-  Future<void> _recordAutomaticFrameworkError(
-    Object error,
-    StackTrace stackTrace, {
-    String? reason,
-    Map<String, Object?>? metadata,
-  }) async {
-    if (!_initialized || !isEnabled) {
-      return;
-    }
-
-    await _trackingManager.recordError(
-      error,
-      stackTrace,
-      source: 'flutter_error',
-      reason: reason,
-      metadata: metadata,
-    );
-  }
-
-  Future<void> _persistFatalCrashForRetry(
-    Object error,
-    StackTrace stackTrace, {
-    required String source,
-    String? reason,
-    Map<String, Object?>? metadata,
-  }) async {
-    if (!_initialized || !isEnabled) {
-      return;
-    }
-
-    final decision = _analyticsTrackingDecision;
-
-    await _storePendingCrashReport(
-      attriaxBuildTrackCrashRequest(
-        appToken: config.appToken,
-        clientOccurredAt: _clock.now(),
-        context: _contextManager.requiredSnapshot,
-        deviceId: decision.attachDeviceIdentity
-            ? _contextManager.requiredDeviceId
-            : null,
-        deviceIdSource: decision.attachDeviceIdentity
-            ? _requireDeviceIdSource()
-            : null,
-        source: source,
-        isFatal: true,
-        exceptionType: error.runtimeType.toString(),
-        message: error.toString(),
-        metadata: metadata,
-        reason: reason,
-        stackTrace: stackTrace.toString(),
-      ),
-    );
-  }
-
-  Future<void> _capturePendingNativeCrashReport() async {
-    final nativeReport = await AttriaxPlatform.instance
-        .consumePendingCrashReport();
-    if (nativeReport == null) {
-      return;
-    }
-
-    final decision = _analyticsTrackingDecision;
-
-    await _storePendingCrashReport(
-      attriaxBuildTrackCrashRequest(
-        appToken: config.appToken,
-        clientOccurredAt: nativeReport.occurredAt,
-        context: _contextManager.requiredSnapshot,
-        deviceId: decision.attachDeviceIdentity
-            ? _contextManager.requiredDeviceId
-            : null,
-        deviceIdSource: decision.attachDeviceIdentity
-            ? _requireDeviceIdSource()
-            : null,
-        source: nativeReport.source,
-        isFatal: nativeReport.isFatal,
-        exceptionType: nativeReport.exceptionType,
-        message: nativeReport.message,
-        metadata: nativeReport.metadata,
-        reason: nativeReport.reason,
-        stackTrace: nativeReport.stackTrace,
-      ),
-    );
-  }
-
-  Future<void> _replayPendingCrashReport() async {
-    final payload = await _readPendingCrashReport();
-    if (payload == null) {
-      return;
-    }
-
-    await _requestManager.enqueue(
-      AttriaxTrackCrashRequest(payload),
-      onSuccess: (_) {
-        unawaited(_preferencesStore.writePendingCrashReportPayload(null));
-      },
-    );
-  }
-
-  Future<void> _storePendingCrashReport(AttriaxTrackCrashRequest request) =>
-      _preferencesStore.writePendingCrashReportPayload(
-        jsonEncode(request.payload.toJson()),
-      );
-
-  Future<AttriaxCrashReportPayload?> _readPendingCrashReport() async {
-    final raw = await _preferencesStore.readPendingCrashReportPayload();
-    if (raw == null || raw.isEmpty) {
-      return null;
-    }
-
-    try {
-      final decoded = jsonDecode(raw);
-      if (decoded is! Map) {
-        await _preferencesStore.writePendingCrashReportPayload(null);
-        return null;
-      }
-
-      return AttriaxCrashReportPayload.fromJson(
-        decoded.map((key, value) => MapEntry(key.toString(), value as Object?)),
-      );
-    } catch (_) {
-      await _preferencesStore.writePendingCrashReportPayload(null);
-      return null;
     }
   }
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
 import 'attriax_api_models.dart';
 import 'attriax_consent_manager.dart';
@@ -21,7 +22,7 @@ class AttriaxDeepLinkManager {
     required AttriaxContextManager contextManager,
     required AttriaxDeepLinkListener listener,
     required AttriaxEventHub eventHub,
-    required AttriaxPreferencesStore preferencesStore,
+    required AttriaxDeepLinkStateStore preferencesStore,
     required AttriaxRequestManager requestManager,
     required AttriaxLogger logger,
     Future<AttriaxTransportSuccess> Function(
@@ -51,7 +52,7 @@ class AttriaxDeepLinkManager {
   final AttriaxContextManager _contextManager;
   final AttriaxDeepLinkListener _listener;
   final AttriaxEventHub _eventHub;
-  final AttriaxPreferencesStore _preferencesStore;
+  final AttriaxDeepLinkStateStore _preferencesStore;
   final String? Function() _currentSessionIdProvider;
   final AttriaxRequestManager _requestManager;
   final Future<AttriaxTransportSuccess> Function(

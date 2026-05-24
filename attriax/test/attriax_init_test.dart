@@ -3,7 +3,7 @@ import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:attriax_flutter/attriax_flutter.dart';
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'test_support/attriax_platform_test_support.dart';
 import 'package:attriax_flutter/src/internal/attriax_context_collector.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
 import 'package:attriax_api_client/attriax_api_client.dart' as generated_sdk;
@@ -37,7 +37,13 @@ void main() {
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
       contextCollector = CountingContextCollector();
-      client = http.Client();
+      client = _mockClientWithRuntimeConfig(
+        (request) async => http.Response(
+          _sdkEnvelope(<String, Object?>{}),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        ),
+      );
       sdk = Attriax.test(
         config: const AttriaxConfig(appToken: 'ax_test_token'),
         client: client,
@@ -148,6 +154,67 @@ void main() {
     );
 
     test(
+      'restores persisted runtime state after previously granted GDPR consent',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          AttriaxPreferencesStore.gdprConsentStorageKey: jsonEncode(
+            <String, Object?>{
+              'state': 'granted',
+              'pendingSync': false,
+              'values': <String, Object?>{
+                'analytics': true,
+                'attribution': true,
+                'adEvents': false,
+              },
+              'countryCode': 'DE',
+              'regionSource': 'manual',
+              'checkedAt': '2026-05-24T00:00:00.000Z',
+            },
+          ),
+          AttriaxPreferencesStore.deviceIdStorageKey: 'persisted_device',
+          AttriaxPreferencesStore.deviceIdSourceStorageKey: 'ios_keychain',
+          AttriaxPreferencesStore.enabledStorageKey: false,
+          AttriaxPreferencesStore.eventsEnabledStorageKey: false,
+          AttriaxPreferencesStore.firstLaunchSeenStorageKey: true,
+        });
+        prefs = await SharedPreferences.getInstance();
+        contextCollector = CountingContextCollector();
+        sdk = Attriax.test(
+          config: const AttriaxConfig(
+            appToken: 'ax_test_token',
+            gdprEnabled: true,
+            gdprAutoDetect: false,
+          ),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init();
+
+        expect(sdk.enabled, isFalse);
+        expect(sdk.tracking.enabled, isFalse);
+        expect(sdk.deviceId, 'persisted_device');
+        expect(
+          prefs.getString(AttriaxPreferencesStore.deviceIdStorageKey),
+          'persisted_device',
+        );
+        expect(
+          prefs.getString(AttriaxPreferencesStore.deviceIdSourceStorageKey),
+          'ios_keychain',
+        );
+        expect(
+          prefs.getBool(AttriaxPreferencesStore.firstLaunchSeenStorageKey),
+          isTrue,
+        );
+        expect(contextCollector.resolvePreferredDeviceIdCalls, 0);
+      },
+    );
+
+    test(
       'imports pending native crash reports during init and clears retry storage after ack',
       () async {
         final crashPlatform = FakeCrashReportingPlatform(
@@ -163,7 +230,7 @@ void main() {
         );
         AttriaxPlatform.instance = crashPlatform;
         final crashRequest = Completer<Map<String, Object?>>();
-        client = MockClient((request) async {
+        client = _mockClientWithRuntimeConfig((request) async {
           if (request.url.path == '/api/sdk/v1/open') {
             return http.Response(
               _sdkEnvelope(<String, Object?>{
@@ -239,6 +306,20 @@ void main() {
         client = MockClient((request) async {
           requestPaths.add(request.url.path);
 
+          if (request.url.path == '/api/sdk/v1/config') {
+            return http.Response(
+              _sdkEnvelope(<String, Object?>{
+                'requestVersion': 'v1',
+                'acceptedAt': '2026-05-06T09:59:59.000Z',
+                'clipboardAttributionEnabled': false,
+              }),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
           if (request.url.path == '/api/sdk/v1/open') {
             return http.Response(
               _sdkEnvelope(<String, Object?>{
@@ -283,13 +364,20 @@ void main() {
         );
 
         await sdk.init().timeout(const Duration(milliseconds: 200));
-        await sdk.recordEvent(
+        await sdk.tracking.recordEvent(
           'purchase',
           eventData: const <String, Object?>{'value': 42},
         );
         await _flushRuntimeTransitions();
+        for (
+          var attempt = 0;
+          attempt < 10 && !requestPaths.contains('/api/sdk/v1/config');
+          attempt += 1
+        ) {
+          await Future<void>.delayed(Duration.zero);
+        }
 
-        expect(requestPaths, isEmpty);
+        expect(requestPaths, <String>['/api/sdk/v1/config']);
 
         delayedPlatform.complete(
           const AttriaxInstallReferrerContext(
@@ -298,7 +386,11 @@ void main() {
         );
         await _flushRuntimeTransitions();
 
-        expect(requestPaths, <String>['/api/sdk/v1/open', '/api/sdk/v1/batch']);
+        expect(requestPaths, <String>[
+          '/api/sdk/v1/config',
+          '/api/sdk/v1/open',
+          '/api/sdk/v1/batch',
+        ]);
         expect(batchBodies, hasLength(1));
 
         final items = batchBodies.single['items']! as List<Object?>;
@@ -468,7 +560,13 @@ void main() {
       expect(initialSession, isNotNull);
 
       final secondDeepLinkSource = FakeDeepLinkSource();
-      final secondClient = http.Client();
+      final secondClient = _mockClientWithRuntimeConfig(
+        (request) async => http.Response(
+          _sdkEnvelope(<String, Object?>{}),
+          200,
+          headers: const <String, String>{'content-type': 'application/json'},
+        ),
+      );
       final secondContextCollector = CountingContextCollector();
       final secondSdk = Attriax.test(
         config: AttriaxConfig(
@@ -523,7 +621,13 @@ void main() {
         expect(initialSession, isNotNull);
 
         final secondDeepLinkSource = FakeDeepLinkSource();
-        final secondClient = http.Client();
+        final secondClient = _mockClientWithRuntimeConfig(
+          (request) async => http.Response(
+            _sdkEnvelope(<String, Object?>{}),
+            200,
+            headers: const <String, String>{'content-type': 'application/json'},
+          ),
+        );
         final secondContextCollector = CountingContextCollector();
         final resumedAt = now.add(
           firstConfig.firstLaunchSessionHeartbeatInterval * 2 +
@@ -579,7 +683,7 @@ void main() {
 
       now = now.add(const Duration(seconds: 7));
       clock.currentTime = now;
-      await sdk.recordEvent(
+      await sdk.tracking.recordEvent(
         'purchase',
         eventData: const <String, Object?>{'value': 42},
       );
@@ -613,7 +717,7 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.recordPurchase(
+        await sdk.tracking.recordPurchase(
           revenue: 4.99,
           currency: 'usd',
           productId: 'coins_500',
@@ -645,6 +749,54 @@ void main() {
     );
 
     test(
+      'tracking facade queues a normalized purchase revenue payload',
+      () async {
+        connectivityPlatform = FakeConnectivityPlatform(
+          currentResults: const <ConnectivityResult>[ConnectivityResult.none],
+        );
+        ConnectivityPlatform.instance = connectivityPlatform;
+        connectivity = Connectivity();
+        sdk = Attriax.test(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init();
+        await sdk.tracking.recordPurchase(
+          revenue: 4.99,
+          currency: 'usd',
+          productId: 'coins_500',
+          transactionId: 'txn_tracking_123',
+          validationProvider: 'google_play',
+          purchaseToken: 'purchase-token-tracking-123',
+          quantity: 2,
+          metadata: const <String, Object?>{'placement': 'paywall'},
+        );
+
+        final bodies = _queuedBodiesFromPrefs(prefs);
+        expect(bodies, hasLength(1));
+
+        final body = bodies.single;
+        final eventData = body['eventData']! as Map<String, Object?>;
+
+        expect(body['eventName'], 'purchase');
+        expect(eventData['revenue'], 4.99);
+        expect(eventData['currency'], 'USD');
+        expect(eventData['productId'], 'coins_500');
+        expect(eventData['transactionId'], 'txn_tracking_123');
+        expect(eventData['validationProvider'], 'google_play');
+        expect(eventData['purchaseToken'], 'purchase-token-tracking-123');
+        expect(eventData['quantity'], 2);
+        expect(eventData['placement'], 'paywall');
+      },
+    );
+
+    test(
       'recordPurchase falls back to 0 USD for an invalid currency',
       () async {
         connectivityPlatform = FakeConnectivityPlatform(
@@ -663,7 +815,7 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.recordPurchase(revenue: 4.99, currency: '  ');
+        await sdk.tracking.recordPurchase(revenue: 4.99, currency: '  ');
 
         final bodies = _queuedBodiesFromPrefs(prefs);
         expect(bodies, hasLength(1));
@@ -694,7 +846,7 @@ void main() {
       );
 
       await sdk.init();
-      await sdk.recordRefund(
+      await sdk.tracking.recordRefund(
         revenue: 4.99,
         currency: 'eur',
         transactionId: 'refund_txn_123',
@@ -727,7 +879,7 @@ void main() {
     test(
       'validateReceipt posts directly and returns the public result',
       () async {
-        client = MockClient((request) async {
+        client = _mockClientWithRuntimeConfig((request) async {
           if (request.url.path == '/api/sdk/v1/open') {
             return http.Response(
               _sdkEnvelope(<String, Object?>{
@@ -814,6 +966,85 @@ void main() {
       },
     );
 
+    test(
+      'validateReceipt stays available when tracking is disabled and consent is pending',
+      () async {
+        client = _mockClientWithRuntimeConfig((request) async {
+          if (request.url.path == '/api/sdk/v1/open') {
+            return http.Response(
+              _sdkEnvelope(<String, Object?>{
+                'userId': 'user_1',
+                'isNewUser': true,
+                'isFirstLaunch': true,
+                'requestVersion': 'v1',
+                'acceptedAt': '2026-05-06T10:00:00.000Z',
+              }),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          expect(request.url.path, '/api/sdk/v1/revenue/receipts/validate');
+          final body = jsonDecode(request.body) as Map<String, Object?>;
+          expect(body['appToken'], 'ax_test_token');
+          expect(body['deviceId'], isNotEmpty);
+          expect(body['provider'], 'unity');
+
+          return http.Response(
+            jsonEncode(<String, Object?>{
+              'success': true,
+              'timestamp': '2026-05-06T10:00:00.000Z',
+              'data': <String, Object?>{
+                'requestVersion': 'v1',
+                'acceptedAt': '2026-05-06T10:00:00.000Z',
+                'validationId': 'validation_disabled_tracking',
+                'status': 'pending',
+                'provider': 'unity',
+                'productId': 'coins_500',
+                'providerResult': <String, Object?>{'provider': 'unity'},
+                'publicReceipt': <String, Object?>{'provider': 'unity'},
+              },
+            }),
+            200,
+            headers: <String, String>{'content-type': 'application/json'},
+          );
+        });
+
+        sdk = Attriax.test(
+          config: const AttriaxConfig(
+            appToken: 'ax_test_token',
+            gdprEnabled: true,
+            gdprAutoDetect: false,
+          ),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init();
+        expect(sdk.consent.gdpr.isWaitingForConsent, isTrue);
+
+        sdk.enabled = false;
+        sdk.tracking.enabled = false;
+        await _flushRuntimeTransitions();
+
+        final result = await sdk.validateReceipt(
+          provider: 'unity',
+          productId: 'coins_500',
+          purchaseToken: 'purchase-token-123',
+        );
+
+        expect(result.validationId, 'validation_disabled_tracking');
+        expect(result.status, AttriaxRevenueReceiptValidationStatus.pending);
+        expect(result.publicReceipt['provider'], 'unity');
+      },
+    );
+
     test('recordAdRevenue queues a normalized ad revenue payload', () async {
       connectivityPlatform = FakeConnectivityPlatform(
         currentResults: const <ConnectivityResult>[ConnectivityResult.none],
@@ -831,7 +1062,7 @@ void main() {
       );
 
       await sdk.init();
-      await sdk.recordAdRevenue(
+      await sdk.tracking.recordAdRevenue(
         revenue: 120000,
         revenueInMicros: true,
         adNetwork: 'admob',
@@ -871,7 +1102,7 @@ void main() {
       );
 
       await sdk.init();
-      await sdk.recordAdEvent(
+      await sdk.tracking.recordAdEvent(
         AttriaxAdEventType.showFailed,
         adNetwork: 'admob',
         mediationNetwork: 'admob',
@@ -917,7 +1148,7 @@ void main() {
       );
 
       await sdk.init();
-      await sdk.recordAdEvent(
+      await sdk.tracking.recordAdEvent(
         AttriaxAdEventType.load,
         adNetwork: 'admob',
         adPlacement: 'level_end',
@@ -949,7 +1180,7 @@ void main() {
       final firstDeviceId = sdk.deviceId;
       expect(firstDeviceId, isNotNull);
 
-      await sdk.recordEvent('stale_event');
+      await sdk.tracking.recordEvent('stale_event');
       expect(
         _queuedBodiesFromPrefs(prefs).map((body) => body['eventName']),
         contains('stale_event'),
@@ -985,7 +1216,7 @@ void main() {
     test(
       'registerFirebaseMessagingToken sends the uninstall-token payload',
       () async {
-        client = MockClient((request) async {
+        client = _mockClientWithRuntimeConfig((request) async {
           if (request.url.path == '/api/sdk/v1/open') {
             return http.Response(
               _sdkEnvelope(<String, Object?>{
@@ -1035,7 +1266,7 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.registerFirebaseMessagingToken(
+        await sdk.tracking.registerFirebaseMessagingToken(
           'fcm_token_123',
           metadata: <String, Object?>{'source': 'tests'},
         );
@@ -1045,7 +1276,7 @@ void main() {
     test(
       'registerFirebaseMessagingToken accepts an empty token to clear the uninstall token',
       () async {
-        client = MockClient((request) async {
+        client = _mockClientWithRuntimeConfig((request) async {
           if (request.url.path == '/api/sdk/v1/open') {
             return http.Response(
               _sdkEnvelope(<String, Object?>{
@@ -1094,7 +1325,7 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.registerFirebaseMessagingToken('   ');
+        await sdk.tracking.registerFirebaseMessagingToken('   ');
       },
     );
 
@@ -1105,7 +1336,7 @@ void main() {
           platform: AttriaxPlatformType.ios,
         );
 
-        client = MockClient((request) async {
+        client = _mockClientWithRuntimeConfig((request) async {
           if (request.url.path == '/api/sdk/v1/open') {
             return http.Response(
               _sdkEnvelope(<String, Object?>{
@@ -1155,7 +1386,7 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.registerApplePushToken(
+        await sdk.tracking.registerApplePushToken(
           'apns_token_123',
           metadata: <String, Object?>{'source': 'tests'},
         );
@@ -1181,7 +1412,7 @@ void main() {
         await sdk.init();
 
         await expectLater(
-          () => sdk.registerFirebaseMessagingToken('fcm_token_123'),
+          () => sdk.tracking.registerFirebaseMessagingToken('fcm_token_123'),
           throwsA(isA<UnsupportedError>()),
         );
       },
@@ -1506,6 +1737,26 @@ String _sdkEnvelope(Map<String, Object?> data) => jsonEncode(<String, Object?>{
   'timestamp': '2026-05-06T10:00:00.000Z',
   'data': data,
 });
+
+http.Client _mockClientWithRuntimeConfig(
+  Future<http.Response> Function(http.Request request) handler,
+) {
+  return MockClient((request) async {
+    if (request.url.path == '/api/sdk/v1/config') {
+      return http.Response(
+        _sdkEnvelope(<String, Object?>{
+          'requestVersion': 'v1',
+          'acceptedAt': '2026-05-06T09:59:59.000Z',
+          'clipboardAttributionEnabled': false,
+        }),
+        200,
+        headers: const <String, String>{'content-type': 'application/json'},
+      );
+    }
+
+    return handler(request);
+  });
+}
 
 generated_sdk.SdkV1BatchResponseEnvelopeDto _batchEnvelope() =>
     generated_sdk.SdkV1BatchResponseEnvelopeDto(

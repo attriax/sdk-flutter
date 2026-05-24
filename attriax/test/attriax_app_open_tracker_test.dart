@@ -2,7 +2,7 @@ import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
 import 'package:attriax_flutter/src/internal/attriax_app_open_tracker.dart';
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
 import 'package:attriax_flutter/src/internal/attriax_request_manager.dart';
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'test_support/attriax_platform_test_support.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

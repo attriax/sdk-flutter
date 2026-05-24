@@ -1,4 +1,5 @@
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
 import '../attriax_analytics_keys.dart';
 import 'attriax_logger.dart';
@@ -21,7 +22,7 @@ typedef AttriaxSkanUsdRevenueConverter =
 class AttriaxSkanManager {
   AttriaxSkanManager({
     required AttriaxConfig config,
-    required AttriaxPreferencesStore preferencesStore,
+    required AttriaxSkanStore preferencesStore,
     required AttriaxPlatform platform,
     required AttriaxPlatformType platformType,
     required AttriaxClock clock,
@@ -36,7 +37,7 @@ class AttriaxSkanManager {
        _usdRevenueConverter = usdRevenueConverter;
 
   final AttriaxConfig _config;
-  final AttriaxPreferencesStore _preferencesStore;
+  final AttriaxSkanStore _preferencesStore;
   final AttriaxPlatform _platform;
   final AttriaxPlatformType _platformType;
   final AttriaxClock _clock;

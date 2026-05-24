@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
 import 'attriax_app_open_monitor.dart';
 import 'attriax_app_open_tracker.dart';
@@ -54,6 +54,8 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
   }
 
   Future<void> schedule({
+    String? installReferrerOverride,
+    Map<String, Object?> deviceMetadataOverrides = const <String, Object?>{},
     Future<void> Function(AttriaxAppOpenResult? result)? onCompleted,
   }) async {
     final context = _contextManager.requiredSnapshot;
@@ -78,6 +80,8 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
       config: _config,
       context: context,
       platformInstallReferrerContext: platformInstallReferrerContext,
+      installReferrerOverride: installReferrerOverride,
+      deviceMetadataOverrides: deviceMetadataOverrides,
       deviceIdSource: _contextManager.requireDeviceIdSource(),
       session: _sessionManager.currentSession,
       requestManager: _requestManager,

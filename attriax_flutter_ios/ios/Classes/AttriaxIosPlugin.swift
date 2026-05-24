@@ -3,6 +3,7 @@ import Security
 import SafariServices
 import StoreKit
 import UIKit
+import WebKit
 import Darwin
 #if canImport(AdSupport)
 import AdSupport
@@ -20,11 +21,70 @@ private func attriaxHandleUncaughtException(_ exception: NSException) {
     attriaxPreviousExceptionHandler?(exception)
 }
 
+private func attriaxReadEntitlementValue(_ key: String) -> Any? {
+    guard let task = SecTaskCreateFromSelf(nil) else {
+        return nil
+    }
+
+    var error: Unmanaged<CFError>?
+    let value = SecTaskCopyValueForEntitlement(
+        task,
+        key as CFString,
+        &error
+    )
+    error?.release()
+    return value
+}
+
+private func attriaxReadEntitlementString(_ key: String) -> String? {
+    attriaxReadEntitlementValue(key) as? String
+}
+
+private func attriaxReadEntitlementStringArray(_ key: String) -> [String] {
+    guard let values = attriaxReadEntitlementValue(key) as? [Any] else {
+        return []
+    }
+
+    return values.compactMap { $0 as? String }
+}
+
+private func attriaxHardwareModel() -> String? {
+    var systemInfo = utsname()
+    guard uname(&systemInfo) == 0 else {
+        return nil
+    }
+
+    return withUnsafePointer(to: &systemInfo.machine) { pointer in
+        pointer.withMemoryRebound(to: CChar.self, capacity: 1) {
+            String(cString: $0)
+        }
+    }
+}
+
+private func attriaxInterfaceIdiom(_ idiom: UIUserInterfaceIdiom) -> String {
+    switch idiom {
+    case .phone:
+        return "phone"
+    case .pad:
+        return "pad"
+    case .mac:
+        return "mac"
+    case .tv:
+        return "tv"
+    case .carPlay:
+        return "carPlay"
+    default:
+        return "unspecified"
+    }
+}
+
 public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandler, FlutterSceneLifeCycleDelegate {
     private var eventSink: FlutterEventSink?
     private var initialLink: String?
     private var initialLinkSent = false
     private var latestLink: String?
+    private var cachedWebViewUserAgent: String?
+    private var webViewUserAgentProbe: WKWebView?
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "attriax", binaryMessenger: registrar.messenger())
@@ -45,6 +105,10 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             result(collectNativeContext(call: call))
         case "collectInstallReferrer":
             result(collectInstallReferrer())
+        case "readAttributionClipboard":
+            readAttributionClipboard(result: result)
+        case "collectWebViewUserAgent":
+            collectWebViewUserAgent(result: result)
         case "setAutomaticCrashReportingEnabled":
             let arguments = call.arguments as? [String: Any]
             if arguments?["enabled"] as? Bool == true {
@@ -156,6 +220,41 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         ["metadata": ["source": "ios_install_referrer"]]
     }
 
+    private func readAttributionClipboard(result: @escaping FlutterResult) {
+        DispatchQueue.main.async {
+            let text = UIPasteboard.general.string?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            result(text?.isEmpty == false ? text : nil)
+        }
+    }
+
+    private func collectWebViewUserAgent(result: @escaping FlutterResult) {
+        if let cachedWebViewUserAgent, !cachedWebViewUserAgent.isEmpty {
+            result(cachedWebViewUserAgent)
+            return
+        }
+
+        DispatchQueue.main.async {
+            let webView = WKWebView(frame: .zero)
+            self.webViewUserAgentProbe = webView
+            webView.evaluateJavaScript("navigator.userAgent") { value, _ in
+                defer {
+                    self.webViewUserAgentProbe = nil
+                }
+
+                let userAgent = (value as? String)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                if let userAgent, !userAgent.isEmpty {
+                    self.cachedWebViewUserAgent = userAgent
+                    result(userAgent)
+                    return
+                }
+
+                result(nil)
+            }
+        }
+    }
+
     private func openBrowserUrl(
         call: FlutterMethodCall,
         result: @escaping FlutterResult
@@ -200,27 +299,15 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
     }
 
     private func collectNativeContext(call: FlutterMethodCall) -> [String: Any] {
-        let device = UIDevice.current
-        let screen = UIScreen.main
-        let screenBounds = screen.bounds
         let bundle = Bundle.main
-        let hardwareModel = readHardwareModelIdentifier()
-        let preciseDeviceModel = resolvePreciseDeviceModel(
-            fallbackModel: device.model,
-            hardwareModel: hardwareModel
-        )
         let appVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         let appBuildNumber = bundle.object(forInfoDictionaryKey: kCFBundleVersionKey as String)
             as? String
-
-        // Top-level payload picked up by the SDK init request. Keys here
-        // map 1:1 to columns the backend uses for multi-signal attribution
-        // matching, so any change must be coordinated with the API.
-        var payload: [String: Any] = [
-            "screenWidth": Int(screenBounds.width * screen.scale),
-            "screenHeight": Int(screenBounds.height * screen.scale),
-            "devicePixelRatio": screen.scale,
-        ]
+        let flutterDeepLinkingEnabled = bundle.object(
+            forInfoDictionaryKey: "FlutterDeepLinkingEnabled"
+        ) as? Bool
+        let device = UIDevice.current
+        var payload: [String: Any] = [:]
 
         let arguments = call.arguments as? [String: Any]
         let collectAdvertisingId = arguments?["collectAdvertisingId"] as? Bool ?? true
@@ -233,109 +320,63 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             "source": "ios_native",
             "timezone": TimeZone.current.identifier,
             "locale": Locale.current.identifier,
-            "regionCode": Locale.current.regionCode as Any,
-            "preferredLanguages": Locale.preferredLanguages,
             "appVersion": appVersion as Any,
             "appBuildNumber": appBuildNumber as Any,
             "packageName": bundle.bundleIdentifier as Any,
             "keychainDeviceId": readOrCreateKeychainDeviceId() as Any,
-            "vendorIdentifier": device.identifierForVendor?.uuidString as Any,
-            "name": device.name,
-            "localizedModel": device.localizedModel,
-            "model": preciseDeviceModel,
-            "deviceModel": preciseDeviceModel,
-            "hardwareModel": hardwareModel,
             "bundleIdentifier": bundle.bundleIdentifier as Any,
+            "vendorIdentifier": device.identifierForVendor?.uuidString as Any,
+            "deviceModel": device.model,
+            "localizedModel": device.localizedModel,
             "systemName": device.systemName,
             "systemVersion": device.systemVersion,
-            "screenWidthPoints": screenBounds.width,
-            "screenHeightPoints": screenBounds.height,
-            "screenScale": screen.scale,
-            "isLowPowerModeEnabled": ProcessInfo.processInfo.isLowPowerModeEnabled,
         ]
 
-        if let flutterDeepLinkingEnabled = Bundle.main.object(
-            forInfoDictionaryKey: "FlutterDeepLinkingEnabled"
-        ) as? Bool {
+#if TARGET_OS_SIMULATOR
+        metadata["isSimulator"] = true
+        metadata["isPhysicalDevice"] = false
+#else
+        metadata["isSimulator"] = false
+        metadata["isPhysicalDevice"] = true
+#endif
+
+        if let flutterDeepLinkingEnabled {
             metadata["flutterDeepLinkingEnabled"] = flutterDeepLinkingEnabled
         }
 
-        let associatedDomains = readEntitlementStringArray(
-            key: "com.apple.developer.associated-domains"
+        if let hardwareModel = attriaxHardwareModel(), !hardwareModel.isEmpty {
+            metadata["hardwareModel"] = hardwareModel
+        }
+
+        let applicationIdentifier = attriaxReadEntitlementString(
+            "application-identifier"
+        )?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let applicationIdentifier, !applicationIdentifier.isEmpty {
+            metadata["applicationIdentifier"] = applicationIdentifier
+            if let derivedTeamIdentifier = applicationIdentifier.split(separator: ".").first,
+               !derivedTeamIdentifier.isEmpty {
+                metadata["teamIdentifier"] = String(derivedTeamIdentifier)
+            }
+        }
+
+        let explicitTeamIdentifier = attriaxReadEntitlementString(
+            "com.apple.developer.team-identifier"
+        )?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let explicitTeamIdentifier, !explicitTeamIdentifier.isEmpty {
+            metadata["teamIdentifier"] = explicitTeamIdentifier
+        }
+
+        let associatedDomains = attriaxReadEntitlementStringArray(
+            "com.apple.developer.associated-domains"
         )
         if !associatedDomains.isEmpty {
             metadata["associatedDomains"] = associatedDomains
         }
 
-        if let applicationIdentifier = readEntitlementString(key: "application-identifier") {
-            metadata["applicationIdentifier"] = applicationIdentifier
-            if let teamIdentifier = applicationIdentifier.split(separator: ".").first {
-                metadata["teamIdentifier"] = String(teamIdentifier)
-            }
-        }
-
-        if let explicitTeamIdentifier = readEntitlementString(
-            key: "com.apple.developer.team-identifier"
-        ) {
-            metadata["teamIdentifier"] = explicitTeamIdentifier
-        }
-
-        // Interface idiom: phone, pad, mac, tv, carPlay, vision, unspecified
-        switch device.userInterfaceIdiom {
-        case .phone:   metadata["interfaceIdiom"] = "phone"
-        case .pad:     metadata["interfaceIdiom"] = "pad"
-        case .mac:     metadata["interfaceIdiom"] = "mac"
-        case .tv:      metadata["interfaceIdiom"] = "tv"
-        case .carPlay: metadata["interfaceIdiom"] = "carPlay"
-        default:       metadata["interfaceIdiom"] = "unspecified"
-        }
-
-#if targetEnvironment(simulator)
-        metadata["isSimulator"] = true
-    metadata["isPhysicalDevice"] = false
-#else
-        metadata["isSimulator"] = false
-    metadata["isPhysicalDevice"] = true
-#endif
+        metadata["interfaceIdiom"] = attriaxInterfaceIdiom(device.userInterfaceIdiom)
 
         payload["metadata"] = metadata
         return payload
-    }
-
-    private func readHardwareModelIdentifier() -> String? {
-        var systemInfo = utsname()
-        guard uname(&systemInfo) == 0 else {
-            return nil
-        }
-
-        var machine = systemInfo.machine
-        let machineSize = MemoryLayout.size(ofValue: machine)
-        let identifier = withUnsafePointer(to: &machine) { machinePointer in
-            machinePointer.withMemoryRebound(
-                to: CChar.self,
-                capacity: machineSize
-            ) {
-                String(cString: $0)
-            }
-        }
-
-        let normalizedIdentifier = identifier.trimmingCharacters(in: .whitespacesAndNewlines)
-        if normalizedIdentifier.isEmpty {
-            return nil
-        }
-
-#if targetEnvironment(simulator)
-        if normalizedIdentifier == "x86_64" || normalizedIdentifier == "arm64" {
-            let simulatedIdentifier = ProcessInfo.processInfo.environment[
-                "SIMULATOR_MODEL_IDENTIFIER"
-            ]?.trimmingCharacters(in: .whitespacesAndNewlines)
-            if let simulatedIdentifier, !simulatedIdentifier.isEmpty {
-                return simulatedIdentifier
-            }
-        }
-#endif
-
-        return normalizedIdentifier
     }
 
     private static func topViewController(
@@ -369,20 +410,6 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         }
 
         return UIApplication.shared.keyWindow
-    }
-
-    private func resolvePreciseDeviceModel(
-        fallbackModel: String,
-        hardwareModel: String?
-    ) -> String {
-        guard let hardwareModel,
-              !hardwareModel.isEmpty,
-              fallbackModel == "iPhone" || fallbackModel == "iPad" || fallbackModel == "iPod touch"
-        else {
-            return fallbackModel
-        }
-
-        return hardwareModel
     }
 
     /**
@@ -597,26 +624,6 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         }
     }
 #endif
-    private func readEntitlementValue(key _: String) -> Any? {
-        nil
-    }
-
-    private func readEntitlementString(key: String) -> String? {
-        return readEntitlementValue(key: key) as? String
-    }
-
-    private func readEntitlementStringArray(key: String) -> [String] {
-        if let values = readEntitlementValue(key: key) as? [String] {
-            return values
-        }
-
-        if let values = readEntitlementValue(key: key) as? [NSString] {
-            return values.map { String($0) }
-        }
-
-        return []
-    }
-
     private func readOrCreateKeychainDeviceId() -> String? {
         if let existingValue = readKeychainDeviceId() {
             return existingValue
@@ -625,21 +632,23 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         let newValue = UUID().uuidString
         let service = Bundle.main.bundleIdentifier ?? "com.attriax.sdk"
         let account = "attriax.device_id"
-        let addQuery: [CFString: Any] = [
+        let query: [CFString: Any] = [
             kSecClass: kSecClassGenericPassword,
             kSecAttrService: service,
             kSecAttrAccount: account,
-            kSecValueData: Data(newValue.utf8),
             kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+            kSecValueData: Data(newValue.utf8),
         ]
 
-        let status = SecItemAdd(addQuery as CFDictionary, nil)
+        let status = SecItemAdd(query as CFDictionary, nil)
         if status == errSecSuccess {
             return newValue
         }
+
         if status == errSecDuplicateItem {
             return readKeychainDeviceId()
         }
+
         return nil
     }
 

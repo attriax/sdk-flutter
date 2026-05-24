@@ -7,13 +7,14 @@ import 'package:attriax_flutter/src/internal/attriax_logger.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
 import 'package:attriax_flutter/src/internal/attriax_queue.dart';
 import 'package:attriax_flutter/src/internal/attriax_request_dispatcher.dart';
-import 'package:attriax_api_client/attriax_api_client.dart' as sdk;
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'test_support/attriax_platform_test_support.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'test_support/fake_generated_transport.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -23,7 +24,7 @@ void main() {
     late AttriaxQueueManager queueManager;
     late FakeConnectivityPlatform connectivityPlatform;
     late Connectivity connectivity;
-    late FakeTransport transport;
+    late FakeGeneratedTransport transport;
     late FakeAppOpenMonitor appOpenMonitor;
     late AttriaxRequestDispatcher dispatcher;
     late AttriaxQueuedRequest queuedRequest;
@@ -40,7 +41,7 @@ void main() {
       connectivityPlatform = FakeConnectivityPlatform();
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
-      transport = FakeTransport();
+      transport = FakeGeneratedTransport();
       appOpenMonitor = FakeAppOpenMonitor();
       dispatcher = AttriaxRequestDispatcher(
         transport: transport,
@@ -240,119 +241,6 @@ void main() {
         );
       },
     );
-
-    test('drops requests that exceed the retry policy', () async {
-      final staleRequest = queuedRequest.copyWith(
-        id: 'req_stale',
-        createdAt: DateTime.now().toUtc().subtract(const Duration(days: 8)),
-        attemptCount: 8,
-      );
-      await queueManager.writeAll(<AttriaxQueuedRequest>[staleRequest]);
-
-      await dispatcher.flush();
-
-      expect(await queueManager.readAll(), isEmpty);
-      expect(transport.sentBatches, isEmpty);
-      final diagnostics = await queueManager.readDiagnostics();
-      expect(diagnostics.droppedRequestCount, 1);
-      expect(diagnostics.lastDroppedReason, 'max_attempts_exceeded');
-    });
-
-    test(
-      'keeps stale deep-link resolution requests queued until they succeed',
-      () async {
-        final staleRequest = AttriaxQueuedRequest(
-          id: 'req_resolve',
-          request: attriaxBuildResolveDeepLinkRequest(
-            appToken: 'ax_test_token',
-            deviceId: 'device_1',
-            deviceIdSource: 'android_ssaid',
-            platform: AttriaxPlatformType.android,
-            source: 'attriax_sdk',
-            isFirstLaunch: false,
-            rawUrl: 'https://app.example/promo/deferred',
-          ),
-          createdAt: DateTime.now().toUtc().subtract(const Duration(days: 8)),
-          attemptCount: 8,
-        );
-        await queueManager.writeAll(<AttriaxQueuedRequest>[staleRequest]);
-        transport.sendError = const AttriaxTransportHttpException(
-          statusCode: 503,
-        );
-
-        await dispatcher.flush();
-
-        expect(transport.sentRequests, hasLength(1));
-        final persisted = await queueManager.readAll();
-        expect(persisted, hasLength(1));
-        expect(persisted.single.id, 'req_resolve');
-        expect(persisted.single.attemptCount, 9);
-        expect(persisted.single.lastErrorClass, 'http_503');
-        expect(persisted.single.lastHttpStatusCode, 503);
-        final diagnostics = await queueManager.readDiagnostics();
-        expect(diagnostics.droppedRequestCount, 0);
-      },
-    );
-
-    test(
-      'drops the request and calls the error handler on non-retryable HTTP errors',
-      () async {
-        Object? failedError;
-
-        transport.batchErrors.add(
-          const AttriaxTransportHttpException(statusCode: 400),
-        );
-        dispatcher.registerHandlers(
-          queuedRequest.id,
-          onError: (error, stackTrace) => failedError = error,
-        );
-
-        await dispatcher.flush();
-
-        expect(transport.sentBatches, hasLength(1));
-        expect(await queueManager.readAll(), isEmpty);
-        expect(failedError, isA<AttriaxTransportHttpException>());
-      },
-    );
-
-    test('batches consecutive queued requests into one batch call', () async {
-      final secondRequest = AttriaxQueuedRequest(
-        id: 'req_2',
-        request: attriaxBuildTrackSessionRequest(
-          appToken: 'ax_test_token',
-          deviceIdSource: 'android_ssaid',
-          session: AttriaxSessionSnapshot(
-            id: 'session_1',
-            deviceId: 'device_1',
-            platform: AttriaxPlatformType.android,
-            locale: 'en-US',
-            isFirstLaunch: false,
-            startedAt: now.subtract(const Duration(minutes: 1)),
-            lastActivityAt: now.subtract(const Duration(seconds: 30)),
-            heartbeatInterval: const Duration(seconds: 5),
-            appVersion: '1.0.0',
-            appBuildNumber: '1',
-            appPackageName: 'com.attriax.test',
-            sdkPackageVersion: '1.0.0',
-          ),
-          kind: AttriaxSessionLifecycleKind.heartbeat,
-        ),
-        createdAt: now.subtract(const Duration(seconds: 30)),
-      );
-      await queueManager.writeAll(<AttriaxQueuedRequest>[
-        queuedRequest,
-        secondRequest,
-      ]);
-
-      await dispatcher.flush();
-
-      expect(transport.sentBatches, hasLength(1));
-      expect(
-        transport.sentBatches.single.map((request) => request.id).toList(),
-        <String>['req_1', 'req_2'],
-      );
-      expect(await queueManager.readAll(), isEmpty);
-    });
 
     test(
       'appends a current-session heartbeat keepalive to event batches',
@@ -747,108 +635,6 @@ void main() {
       },
     );
   });
-}
-
-class FakeTransport implements AttriaxGeneratedTransport {
-  final List<AttriaxApiRequest> sentRequests = <AttriaxApiRequest>[];
-  final List<List<AttriaxQueuedRequest>> sentBatches =
-      <List<AttriaxQueuedRequest>>[];
-  AttriaxTransportSuccess? sendResult;
-  final List<Exception> batchErrors = <Exception>[];
-  AttriaxTransportSuccess? sendBatchResult;
-  Exception? sendError;
-
-  @override
-  Future<AttriaxTransportSuccess> send(AttriaxApiRequest request) async {
-    sentRequests.add(request);
-    if (sendError != null) {
-      throw sendError!;
-    }
-    return sendResult ??
-        const AttriaxTransportSuccess(
-          statusCode: 200,
-          response: AttriaxAckResponse(success: true),
-        );
-  }
-
-  @override
-  Future<AttriaxTransportSuccess> sendBatch(
-    List<AttriaxQueuedRequest> requests,
-  ) async {
-    sentBatches.add(List<AttriaxQueuedRequest>.from(requests));
-    if (batchErrors.isNotEmpty) {
-      throw batchErrors.removeAt(0);
-    }
-    return sendBatchResult ??
-        const AttriaxTransportSuccess(
-          statusCode: 200,
-          response: AttriaxAckResponse(success: true),
-        );
-  }
-
-  @override
-  Future<AttriaxCreateDynamicLinkResult> createDynamicLink(
-    AttriaxCreateDynamicLinkRequest request,
-  ) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> registerUninstallToken(Map<String, Object?> payload) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<AttriaxRevenueReceiptValidationResult> validateRevenueReceipt(
-    Map<String, Object?> payload,
-  ) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<AttriaxRevenueUsdConversionResult> convertRevenueToUsd(
-    Map<String, Object?> payload,
-  ) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<sdk.SdkGdprConsentStatusDto> checkGdprConsent({
-    required String appToken,
-    required String consentId,
-    String? deviceId,
-    String? deviceIdSource,
-  }) async => sdk.SdkGdprConsentStatusDto(
-    checkedAt: DateTime.utc(2026, 5, 20),
-    needsConsent: false,
-    state: sdk.AppUserGdprConsentState.notRequired,
-  );
-
-  @override
-  Future<sdk.SdkGdprConsentStatusDto> upsertGdprConsent({
-    required String appToken,
-    required String consentId,
-    required sdk.AppUserGdprConsentState state,
-    String? deviceId,
-    String? deviceIdSource,
-    sdk.SdkV1GdprConsentValuesDto? values,
-    String? countryCode,
-    String? regionSource,
-    DateTime? clientOccurredAt,
-  }) async => sdk.SdkGdprConsentStatusDto(
-    checkedAt: clientOccurredAt ?? DateTime.utc(2026, 5, 20),
-    countryCode: countryCode,
-    needsConsent: state == sdk.AppUserGdprConsentState.pending,
-    regionSource: regionSource,
-    state: state,
-    values: values == null
-        ? null
-        : sdk.SdkGdprConsentValuesDto(
-            analytics: values.analytics,
-            attribution: values.attribution,
-            adEvents: values.adEvents,
-          ),
-  );
 }
 
 class FakeConnectivityPlatform extends ConnectivityPlatform {

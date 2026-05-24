@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
 import 'attriax_api_models.dart';
 import 'attriax_logger.dart';
@@ -23,6 +23,8 @@ class AttriaxAppOpenTracker {
     required AttriaxConfig config,
     required AttriaxContextSnapshot context,
     required AttriaxInstallReferrerContext platformInstallReferrerContext,
+    String? installReferrerOverride,
+    Map<String, Object?> deviceMetadataOverrides = const <String, Object?>{},
     required String deviceIdSource,
     required AttriaxSessionSnapshot? session,
     required AttriaxRequestManager requestManager,
@@ -40,6 +42,8 @@ class AttriaxAppOpenTracker {
         context: context,
         deviceIdSource: deviceIdSource,
         platformInstallReferrerContext: platformInstallReferrerContext,
+        installReferrerOverride: installReferrerOverride,
+        deviceMetadataOverrides: deviceMetadataOverrides,
         sessionId: session?.id,
         sessionStartedAt: session?.startedAt,
       ),

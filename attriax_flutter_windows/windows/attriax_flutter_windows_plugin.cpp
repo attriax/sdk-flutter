@@ -2,9 +2,6 @@
 
 #include <appmodel.h>
 #include <windows.h>
-#include <winver.h>
-
-#include <VersionHelpers.h>
 
 #include <flutter/event_channel.h>
 #include <flutter/event_stream_handler_functions.h>
@@ -26,7 +23,6 @@ using flutter::EncodableMap;
 using flutter::EncodableValue;
 
 constexpr char kAttriaxMethodChannelName[] = "attriax";
-constexpr char kCompatibilityMethodChannelName[] = "attriax_flutter_windows";
 constexpr char kDeepLinkEventChannelName[] = "attriax/deep_links/events";
 
 std::optional<std::string> WideToUtf8(const std::wstring& value) {
@@ -396,19 +392,6 @@ EncodableValue BuildInstallReferrerResponse() {
   return EncodableValue(response);
 }
 
-std::string GetPlatformVersion() {
-  std::ostringstream version_stream;
-  version_stream << "Windows ";
-  if (IsWindows10OrGreater()) {
-    version_stream << "10+";
-  } else if (IsWindows8OrGreater()) {
-    version_stream << "8";
-  } else if (IsWindows7OrGreater()) {
-    version_stream << "7";
-  }
-  return version_stream.str();
-}
-
 }  // namespace
 
 // static
@@ -418,10 +401,6 @@ void AttriaxFlutterWindowsPlugin::RegisterWithRegistrar(
       std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
           registrar->messenger(), kAttriaxMethodChannelName,
           &flutter::StandardMethodCodec::GetInstance());
-  auto compatibility_channel =
-      std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-          registrar->messenger(), kCompatibilityMethodChannelName,
-          &flutter::StandardMethodCodec::GetInstance());
   auto event_channel =
       std::make_unique<flutter::EventChannel<flutter::EncodableValue>>(
           registrar->messenger(), kDeepLinkEventChannelName,
@@ -430,10 +409,6 @@ void AttriaxFlutterWindowsPlugin::RegisterWithRegistrar(
   auto plugin = std::make_unique<AttriaxFlutterWindowsPlugin>();
 
   channel->SetMethodCallHandler(
-      [plugin_pointer = plugin.get()](const auto &call, auto result) {
-        plugin_pointer->HandleMethodCall(call, std::move(result));
-      });
-  compatibility_channel->SetMethodCallHandler(
       [plugin_pointer = plugin.get()](const auto &call, auto result) {
         plugin_pointer->HandleMethodCall(call, std::move(result));
       });
@@ -482,11 +457,6 @@ void AttriaxFlutterWindowsPlugin::HandleMethodCall(
   if (method_call.method_name() == "getTrackingAuthorizationStatus" ||
       method_call.method_name() == "requestTrackingAuthorization") {
     result->Success(EncodableValue("not_supported"));
-    return;
-  }
-
-  if (method_call.method_name() == "getPlatformVersion") {
-    result->Success(EncodableValue(GetPlatformVersion()));
     return;
   }
 

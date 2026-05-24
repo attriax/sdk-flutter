@@ -1,6 +1,17 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
+
+import '../attriax_platform_types.dart'
+  show
+    AttriaxInstallReferrerContext,
+    AttriaxNativeContext,
+    AttriaxPendingCrashReport,
+    AttriaxResolvedUrlOpenMode,
+    AttriaxSkanCoarseValue,
+    AttriaxSkanUpdateResult,
+    AttriaxSkanUpdateStatus,
+    AttriaxTrackingAuthorizationStatus;
+
 import 'method_channel_attriax.dart';
-import 'types.dart';
 
 /// The interface that implementations of attriax must implement.
 abstract class AttriaxPlatform extends PlatformInterface {
@@ -27,6 +38,10 @@ abstract class AttriaxPlatform extends PlatformInterface {
 
   Future<AttriaxInstallReferrerContext> collectInstallReferrer() async =>
       const AttriaxInstallReferrerContext();
+
+  Future<String?> readAttributionClipboard() async => null;
+
+  Future<String?> collectWebViewUserAgent() async => null;
 
   Future<void> setAutomaticCrashReportingEnabled({
     required bool enabled,

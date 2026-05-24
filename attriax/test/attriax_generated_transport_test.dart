@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
 import 'package:attriax_flutter/src/internal/attriax_generated_transport.dart';
 import 'package:attriax_flutter/src/internal/attriax_queue.dart';
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter/src/internal/attriax_sdk_runtime_config.dart';
+import 'test_support/attriax_platform_test_support.dart';
 import 'package:attriax_api_client/attriax_api_client.dart' as sdk;
 import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -136,6 +137,60 @@ void main() {
 
       final transport = _createTransport(client);
       await expectLater(() => transport.send(request), returnsNormally);
+    });
+
+    test('fetches launch-time runtime config over the JSON endpoint', () async {
+      final request = attriaxBuildSdkRuntimeConfigRequest(
+        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        context: const AttriaxContextSnapshot(
+          platform: AttriaxPlatformType.android,
+          deviceId: 'device_123',
+          isFirstLaunch: true,
+          sdk: AttriaxSdkSnapshot(
+            apiVersion: '2025-01-01',
+            packageVersion: '1.2.3',
+          ),
+          app: AttriaxAppSnapshot(
+            version: '1.0.0',
+            buildNumber: '1',
+            packageName: 'com.attriax.test',
+          ),
+          device: AttriaxDeviceSnapshot(
+            model: 'Pixel 9',
+            metadata: <String, Object?>{
+              'signingSha256Fingerprints': <String>['AA:BB', 'CC:DD'],
+            },
+          ),
+        ),
+      );
+
+      final client = FakeHttpClient((requestMessage) async {
+        expect(requestMessage.method, 'POST');
+        expect(requestMessage.url.path, '/api/sdk/v1/config');
+
+        final body =
+            jsonDecode(_readRequestBody(requestMessage))
+                as Map<String, Object?>;
+        expect(body['appToken'], 'ax_test_token');
+        expect(body['platform'], 'android');
+        expect(body['packageName'], 'com.attriax.test');
+        expect(body['signatureHashes'], <Object?>['AA:BB', 'CC:DD']);
+
+        return _jsonResponse(200, <String, Object?>{
+          'data': <String, Object?>{
+            'requestVersion': 'v1',
+            'acceptedAt': '2026-05-24T10:00:00.000Z',
+            'clipboardAttributionEnabled': true,
+          },
+        });
+      });
+
+      final transport = _createTransport(client);
+      final result = await transport.fetchSdkRuntimeConfig(request);
+
+      expect(result.requestVersion, 'v1');
+      expect(result.clipboardAttributionEnabled, isTrue);
+      expect(result.acceptedAt, DateTime.parse('2026-05-24T10:00:00.000Z'));
     });
 
     test('sends event requests and maps acknowledge responses', () async {
@@ -337,6 +392,31 @@ void main() {
       expect(result.link.id, 'dl_123');
       expect(result.link.path, '/promo/spring');
       expect(result.link.shortUrl, 'https://ax.example/spring');
+    });
+
+    test('sends GDPR erasure requests as acknowledge-only calls', () async {
+      final client = FakeHttpClient((request) async {
+        expect(request.method, 'POST');
+        expect(request.url.path, '/api/sdk/v1/privacy/gdpr/erase');
+
+        final body =
+            jsonDecode(_readRequestBody(request)) as Map<String, Object?>;
+        expect(body['appToken'], 'ax_test_token');
+        expect(body['deviceId'], 'device_123');
+        expect(body.containsKey('consentId'), isFalse);
+
+        return _jsonResponse(200, <String, Object?>{
+          'success': true,
+          'timestamp': '2026-05-24T10:00:00.000Z',
+          'data': <String, Object?>{'success': true},
+        });
+      });
+
+      final transport = _createTransport(client);
+      await transport.eraseGdprData(
+        appToken: 'ax_test_token',
+        deviceId: 'device_123',
+      );
     });
 
     test(

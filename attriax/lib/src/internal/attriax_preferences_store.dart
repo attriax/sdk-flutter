@@ -1,10 +1,14 @@
 import 'dart:convert';
 
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+// ignore_for_file: annotate_overrides
+
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 typedef AttriaxPersistenceDegradedCallback =
     void Function({required String operation, required Object error});
+
+enum AttriaxRuntimePersistenceMode { consentOnly, fullRuntime }
 
 class AttriaxStoredRuntimePreferences {
   const AttriaxStoredRuntimePreferences({
@@ -98,6 +102,101 @@ class AttriaxStoredGdprConsentData {
   final DateTime? checkedAt;
 }
 
+abstract interface class AttriaxContextIdentityStore {
+  Future<AttriaxStoredDeviceData> restoreDeviceData({
+    required String Function() deviceIdFactory,
+  });
+
+  Future<AttriaxStoredDeviceIdentity> ensureDeviceIdentity({
+    required String Function() deviceIdFactory,
+  });
+
+  Future<void> setResolvedDeviceIdentity({
+    required String deviceId,
+    required String? deviceIdSource,
+  });
+}
+
+abstract interface class AttriaxConsentPersistenceStore {
+  Future<String> ensureGdprConsentId({
+    required String Function() consentIdFactory,
+  });
+
+  Future<AttriaxStoredGdprConsentData?> readGdprConsentData();
+
+  Future<void> setGdprConsentData({
+    required AttriaxStoredGdprConsentData? data,
+  });
+}
+
+abstract interface class AttriaxPlatformInstallReferrerStore {
+  Future<AttriaxStoredPlatformInstallReferrer>
+  readStoredPlatformInstallReferrer();
+
+  Future<void> setStoredPlatformInstallReferrer({
+    required bool isLoaded,
+    required String? value,
+  });
+
+  Future<void> clearStoredPlatformInstallReferrer();
+}
+
+abstract interface class AttriaxInstallReferrerDetailsStore {
+  Future<AttriaxStoredInstallReferrerDetails>
+  readStoredInstallReferrerDetails();
+
+  Future<void> setStoredInstallReferrerDetails({
+    required AttriaxInstallReferrerDetails? details,
+    required bool isLoaded,
+  });
+
+  Future<void> clearStoredInstallReferrerDetails();
+
+  Future<AttriaxStoredInstallReferrerDetails>
+  readStoredReinstallReferrerDetails();
+
+  Future<void> setStoredReinstallReferrerDetails({
+    required AttriaxInstallReferrerDetails? details,
+    required bool isLoaded,
+  });
+
+  Future<void> clearStoredReinstallReferrerDetails();
+}
+
+abstract interface class AttriaxDeepLinkStateStore {
+  Future<bool> readDeferredAppOpenDeepLinkHandled();
+
+  Future<void> setDeferredAppOpenDeepLinkHandled({required bool value});
+}
+
+abstract interface class AttriaxSessionStore {
+  Future<AttriaxSessionSnapshot?> readSessionSnapshot();
+
+  Future<void> setSessionSnapshot({required AttriaxSessionSnapshot? session});
+}
+
+abstract interface class AttriaxSkanStore {
+  Future<AttriaxSkanState?> readSkanState();
+
+  Future<void> setSkanState({required AttriaxSkanState? state});
+}
+
+abstract interface class AttriaxQueueStore {
+  Future<String?> readQueuePayload();
+
+  Future<void> writeQueuePayload(String? value);
+
+  Future<String?> readQueueDiagnosticsPayload();
+
+  Future<void> writeQueueDiagnosticsPayload(String? value);
+}
+
+abstract interface class AttriaxCrashStore {
+  Future<String?> readPendingCrashReportPayload();
+
+  Future<void> writePendingCrashReportPayload(String? value);
+}
+
 class _StoredDeviceIdState {
   const _StoredDeviceIdState({
     required this.value,
@@ -108,7 +207,17 @@ class _StoredDeviceIdState {
   final bool hasPersistedValue;
 }
 
-class AttriaxPreferencesStore {
+class AttriaxPreferencesStore
+    implements
+        AttriaxContextIdentityStore,
+        AttriaxConsentPersistenceStore,
+        AttriaxPlatformInstallReferrerStore,
+        AttriaxInstallReferrerDetailsStore,
+        AttriaxDeepLinkStateStore,
+        AttriaxSessionStore,
+        AttriaxSkanStore,
+        AttriaxQueueStore,
+        AttriaxCrashStore {
   AttriaxPreferencesStore({
     SharedPreferences? prefsOverride,
     Future<SharedPreferences> Function()? preferencesLoader,
@@ -145,6 +254,36 @@ class AttriaxPreferencesStore {
   static const String gdprConsentStorageKey = 'attriax.gdpr.consent.v1';
   static const String gdprConsentIdStorageKey = 'attriax.gdpr.consent_id.v1';
 
+  static const Set<String> _runtimeScopedStorageKeys = <String>{
+    deviceIdStorageKey,
+    deviceIdSourceStorageKey,
+    enabledStorageKey,
+    eventsEnabledStorageKey,
+    firstLaunchSeenStorageKey,
+    platformInstallReferrerStorageKey,
+    platformInstallReferrerLoadedStorageKey,
+    installReferrerDetailsStorageKey,
+    installReferrerDetailsLoadedStorageKey,
+    reinstallReferrerDetailsStorageKey,
+    reinstallReferrerDetailsLoadedStorageKey,
+    deferredAppOpenDeepLinkHandledStorageKey,
+    sessionSnapshotStorageKey,
+    queueStorageKey,
+    queueDiagnosticsStorageKey,
+    pendingCrashReportStorageKey,
+    skanStateStorageKey,
+  };
+
+  static const Set<String> _consentScopedStorageKeys = <String>{
+    gdprConsentStorageKey,
+    gdprConsentIdStorageKey,
+  };
+
+  static const Set<String> _allStorageKeys = <String>{
+    ..._runtimeScopedStorageKeys,
+    ..._consentScopedStorageKeys,
+  };
+
   final SharedPreferences? _prefsOverride;
   final Future<SharedPreferences> Function()? _preferencesLoader;
   final AttriaxPersistenceDegradedCallback? _onPersistenceDegraded;
@@ -154,11 +293,29 @@ class AttriaxPreferencesStore {
   bool _didFailToLoadPreferences = false;
   Object? _lastPersistenceError;
   String? _lastPersistenceFailureOperation;
+  AttriaxRuntimePersistenceMode _runtimePersistenceMode =
+      AttriaxRuntimePersistenceMode.fullRuntime;
 
   bool get isPersistenceDegraded => _didFailToLoadPreferences;
   Object? get lastPersistenceError => _lastPersistenceError;
   String? get lastPersistenceFailureOperation =>
       _lastPersistenceFailureOperation;
+
+  Future<void> setRuntimePersistenceMode({
+    required AttriaxRuntimePersistenceMode mode,
+  }) async {
+    if (_runtimePersistenceMode == mode) {
+      return;
+    }
+
+    _runtimePersistenceMode = mode;
+    if (mode == AttriaxRuntimePersistenceMode.fullRuntime) {
+      await _syncMemoryValuesToPersistentStorage();
+      return;
+    }
+
+    await _clearRuntimeScopedPersistentStorage();
+  }
 
   Future<AttriaxStoredRuntimePreferences> restoreRuntimePreferences({
     bool? enabledOverride,
@@ -269,6 +426,9 @@ class AttriaxPreferencesStore {
     return generated;
   }
 
+  Future<String?> readStoredGdprConsentId() async =>
+      _sanitizeString(await _readString(gdprConsentIdStorageKey));
+
   Future<void> setRuntimeFlags({
     required bool enabled,
     required bool eventsEnabled,
@@ -300,6 +460,11 @@ class AttriaxPreferencesStore {
     }
 
     await _writeString(platformInstallReferrerStorageKey, normalized);
+  }
+
+  Future<void> clearStoredPlatformInstallReferrer() async {
+    await _remove(platformInstallReferrerLoadedStorageKey);
+    await _remove(platformInstallReferrerStorageKey);
   }
 
   Future<AttriaxInstallReferrerDetails?> readInstallReferrerDetails() async {
@@ -379,6 +544,11 @@ class AttriaxPreferencesStore {
     await setInstallReferrerDetails(details: details);
   }
 
+  Future<void> clearStoredInstallReferrerDetails() async {
+    await _remove(installReferrerDetailsLoadedStorageKey);
+    await _remove(installReferrerDetailsStorageKey);
+  }
+
   Future<AttriaxStoredInstallReferrerDetails>
   readStoredReinstallReferrerDetails() async =>
       AttriaxStoredInstallReferrerDetails(
@@ -393,6 +563,11 @@ class AttriaxPreferencesStore {
   }) async {
     await _writeBool(reinstallReferrerDetailsLoadedStorageKey, isLoaded);
     await setReinstallReferrerDetails(details: details);
+  }
+
+  Future<void> clearStoredReinstallReferrerDetails() async {
+    await _remove(reinstallReferrerDetailsLoadedStorageKey);
+    await _remove(reinstallReferrerDetailsStorageKey);
   }
 
   Future<bool> readDeferredAppOpenDeepLinkHandled() async =>
@@ -578,27 +753,7 @@ class AttriaxPreferencesStore {
   Future<SharedPreferences?> sharedPreferencesOrNull() => _preferencesOrNull();
 
   Future<void> clearAll() async {
-    const keys = <String>[
-      deviceIdStorageKey,
-      deviceIdSourceStorageKey,
-      enabledStorageKey,
-      eventsEnabledStorageKey,
-      firstLaunchSeenStorageKey,
-      platformInstallReferrerStorageKey,
-      platformInstallReferrerLoadedStorageKey,
-      installReferrerDetailsStorageKey,
-      installReferrerDetailsLoadedStorageKey,
-      reinstallReferrerDetailsStorageKey,
-      reinstallReferrerDetailsLoadedStorageKey,
-      sessionSnapshotStorageKey,
-      queueStorageKey,
-      queueDiagnosticsStorageKey,
-      pendingCrashReportStorageKey,
-      gdprConsentStorageKey,
-      gdprConsentIdStorageKey,
-    ];
-
-    for (final key in keys) {
+    for (final key in _allStorageKeys) {
       await _remove(key);
     }
   }
@@ -617,25 +772,46 @@ class AttriaxPreferencesStore {
   }
 
   Future<bool?> _readBool(String key) async {
-    final prefs = await _preferencesOrNull();
-    if (prefs != null) {
-      return prefs.getBool(key) ?? _memoryValues[key] as bool?;
+    if (_memoryValues.containsKey(key)) {
+      return _memoryValues[key] as bool?;
     }
 
-    return _memoryValues[key] as bool?;
+    if (!_canUsePersistentStorageForKey(key)) {
+      return null;
+    }
+
+    final prefs = await _preferencesOrNull();
+    if (prefs != null) {
+      return prefs.getBool(key);
+    }
+
+    return null;
   }
 
   Future<String?> _readString(String key) async {
-    final prefs = await _preferencesOrNull();
-    if (prefs != null) {
-      return prefs.getString(key) ?? _memoryValues[key] as String?;
+    if (_memoryValues.containsKey(key)) {
+      return _memoryValues[key] as String?;
     }
 
-    return _memoryValues[key] as String?;
+    if (!_canUsePersistentStorageForKey(key)) {
+      return null;
+    }
+
+    final prefs = await _preferencesOrNull();
+    if (prefs != null) {
+      return prefs.getString(key);
+    }
+
+    return null;
   }
 
   Future<void> _writeBool(String key, bool value) async {
     _memoryValues[key] = value;
+    if (!_canUsePersistentStorageForKey(key)) {
+      await _removePersistedValue(key);
+      return;
+    }
+
     final prefs = await _preferencesOrNull();
     if (prefs == null) {
       return;
@@ -650,6 +826,11 @@ class AttriaxPreferencesStore {
 
   Future<void> _writeString(String key, String value) async {
     _memoryValues[key] = value;
+    if (!_canUsePersistentStorageForKey(key)) {
+      await _removePersistedValue(key);
+      return;
+    }
+
     final prefs = await _preferencesOrNull();
     if (prefs == null) {
       return;
@@ -664,6 +845,10 @@ class AttriaxPreferencesStore {
 
   Future<void> _remove(String key) async {
     _memoryValues.remove(key);
+    await _removePersistedValue(key);
+  }
+
+  Future<void> _removePersistedValue(String key) async {
     final prefs = await _preferencesOrNull();
     if (prefs == null) {
       return;
@@ -673,6 +858,51 @@ class AttriaxPreferencesStore {
       await prefs.remove(key);
     } catch (error) {
       _markPersistenceFailure(operation: 'remove($key)', error: error);
+    }
+  }
+
+  bool _canUsePersistentStorageForKey(String key) {
+    if (_consentScopedStorageKeys.contains(key)) {
+      return true;
+    }
+
+    return _runtimePersistenceMode == AttriaxRuntimePersistenceMode.fullRuntime;
+  }
+
+  Future<void> _clearRuntimeScopedPersistentStorage() async {
+    for (final key in _runtimeScopedStorageKeys) {
+      await _removePersistedValue(key);
+    }
+  }
+
+  Future<void> _syncMemoryValuesToPersistentStorage() async {
+    final prefs = await _preferencesOrNull();
+    if (prefs == null) {
+      return;
+    }
+
+    final entries = _memoryValues.entries.toList(growable: false);
+    for (final entry in entries) {
+      if (!_canUsePersistentStorageForKey(entry.key)) {
+        continue;
+      }
+
+      try {
+        final value = entry.value;
+        if (value is bool) {
+          await prefs.setBool(entry.key, value);
+          continue;
+        }
+        if (value is String) {
+          await prefs.setString(entry.key, value);
+          continue;
+        }
+      } catch (error) {
+        _markPersistenceFailure(
+          operation: 'syncMemory(${entry.key})',
+          error: error,
+        );
+      }
     }
   }
 

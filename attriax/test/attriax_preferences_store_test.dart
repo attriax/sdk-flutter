@@ -1,5 +1,5 @@
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'test_support/attriax_platform_test_support.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -16,27 +16,16 @@ void main() {
       store = AttriaxPreferencesStore(prefsOverride: prefs);
     });
 
-    test('restores runtime preferences and device data separately', () async {
-      final restoredRuntime = await store.restoreRuntimePreferences(
-        enabledOverride: false,
-        eventsEnabledOverride: true,
-      );
+    test('restores device data and first-launch state', () async {
       final restoredDevice = await store.restoreDeviceData(
         deviceIdFactory: () => 'generated_device',
       );
 
-      expect(restoredRuntime.isEnabled, isFalse);
-      expect(restoredRuntime.areEventsEnabled, isTrue);
       expect(restoredDevice.deviceId, 'generated_device');
       expect(restoredDevice.hasPersistedDeviceId, isFalse);
       expect(restoredDevice.isFirstLaunch, isTrue);
       expect(
         prefs.getBool(AttriaxPreferencesStore.firstLaunchSeenStorageKey),
-        isTrue,
-      );
-      expect(prefs.getBool(AttriaxPreferencesStore.enabledStorageKey), isFalse);
-      expect(
-        prefs.getBool(AttriaxPreferencesStore.eventsEnabledStorageKey),
         isTrue,
       );
     });
@@ -282,6 +271,61 @@ void main() {
     });
 
     test(
+      'consent-only mode keeps runtime state in memory and clears persisted keys',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          AttriaxPreferencesStore.deviceIdStorageKey: 'persisted_device',
+          AttriaxPreferencesStore.firstLaunchSeenStorageKey: true,
+          AttriaxPreferencesStore.queueStorageKey: '["persisted"]',
+        });
+        prefs = await SharedPreferences.getInstance();
+        store = AttriaxPreferencesStore(prefsOverride: prefs);
+
+        await store.setRuntimePersistenceMode(
+          mode: AttriaxRuntimePersistenceMode.consentOnly,
+        );
+
+        final restoredDevice = await store.restoreDeviceData(
+          deviceIdFactory: () => 'memory_device',
+        );
+        await store.writeQueuePayload('["memory"]');
+
+        expect(restoredDevice.deviceId, 'memory_device');
+        expect(restoredDevice.isFirstLaunch, isTrue);
+        expect(await store.readQueuePayload(), '["memory"]');
+        expect(
+          prefs.getString(AttriaxPreferencesStore.deviceIdStorageKey),
+          isNull,
+        );
+        expect(
+          prefs.getBool(AttriaxPreferencesStore.firstLaunchSeenStorageKey),
+          isNull,
+        );
+        expect(
+          prefs.getString(AttriaxPreferencesStore.queueStorageKey),
+          isNull,
+        );
+
+        await store.setRuntimePersistenceMode(
+          mode: AttriaxRuntimePersistenceMode.fullRuntime,
+        );
+
+        expect(
+          prefs.getString(AttriaxPreferencesStore.deviceIdStorageKey),
+          'memory_device',
+        );
+        expect(
+          prefs.getBool(AttriaxPreferencesStore.firstLaunchSeenStorageKey),
+          isTrue,
+        );
+        expect(
+          prefs.getString(AttriaxPreferencesStore.queueStorageKey),
+          '["memory"]',
+        );
+      },
+    );
+
+    test(
       'falls back to in-memory values when preferences loading fails',
       () async {
         final degradedOperations = <String>[];
@@ -292,16 +336,10 @@ void main() {
           },
         );
 
-        final restoredRuntime = await failingStore.restoreRuntimePreferences(
-          enabledOverride: false,
-          eventsEnabledOverride: true,
-        );
         final restoredDevice = await failingStore.restoreDeviceData(
           deviceIdFactory: () => 'generated_memory_device',
         );
 
-        expect(restoredRuntime.isEnabled, isFalse);
-        expect(restoredRuntime.areEventsEnabled, isTrue);
         expect(restoredDevice.deviceId, 'generated_memory_device');
         expect(restoredDevice.isFirstLaunch, isTrue);
 

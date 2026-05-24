@@ -75,6 +75,7 @@ class AttriaxNavigationObserver extends NavigatorObserver {
 
     unawaited(
       _attriax
+          .tracking
           .recordPageView(
             currentPageName,
             pageClass: route.runtimeType.toString(),

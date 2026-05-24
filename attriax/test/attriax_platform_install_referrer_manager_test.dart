@@ -1,7 +1,7 @@
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
 import 'package:attriax_flutter/src/internal/attriax_platform_install_referrer_manager.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'test_support/attriax_platform_test_support.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -147,6 +147,73 @@ void main() {
       expect(context.installReferrer, 'utm_source=play_store');
       expect(context.metadata['installReferrerStatus'], 'ok');
     });
+
+    test(
+      'raw install referrer reads do not persist the fetched value',
+      () async {
+        final platform = _FakePlatform(
+          installReferrerResponses:
+              <Future<AttriaxInstallReferrerContext> Function()>[
+                () async => const AttriaxInstallReferrerContext(
+                  installReferrer: 'utm_source=play_store',
+                  metadata: <String, Object?>{'installReferrerStatus': 'ok'},
+                ),
+              ],
+        );
+        final manager = AttriaxPlatformInstallReferrerManager(
+          platformType: AttriaxPlatformType.android,
+          platform: platform,
+          logger: AttriaxLogger(enableDebugLogs: false),
+          preferencesStore: preferencesStore,
+          installReferrerTimeout: const Duration(seconds: 1),
+          installReferrerRetryDelay: Duration.zero,
+        );
+
+        final rawInstallReferrer = await manager.loadRawInstallReferrer();
+
+        expect(rawInstallReferrer, 'utm_source=play_store');
+        expect(manager.isLoaded, isFalse);
+        expect(manager.value, isNull);
+        expect(
+          prefs.getString(
+            AttriaxPreferencesStore.platformInstallReferrerStorageKey,
+          ),
+          isNull,
+        );
+        expect(
+          prefs.getBool(
+            AttriaxPreferencesStore.platformInstallReferrerLoadedStorageKey,
+          ),
+          isNull,
+        );
+      },
+    );
+
+    test('can initialize from a narrow fake referrer store', () async {
+      final store = _FakePlatformInstallReferrerStore(
+        const AttriaxStoredPlatformInstallReferrer(
+          isLoaded: true,
+          value: 'utm_source=fake_store',
+        ),
+      );
+      final manager = AttriaxPlatformInstallReferrerManager(
+        platformType: AttriaxPlatformType.android,
+        platform: _FakePlatform(
+          installReferrerResponses:
+              <Future<AttriaxInstallReferrerContext> Function()>[],
+        ),
+        logger: AttriaxLogger(enableDebugLogs: false),
+        preferencesStore: store,
+        installReferrerTimeout: const Duration(seconds: 1),
+        installReferrerRetryDelay: Duration.zero,
+      );
+
+      final context = await manager.load();
+
+      expect(store.readCallCount, 1);
+      expect(context.installReferrer, 'utm_source=fake_store');
+      expect(context.metadata['source'], 'flutter_cached_install_referrer');
+    });
   });
 }
 
@@ -171,5 +238,39 @@ class _FakePlatform extends AttriaxPlatform {
     }
 
     return installReferrerResponses[callIndex]();
+  }
+}
+
+class _FakePlatformInstallReferrerStore
+    implements AttriaxPlatformInstallReferrerStore {
+  _FakePlatformInstallReferrerStore(this._storedValue);
+
+  AttriaxStoredPlatformInstallReferrer _storedValue;
+  int readCallCount = 0;
+
+  @override
+  Future<void> clearStoredPlatformInstallReferrer() async {
+    _storedValue = const AttriaxStoredPlatformInstallReferrer(
+      isLoaded: false,
+      value: null,
+    );
+  }
+
+  @override
+  Future<AttriaxStoredPlatformInstallReferrer>
+  readStoredPlatformInstallReferrer() async {
+    readCallCount += 1;
+    return _storedValue;
+  }
+
+  @override
+  Future<void> setStoredPlatformInstallReferrer({
+    required bool isLoaded,
+    required String? value,
+  }) async {
+    _storedValue = AttriaxStoredPlatformInstallReferrer(
+      isLoaded: isLoaded,
+      value: value,
+    );
   }
 }

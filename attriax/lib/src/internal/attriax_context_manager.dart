@@ -1,6 +1,6 @@
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
-import 'attriax_context_collector.dart';
+import 'attriax_context_services.dart';
 import 'attriax_id_generator.dart';
 import 'attriax_logger.dart';
 import 'attriax_preferences_store.dart';
@@ -15,15 +15,15 @@ abstract interface class AttriaxTrackingContext {
 /// Owns the in-memory Attriax runtime context and device identity state.
 class AttriaxContextManager implements AttriaxTrackingContext {
   AttriaxContextManager({
-    required AttriaxContextCollector contextCollector,
-    required AttriaxPreferencesStore preferencesStore,
+    required AttriaxContextRuntimeServices contextCollector,
+    required AttriaxContextIdentityStore preferencesStore,
     required AttriaxLogger logger,
   }) : _contextCollector = contextCollector,
        _preferencesStore = preferencesStore,
        _logger = logger;
 
-  final AttriaxContextCollector _contextCollector;
-  final AttriaxPreferencesStore _preferencesStore;
+  final AttriaxContextRuntimeServices _contextCollector;
+  final AttriaxContextIdentityStore _preferencesStore;
   final AttriaxLogger _logger;
 
   String? _deviceId;

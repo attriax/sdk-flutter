@@ -1,6 +1,7 @@
 import 'dart:async';
 
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
 
 import 'attriax_logger.dart';
 import 'attriax_preferences_store.dart';
@@ -10,7 +11,7 @@ class AttriaxPlatformInstallReferrerManager {
     required AttriaxPlatformType platformType,
     required AttriaxPlatform platform,
     required AttriaxLogger logger,
-    required AttriaxPreferencesStore preferencesStore,
+    required AttriaxPlatformInstallReferrerStore preferencesStore,
     required Duration installReferrerTimeout,
     required Duration installReferrerRetryDelay,
   }) : _platformType = platformType,
@@ -23,7 +24,7 @@ class AttriaxPlatformInstallReferrerManager {
   final AttriaxPlatformType _platformType;
   final AttriaxPlatform _platform;
   final AttriaxLogger _logger;
-  final AttriaxPreferencesStore _preferencesStore;
+  final AttriaxPlatformInstallReferrerStore _preferencesStore;
   final Duration _installReferrerTimeout;
   final Duration _installReferrerRetryDelay;
 
@@ -87,6 +88,27 @@ class AttriaxPlatformInstallReferrerManager {
     });
   }
 
+  Future<String?> loadRawInstallReferrer() async {
+    await _ensureInitialized();
+    if (!isSupported) {
+      return null;
+    }
+
+    final context = await _loadInternal(
+      persistResult: false,
+      updateCachedState: false,
+    );
+    return _emptyToNull(context.installReferrer);
+  }
+
+  Future<void> clearStoredReferrer() async {
+    _isLoaded = false;
+    _value = null;
+    _lastContext = const AttriaxInstallReferrerContext();
+    _loadFuture = null;
+    await _preferencesStore.clearStoredPlatformInstallReferrer();
+  }
+
   Future<void> persistResolvedReferrer(String installReferrer) async {
     final normalized = _emptyToNull(installReferrer);
     if (normalized == null) {
@@ -138,10 +160,17 @@ class AttriaxPlatformInstallReferrerManager {
         _cachedContext(stored.value) ?? const AttriaxInstallReferrerContext();
   }
 
-  Future<AttriaxInstallReferrerContext> _loadInternal() async {
+  Future<AttriaxInstallReferrerContext> _loadInternal({
+    bool persistResult = true,
+    bool updateCachedState = true,
+  }) async {
     final first = await _fetchOnce(attempt: 1);
     if (_hasReferrer(first)) {
-      return _finishLoad(first);
+      return _finishLoad(
+        first,
+        persistResult: persistResult,
+        updateCachedState: updateCachedState,
+      );
     }
 
     _logInfo('Install referrer attempt 1 returned no referrer; retrying.');
@@ -162,19 +191,30 @@ class AttriaxPlatformInstallReferrerManager {
       'installReferrerAttempts': 2,
     };
     _logWarning('Install referrer unavailable after 2 attempts.');
-    return _finishLoad(AttriaxInstallReferrerContext(metadata: mergedMetadata));
+    return _finishLoad(
+      AttriaxInstallReferrerContext(metadata: mergedMetadata),
+      persistResult: persistResult,
+      updateCachedState: updateCachedState,
+    );
   }
 
   Future<AttriaxInstallReferrerContext> _finishLoad(
-    AttriaxInstallReferrerContext context,
-  ) async {
-    _value = _emptyToNull(context.installReferrer);
-    _isLoaded = true;
-    _lastContext = context;
-    await _preferencesStore.setStoredPlatformInstallReferrer(
-      isLoaded: true,
-      value: _value,
-    );
+    AttriaxInstallReferrerContext context, {
+    bool persistResult = true,
+    bool updateCachedState = true,
+  }) async {
+    final normalizedValue = _emptyToNull(context.installReferrer);
+    if (updateCachedState) {
+      _value = normalizedValue;
+      _isLoaded = true;
+      _lastContext = context;
+    }
+    if (persistResult) {
+      await _preferencesStore.setStoredPlatformInstallReferrer(
+        isLoaded: true,
+        value: normalizedValue,
+      );
+    }
     return context;
   }
 

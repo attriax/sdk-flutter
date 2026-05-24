@@ -1,28 +1,16 @@
-import 'package:flutter_test/flutter_test.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_interface.dart';
 import 'package:attriax_flutter_windows/attriax_flutter_windows.dart';
-import 'package:attriax_flutter_windows/attriax_flutter_windows_platform_interface.dart';
-import 'package:attriax_flutter_windows/attriax_flutter_windows_method_channel.dart';
-import 'package:plugin_platform_interface/plugin_platform_interface.dart';
-
-class MockAttriaxFlutterWindowsPlatform
-    with MockPlatformInterfaceMixin
-    implements AttriaxFlutterWindowsPlatform {
-  @override
-  Future<String?> getPlatformVersion() => Future.value('42');
-}
+import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  final initialPlatform = AttriaxFlutterWindowsPlatform.instance;
+  test('registerWith installs AttriaxWindows as the active platform', () {
+    final originalPlatform = AttriaxPlatform.instance;
+    addTearDown(() {
+      AttriaxPlatform.instance = originalPlatform;
+    });
 
-  test('$MethodChannelAttriaxFlutterWindows is the default instance', () {
-    expect(initialPlatform, isInstanceOf<MethodChannelAttriaxFlutterWindows>());
-  });
+    AttriaxWindows.registerWith();
 
-  test('getPlatformVersion', () async {
-    final attriaxFlutterWindowsPlugin = AttriaxFlutterWindows();
-    final fakePlatform = MockAttriaxFlutterWindowsPlatform();
-    AttriaxFlutterWindowsPlatform.instance = fakePlatform;
-
-    expect(await attriaxFlutterWindowsPlugin.getPlatformVersion(), '42');
+    expect(AttriaxPlatform.instance, isA<AttriaxWindows>());
   });
 }

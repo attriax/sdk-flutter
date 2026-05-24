@@ -1,4 +1,4 @@
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 import 'package:flutter/widgets.dart';
 
 import 'attriax_api_models.dart';
@@ -32,7 +32,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
   AttriaxSessionManager({
     required AttriaxConfig config,
     required AttriaxContextManager contextManager,
-    required AttriaxPreferencesStore preferencesStore,
+    required AttriaxSessionStore preferencesStore,
     required AttriaxLogger logger,
     required AttriaxRuntimeSettingsView settingsState,
     required AttriaxRequestManager requestManager,
@@ -56,7 +56,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
 
   final AttriaxConfig _config;
   final AttriaxContextManager _contextManager;
-  final AttriaxPreferencesStore _preferencesStore;
+  final AttriaxSessionStore _preferencesStore;
   final AttriaxLogger _logger;
   final AttriaxClock _clock;
 

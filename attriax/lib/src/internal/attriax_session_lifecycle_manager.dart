@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 import 'package:flutter/widgets.dart';
 
 import 'attriax_api_models.dart';

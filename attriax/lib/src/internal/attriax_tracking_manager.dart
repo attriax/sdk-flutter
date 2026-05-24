@@ -1,4 +1,4 @@
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
 import '../attriax_ad_event_type.dart';
 import '../attriax_analytics_keys.dart';

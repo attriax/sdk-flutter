@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
 import 'package:attriax_flutter/src/internal/attriax_queue.dart';
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 

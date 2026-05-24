@@ -9,7 +9,8 @@
 ```text
 sdk-flutter/
 ├── attriax/                     # Public package surface
-│   └── example/                # Public example app
+│   └── example/                # Minimal public package example app
+├── example-rich/               # Rich public demo app
 ├── attriax_api_client/         # Generated internal transport client
 ├── attriax_flutter_platform_interface/ # Shared contracts and types
 ├── attriax_flutter_android/            # Android implementation
@@ -17,7 +18,7 @@ sdk-flutter/
 └── attriax_flutter_windows/            # Windows implementation
 ```
 
-The internal QA app is intentionally kept outside this repository at `../flutter-internal-tester/` so it can evolve independently from the publishable SDK packages.
+The internal QA app is intentionally kept outside this repository at `../flutter-internal-tester/` so it can evolve independently from the publishable SDK packages. It is not part of the public SDK example surface.
 
 The generated transport client stays in its own package so regeneration can replace it atomically without mixing generated and handwritten runtime code.
 
@@ -29,6 +30,7 @@ flutter pub get
 dart analyze
 cd attriax && flutter test
 cd ..\attriax\example && flutter test
+cd ..\example-rich && flutter test
 cd ..\..\attriax_flutter_platform_interface && flutter test
 cd ..\attriax_flutter_android && flutter test
 cd ..\attriax_flutter_ios && flutter test
@@ -39,6 +41,11 @@ The workspace root does not own a top-level `test/` directory, so `flutter test`
 
 ```bash
 cd sdk-flutter\attriax\example
+flutter run
+```
+
+```bash
+cd sdk-flutter\example-rich
 flutter run
 ```
 

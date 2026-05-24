@@ -6,6 +6,8 @@ Attriax mobile attribution SDK for Flutter.
 
 This is the main Flutter package for Attriax. The public `Attriax` class is a thin wrapper over an internal runtime that owns orchestration, logging, request queuing, synchronization state, and deep-link handling.
 
+Public SDK surfaces are grouped behind focused facades such as `attriax.consent`, `attriax.tracking`, `attriax.synchronization`, `attriax.deepLinks`, `attriax.referrer`, and `attriax.skan`. The root `Attriax` entrypoint now stays focused on lifecycle, reset, receipt validation, and those top-level facades.
+
 ## Installation
 
 Add to your `pubspec.yaml`:
@@ -67,7 +69,7 @@ Future<void> processAttriaxStartup(Attriax attriax) async {
   );
 }
 
-await attriax.recordPurchase(
+await attriax.tracking.recordPurchase(
   revenue: 99,
   currency: 'USD',
   productId: 'pro_yearly',
@@ -76,7 +78,7 @@ await attriax.recordPurchase(
   metadata: const <String, Object?>{'paywallVariant': 'spring_2026'},
 );
 
-final createdDynamicLink = await attriax.createDynamicLink(
+final createdDynamicLink = await attriax.deepLinks.createDynamicLink(
   name: 'Referral share link',
   destinationUrl: 'https://attriax.com/invite',
   group: 'referrals',
@@ -128,7 +130,7 @@ If you truly need a fire-and-forget local startup path, you can still intentiona
 The `appVersion`, `appBuildNumber`, and `appPackageName` fields let you override what the SDK reports to the API. That is useful for staged rollouts, white-label apps, and internal testing. On Flutter web, when those overrides are not set, the SDK also tries to read the build's `version.json` file so hosted deployments can report the app version automatically.
 
 If your app consumes the incoming URL before Attriax sees it, forward the accepted
-route manually with `recordDeepLink(uri: incomingUri, source: 'custom_router')`.
+route manually with `attriax.deepLinks.recordDeepLink(uri: incomingUri, source: 'custom_router')`.
 
 ## GDPR Consent
 
@@ -167,13 +169,13 @@ See [doc/gdpr-and-anonymous-analytics.md](doc/gdpr-and-anonymous-analytics.md) f
 
 ## Dynamic Link Creation
 
-Use `createDynamicLink()` when your app needs a short shareable URL created at
+Use `attriax.deepLinks.createDynamicLink()` when your app needs a short shareable URL created at
 runtime. Attriax generates the short code server-side, applies app-level
 dynamic-link defaults when fields are omitted, and returns the saved link data
 including the final short URL.
 
 ```dart
-final result = await attriax.createDynamicLink(
+final result = await attriax.deepLinks.createDynamicLink(
   destinationUrl: 'https://attriax.com/invite',
   group: 'creator-program',
   socialPreview: const AttriaxDynamicLinkSocialPreview(
@@ -197,7 +199,7 @@ Notes:
 
 ## Page Tracking
 
-Use `recordPageView()` when you want page-level analytics and funnels without
+Use `attriax.tracking.recordPageView()` when you want page-level analytics and funnels without
 manually naming a raw custom event. Attriax stores these under the standardized
 `page_view` event name and surfaces them separately in the dashboard.
 
@@ -214,7 +216,7 @@ MaterialApp(
   ],
 );
 
-await attriax.recordPageView(
+await attriax.tracking.recordPageView(
   '/checkout',
   pageClass: 'CheckoutPage',
   previousPageName: '/cart',
@@ -241,7 +243,7 @@ The most common ones are `revenue`, `currency`, `productId`, `transactionId`,
 `source`.
 
 ```dart
-await attriax.recordEvent(
+await attriax.tracking.recordEvent(
   AttriaxAnalyticsEventKeys.addPaymentInfo,
   eventData: const <String, Object?>{
     AttriaxAnalyticsParamKeys.paymentType: 'apple_pay',
@@ -249,7 +251,7 @@ await attriax.recordEvent(
   },
 );
 
-await attriax.recordEvent(
+await attriax.tracking.recordEvent(
   AttriaxAnalyticsEventKeys.tutorialBegin,
   eventData: const <String, Object?>{
     AttriaxAnalyticsParamKeys.source: 'first_session',
@@ -258,9 +260,9 @@ await attriax.recordEvent(
 ```
 
 These constants are intentionally curated rather than exhaustive. If your app
-needs a custom event name, you can still send it with `recordEvent(...)`; use
-the shared constants whenever you want a stable, SDK-documented conversion
-event name.
+needs a custom event name, you can still send it with
+`attriax.tracking.recordEvent(...)`; use the shared constants whenever you want
+a stable, SDK-documented conversion event name.
 
 ## Ad Events
 
@@ -269,7 +271,7 @@ engagement, failures, rewards, and paid callbacks to show up in the same
 analytics vocabulary across SDKs.
 
 ```dart
-await attriax.recordAdEvent(
+await attriax.tracking.recordAdEvent(
   AttriaxAdEventType.load,
   adNetwork: 'admob',
   adUnitId: rewardedAdUnitId,
@@ -277,7 +279,7 @@ await attriax.recordAdEvent(
   adFormat: 'rewarded',
 );
 
-await attriax.recordAdEvent(
+await attriax.tracking.recordAdEvent(
   AttriaxAdEventType.show,
   adNetwork: 'admob',
   adUnitId: rewardedAdUnitId,
@@ -285,7 +287,7 @@ await attriax.recordAdEvent(
   adFormat: 'rewarded',
 );
 
-await attriax.recordAdEvent(
+await attriax.tracking.recordAdEvent(
   AttriaxAdEventType.impression,
   adNetwork: 'admob',
   adUnitId: rewardedAdUnitId,
@@ -293,7 +295,7 @@ await attriax.recordAdEvent(
   adFormat: 'rewarded',
 );
 
-await attriax.recordAdEvent(
+await attriax.tracking.recordAdEvent(
   AttriaxAdEventType.reward,
   adNetwork: 'admob',
   adUnitId: rewardedAdUnitId,
@@ -303,7 +305,7 @@ await attriax.recordAdEvent(
   rewardAmount: 50,
 );
 
-await attriax.recordAdRevenue(
+await attriax.tracking.recordAdRevenue(
   revenue: 125000,
   currency: 'USD',
   revenueInMicros: true,
@@ -315,7 +317,7 @@ await attriax.recordAdRevenue(
 ```
 
 When an ad SDK exposes failures, clicks, dismissals, or mediation metadata,
-send them through `recordAdEvent(...)` with the matching
+send them through `attriax.tracking.recordAdEvent(...)` with the matching
 `AttriaxAdEventType`, `failureReason`, and `metadata` so the ad-events
 analytics page can group the callbacks cleanly.
 
@@ -325,9 +327,9 @@ analytics page can group the callbacks cleanly.
 host app still owns the platform registration files and most runner hooks.
 
 - Android: add the intent filter to your launcher activity and keep your SHA-256 fingerprints current. The `attriax_flutter_android` plugin already injects `flutter_deeplinking_enabled=false` so Flutter's built-in handler does not compete with Attriax.
-- iOS: add `<key>FlutterDeepLinkingEnabled</key><false/>` to `ios/Runner/Info.plist`, add the Associated Domains entitlement, and test on a physical device after reinstalling. If your app requests ATT through Attriax or its own consent flow, the same plist must also include `NSUserTrackingUsageDescription` before `requestTrackingAuthorizationOnInit` or `requestTrackingAuthorization()` runs. These plist changes still belong to the consuming app.
-- Web: the SDK reads the initial URL automatically. If your router consumes the incoming URL first, forward it with `recordDeepLink(uri: Uri.base, source: 'web_router')`. The Attriax app configuration must also allow every browser origin that will call the SDK, including local dev origins such as `http://localhost:3000`, in the dashboard setup page's Web allowed browser origins list.
-- macOS, Linux, Windows: automatic deep-link capture is not bundled yet. Accept the URI in your runner or activation handler and forward it with `recordDeepLink(uri: incomingUri, source: 'desktop_router')`.
+- iOS: add `<key>FlutterDeepLinkingEnabled</key><false/>` to `ios/Runner/Info.plist`, add the Associated Domains entitlement, and test on a physical device after reinstalling. If your app requests ATT through Attriax or its own consent flow, the same plist must also include `NSUserTrackingUsageDescription` before `requestTrackingAuthorizationOnInit` or `consent.att.requestTrackingAuthorization()` runs. These plist changes still belong to the consuming app.
+- Web: the SDK reads the initial URL automatically. If your router consumes the incoming URL first, forward it with `attriax.deepLinks.recordDeepLink(uri: Uri.base, source: 'web_router')`. The Attriax app configuration must also allow every browser origin that will call the SDK, including local dev origins such as `http://localhost:3000`, in the dashboard setup page's Web allowed browser origins list.
+- macOS, Linux, Windows: automatic deep-link capture is not bundled yet. Accept the URI in your runner or activation handler and forward it with `attriax.deepLinks.recordDeepLink(uri: incomingUri, source: 'desktop_router')`.
 
 The example runner files shipped with this package include the Android and iOS
 host-side setup. Desktop examples stay intentionally minimal and expect manual
@@ -391,9 +393,9 @@ incoming postbacks back to the app.
 Attriax accepts uninstall-tracking tokens from mobile apps so the backend can
 probe whether the app instance is still reachable.
 
-- Android: call `registerFirebaseMessagingToken(token)` after your app receives an FCM registration token and again whenever Firebase rotates that token.
-- Apple platforms: if your app receives an FCM registration token, call `registerFirebaseMessagingToken(token)` there too.
-- Apple platforms: if your app also receives the native APNs device token, call `registerApplePushToken(token)` to register it as a separate Apple token provider.
+- Android: call `tracking.registerFirebaseMessagingToken(token)` after your app receives an FCM registration token and again whenever Firebase rotates that token.
+- Apple platforms: if your app receives an FCM registration token, call `tracking.registerFirebaseMessagingToken(token)` there too.
+- Apple platforms: if your app also receives the native APNs device token, call `tracking.registerApplePushToken(token)` to register it as a separate Apple token provider.
 - Pass `null` or whitespace to either method when you need to clear the currently registered token for that provider.
 
 Attriax probes FCM registrations through Firebase Admin. When you configure the
@@ -412,7 +414,7 @@ Future<void> syncPushTokensWithAttriax(Attriax attriax) async {
   await messaging.requestPermission();
 
   final fcmToken = await messaging.getToken();
-  await attriax.registerFirebaseMessagingToken(
+  await attriax.tracking.registerFirebaseMessagingToken(
     fcmToken,
     metadata: const <String, Object?>{'source': 'firebase_messaging'},
   );
@@ -421,7 +423,7 @@ Future<void> syncPushTokensWithAttriax(Attriax attriax) async {
       (defaultTargetPlatform == TargetPlatform.iOS ||
           defaultTargetPlatform == TargetPlatform.macOS)) {
     final apnsToken = await messaging.getAPNSToken();
-    await attriax.registerApplePushToken(
+    await attriax.tracking.registerApplePushToken(
       apnsToken,
       metadata: const <String, Object?>{'source': 'firebase_messaging_apns'},
     );
@@ -429,7 +431,7 @@ Future<void> syncPushTokensWithAttriax(Attriax attriax) async {
 
   messaging.onTokenRefresh.listen((token) {
     unawaited(
-      attriax.registerFirebaseMessagingToken(
+      attriax.tracking.registerFirebaseMessagingToken(
         token,
         metadata: const <String, Object?>{'source': 'firebase_messaging_refresh'},
       ),
@@ -489,20 +491,20 @@ final attriax = Attriax(
 ```
 
 - `collectAdvertisingId` controls GAID collection on Android and IDFA collection on Apple platforms.
-- When `collectAdvertisingId` is `false`, the SDK stops using ATT and advertising IDs for its own native context collection, but host apps can still call `getTrackingAuthorizationStatus()` and `requestTrackingAuthorization()` for their own consent flow.
-- `automaticCrashReportingEnabled` controls automatic Flutter/native crash handlers. Manual `recordError()` calls remain available when automatic handlers are disabled.
+- When `collectAdvertisingId` is `false`, the SDK stops using ATT and advertising IDs for its own native context collection, but host apps can still call `consent.att.getTrackingAuthorizationStatus()` and `consent.att.requestTrackingAuthorization()` for their own consent flow.
+- `automaticCrashReportingEnabled` controls automatic Flutter/native crash handlers. Manual `tracking.recordError()` calls remain available when automatic handlers are disabled.
 - `requestTrackingAuthorizationOnInit` requests ATT during SDK startup when advertising ID collection is enabled, then waits for the user-driven result before iOS context collection continues. Add `NSUserTrackingUsageDescription` to `ios/Runner/Info.plist` before enabling this on iOS.
-- `trackingAuthorizationStatusTimeout` only applies when `requestTrackingAuthorizationOnInit` is `false`. During startup, the SDK polls ATT status for up to that duration so an app-managed consent flow can still call `requestTrackingAuthorization()` without being raced by SDK initialization.
+- `trackingAuthorizationStatusTimeout` only applies when `requestTrackingAuthorizationOnInit` is `false`. During startup, the SDK polls ATT status for up to that duration so an app-managed consent flow can still call `consent.att.requestTrackingAuthorization()` without being raced by SDK initialization.
 
 To check ATT state or request ATT manually after your own consent or onboarding UI:
 
 Add `NSUserTrackingUsageDescription` to `ios/Runner/Info.plist` before shipping or testing the manual ATT prompt.
 
 ```dart
-final currentStatus = await attriax.getTrackingAuthorizationStatus();
+final currentStatus = await attriax.consent.att.getTrackingAuthorizationStatus();
 debugPrint('Current ATT status: $currentStatus');
 
-final updatedStatus = await attriax.requestTrackingAuthorization();
+final updatedStatus = await attriax.consent.att.requestTrackingAuthorization();
 debugPrint('Updated ATT status: $updatedStatus');
 ```
 
@@ -552,7 +554,7 @@ attriax.deepLinks.stream.listen((event) {
 Manual forwarding for custom routers, web, or desktop runners:
 
 ```dart
-await attriax.recordDeepLink(
+await attriax.deepLinks.recordDeepLink(
   uri: incomingUri,
   source: 'custom_router',
 );
@@ -566,9 +568,9 @@ await attriax.recordDeepLink(
 
 ## Examples
 
-- Public example app: `example/`
-- Public example tests: `example/test/`
-- The example home screen includes a "Create sample dynamic link" action that calls the live SDK method and prints the generated short URL.
+- Package example app: `example/`
+- Package example tests: `example/test/`
+- This publishable package now keeps the shipped example focused on minimal integration. Richer public demo flows live elsewhere in the repository, and internal QA flows stay in the non-public internal tester app.
 
 ## Platform Support
 

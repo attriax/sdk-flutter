@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 import 'package:attriax_api_client/attriax_api_client.dart' as sdk;
 import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
@@ -10,6 +10,7 @@ import 'package:http/http.dart' as http;
 import 'attriax_api_models.dart';
 import 'attriax_json_utils.dart';
 import 'attriax_queue.dart';
+import 'attriax_sdk_runtime_config.dart';
 
 const int _attriaxBatchMaxItemCount = 100;
 const int _attriaxBatchMaxBodyBytes = 48 * 1024;
@@ -302,6 +303,33 @@ class AttriaxGeneratedTransport {
     }
   }
 
+  Future<AttriaxSdkRuntimeConfig> fetchSdkRuntimeConfig(
+    Map<String, Object?> payload,
+  ) async {
+    final response = await _dio.post<Object?>(
+      '/api/sdk/v1/config',
+      data: attriaxNormalizeJsonMap(payload),
+      options: Options(validateStatus: _allowAnyStatus),
+    );
+
+    final statusCode = response.statusCode ?? 0;
+    if (!_isSuccessful(statusCode)) {
+      throw AttriaxTransportHttpException(
+        statusCode: statusCode,
+        body: response.data,
+      );
+    }
+
+    final body = attriaxObjectMap(response.data);
+    if (body == null) {
+      throw const AttriaxTransportInvalidResponseException(
+        'Missing runtime config response body.',
+      );
+    }
+
+    return AttriaxSdkRuntimeConfig.fromJsonEnvelope(body);
+  }
+
   Future<AttriaxRevenueReceiptValidationResult> validateRevenueReceipt(
     Map<String, Object?> payload,
   ) async {
@@ -347,6 +375,30 @@ class AttriaxGeneratedTransport {
     }
 
     return (result.response as AttriaxRevenueUsdConversionApiResponse).result;
+  }
+
+  Future<void> eraseGdprData({
+    required String appToken,
+    required String deviceId,
+  }) async {
+    final response = await _dio.post<Object?>(
+      '/api/sdk/v1/privacy/gdpr/erase',
+      data: attriaxNormalizeJsonMap(<String, Object?>{
+        'appToken': appToken,
+        'deviceId': deviceId,
+      }),
+      options: Options(validateStatus: _allowAnyStatus),
+    );
+
+    final result = _unwrapAckLikeResponse(
+      label: 'gdpr data erasure',
+      response: response,
+    );
+    if (result.response is! AttriaxAckResponse) {
+      throw const AttriaxTransportInvalidResponseException(
+        'Unexpected GDPR data erasure response type.',
+      );
+    }
   }
 
   Future<void> registerUninstallToken(Map<String, Object?> payload) async {

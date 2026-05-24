@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:attriax_flutter/attriax_flutter.dart';
 import 'package:attriax_flutter/src/internal/attriax_context_collector.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'test_support/attriax_platform_test_support.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -376,12 +376,145 @@ void main() {
     );
 
     test(
+      'requestDataErasure anonymizes remote SDK data and clears local runtime state after success',
+      () async {
+        final requestPaths = <String>[];
+        Map<String, Object?>? syncedConsentBody;
+        Map<String, Object?>? erasureBody;
+        client = MockClient((request) async {
+          requestPaths.add(request.url.path);
+
+          if (request.url.path == '/api/sdk/v1/consent/gdpr') {
+            syncedConsentBody =
+                jsonDecode(request.body) as Map<String, Object?>;
+            return http.Response(
+              _gdprEnvelope(<String, Object?>{
+                'checkedAt': '2026-05-20T12:00:01.000Z',
+                'countryCode': 'DE',
+                'needsConsent': false,
+                'regionSource': 'manual',
+                'state': 'granted',
+                'values': <String, Object?>{
+                  'analytics': true,
+                  'attribution': true,
+                  'adEvents': false,
+                },
+              }),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          if (request.url.path == '/api/sdk/v1/privacy/gdpr/erase') {
+            erasureBody = jsonDecode(request.body) as Map<String, Object?>;
+            return http.Response(
+              _ackEnvelope(),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          if (request.url.path == '/api/sdk/v1/open') {
+            return http.Response(
+              _sdkEnvelope(<String, Object?>{
+                'userId': 'user_1',
+                'isNewUser': true,
+                'isFirstLaunch': true,
+                'requestVersion': 'v1',
+                'acceptedAt': '2026-05-20T12:00:02.000Z',
+              }),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          return http.Response(
+            request.url.path == '/api/sdk/v1/config'
+                ? _runtimeConfigEnvelope()
+                : _ackEnvelope(),
+            200,
+            headers: const <String, String>{'content-type': 'application/json'},
+          );
+        });
+        await sdk.dispose();
+        sdk = _createSdk(
+          config: const AttriaxConfig(
+            appToken: 'ax_test_token',
+            gdprEnabled: true,
+            gdprAutoDetect: false,
+          ),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+        );
+
+        await sdk.init();
+        await _drainMicrotasks();
+
+        sdk.consent.gdpr.setConsent(
+          analytics: true,
+          attribution: true,
+          adEvents: false,
+        );
+        await _waitFor(() => requestPaths.contains('/api/sdk/v1/open'));
+        await _waitFor(() => sdk.synchronization.isSynchronized);
+
+        final storedDeviceId = prefs.getString(
+          AttriaxPreferencesStore.deviceIdStorageKey,
+        );
+        final storedConsentId = prefs.getString(
+          AttriaxPreferencesStore.gdprConsentIdStorageKey,
+        );
+
+        await sdk.consent.gdpr.requestDataErasure();
+
+        expect(syncedConsentBody?['consentId'], isA<String>());
+        expect(erasureBody?['appToken'], 'ax_test_token');
+        expect(erasureBody?['deviceId'], storedDeviceId);
+        expect(erasureBody?.containsKey('consentId'), isFalse);
+        expect(storedConsentId, isNotNull);
+        expect(sdk.isInitialized, isFalse);
+        expect(
+          prefs.containsKey(AttriaxPreferencesStore.deviceIdStorageKey),
+          isFalse,
+        );
+        expect(
+          prefs.containsKey(AttriaxPreferencesStore.gdprConsentIdStorageKey),
+          isFalse,
+        );
+        expect(
+          prefs.containsKey(AttriaxPreferencesStore.gdprConsentStorageKey),
+          isFalse,
+        );
+      },
+    );
+
+    test(
       'init auto-detects local pending consent without a network request',
       () async {
         final requestPaths = <String>[];
         contextCollector.timezone = 'Europe/Berlin';
         client = MockClient((request) async {
           requestPaths.add(request.url.path);
+
+          if (request.url.path == '/api/sdk/v1/config') {
+            return http.Response(
+              _runtimeConfigEnvelope(),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
           throw StateError(
             'Unexpected request during local auto-detect: ${request.method} ${request.url.path}',
           );
@@ -404,9 +537,21 @@ void main() {
           () => sdk.consent.gdpr.state != AttriaxGdprConsentState.unknown,
         );
 
-        expect(requestPaths, isEmpty);
+        expect(_nonConfigRequestPaths(requestPaths), isEmpty);
         expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.pending);
         expect(sdk.consent.gdpr.isWaitingForConsent, isTrue);
+        expect(
+          prefs.getString(AttriaxPreferencesStore.deviceIdStorageKey),
+          isNull,
+        );
+        expect(
+          prefs.getBool(AttriaxPreferencesStore.firstLaunchSeenStorageKey),
+          isNull,
+        );
+        expect(
+          prefs.getString(AttriaxPreferencesStore.sessionSnapshotStorageKey),
+          isNull,
+        );
       },
     );
 
@@ -455,7 +600,9 @@ void main() {
           }
 
           return http.Response(
-            _sdkEnvelope(<String, Object?>{'success': true}),
+            request.url.path == '/api/sdk/v1/config'
+                ? _runtimeConfigEnvelope()
+                : _ackEnvelope(),
             200,
             headers: const <String, String>{'content-type': 'application/json'},
           );
@@ -477,7 +624,7 @@ void main() {
         await sdk.init();
         await _drainMicrotasks();
 
-        expect(requestPaths, isEmpty);
+        expect(_nonConfigRequestPaths(requestPaths), isEmpty);
         expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.unknown);
         expect(sdk.consent.gdpr.isWaitingForConsent, isTrue);
 
@@ -491,8 +638,17 @@ void main() {
 
         expect(requestPaths, isNot(contains('/api/sdk/v1/consent/gdpr/check')));
         expect(requestPaths, contains('/api/sdk/v1/consent/gdpr'));
+        expect(requestPaths, contains('/api/sdk/v1/config'));
         expect(requestPaths, contains('/api/sdk/v1/open'));
         expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.granted);
+        expect(
+          prefs.getString(AttriaxPreferencesStore.deviceIdStorageKey),
+          isNotNull,
+        );
+        expect(
+          prefs.getBool(AttriaxPreferencesStore.firstLaunchSeenStorageKey),
+          isTrue,
+        );
       },
     );
 
@@ -528,9 +684,7 @@ void main() {
           if (request.url.path == '/api/sdk/v1/events') {
             eventBodies.add(jsonDecode(request.body) as Map<String, Object?>);
             return http.Response(
-              _sdkEnvelope(<String, Object?>{
-                'storedAt': '2026-05-20T12:00:02.000Z',
-              }),
+              _ackEnvelope(),
               200,
               headers: const <String, String>{
                 'content-type': 'application/json',
@@ -555,7 +709,9 @@ void main() {
           }
 
           return http.Response(
-            _sdkEnvelope(<String, Object?>{'success': true}),
+            request.url.path == '/api/sdk/v1/config'
+                ? _runtimeConfigEnvelope()
+                : _ackEnvelope(),
             200,
             headers: const <String, String>{'content-type': 'application/json'},
           );
@@ -575,13 +731,13 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.recordEvent(
+        await sdk.tracking.recordEvent(
           'purchase',
           eventData: const <String, Object?>{'value': 42},
         );
         await _drainMicrotasks();
 
-        expect(requestPaths, isEmpty);
+        expect(_nonConfigRequestPaths(requestPaths), isEmpty);
 
         sdk.consent.gdpr.setConsent(
           analytics: true,
@@ -628,9 +784,7 @@ void main() {
           if (request.url.path == '/api/sdk/v1/events') {
             eventBodies.add(jsonDecode(request.body) as Map<String, Object?>);
             return http.Response(
-              _sdkEnvelope(<String, Object?>{
-                'storedAt': '2026-05-20T12:00:02.000Z',
-              }),
+              _ackEnvelope(),
               200,
               headers: const <String, String>{
                 'content-type': 'application/json',
@@ -641,7 +795,7 @@ void main() {
           if (request.url.path == '/api/sdk/v1/batch') {
             batchBodies.add(jsonDecode(request.body) as Map<String, Object?>);
             return http.Response(
-              _sdkEnvelope(<String, Object?>{'success': true}),
+              _batchEnvelope(),
               200,
               headers: const <String, String>{
                 'content-type': 'application/json',
@@ -666,7 +820,9 @@ void main() {
           }
 
           return http.Response(
-            _sdkEnvelope(<String, Object?>{'success': true}),
+            request.url.path == '/api/sdk/v1/config'
+                ? _runtimeConfigEnvelope()
+                : _ackEnvelope(),
             200,
             headers: const <String, String>{'content-type': 'application/json'},
           );
@@ -686,10 +842,10 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.recordEvent('purchase');
+        await sdk.tracking.recordEvent('purchase');
         await _drainMicrotasks();
 
-        expect(requestPaths, isEmpty);
+        expect(_nonConfigRequestPaths(requestPaths), isEmpty);
 
         sdk.consent.gdpr.setNotRequired();
         await _waitFor(() => eventBodies.isNotEmpty || batchBodies.isNotEmpty);
@@ -747,9 +903,7 @@ void main() {
           if (request.url.path == '/api/sdk/v1/events') {
             eventBodies.add(jsonDecode(request.body) as Map<String, Object?>);
             return http.Response(
-              _sdkEnvelope(<String, Object?>{
-                'storedAt': '2026-05-20T12:00:02.000Z',
-              }),
+              _ackEnvelope(),
               200,
               headers: const <String, String>{
                 'content-type': 'application/json',
@@ -758,7 +912,9 @@ void main() {
           }
 
           return http.Response(
-            _sdkEnvelope(<String, Object?>{'success': true}),
+            request.url.path == '/api/sdk/v1/config'
+                ? _runtimeConfigEnvelope()
+                : _ackEnvelope(),
             200,
             headers: const <String, String>{'content-type': 'application/json'},
           );
@@ -778,10 +934,10 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.recordEvent('purchase');
+        await sdk.tracking.recordEvent('purchase');
         await _drainMicrotasks();
 
-        expect(requestPaths, isEmpty);
+        expect(_nonConfigRequestPaths(requestPaths), isEmpty);
 
         sdk.consent.gdpr.setConsent(
           analytics: false,
@@ -797,6 +953,14 @@ void main() {
         expect(eventBodies.single['eventName'], 'purchase');
         expect(eventBodies.single['deviceId'], isNull);
         expect(eventBodies.single['deviceIdSource'], isNull);
+        expect(
+          prefs.containsKey(AttriaxPreferencesStore.deviceIdStorageKey),
+          isFalse,
+        );
+        expect(
+          prefs.containsKey(AttriaxPreferencesStore.sessionSnapshotStorageKey),
+          isFalse,
+        );
       },
     );
 
@@ -832,7 +996,7 @@ void main() {
           if (request.url.path == '/api/sdk/v1/uninstall-tokens') {
             uninstallBody = jsonDecode(request.body) as Map<String, Object?>;
             return http.Response(
-              _sdkEnvelope(<String, Object?>{'success': true}),
+              _ackEnvelope(),
               200,
               headers: const <String, String>{
                 'content-type': 'application/json',
@@ -857,7 +1021,9 @@ void main() {
           }
 
           return http.Response(
-            _sdkEnvelope(<String, Object?>{'success': true}),
+            request.url.path == '/api/sdk/v1/config'
+                ? _runtimeConfigEnvelope()
+                : _ackEnvelope(),
             200,
             headers: const <String, String>{'content-type': 'application/json'},
           );
@@ -877,10 +1043,10 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.registerApplePushToken('apns_token_1');
+        await sdk.tracking.registerApplePushToken('apns_token_1');
         await _drainMicrotasks();
 
-        expect(requestPaths, isEmpty);
+        expect(_nonConfigRequestPaths(requestPaths), isEmpty);
 
         sdk.consent.gdpr.setConsent(
           analytics: false,
@@ -1013,11 +1179,32 @@ String _sdkEnvelope(Map<String, Object?> data) => jsonEncode(<String, Object?>{
   'data': data,
 });
 
+String _ackEnvelope() => _sdkEnvelope(<String, Object?>{'success': true});
+
+String _batchEnvelope() => _sdkEnvelope(<String, Object?>{
+  'acceptedAt': '2026-05-20T12:00:02.000Z',
+  'duplicateCount': 0,
+  'itemCount': 2,
+  'processedCount': 2,
+  'requestVersion': 'v1',
+});
+
+String _runtimeConfigEnvelope() => _sdkEnvelope(<String, Object?>{
+  'acceptedAt': '2026-05-20T12:00:01.000Z',
+  'clipboardAttributionEnabled': false,
+  'requestVersion': 'v1',
+});
+
 String _gdprEnvelope(Map<String, Object?> data) => jsonEncode(<String, Object?>{
   'success': true,
   'timestamp': '2026-05-20T12:00:00.000Z',
   'data': data,
 });
+
+List<String> _nonConfigRequestPaths(Iterable<String> requestPaths) =>
+    requestPaths
+        .where((path) => path != '/api/sdk/v1/config')
+        .toList(growable: false);
 
 Future<void> _drainMicrotasks() async {
   for (var attempt = 0; attempt < 20; attempt += 1) {

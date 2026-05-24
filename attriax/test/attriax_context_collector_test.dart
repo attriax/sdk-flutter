@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:attriax_flutter/src/internal/attriax_context_collector.dart';
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'test_support/attriax_platform_test_support.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -143,42 +143,72 @@ void main() {
     expect(resolved.source, 'ios_keychain');
   });
 
-  test(
-    'uses iOS hardware model when native model is only the family name',
-    () async {
-      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
-      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+  test('builds iOS app and device snapshots from native metadata', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+    addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
-      final collector = AttriaxContextCollector(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
-        platform:
-            FakeAttriaxPlatform.withNativeContext(
-                const AttriaxNativeContext(
-                  metadata: <String, Object?>{
-                    'model': 'iPhone',
-                    'deviceModel': 'iPhone',
-                    'hardwareModel': 'iPhone14,5',
-                    'localizedModel': 'iPhone',
-                    'name': 'Timon\'s iPhone',
-                    'systemVersion': '18.4',
-                    'isPhysicalDevice': true,
-                  },
-                ),
-              )
-              ..trackingAuthorizationStatus =
-                  AttriaxTrackingAuthorizationStatus.authorized,
-      );
+    final collector = AttriaxContextCollector(
+      config: const AttriaxConfig(appToken: 'ax_test_token'),
+      platform:
+          FakeAttriaxPlatform.withNativeContext(
+              const AttriaxNativeContext(
+                advertisingId: 'ios-idfa',
+                metadata: <String, Object?>{
+                  'appVersion': '1.2.3',
+                  'appBuildNumber': '45',
+                  'packageName': 'com.example.attriax.ios',
+                  'keychainDeviceId': 'ios-keychain-id',
+                  'vendorIdentifier': 'ios-idfv',
+                  'applicationIdentifier': 'TEAM123.com.example.attriax.ios',
+                  'teamIdentifier': 'TEAM123',
+                  'associatedDomains': <String>['applinks:app.attriax.com'],
+                  'flutterDeepLinkingEnabled': false,
+                  'interfaceIdiom': 'phone',
+                  'deviceModel': 'iPhone',
+                  'localizedModel': 'iPhone',
+                  'hardwareModel': 'iPhone14,5',
+                  'systemVersion': '18.4',
+                  'timezone': 'Europe/Berlin',
+                  'isSimulator': false,
+                  'isPhysicalDevice': true,
+                },
+              ),
+            )
+            ..trackingAuthorizationStatus =
+                AttriaxTrackingAuthorizationStatus.authorized,
+    );
 
-      final context = await collector.collectContextSnapshot(
-        deviceId: 'ios-device-1',
-        isFirstLaunch: true,
-      );
+    final context = await collector.collectContextSnapshot(
+      deviceId: 'ios-device-1',
+      isFirstLaunch: true,
+    );
 
-      expect(context.device.model, 'iPhone14,5');
-      expect(context.device.hardware, 'iPhone14,5');
-      expect(context.device.name, 'Timon\'s iPhone');
-    },
-  );
+    expect(context.app.version, '1.2.3');
+    expect(context.app.buildNumber, '45');
+    expect(context.app.packageName, 'com.example.attriax.ios');
+    expect(context.device.advertisingId, 'ios-idfa');
+    expect(context.device.model, 'iPhone14,5');
+    expect(context.device.name, 'iPhone');
+    expect(context.device.brand, 'Apple');
+    expect(context.device.manufacturer, 'Apple');
+    expect(context.device.hardware, 'iPhone14,5');
+    expect(context.device.osVersion, '18.4');
+    expect(context.device.timezone, 'Europe/Berlin');
+    expect(context.device.isPhysicalDevice, isTrue);
+    expect(
+      context.device.metadata['applicationIdentifier'],
+      'TEAM123.com.example.attriax.ios',
+    );
+    expect(context.device.metadata['teamIdentifier'], 'TEAM123');
+    expect(context.device.metadata['associatedDomains'], <String>[
+      'applinks:app.attriax.com',
+    ]);
+    expect(context.device.metadata['flutterDeepLinkingEnabled'], isFalse);
+    expect(context.device.metadata['interfaceIdiom'], 'phone');
+    expect(context.device.metadata['isSimulator'], isFalse);
+    expect(context.device.metadata['keychainDeviceId'], 'ios-keychain-id');
+    expect(context.device.metadata['vendorIdentifier'], 'ios-idfv');
+  });
 
   test('prefers macOS keychain before storage', () async {
     debugDefaultTargetPlatformOverride = TargetPlatform.macOS;
@@ -383,6 +413,10 @@ class FakeAttriaxPlatform extends AttriaxPlatform {
   AttriaxTrackingAuthorizationStatus requestTrackingAuthorizationStatus =
       AttriaxTrackingAuthorizationStatus.authorized;
   Completer<void>? requestTrackingAuthorizationCompleter;
+  String? clipboardText;
+  String? webViewUserAgent;
+  int readAttributionClipboardCalls = 0;
+  int collectWebViewUserAgentCalls = 0;
 
   @override
   Future<AttriaxNativeContext> collectNativeContext({
@@ -414,6 +448,18 @@ class FakeAttriaxPlatform extends AttriaxPlatform {
     }
 
     return requestTrackingAuthorizationStatus;
+  }
+
+  @override
+  Future<String?> readAttributionClipboard() async {
+    readAttributionClipboardCalls += 1;
+    return clipboardText;
+  }
+
+  @override
+  Future<String?> collectWebViewUserAgent() async {
+    collectWebViewUserAgentCalls += 1;
+    return webViewUserAgent;
   }
 
   @override

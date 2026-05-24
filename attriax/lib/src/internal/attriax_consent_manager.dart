@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:attriax_api_client/attriax_api_client.dart' as sdk;
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
 
 import '../attriax_consent.dart';
 import 'attriax_context_manager.dart';
@@ -61,7 +61,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     required AttriaxConfig config,
     required AttriaxClock clock,
     required AttriaxContextManager contextManager,
-    required AttriaxPreferencesStore preferencesStore,
+    required AttriaxConsentPersistenceStore preferencesStore,
     required AttriaxLogger logger,
   }) : _config = config,
        _clock = clock,
@@ -72,7 +72,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
   final AttriaxConfig _config;
   final AttriaxClock _clock;
   final AttriaxContextManager _contextManager;
-  final AttriaxPreferencesStore _preferencesStore;
+  final AttriaxConsentPersistenceStore _preferencesStore;
   final AttriaxLogger _logger;
 
   AttriaxGeneratedTransport? _transport;

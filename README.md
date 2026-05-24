@@ -55,13 +55,13 @@ MaterialApp(
 	],
 );
 
-await attriax.recordPageView(
+await attriax.tracking.recordPageView(
 	'/checkout',
 	pageClass: 'CheckoutPage',
 	previousPageName: '/cart',
 );
 
-await attriax.recordPurchase(
+await attriax.tracking.recordPurchase(
 	revenue: 9.99,
 	currency: 'USD',
 	productId: 'pro_monthly',
@@ -69,7 +69,7 @@ await attriax.recordPurchase(
 	store: 'app_store',
 );
 
-await attriax.recordAdEvent(
+await attriax.tracking.recordAdEvent(
 	AttriaxAdEventType.impression,
 	adNetwork: 'admob',
 	adPlacement: 'level_complete',
@@ -80,7 +80,7 @@ await attriax.recordAdEvent(
 ## What The Flutter SDK Covers
 
 - App-open attribution, deep-link resolution, and deferred deep-link handling.
-- Automatic or manual page tracking through `AttriaxNavigationObserver` and `recordPageView(...)`.
+- Automatic or manual page tracking through `AttriaxNavigationObserver` and `tracking.recordPageView(...)`.
 - Custom events, crash/error reporting, purchase revenue, ad revenue, and standardized ad lifecycle events.
 - Install-referrer access on Android when it is available.
 - Firebase and APNs token registration for uninstall-tracking flows.

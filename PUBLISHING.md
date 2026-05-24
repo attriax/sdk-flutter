@@ -101,7 +101,8 @@ The publish helper follows the release order above and delegates to
 
 ## Web Checklist
 
-- Run `flutter build web` on the public example before release.
+- Run `flutter build web` on `attriax/example` before release.
+- Run `flutter build web` on `example-rich` when a demo change needs web validation.
 - Verify that the hosting environment preserves the full incoming URL,
   including query parameters, until Flutter boots and the SDK initializes.
 - Verify that the production SDK endpoints answer browser CORS preflights.
@@ -120,7 +121,8 @@ The publish helper follows the release order above and delegates to
 ## Documentation Expectations
 
 - Keep the public package example focused on package usage only.
-- Keep internal QA instructions in the internal tester app or this document, not in the public example.
+- Keep richer public-demo instructions in `example-rich/`, not in the package example.
+- Keep internal QA instructions in the non-public internal tester app or this document, not in the public examples.
 - Update every package `CHANGELOG.md` when shipping a new release.
 
 ## Licensing Note

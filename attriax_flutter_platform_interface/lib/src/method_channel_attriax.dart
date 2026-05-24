@@ -2,8 +2,19 @@ import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:flutter/services.dart';
+
+import '../attriax_platform_types.dart'
+  show
+    AttriaxInstallReferrerContext,
+    AttriaxNativeContext,
+    AttriaxPendingCrashReport,
+    AttriaxResolvedUrlOpenMode,
+    AttriaxSkanCoarseValue,
+    AttriaxSkanUpdateResult,
+    AttriaxSkanUpdateStatus,
+    AttriaxTrackingAuthorizationStatus;
+
 import 'attriax_platform_interface.dart';
-import 'types.dart';
 
 /// An implementation of [AttriaxPlatform] that uses method channels.
 class MethodChannelAttriax extends AttriaxPlatform {
@@ -48,6 +59,38 @@ class MethodChannelAttriax extends AttriaxPlatform {
     } on PlatformException catch (error, stackTrace) {
       _logException('collectInstallReferrer', error, stackTrace);
       return platformExceptionInstallReferrerContext(error);
+    }
+  }
+
+  @override
+  Future<String?> readAttributionClipboard() async {
+    try {
+      final result = await _channel.invokeMethod<Object?>(
+        'readAttributionClipboard',
+      );
+      return result is String && result.trim().isNotEmpty ? result.trim() : null;
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException('readAttributionClipboard', error, stackTrace);
+      return null;
+    } on PlatformException catch (error, stackTrace) {
+      _logException('readAttributionClipboard', error, stackTrace);
+      return null;
+    }
+  }
+
+  @override
+  Future<String?> collectWebViewUserAgent() async {
+    try {
+      final result = await _channel.invokeMethod<Object?>(
+        'collectWebViewUserAgent',
+      );
+      return result is String && result.trim().isNotEmpty ? result.trim() : null;
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException('collectWebViewUserAgent', error, stackTrace);
+      return null;
+    } on PlatformException catch (error, stackTrace) {
+      _logException('collectWebViewUserAgent', error, stackTrace);
+      return null;
     }
   }
 

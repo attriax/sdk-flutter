@@ -101,7 +101,7 @@ sdk-flutter/
 ├── attriax_flutter_ios/                # iOS implementation
 ```
 
-The internal tester lives in the sibling repository `../flutter-internal-tester/`.
+The internal tester lives in the sibling repository `../flutter-internal-tester/` and is not part of the public SDK examples.
 
 ### When Adding Features
 
@@ -109,8 +109,9 @@ The internal tester lives in the sibling repository `../flutter-internal-tester/
 2. **Implement on Android** in `attriax_flutter_android/`
 3. **Implement on iOS** in `attriax_flutter_ios/`
 4. **Expose through main package** in `attriax/`
-5. **Demonstrate in the public example** in `attriax/example/`
-6. **Exercise deeper flows in the internal tester** in `../flutter-internal-tester/`
+5. **Demonstrate package usage** in `attriax/example/`
+6. **Add richer public demo coverage when it helps explain the feature** in `example-rich/`
+7. **Exercise internal-only QA flows** in `../flutter-internal-tester/`
 
 ## Testing
 

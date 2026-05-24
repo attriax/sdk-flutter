@@ -1,4 +1,4 @@
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
 
 import 'internal/attriax_runtime.dart';
 
@@ -88,4 +88,10 @@ class AttriaxGdprConsent {
   void setNotRequired() => _runtime.setGdprConsentNotRequired();
 
   void reset() => _runtime.resetGdprConsent();
+
+  /// Requests deletion of device-linked GDPR data on the Attriax backend.
+  ///
+  /// On success, this also clears the local SDK state and returns this instance
+  /// to the pre-init state.
+  Future<void> requestDataErasure() => _runtime.requestGdprDataErasure();
 }

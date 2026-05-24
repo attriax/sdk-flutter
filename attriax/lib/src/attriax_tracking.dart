@@ -1,0 +1,356 @@
+part of 'attriax.dart';
+
+/// Tracking, revenue, token-registration, and user helpers exposed by [Attriax].
+class AttriaxTracking {
+  AttriaxTracking._(this._runtime);
+
+  final AttriaxRuntime _runtime;
+
+  /// Whether event-style tracking is currently enabled.
+  ///
+  /// This affects event, revenue, ad, crash, and user-association helpers in
+  /// this facade, but it does not disable the whole SDK runtime.
+  bool get enabled => _runtime.areEventsEnabled;
+
+  /// Updates whether event-style tracking is enabled.
+  ///
+  /// The runtime state flips immediately and persistence is applied
+  /// asynchronously in the background.
+  set enabled(bool value) => _runtime.setEventsEnabled(enabled: value);
+
+  Future<void> recordEvent(
+    String eventName, {
+    Map<String, Object?>? eventData,
+    bool flushImmediately = false,
+  }) => _runtime.recordEvent(
+    eventName,
+    eventData: eventData,
+    flushImmediately: flushImmediately,
+  );
+
+  Future<void> recordPurchase({
+    required num revenue,
+    String currency = 'USD',
+    bool revenueInMicros = false,
+    String? purchaseType,
+    String? productId,
+    String? transactionId,
+    String? originalTransactionId,
+    String? validationProvider,
+    String? validationEnvironment,
+    String? purchaseToken,
+    String? receiptData,
+    String? signedPayload,
+    String? receiptSignature,
+    bool? isRenewal,
+    int quantity = 1,
+    String? store,
+    String? packageName,
+    bool? voided,
+    bool? test,
+    String? validationId,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
+  }) {
+    final normalizedRevenue = revenue.toDouble();
+    if (!normalizedRevenue.isFinite) {
+      throw ArgumentError.value(revenue, 'revenue', 'revenue must be finite.');
+    }
+    if (quantity <= 0) {
+      throw ArgumentError.value(
+        quantity,
+        'quantity',
+        'quantity must be positive.',
+      );
+    }
+
+    final normalizedRevenueCurrency = _normalizeRevenueCurrency(
+      normalizedRevenue,
+      currency,
+    );
+
+    return _runtime.recordEvent(
+      AttriaxAnalyticsEventKeys.purchase,
+      eventData: <String, Object?>{
+        ...?metadata,
+        AttriaxAnalyticsParamKeys.revenue: normalizedRevenueCurrency.revenue,
+        AttriaxAnalyticsParamKeys.currency: normalizedRevenueCurrency.currency,
+        if (revenueInMicros) AttriaxAnalyticsParamKeys.revenueInMicros: true,
+        AttriaxAnalyticsParamKeys.purchaseType: ?_trimOrNull(purchaseType),
+        AttriaxAnalyticsParamKeys.productId: ?_trimOrNull(productId),
+        AttriaxAnalyticsParamKeys.transactionId: ?_trimOrNull(transactionId),
+        AttriaxAnalyticsParamKeys.originalTransactionId: ?_trimOrNull(
+          originalTransactionId,
+        ),
+        AttriaxAnalyticsParamKeys.validationProvider: ?_trimOrNull(
+          validationProvider,
+        ),
+        AttriaxAnalyticsParamKeys.validationEnvironment: ?_trimOrNull(
+          validationEnvironment,
+        ),
+        AttriaxAnalyticsParamKeys.purchaseToken: ?_trimOrNull(purchaseToken),
+        AttriaxAnalyticsParamKeys.receiptData: ?_trimOrNull(receiptData),
+        AttriaxAnalyticsParamKeys.signedPayload: ?_trimOrNull(signedPayload),
+        AttriaxAnalyticsParamKeys.receiptSignature: ?_trimOrNull(
+          receiptSignature,
+        ),
+        AttriaxAnalyticsParamKeys.isRenewal: ?isRenewal,
+        if (quantity != 1) AttriaxAnalyticsParamKeys.quantity: quantity,
+        AttriaxAnalyticsParamKeys.store: ?_trimOrNull(store),
+        AttriaxAnalyticsParamKeys.packageName: ?_trimOrNull(packageName),
+        AttriaxAnalyticsParamKeys.voided: ?voided,
+        AttriaxAnalyticsParamKeys.test: ?test,
+        AttriaxAnalyticsParamKeys.validationId: ?_trimOrNull(validationId),
+      },
+      flushImmediately: flushImmediately,
+    );
+  }
+
+  Future<void> recordRefund({
+    required num revenue,
+    String currency = 'USD',
+    bool revenueInMicros = false,
+    String? purchaseType,
+    String? productId,
+    String? transactionId,
+    String? originalTransactionId,
+    int quantity = 1,
+    String? store,
+    String? packageName,
+    bool? voided,
+    bool? test,
+    String? reason,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
+  }) {
+    final normalizedRevenue = revenue.toDouble();
+    if (!normalizedRevenue.isFinite) {
+      throw ArgumentError.value(revenue, 'revenue', 'revenue must be finite.');
+    }
+    if (quantity <= 0) {
+      throw ArgumentError.value(
+        quantity,
+        'quantity',
+        'quantity must be positive.',
+      );
+    }
+
+    final normalizedRevenueCurrency = _normalizeRevenueCurrency(
+      normalizedRevenue,
+      currency,
+    );
+    final refundRevenue = normalizedRevenueCurrency.revenue == 0
+        ? 0
+        : -normalizedRevenueCurrency.revenue.abs();
+
+    return _runtime.recordEvent(
+      AttriaxAnalyticsEventKeys.refund,
+      eventData: <String, Object?>{
+        ...?metadata,
+        AttriaxAnalyticsParamKeys.revenue: refundRevenue,
+        AttriaxAnalyticsParamKeys.currency: normalizedRevenueCurrency.currency,
+        AttriaxAnalyticsParamKeys.revenueType: AttriaxAnalyticsEventKeys.refund,
+        if (revenueInMicros) AttriaxAnalyticsParamKeys.revenueInMicros: true,
+        AttriaxAnalyticsParamKeys.purchaseType: ?_trimOrNull(purchaseType),
+        AttriaxAnalyticsParamKeys.productId: ?_trimOrNull(productId),
+        AttriaxAnalyticsParamKeys.transactionId: ?_trimOrNull(transactionId),
+        AttriaxAnalyticsParamKeys.originalTransactionId: ?_trimOrNull(
+          originalTransactionId,
+        ),
+        if (quantity != 1) AttriaxAnalyticsParamKeys.quantity: quantity,
+        AttriaxAnalyticsParamKeys.store: ?_trimOrNull(store),
+        AttriaxAnalyticsParamKeys.packageName: ?_trimOrNull(packageName),
+        AttriaxAnalyticsParamKeys.voided: ?voided,
+        AttriaxAnalyticsParamKeys.test: ?test,
+        AttriaxAnalyticsParamKeys.reason: ?_trimOrNull(reason),
+      },
+      flushImmediately: flushImmediately,
+    );
+  }
+
+  Future<void> registerFirebaseMessagingToken(
+    String? token, {
+    Map<String, Object?>? metadata,
+  }) =>
+      _runtime.registerFirebaseMessagingToken(token: token, metadata: metadata);
+
+  Future<void> registerApplePushToken(
+    String? token, {
+    Map<String, Object?>? metadata,
+  }) => _runtime.registerApplePushToken(token: token, metadata: metadata);
+
+  Future<void> recordAdRevenue({
+    required num revenue,
+    String currency = 'USD',
+    bool revenueInMicros = false,
+    String? adNetwork,
+    String? adFormat,
+    String? adType,
+    String? adPlacement,
+    bool? test,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
+  }) {
+    final normalizedRevenue = revenue.toDouble();
+    if (!normalizedRevenue.isFinite) {
+      throw ArgumentError.value(revenue, 'revenue', 'revenue must be finite.');
+    }
+
+    final normalizedRevenueCurrency = _normalizeRevenueCurrency(
+      normalizedRevenue,
+      currency,
+    );
+
+    return _runtime.recordEvent(
+      AttriaxAnalyticsEventKeys.adRevenue,
+      eventData: <String, Object?>{
+        ...?metadata,
+        AttriaxAnalyticsParamKeys.revenue: normalizedRevenueCurrency.revenue,
+        AttriaxAnalyticsParamKeys.currency: normalizedRevenueCurrency.currency,
+        if (revenueInMicros) AttriaxAnalyticsParamKeys.revenueInMicros: true,
+        AttriaxAnalyticsParamKeys.adNetwork: ?_trimOrNull(adNetwork),
+        AttriaxAnalyticsParamKeys.adFormat: ?_trimOrNull(adFormat),
+        AttriaxAnalyticsParamKeys.adType: ?_trimOrNull(adType),
+        AttriaxAnalyticsParamKeys.adPlacement: ?_trimOrNull(adPlacement),
+        AttriaxAnalyticsParamKeys.test: ?test,
+      },
+      flushImmediately: flushImmediately,
+    );
+  }
+
+  Future<void> recordAdEvent(
+    AttriaxAdEventType type, {
+    String? adNetwork,
+    String? mediationNetwork,
+    String? adUnitId,
+    String? adPlacement,
+    String? adFormat,
+    String? adType,
+    String? failureReason,
+    num? loadLatencyMs,
+    String? rewardType,
+    num? rewardAmount,
+    bool? test,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
+  }) {
+    final normalizedLoadLatencyMs = loadLatencyMs?.toDouble();
+    if (normalizedLoadLatencyMs != null && !normalizedLoadLatencyMs.isFinite) {
+      throw ArgumentError.value(
+        loadLatencyMs,
+        'loadLatencyMs',
+        'loadLatencyMs must be finite.',
+      );
+    }
+
+    final normalizedRewardAmount = rewardAmount?.toDouble();
+    if (normalizedRewardAmount != null && !normalizedRewardAmount.isFinite) {
+      throw ArgumentError.value(
+        rewardAmount,
+        'rewardAmount',
+        'rewardAmount must be finite.',
+      );
+    }
+
+    return _runtime.recordEvent(
+      type.eventName,
+      eventData: <String, Object?>{
+        ...?metadata,
+        AttriaxAnalyticsParamKeys.adNetwork: ?_trimOrNull(adNetwork),
+        AttriaxAnalyticsParamKeys.mediationNetwork: ?_trimOrNull(
+          mediationNetwork,
+        ),
+        AttriaxAnalyticsParamKeys.adUnitId: ?_trimOrNull(adUnitId),
+        AttriaxAnalyticsParamKeys.adPlacement: ?_trimOrNull(adPlacement),
+        AttriaxAnalyticsParamKeys.adFormat: ?_trimOrNull(adFormat),
+        AttriaxAnalyticsParamKeys.adType: ?_trimOrNull(adType),
+        AttriaxAnalyticsParamKeys.failureReason: ?_trimOrNull(failureReason),
+        AttriaxAnalyticsParamKeys.rewardType: ?_trimOrNull(rewardType),
+        AttriaxAnalyticsParamKeys.loadLatencyMs: ?normalizedLoadLatencyMs,
+        AttriaxAnalyticsParamKeys.rewardAmount: ?normalizedRewardAmount,
+        AttriaxAnalyticsParamKeys.test: ?test,
+      },
+      flushImmediately: flushImmediately,
+    );
+  }
+
+  Future<void> recordPageView(
+    String pageName, {
+    String? pageClass,
+    String? pageTitle,
+    String? previousPageName,
+    Map<String, Object?>? parameters,
+    String source = 'manual',
+    bool flushImmediately = false,
+  }) => _runtime.recordPageView(
+    pageName,
+    pageClass: pageClass,
+    pageTitle: pageTitle,
+    previousPageName: previousPageName,
+    parameters: parameters,
+    source: source,
+    flushImmediately: flushImmediately,
+  );
+
+  Future<void> recordError(
+    Object error,
+    StackTrace stackTrace, {
+    bool fatal = false,
+    String source = 'manual',
+    String? reason,
+    Map<String, Object?>? metadata,
+  }) => _runtime.recordError(
+    error,
+    stackTrace,
+    fatal: fatal,
+    source: source,
+    reason: reason,
+    metadata: metadata,
+  );
+
+  Future<void> setUser(String? userId, {String? userName}) =>
+      _runtime.setUser(userId, userName: userName);
+
+  Future<void> setUserProperty(String name, Object? value) =>
+      _runtime.setUserProperty(name, value);
+
+  Future<void> setUserProperties(Map<String, Object?> properties) =>
+      _runtime.setUserProperties(properties);
+
+  Future<void> clearUserProperties({List<String>? propertyNames}) =>
+      _runtime.clearUserProperties(propertyNames: propertyNames);
+
+  _AttriaxNormalizedRevenue _normalizeRevenueCurrency(
+    double revenue,
+    String currency,
+  ) {
+    final normalizedCurrency = _trimOrNull(currency)?.toUpperCase();
+    if (normalizedCurrency != null &&
+        RegExp(r'^[A-Z]{3}$').hasMatch(normalizedCurrency)) {
+      return _AttriaxNormalizedRevenue(
+        revenue: revenue,
+        currency: normalizedCurrency,
+      );
+    }
+
+    debugPrint(
+      '[Attriax][WARNING] Invalid revenue currency "$currency"; defaulting revenue to 0 USD.',
+    );
+    return const _AttriaxNormalizedRevenue(revenue: 0, currency: 'USD');
+  }
+
+  String? _trimOrNull(String? value) {
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+}
+
+class _AttriaxNormalizedRevenue {
+  const _AttriaxNormalizedRevenue({
+    required this.revenue,
+    required this.currency,
+  });
+
+  final double revenue;
+  final String currency;
+}

@@ -37,6 +37,8 @@ When analytics or ad-events consent is denied after a pending period, queued ana
 
 Attribution, user identity, uninstall tracking, and install attribution require attribution consent. If attribution is denied, those requests are withheld rather than anonymized.
 
+When all granted categories are effectively off and the SDK is only allowed to emit anonymous-capable traffic, the Flutter runtime falls back to consent-only persistence. GDPR consent state remains persisted, but runtime-scoped identifiers and queue/session state are cleared from persistent storage.
+
 ## Anonymous Analytics
 
 Anonymous analytics means the SDK does not send Attriax device identity, app-user identity, or external user identity. It is not a promise of irreversible legal anonymization by itself.
@@ -44,6 +46,8 @@ Anonymous analytics means the SDK does not send Attriax device identity, app-use
 Anonymous traffic is bound server-side to anonymous sessions, not to device IDs or app users. The backend derives a daily salted hash from request context and app ID, then groups anonymous events, crashes, sessions, and deep-link diagnostics under an anonymous session ID. Raw IP and user-agent values are not stored in anonymous session rows.
 
 Daily salts limit long-term linkability and are pruned after a short operational window. While a salt exists, anonymous session data should still be treated as daily-scoped pseudonymous data for GDPR analysis. Anonymous analytics is useful for aggregate counts, trends, crash volume, and deep-link diagnostics, but it intentionally does not support user explorer history, uninstall tracking, cross-day identity stitching, or attribution decisions.
+
+Website integrations can rely on the shared JS SDK GDPR flow instead of a separate anonymous fallback path. When only anonymous analytics remains allowed, the SDK can dispatch anonymous-capable traffic without persistent device identity storage.
 
 ## App Responsibilities
 
@@ -53,4 +57,5 @@ Your app should:
 - Present clear consent UI before calling `setConsent`.
 - Store and expose privacy choices in your app settings.
 - Call `reset()` when the app needs to re-ask.
+- Call `requestDataErasure()` when the user requests anonymization of previously tracked SDK data for the current installation.
 - Avoid putting personal data, secrets, or direct identifiers in event names, metadata, page names, crash reasons, or custom properties unless you have an appropriate lawful basis.

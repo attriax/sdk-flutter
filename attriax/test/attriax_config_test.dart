@@ -1,4 +1,4 @@
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

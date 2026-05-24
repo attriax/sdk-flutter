@@ -7,7 +7,7 @@ import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
 import 'package:attriax_flutter/src/internal/attriax_request_manager.dart';
 import 'package:attriax_flutter/src/internal/attriax_runtime_settings_state.dart';
 import 'package:attriax_flutter/src/internal/attriax_session_manager.dart';
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'test_support/attriax_platform_test_support.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

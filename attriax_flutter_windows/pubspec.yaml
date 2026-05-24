@@ -17,9 +17,10 @@ environment:
 resolution: workspace
 
 dependencies:
+  attriax_flutter_platform_interface: ^0.3.0
   flutter:
     sdk: flutter
-  plugin_platform_interface: ^2.0.2
+ 
 
 dev_dependencies:
   flutter_lints: ^6.0.0
@@ -32,6 +33,7 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   plugin:
+    implements: attriax_flutter
     platforms:
       windows:
         pluginClass: AttriaxFlutterWindowsPluginCApi

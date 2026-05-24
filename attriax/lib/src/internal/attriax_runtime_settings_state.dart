@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'attriax_logger.dart';
-import 'attriax_preferences_store.dart';
+import 'attriax_runtime_settings_store.dart';
 
 abstract interface class AttriaxRuntimeSettingsView {
   bool get isEnabled;
@@ -10,12 +10,12 @@ abstract interface class AttriaxRuntimeSettingsView {
 
 class AttriaxRuntimeSettingsState implements AttriaxRuntimeSettingsView {
   AttriaxRuntimeSettingsState({
-    required AttriaxPreferencesStore preferencesStore,
+    required AttriaxRuntimeSettingsWriteStore settingsStore,
     required AttriaxLogger logger,
-  }) : _preferencesStore = preferencesStore,
+  }) : _settingsStore = settingsStore,
        _logger = logger;
 
-  final AttriaxPreferencesStore _preferencesStore;
+  final AttriaxRuntimeSettingsWriteStore _settingsStore;
   final AttriaxLogger _logger;
 
   bool _isEnabled = true;
@@ -90,7 +90,7 @@ class AttriaxRuntimeSettingsState implements AttriaxRuntimeSettingsView {
 
   Future<void> _persistEnabledPreference(bool enabled) async {
     try {
-      await _preferencesStore.setSdkEnabled(enabled: enabled);
+      await _settingsStore.setEnabled(enabled: enabled);
     } catch (error, stackTrace) {
       _logger.warning(
         'Failed to persist the Attriax enabled preference.',
@@ -102,7 +102,7 @@ class AttriaxRuntimeSettingsState implements AttriaxRuntimeSettingsView {
 
   Future<void> _persistEventsEnabledPreference(bool enabled) async {
     try {
-      await _preferencesStore.setEventsEnabled(enabled: enabled);
+      await _settingsStore.setEventsEnabled(enabled: enabled);
     } catch (error, stackTrace) {
       _logger.warning(
         'Failed to persist the Attriax event preference.',

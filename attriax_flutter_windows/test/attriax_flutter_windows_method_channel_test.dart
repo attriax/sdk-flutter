@@ -1,19 +1,32 @@
 import 'package:flutter/services.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_interface.dart';
+import 'package:attriax_flutter_windows/attriax_flutter_windows.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:attriax_flutter_windows/attriax_flutter_windows_method_channel.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
-  final platform = MethodChannelAttriaxFlutterWindows();
-  const channel = MethodChannel('attriax_flutter_windows');
+  final AttriaxPlatform platform = AttriaxWindows();
+  const channel = MethodChannel('attriax');
 
   setUp(() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          channel,
-          (MethodCall methodCall) async => '42',
-        );
+        .setMockMethodCallHandler(channel, (MethodCall methodCall) async {
+          switch (methodCall.method) {
+            case 'collectNativeContext':
+              return <String, Object?>{
+                'metadata': <String, Object?>{'source': 'windows_native'},
+              };
+            case 'collectInstallReferrer':
+              return <String, Object?>{
+                'metadata': <String, Object?>{
+                  'installReferrerStatus': 'unsupported_windows',
+                },
+              };
+            default:
+              return null;
+          }
+        });
   });
 
   tearDown(() {
@@ -21,7 +34,15 @@ void main() {
         .setMockMethodCallHandler(channel, null);
   });
 
-  test('getPlatformVersion', () async {
-    expect(await platform.getPlatformVersion(), '42');
+  test('collectNativeContext uses the shared attriax channel', () async {
+    final context = await platform.collectNativeContext();
+
+    expect(context.metadata['source'], 'windows_native');
+  });
+
+  test('collectInstallReferrer uses the shared attriax channel', () async {
+    final context = await platform.collectInstallReferrer();
+
+    expect(context.metadata['installReferrerStatus'], 'unsupported_windows');
   });
 }

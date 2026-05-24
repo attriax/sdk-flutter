@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:attriax_flutter/attriax_flutter.dart';
 import 'package:attriax_flutter/src/internal/attriax_context_collector.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'test_support/attriax_platform_test_support.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -60,27 +60,43 @@ void main() {
       expect(prefs.getBool(AttriaxPreferencesStore.enabledStorageKey), isTrue);
     });
 
-    test('persists eventsEnabled changes after init', () async {
+    test('persists tracking.enabled changes after init', () async {
       await sdk.init();
 
-      sdk.eventsEnabled = false;
+      sdk.tracking.enabled = false;
       await _flushRuntimeTransitions();
 
-      expect(sdk.eventsEnabled, isFalse);
+      expect(sdk.tracking.enabled, isFalse);
       expect(
         prefs.getBool(AttriaxPreferencesStore.eventsEnabledStorageKey),
         isFalse,
       );
 
-      sdk.eventsEnabled = true;
+      sdk.tracking.enabled = true;
       await _flushRuntimeTransitions();
 
-      expect(sdk.eventsEnabled, isTrue);
+      expect(sdk.tracking.enabled, isTrue);
       expect(
         prefs.getBool(AttriaxPreferencesStore.eventsEnabledStorageKey),
         isTrue,
       );
     });
+
+    test(
+      'respects a pre-init tracking.enabled override during initialization',
+      () async {
+        sdk.tracking.enabled = false;
+        await _flushRuntimeTransitions();
+
+        await sdk.init();
+
+        expect(sdk.tracking.enabled, isFalse);
+        expect(
+          prefs.getBool(AttriaxPreferencesStore.eventsEnabledStorageKey),
+          isFalse,
+        );
+      },
+    );
 
     test(
       'respects a pre-init enabled override during initialization',

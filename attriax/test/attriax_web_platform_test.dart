@@ -1,7 +1,7 @@
 import 'package:attriax_flutter/src/internal/attriax_web_app_info_loader.dart';
 import 'package:attriax_flutter/src/internal/attriax_web_environment_stub.dart';
 import 'package:attriax_flutter/src/internal/attriax_web_platform.dart';
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'test_support/attriax_platform_test_support.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {

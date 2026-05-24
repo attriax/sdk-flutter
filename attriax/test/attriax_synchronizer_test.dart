@@ -2,17 +2,16 @@ import 'dart:async';
 
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
 import 'package:attriax_flutter/src/internal/attriax_app_open_monitor.dart';
-import 'package:attriax_flutter/src/internal/attriax_generated_transport.dart';
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
-import 'package:attriax_flutter/src/internal/attriax_queue.dart';
 import 'package:attriax_flutter/src/internal/attriax_synchronizer.dart';
-import 'package:attriax_api_client/attriax_api_client.dart' as sdk;
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'test_support/attriax_platform_test_support.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:connectivity_plus_platform_interface/connectivity_plus_platform_interface.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'test_support/fake_generated_transport.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -21,7 +20,7 @@ void main() {
     late FakeConnectivityPlatform connectivityPlatform;
     late Connectivity connectivity;
     late AttriaxPreferencesStore preferencesStore;
-    late FakeTransport transport;
+    late FakeGeneratedTransport transport;
     late FakeAppOpenMonitor appOpenMonitor;
     late AttriaxSynchronizer synchronizer;
 
@@ -32,7 +31,7 @@ void main() {
       connectivityPlatform = FakeConnectivityPlatform();
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
-      transport = FakeTransport();
+      transport = FakeGeneratedTransport();
       appOpenMonitor = FakeAppOpenMonitor();
       synchronizer = AttriaxSynchronizer(
         transport: transport,
@@ -121,91 +120,6 @@ AttriaxTrackEventRequest _eventRequest(String eventName) =>
       eventName: eventName,
       eventData: const <String, Object?>{'value': 42},
     );
-
-class FakeTransport implements AttriaxGeneratedTransport {
-  final List<List<AttriaxQueuedRequest>> sentBatches =
-      <List<AttriaxQueuedRequest>>[];
-
-  @override
-  Future<AttriaxTransportSuccess> send(AttriaxApiRequest request) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<AttriaxTransportSuccess> sendBatch(
-    List<AttriaxQueuedRequest> requests,
-  ) async {
-    sentBatches.add(List<AttriaxQueuedRequest>.from(requests));
-    return const AttriaxTransportSuccess(
-      statusCode: 200,
-      response: AttriaxAckResponse(success: true),
-    );
-  }
-
-  @override
-  Future<AttriaxCreateDynamicLinkResult> createDynamicLink(
-    AttriaxCreateDynamicLinkRequest request,
-  ) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<void> registerUninstallToken(Map<String, Object?> payload) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<AttriaxRevenueReceiptValidationResult> validateRevenueReceipt(
-    Map<String, Object?> payload,
-  ) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<AttriaxRevenueUsdConversionResult> convertRevenueToUsd(
-    Map<String, Object?> payload,
-  ) {
-    throw UnimplementedError();
-  }
-
-  @override
-  Future<sdk.SdkGdprConsentStatusDto> checkGdprConsent({
-    required String appToken,
-    required String consentId,
-    String? deviceId,
-    String? deviceIdSource,
-  }) async => sdk.SdkGdprConsentStatusDto(
-    checkedAt: DateTime.utc(2026, 5, 20),
-    needsConsent: false,
-    state: sdk.AppUserGdprConsentState.notRequired,
-  );
-
-  @override
-  Future<sdk.SdkGdprConsentStatusDto> upsertGdprConsent({
-    required String appToken,
-    required String consentId,
-    required sdk.AppUserGdprConsentState state,
-    String? deviceId,
-    String? deviceIdSource,
-    sdk.SdkV1GdprConsentValuesDto? values,
-    String? countryCode,
-    String? regionSource,
-    DateTime? clientOccurredAt,
-  }) async => sdk.SdkGdprConsentStatusDto(
-    checkedAt: clientOccurredAt ?? DateTime.utc(2026, 5, 20),
-    countryCode: countryCode,
-    needsConsent: state == sdk.AppUserGdprConsentState.pending,
-    regionSource: regionSource,
-    state: state,
-    values: values == null
-        ? null
-        : sdk.SdkGdprConsentValuesDto(
-            analytics: values.analytics,
-            attribution: values.attribution,
-            adEvents: values.adEvents,
-          ),
-  );
-}
 
 class FakeConnectivityPlatform extends ConnectivityPlatform {
   @override

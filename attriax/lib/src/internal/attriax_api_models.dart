@@ -1,5 +1,5 @@
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
 import 'package:attriax_api_client/attriax_api_client.dart' as sdk;
+import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
 import 'attriax_json_utils.dart';
 
@@ -606,6 +606,8 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
   required AttriaxContextSnapshot context,
   required String deviceIdSource,
   AttriaxInstallReferrerContext? platformInstallReferrerContext,
+  String? installReferrerOverride,
+  Map<String, Object?> deviceMetadataOverrides = const <String, Object?>{},
   String? sessionId,
   DateTime? sessionStartedAt,
 }) {
@@ -614,7 +616,10 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
   final requestDto = sdk.SdkV1OpenDto(
     app: _generatedAppVersionContext(context.app),
     appToken: config.appToken,
-    device: _generatedDeviceContext(context.device),
+    device: _generatedDeviceContext(
+      context.device,
+      metadataOverrides: deviceMetadataOverrides,
+    ),
     deviceId: context.deviceId,
     deviceIdSource: deviceIdSource,
     googlePlayInstantParam: attriaxBoolValue(
@@ -623,9 +628,9 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
     installBeginTimestampSeconds: _attriaxIntValue(
       installReferrerMetadata['installBeginTimestampSeconds'],
     ),
-    installReferrer: attriaxStringValue(
-      platformInstallReferrerContext?.installReferrer,
-    ),
+    installReferrer:
+        attriaxStringValue(installReferrerOverride) ??
+        attriaxStringValue(platformInstallReferrerContext?.installReferrer),
     isFirstLaunch: context.isFirstLaunch,
     platform: _generatedPlatform(context.platform),
     referrerClickTimestampSeconds: _attriaxIntValue(
@@ -1228,29 +1233,35 @@ sdk.AppVersionContextDto _generatedAppVersionContext(AttriaxAppSnapshot app) =>
       version: attriaxStringValue(app.version),
     );
 
-sdk.DeviceContextDto _generatedDeviceContext(AttriaxDeviceSnapshot device) =>
-    sdk.DeviceContextDto(
-      advertisingId: attriaxStringValue(device.advertisingId),
-      androidId: attriaxStringValue(device.androidId),
-      brand: attriaxStringValue(device.brand),
-      colorDepth: device.colorDepth,
-      devicePixelRatio: device.devicePixelRatio,
-      hardware: attriaxStringValue(device.hardware),
-      isPhysicalDevice: device.isPhysicalDevice,
-      language: attriaxStringValue(device.language),
-      manufacturer: attriaxStringValue(device.manufacturer),
-      metadata: _generatedOptionalJsonObjectMap(device.metadata),
-      model: attriaxStringValue(device.model),
-      name: attriaxStringValue(device.name),
-      osVersion: attriaxStringValue(device.osVersion),
-      screenHeight: device.screenHeight,
-      screenResolution: attriaxStringValue(device.screenResolution),
-      screenWidth: device.screenWidth,
-      supportedAbis: device.supportedAbis.isEmpty
-          ? null
-          : List<String>.from(device.supportedAbis),
-      timezone: attriaxStringValue(device.timezone),
-    );
+sdk.DeviceContextDto _generatedDeviceContext(
+  AttriaxDeviceSnapshot device, {
+  Map<String, Object?> metadataOverrides = const <String, Object?>{},
+}) {
+  final metadata = <String, Object?>{...device.metadata, ...metadataOverrides};
+
+  return sdk.DeviceContextDto(
+    advertisingId: attriaxStringValue(device.advertisingId),
+    androidId: attriaxStringValue(device.androidId),
+    brand: attriaxStringValue(device.brand),
+    colorDepth: device.colorDepth,
+    devicePixelRatio: device.devicePixelRatio,
+    hardware: attriaxStringValue(device.hardware),
+    isPhysicalDevice: device.isPhysicalDevice,
+    language: attriaxStringValue(device.language),
+    manufacturer: attriaxStringValue(device.manufacturer),
+    metadata: _generatedOptionalJsonObjectMap(metadata),
+    model: attriaxStringValue(device.model),
+    name: attriaxStringValue(device.name),
+    osVersion: attriaxStringValue(device.osVersion),
+    screenHeight: device.screenHeight,
+    screenResolution: attriaxStringValue(device.screenResolution),
+    screenWidth: device.screenWidth,
+    supportedAbis: device.supportedAbis.isEmpty
+        ? null
+        : List<String>.from(device.supportedAbis),
+    timezone: attriaxStringValue(device.timezone),
+  );
+}
 
 sdk.SdkVersionContextDto _generatedSdkVersionContext(
   AttriaxSdkSnapshot sdkSnapshot,

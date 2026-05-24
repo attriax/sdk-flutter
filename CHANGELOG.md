@@ -5,6 +5,23 @@ All notable changes to the Attriax Flutter SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-05-24
+
+### Added
+- `attriax.tracking` as the focused Flutter facade for custom events, page views, revenue, ads, uninstall-token registration, user identity, and manual error reporting.
+- A richer public demo app under `example-rich/` so the publishable package example can stay integration-focused.
+
+### Changed
+- Breaking: removed the legacy top-level tracking, ad, revenue, uninstall-token, and identity methods from `Attriax`; use `attriax.tracking.*` instead.
+- Breaking: moved the event-delivery toggle from `attriax.eventsEnabled` to `attriax.tracking.enabled`.
+- Breaking: moved dynamic-link creation and manual deep-link forwarding from the root API to `attriax.deepLinks.createDynamicLink(...)` and `attriax.deepLinks.recordDeepLink(...)`.
+- Breaking: removed the remaining root ATT aliases in favor of `attriax.consent.att.getTrackingAuthorizationStatus()` and `attriax.consent.att.requestTrackingAuthorization()`.
+- `validateReceipt(...)` stays on the root `Attriax` entrypoint and remains available even when tracking is disabled or GDPR consent is still pending.
+- The package example now stays minimal and package-focused, while the broader demo surface lives in `example-rich/`.
+
+### Fixed
+- Frontend setup snippets and Flutter-facing docs now reference the new facade-based API surface instead of the removed top-level methods.
+
 ## [0.3.0] - 2026-05-21
 
 ### Added
@@ -27,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A rebuilt public example app with Firebase/share integration, push-token flows, deep-link inspection, and broader startup/runtime integration coverage.
 
 ### Changed
-- Breaking: `Attriax.recordDeepLink()` now resolves to `AttriaxDeepLinkEvent?` after browser and deferred handling instead of the lower-level `AttriaxDeepLinkResolution?` wrapper.
+- Breaking: `AttriaxDeepLinks.recordDeepLink()` now resolves to `AttriaxDeepLinkEvent?` after browser and deferred handling instead of the lower-level `AttriaxDeepLinkResolution?` wrapper.
 - Breaking: deeplinks are now reworked, the stream returns already resolved events, while you can use rawStream for the install raw AppLink events.
 - Events are now enhanced, look for the new `AttriaxAnalyticsEventKeys` and `AttriaxAnalyticsParamKeys` exports for the shared event vocabulary. Useful for SKAN conversion-value rules and consistent event naming across your app and the dashboard.
 - Startup app-open monitoring now waits for the app-open lifecycle before resolving deferred deep links and session referrers.

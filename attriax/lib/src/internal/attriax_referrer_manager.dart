@@ -1,16 +1,15 @@
 import 'dart:async';
 
-import 'package:attriax_flutter_platform_interface/attriax_flutter_platform_interface.dart';
+import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
 
 import 'attriax_app_open_monitor.dart';
-import 'attriax_api_models.dart';
 import 'attriax_deep_link_manager.dart';
 import 'attriax_platform_install_referrer_manager.dart';
 import 'attriax_preferences_store.dart';
 
 class AttriaxReferrerManager {
   AttriaxReferrerManager({
-    required AttriaxPreferencesStore preferencesStore,
+    required AttriaxInstallReferrerDetailsStore preferencesStore,
     required AttriaxAppOpenMonitor appOpenMonitor,
     required AttriaxDeepLinkManager deepLinkManager,
     required AttriaxPlatformInstallReferrerManager
@@ -22,7 +21,7 @@ class AttriaxReferrerManager {
        _platformInstallReferrerManager = platformInstallReferrerManager,
        _currentSessionIdProvider = currentSessionIdProvider ?? _noSessionId;
 
-  final AttriaxPreferencesStore _preferencesStore;
+  final AttriaxInstallReferrerDetailsStore _preferencesStore;
   final AttriaxAppOpenMonitor _appOpenMonitor;
   final AttriaxDeepLinkManager _deepLinkManager;
   final AttriaxPlatformInstallReferrerManager _platformInstallReferrerManager;
@@ -79,10 +78,14 @@ class AttriaxReferrerManager {
   }
 
   Future<void> prepareForEnabledState() async {
+    final wasLocalInstallReferrerOnly = _localInstallReferrerOnly;
     _enabled = true;
     _localInstallReferrerOnly = false;
     _installObservationGeneration += 1;
     _installObservationFuture = null;
+    if (wasLocalInstallReferrerOnly) {
+      _resetInstallReferrerResolution();
+    }
     await _restoreStoredInstallReferrers();
     _ensureDeepLinkSubscription();
     _syncSessionScope();
@@ -111,11 +114,30 @@ class AttriaxReferrerManager {
     _localInstallReferrerOnly = true;
     _installObservationGeneration += 1;
     _installObservationFuture = null;
-    await _restoreStoredInstallReferrers();
+    await _platformInstallReferrerManager.clearStoredReferrer();
+    _setOriginalInstallValue(null);
+    _setReinstallValue(null);
+    await Future.wait(<Future<void>>[
+      _preferencesStore.clearStoredInstallReferrerDetails(),
+      _preferencesStore.clearStoredReinstallReferrerDetails(),
+    ]);
     _ensureDeepLinkSubscription();
     _syncSessionScope();
     _ensureInstallObservationStarted();
     _ensureSessionStartupObservationStarted();
+  }
+
+  Future<String?> waitForRawInstallReferrer() async {
+    if (!_didInit) {
+      return Future<String?>.error(
+        StateError('Attriax SDK not initialized. Call init() first.'),
+      );
+    }
+
+    final value = await _platformInstallReferrerManager
+        .loadRawInstallReferrer();
+    final trimmed = value?.trim();
+    return trimmed == null || trimmed.isEmpty ? null : trimmed;
   }
 
   Future<AttriaxInstallReferrerDetails?> waitForOriginalInstallReferrer() {
@@ -275,24 +297,12 @@ class AttriaxReferrerManager {
   Future<void> _observeInstallReferrers(int generation) async {
     try {
       if (_localInstallReferrerOnly) {
-        final context = await _platformInstallReferrerManager.load();
         if (generation != _installObservationGeneration) {
           return;
         }
 
-        final details = attriaxBuildLocalInstallReferrerDetails(context);
-        _setOriginalInstallValue(details);
-        _setReinstallValue(details);
-        await Future.wait(<Future<void>>[
-          _preferencesStore.setStoredInstallReferrerDetails(
-            isLoaded: true,
-            details: details,
-          ),
-          _preferencesStore.setStoredReinstallReferrerDetails(
-            isLoaded: true,
-            details: details,
-          ),
-        ]);
+        _setOriginalInstallValue(null);
+        _setReinstallValue(null);
         return;
       }
 
@@ -446,6 +456,19 @@ class AttriaxReferrerManager {
         _originalInstallLoaded || _originalInstallError != null;
     final reinstallResolved = _reinstallLoaded || _reinstallError != null;
     return originalResolved && reinstallResolved;
+  }
+
+  void _resetInstallReferrerResolution() {
+    _originalInstallCompleter = null;
+    _originalInstallValue = null;
+    _originalInstallLoaded = false;
+    _originalInstallError = null;
+    _originalInstallStackTrace = null;
+    _reinstallCompleter = null;
+    _reinstallValue = null;
+    _reinstallLoaded = false;
+    _reinstallError = null;
+    _reinstallStackTrace = null;
   }
 
   bool _isSessionObservationCurrent(int generation, String? sessionId) =>

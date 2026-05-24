@@ -94,12 +94,12 @@ class AttriaxQueuedRequest {
 /// Persists the outbound request queue to [SharedPreferences].
 class AttriaxQueueManager {
   AttriaxQueueManager({
-    required AttriaxPreferencesStore preferencesStore,
+    required AttriaxQueueStore preferencesStore,
     required int maxQueueSize,
   }) : _preferencesStore = preferencesStore,
        _maxQueueSize = maxQueueSize;
 
-  final AttriaxPreferencesStore _preferencesStore;
+  final AttriaxQueueStore _preferencesStore;
   final int _maxQueueSize;
   Future<void> _operationLock = Future<void>.value();
 
