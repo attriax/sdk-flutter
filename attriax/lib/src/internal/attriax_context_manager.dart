@@ -74,21 +74,8 @@ class AttriaxContextManager implements AttriaxTrackingContext {
   }
 
   Future<void> init() async {
-    final storedDeviceData = await _preferencesStore.restoreDeviceData(
-      deviceIdFactory: attriaxGenerateId,
-    );
-
-    _deviceId ??= storedDeviceData.deviceId;
-    _deviceIdSource ??= storedDeviceData.deviceIdSource;
-    await _ensureResolvedDeviceIdentity(
-      hasPersistedDeviceId: storedDeviceData.hasPersistedDeviceId,
-    );
-
-    _isFirstLaunch = storedDeviceData.isFirstLaunch;
-    _snapshot = await _contextCollector.collectContextSnapshot(
-      deviceId: requiredDeviceId,
-      isFirstLaunch: _isFirstLaunch,
-    );
+    await _restoreDeviceState();
+    await refreshSnapshot(waitForTrackingAuthorization: false);
   }
 
   Future<AttriaxTrackingAuthorizationStatus> requestTrackingAuthorization({
@@ -104,8 +91,23 @@ class AttriaxContextManager implements AttriaxTrackingContext {
   Future<void> setAutomaticCrashReportingEnabled({required bool enabled}) =>
       _contextCollector.setAutomaticCrashReportingEnabled(enabled: enabled);
 
-  Future<AttriaxContextSnapshot> ensureResolvedForAppOpen() =>
-      Future<AttriaxContextSnapshot>.value(requiredSnapshot);
+  Future<AttriaxContextSnapshot> refreshSnapshot({
+    bool waitForTrackingAuthorization = false,
+  }) async {
+    _snapshot = await _contextCollector.collectContextSnapshot(
+      deviceId: requiredDeviceId,
+      isFirstLaunch: _isFirstLaunch,
+      waitForTrackingAuthorization: waitForTrackingAuthorization,
+    );
+
+    return requiredSnapshot;
+  }
+
+  Future<AttriaxContextSnapshot> ensureResolvedForAppOpen({
+    bool waitForTrackingAuthorization = true,
+  }) => refreshSnapshot(
+    waitForTrackingAuthorization: waitForTrackingAuthorization,
+  );
 
   void reset() {
     _deviceId = null;
@@ -157,5 +159,19 @@ class AttriaxContextManager implements AttriaxTrackingContext {
     _logger.verbose(
       'Using device ID (${resolvedDeviceId.source}): $requiredDeviceId',
     );
+  }
+
+  Future<void> _restoreDeviceState() async {
+    final storedDeviceData = await _preferencesStore.restoreDeviceData(
+      deviceIdFactory: attriaxGenerateId,
+    );
+
+    _deviceId ??= storedDeviceData.deviceId;
+    _deviceIdSource ??= storedDeviceData.deviceIdSource;
+    await _ensureResolvedDeviceIdentity(
+      hasPersistedDeviceId: storedDeviceData.hasPersistedDeviceId,
+    );
+
+    _isFirstLaunch = storedDeviceData.isFirstLaunch;
   }
 }

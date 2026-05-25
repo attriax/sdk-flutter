@@ -134,8 +134,11 @@ class AttriaxContextCollector implements AttriaxContextRuntimeServices {
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
+    bool waitForTrackingAuthorization = false,
   }) async {
-    final nativeContext = await _nativeContextCapture.collect();
+    final nativeContext = await _nativeContextCapture.collect(
+      waitForTrackingAuthorization: waitForTrackingAuthorization,
+    );
     return _snapshotBuilder.build(
       nativeContext: nativeContext,
       deviceId: deviceId,

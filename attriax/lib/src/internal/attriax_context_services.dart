@@ -20,6 +20,7 @@ abstract interface class AttriaxContextSnapshotSource {
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
+    bool waitForTrackingAuthorization,
   });
 }
 

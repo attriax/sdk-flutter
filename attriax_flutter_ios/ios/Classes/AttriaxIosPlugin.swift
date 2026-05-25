@@ -22,6 +22,7 @@ private func attriaxHandleUncaughtException(_ exception: NSException) {
 }
 
 private func attriaxReadEntitlementValue(_ key: String) -> Any? {
+#if os(macOS)
     guard let task = SecTaskCreateFromSelf(nil) else {
         return nil
     }
@@ -34,6 +35,20 @@ private func attriaxReadEntitlementValue(_ key: String) -> Any? {
     )
     error?.release()
     return value
+#else
+    let infoDictionary = Bundle.main.infoDictionary ?? [:]
+
+    switch key {
+    case "application-identifier":
+        return infoDictionary["AttriaxApplicationIdentifier"]
+    case "com.apple.developer.team-identifier":
+        return infoDictionary["AttriaxTeamIdentifier"]
+    case "com.apple.developer.associated-domains":
+        return infoDictionary["AttriaxAssociatedDomains"]
+    default:
+        return nil
+    }
+#endif
 }
 
 private func attriaxReadEntitlementString(_ key: String) -> String? {

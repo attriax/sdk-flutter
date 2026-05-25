@@ -58,7 +58,7 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
     Map<String, Object?> deviceMetadataOverrides = const <String, Object?>{},
     Future<void> Function(AttriaxAppOpenResult? result)? onCompleted,
   }) async {
-    final context = _contextManager.requiredSnapshot;
+    final context = await _contextManager.ensureResolvedForAppOpen();
     late final AttriaxInstallReferrerContext platformInstallReferrerContext;
     try {
       platformInstallReferrerContext = await _platformInstallReferrerManager

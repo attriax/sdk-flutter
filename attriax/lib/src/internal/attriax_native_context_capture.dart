@@ -39,7 +39,7 @@ class AttriaxNativeContextCapture {
     required AttriaxPlatformDeviceIdentityResolver deviceIdentityResolver,
   }) async {
     try {
-      final nativeContext = await collect();
+      final nativeContext = await collect(waitForTrackingAuthorization: false);
       final resolved = deviceIdentityResolver.resolveFromNativeContext(
         nativeContext,
       );
