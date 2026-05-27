@@ -78,6 +78,44 @@ void main() {
         expect(contextServices.getTrackingAuthorizationStatusCallCount, 1);
       },
     );
+
+    test(
+      'can initialize anonymous startup context without device identity',
+      () async {
+        final contextServices = _FakeContextRuntimeServices(
+          resolvedDeviceId: const AttriaxResolvedDeviceId(
+            value: 'native_device_id',
+            source: 'android_ssaid',
+          ),
+          timezone: 'Europe/Berlin',
+        );
+        final deviceStore = _FakeContextIdentityStore(
+          storedDeviceData: const AttriaxStoredDeviceData(
+            deviceId: 'stored_device_id',
+            hasPersistedDeviceId: false,
+            isFirstLaunch: true,
+          ),
+        );
+        final manager = AttriaxContextManager(
+          contextCollector: contextServices,
+          preferencesStore: deviceStore,
+          logger: AttriaxLogger(enableDebugLogs: false),
+        );
+
+        await manager.init(allowDeviceIdentity: false);
+
+        expect(manager.deviceId, isNull);
+        expect(manager.deviceIdSource, isNull);
+        expect(manager.isFirstLaunch, isTrue);
+        expect(manager.snapshot?.deviceId, isNull);
+        expect(manager.snapshot?.device.timezone, 'Europe/Berlin');
+        expect(contextServices.collectContextSnapshotCallCount, 0);
+        expect(contextServices.resolvePreferredDeviceIdCallCount, 0);
+        expect(contextServices.anonymousSnapshotBuildCount, 1);
+        expect(deviceStore.persistedDeviceId, isNull);
+        expect(deviceStore.persistedDeviceIdSource, isNull);
+      },
+    );
   });
 }
 
@@ -95,6 +133,9 @@ class _FakeContextRuntimeServices implements AttriaxContextRuntimeServices {
 
   String? collectedDeviceId;
   bool? collectedIsFirstLaunch;
+  int collectContextSnapshotCallCount = 0;
+  int resolvePreferredDeviceIdCallCount = 0;
+  int anonymousSnapshotBuildCount = 0;
   bool crashReportingEnabled = false;
   int requestTrackingAuthorizationCallCount = 0;
   int getTrackingAuthorizationStatusCallCount = 0;
@@ -103,7 +144,9 @@ class _FakeContextRuntimeServices implements AttriaxContextRuntimeServices {
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
+    bool waitForTrackingAuthorization = false,
   }) async {
+    collectContextSnapshotCallCount += 1;
     collectedDeviceId = deviceId;
     collectedIsFirstLaunch = isFirstLaunch;
     return AttriaxContextSnapshot(
@@ -120,6 +163,29 @@ class _FakeContextRuntimeServices implements AttriaxContextRuntimeServices {
         packageName: 'com.attriax.test',
       ),
       device: const AttriaxDeviceSnapshot(model: 'Pixel 9'),
+    );
+  }
+
+  @override
+  AttriaxContextSnapshot buildAnonymousStartupSnapshot({
+    required bool isFirstLaunch,
+    String? timezone,
+  }) {
+    anonymousSnapshotBuildCount += 1;
+    return AttriaxContextSnapshot(
+      platform: AttriaxPlatformType.android,
+      deviceId: null,
+      isFirstLaunch: isFirstLaunch,
+      sdk: const AttriaxSdkSnapshot(
+        apiVersion: attriaxSdkApiVersion,
+        packageVersion: attriaxSdkPackageVersion,
+      ),
+      app: const AttriaxAppSnapshot(
+        version: '1.0.0',
+        buildNumber: '1',
+        packageName: 'com.attriax.test',
+      ),
+      device: AttriaxDeviceSnapshot(timezone: timezone),
     );
   }
 
@@ -141,7 +207,10 @@ class _FakeContextRuntimeServices implements AttriaxContextRuntimeServices {
   @override
   Future<AttriaxResolvedDeviceId> resolvePreferredDeviceId({
     required String fallbackDeviceId,
-  }) async => resolvedDeviceId;
+  }) async {
+    resolvePreferredDeviceIdCallCount += 1;
+    return resolvedDeviceId;
+  }
 
   @override
   Future<String?> resolveDeviceTimezone() async => timezone;
@@ -160,6 +229,10 @@ class _FakeContextIdentityStore implements AttriaxContextIdentityStore {
   final AttriaxStoredDeviceData storedDeviceData;
   String? persistedDeviceId;
   String? persistedDeviceIdSource;
+
+  @override
+  Future<bool> restoreFirstLaunchState() async =>
+      storedDeviceData.isFirstLaunch;
 
   @override
   Future<AttriaxStoredDeviceIdentity> ensureDeviceIdentity({

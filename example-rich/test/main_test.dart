@@ -459,7 +459,7 @@ class FakeAttriax extends Fake implements Attriax {
 
   @override
   AttriaxSdkSnapshot? get sdkSnapshot =>
-      const AttriaxSdkSnapshot(apiVersion: 'v1', packageVersion: '0.3.0');
+      const AttriaxSdkSnapshot(apiVersion: 'v1', packageVersion: '0.4.0');
 
   @override
   Future<void> init({bool? enabled}) async {}

@@ -49,12 +49,16 @@ lib/src/model/sdk_v1_batch_dto.dart
 lib/src/model/sdk_v1_batch_item_dto.dart
 lib/src/model/sdk_v1_batch_response_dto.dart
 lib/src/model/sdk_v1_batch_response_envelope_dto.dart
+lib/src/model/sdk_v1_config_dto.dart
+lib/src/model/sdk_v1_config_response_dto.dart
+lib/src/model/sdk_v1_config_response_envelope_dto.dart
 lib/src/model/sdk_v1_deep_link_resolve_dto.dart
 lib/src/model/sdk_v1_deep_link_resolve_response_dto.dart
 lib/src/model/sdk_v1_deep_link_resolve_response_envelope_dto.dart
 lib/src/model/sdk_v1_gdpr_consent_check_dto.dart
 lib/src/model/sdk_v1_gdpr_consent_values_dto.dart
 lib/src/model/sdk_v1_gdpr_consent_write_dto.dart
+lib/src/model/sdk_v1_gdpr_data_erase_dto.dart
 lib/src/model/sdk_v1_open_dto.dart
 lib/src/model/sdk_v1_open_response_dto.dart
 lib/src/model/sdk_v1_open_response_envelope_dto.dart

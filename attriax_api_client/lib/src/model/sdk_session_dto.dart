@@ -96,7 +96,7 @@ class SdkSessionDto {
   @JsonKey(name: r'sessionId', required: true, includeIfNull: false)
   final String sessionId;
 
-  /// Milliseconds since the session started.
+  /// Milliseconds since the session started. Fractional values are allowed.
   @JsonKey(
     name: r'sessionRelativeTimeMs',
     required: false,

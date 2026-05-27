@@ -26,6 +26,11 @@ SdkV1DeepLinkResolveDto _$SdkV1DeepLinkResolveDtoFromJson(
       (v) => $enumDecode(_$PlatformEnumMap, v),
     ),
     rawUrl: $checkedConvert('rawUrl', (v) => v as String?),
+    sessionId: $checkedConvert('sessionId', (v) => v as String?),
+    sessionRelativeTimeMs: $checkedConvert(
+      'sessionRelativeTimeMs',
+      (v) => v as num?,
+    ),
     source_: $checkedConvert('source', (v) => v as String?),
   );
   return val;
@@ -42,6 +47,8 @@ Map<String, dynamic> _$SdkV1DeepLinkResolveDtoToJson(
   'metadata': ?instance.metadata,
   'platform': _$PlatformEnumMap[instance.platform]!,
   'rawUrl': ?instance.rawUrl,
+  'sessionId': ?instance.sessionId,
+  'sessionRelativeTimeMs': ?instance.sessionRelativeTimeMs,
   'source': ?instance.source_,
 };
 

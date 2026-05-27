@@ -34,8 +34,6 @@ class SdkCreateDynamicLinkDto {
 
     this.previewDescription,
 
-    this.previewImagePath,
-
     this.previewTitle,
 
     this.utmCampaign,
@@ -76,9 +74,6 @@ class SdkCreateDynamicLinkDto {
   @JsonKey(name: r'previewDescription', required: false, includeIfNull: false)
   final String? previewDescription;
 
-  @JsonKey(name: r'previewImagePath', required: false, includeIfNull: false)
-  final String? previewImagePath;
-
   @JsonKey(name: r'previewTitle', required: false, includeIfNull: false)
   final String? previewTitle;
 
@@ -110,7 +105,6 @@ class SdkCreateDynamicLinkDto {
           other.name == name &&
           other.prefix == prefix &&
           other.previewDescription == previewDescription &&
-          other.previewImagePath == previewImagePath &&
           other.previewTitle == previewTitle &&
           other.utmCampaign == utmCampaign &&
           other.utmContent == utmContent &&
@@ -129,7 +123,6 @@ class SdkCreateDynamicLinkDto {
       name.hashCode +
       prefix.hashCode +
       previewDescription.hashCode +
-      previewImagePath.hashCode +
       previewTitle.hashCode +
       utmCampaign.hashCode +
       utmContent.hashCode +

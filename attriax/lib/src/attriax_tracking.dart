@@ -18,6 +18,17 @@ class AttriaxTracking {
   /// asynchronously in the background.
   set enabled(bool value) => _runtime.setEventsEnabled(enabled: value);
 
+  /// Whether GDPR-safe anonymous tracking is currently allowed.
+  ///
+  /// Anonymous tracking omits Attriax device identity and lets analytics,
+  /// crashes, sessions, and deep-link diagnostics keep flowing while GDPR
+  /// consent is unresolved or only partially granted.
+  bool get anonymousTrackingEnabled => _runtime.anonymousTrackingEnabled;
+
+  /// Updates whether GDPR-safe anonymous tracking is allowed.
+  set anonymousTrackingEnabled(bool value) =>
+      _runtime.setAnonymousTrackingEnabled(enabled: value);
+
   Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,

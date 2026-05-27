@@ -14,7 +14,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  attriax_flutter: ^0.3.0
+  attriax_flutter: ^0.4.0
 ```
 
 For local workspace development inside this repository, keep using the existing path-based workspace setup instead of a hosted dependency.
@@ -138,6 +138,10 @@ route manually with `attriax.deepLinks.recordDeepLink(uri: incomingUri, source: 
 wait for a GDPR decision before sending GDPR-gated tracking activity.
 `gdprAutoDetect` defaults to `true` and lets the SDK derive an initial GDPR
 state automatically.
+`anonymousTracking` defaults to `true` and keeps anonymous-capable traffic
+flowing without `deviceId` while consent is unresolved. Set it to `false` when
+your app wants to buffer that traffic locally until consent allows identified
+delivery.
 
 ```dart
 final needsLocalConsent = await attriax.consent.gdpr.needsConsent(
@@ -165,7 +169,7 @@ attriax.consent.gdpr.reset();
 Use `state`, `values`, and `isWaitingForConsent` to drive your privacy UI and
 settings screen.
 
-See [doc/gdpr-and-anonymous-analytics.md](doc/gdpr-and-anonymous-analytics.md) for the full GDPR and anonymous analytics behavior, including how `unknown` and `pending` states dispatch anonymous-capable traffic immediately and how denied analytics is stored without device identity.
+See [doc/gdpr-and-anonymous-analytics.md](doc/gdpr-and-anonymous-analytics.md) for the full GDPR and anonymous analytics behavior, including how anonymous tracking avoids device identity before consent and how to opt into local buffering instead.
 
 ## Dynamic Link Creation
 
@@ -195,6 +199,7 @@ Notes:
 
 - `prefix` is optional and only works when the current app plan allows custom prefixes.
 - `destinationUrl` may be omitted when the app already defines a default dynamic-link destination.
+- The preview image always comes from the app-level dynamic-link defaults.
 - `data` must be a JSON object and is returned later in resolved deep-link payloads.
 
 ## Page Tracking
@@ -484,6 +489,7 @@ final attriax = Attriax(
     appToken: 'ax_your_app_token',
     collectAdvertisingId: false,
     automaticCrashReportingEnabled: false,
+    anonymousTracking: true,
     requestTrackingAuthorizationOnInit: false,
     trackingAuthorizationStatusTimeout: Duration(seconds: 15),
   ),
@@ -493,6 +499,7 @@ final attriax = Attriax(
 - `collectAdvertisingId` controls GAID collection on Android and IDFA collection on Apple platforms.
 - When `collectAdvertisingId` is `false`, the SDK stops using ATT and advertising IDs for its own native context collection, but host apps can still call `consent.att.getTrackingAuthorizationStatus()` and `consent.att.requestTrackingAuthorization()` for their own consent flow.
 - `automaticCrashReportingEnabled` controls automatic Flutter/native crash handlers. Manual `tracking.recordError()` calls remain available when automatic handlers are disabled.
+- `anonymousTracking` keeps anonymous-capable GDPR traffic flowing without device identity while consent is unresolved. Disable it if your app prefers to buffer that activity locally until consent allows identified delivery.
 - `requestTrackingAuthorizationOnInit` requests ATT during SDK startup when advertising ID collection is enabled, then waits for the user-driven result before iOS context collection continues. Add `NSUserTrackingUsageDescription` to `ios/Runner/Info.plist` before enabling this on iOS.
 - `trackingAuthorizationStatusTimeout` only applies when `requestTrackingAuthorizationOnInit` is `false`. During startup, the SDK polls ATT status for up to that duration so an app-managed consent flow can still call `consent.att.requestTrackingAuthorization()` without being raced by SDK initialization.
 

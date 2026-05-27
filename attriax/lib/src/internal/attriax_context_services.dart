@@ -22,6 +22,11 @@ abstract interface class AttriaxContextSnapshotSource {
     required bool isFirstLaunch,
     bool waitForTrackingAuthorization,
   });
+
+  AttriaxContextSnapshot buildAnonymousStartupSnapshot({
+    required bool isFirstLaunch,
+    String? timezone,
+  });
 }
 
 abstract interface class AttriaxContextDeviceIdentityResolver {

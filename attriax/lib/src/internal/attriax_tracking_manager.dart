@@ -6,6 +6,9 @@ import 'attriax_api_models.dart';
 import 'attriax_consent_manager.dart';
 import 'attriax_context_manager.dart';
 import 'attriax_logger.dart';
+import 'attriax_page_title_stub.dart'
+  if (dart.library.js_interop) 'attriax_page_title_web.dart'
+  as page_title;
 import 'attriax_request_manager.dart';
 import 'attriax_runtime_settings_state.dart';
 import 'attriax_skan_manager.dart';
@@ -24,6 +27,7 @@ class AttriaxTrackingManager {
     required AttriaxRequestManager requestManager,
     required AttriaxTrackedSessionPreparer sessionManager,
     AttriaxSkanManager? skanManager,
+    String? Function()? documentTitleProvider,
   }) : _config = config,
        _logger = logger,
        _clock = clock,
@@ -32,7 +36,9 @@ class AttriaxTrackingManager {
        _settingsState = settingsState,
        _requestManager = requestManager,
        _sessionManager = sessionManager,
-       _skanManager = skanManager;
+       _skanManager = skanManager,
+       _documentTitleProvider =
+           documentTitleProvider ?? page_title.currentAttriaxDocumentTitle;
 
   final AttriaxConfig _config;
   final AttriaxLogger _logger;
@@ -43,6 +49,7 @@ class AttriaxTrackingManager {
   final AttriaxRequestManager _requestManager;
   final AttriaxTrackedSessionPreparer _sessionManager;
   final AttriaxSkanManager? _skanManager;
+  final String? Function() _documentTitleProvider;
 
   Future<void> recordEvent(
     String eventName, {
@@ -107,7 +114,8 @@ class AttriaxTrackingManager {
     }
 
     final normalizedPageClass = _trimOrNull(pageClass);
-    final normalizedPageTitle = _trimOrNull(pageTitle);
+    final normalizedPageTitle =
+      _trimOrNull(pageTitle) ?? _trimOrNull(_documentTitleProvider());
     final normalizedPreviousPageName = _trimOrNull(previousPageName);
 
     final pageViewEventData = <String, Object?>{

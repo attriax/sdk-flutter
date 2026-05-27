@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+### Changed
+- Package version alignment for the federated 0.4.0 grouped-tracking and anonymous-GDPR release. No Windows-only public API changes are required.
+
 ## 0.3.0
 
 ### Changed

@@ -18,6 +18,35 @@ class AttriaxContextSnapshotBuilder {
   final AttriaxPlatformType _platformType;
   final AttriaxNativeContextMetadata _metadata;
 
+  AttriaxContextSnapshot buildAnonymousStartupSnapshot({
+    required bool isFirstLaunch,
+    String? timezone,
+  }) {
+    final normalizedTimezone =
+        _metadata.emptyToNull(timezone) ??
+        _metadata.emptyToNull(DateTime.now().timeZoneName);
+
+    return AttriaxContextSnapshot(
+      platform: _platformType,
+      deviceId: null,
+      isFirstLaunch: isFirstLaunch,
+      sdk: AttriaxSdkSnapshot(
+        apiVersion: attriaxSdkApiVersion,
+        packageVersion: attriaxSdkPackageVersion,
+        metadata: _collectSdkMetadata(),
+      ),
+      app: AttriaxAppSnapshot(
+        version: _config.appVersion,
+        buildNumber: _config.appBuildNumber,
+        packageName: _config.appPackageName,
+      ),
+      device: AttriaxDeviceSnapshot(
+        language: PlatformDispatcher.instance.locale.toLanguageTag(),
+        timezone: normalizedTimezone,
+      ),
+    );
+  }
+
   AttriaxContextSnapshot build({
     required AttriaxNativeContext nativeContext,
     required String deviceId,

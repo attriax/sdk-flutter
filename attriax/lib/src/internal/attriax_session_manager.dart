@@ -87,7 +87,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
 
   Future<AttriaxSessionRestoreResult> restoreOrStart() async {
     final context = _contextManager.requiredSnapshot;
-    final deviceId = _contextManager.requiredDeviceId;
+    final deviceId = _contextManager.deviceId;
     final now = _clock.now();
     final storedSession = await _preferencesStore.readSessionSnapshot();
     final continuedSession = _shouldContinueSession(
@@ -119,7 +119,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
 
   Future<AttriaxSessionRestoreResult> resumeOrStart({DateTime? at}) async {
     final context = _contextManager.requiredSnapshot;
-    final deviceId = _contextManager.requiredDeviceId;
+    final deviceId = _contextManager.deviceId;
     final now = (at ?? _clock.now()).toUtc();
     final existingSession = _currentSession;
     final continuedSession = _shouldContinueSession(
@@ -193,6 +193,39 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
     _lifecycleManager.reset();
   }
 
+  Future<void> syncCurrentSessionContext() async {
+    final session = _currentSession;
+    final context = _contextManager.snapshot;
+    if (session == null || context == null) {
+      return;
+    }
+
+    final deviceId = _contextManager.deviceId;
+    if (session.deviceId == deviceId &&
+        session.platform == context.platform &&
+        session.locale == context.device.language &&
+        session.isFirstLaunch == context.isFirstLaunch &&
+        session.appVersion == context.app.version &&
+        session.appBuildNumber == context.app.buildNumber &&
+        session.appPackageName == context.app.packageName &&
+        session.sdkPackageVersion == context.sdk.packageVersion) {
+      return;
+    }
+
+    final updatedSession = session.copyWith(
+      deviceId: deviceId,
+      platform: context.platform,
+      locale: context.device.language,
+      isFirstLaunch: context.isFirstLaunch,
+      appVersion: context.app.version,
+      appBuildNumber: context.app.buildNumber,
+      appPackageName: context.app.packageName,
+      sdkPackageVersion: context.sdk.packageVersion,
+    );
+    _currentSession = updatedSession;
+    await _preferencesStore.setSessionSnapshot(session: updatedSession);
+  }
+
   DateTime inferredEndAt(AttriaxSessionSnapshot session) =>
       session.lastActivityAt.add(_continuationWindowFor(session));
 
@@ -227,17 +260,22 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
   AttriaxTrackSessionRequest buildHeartbeatKeepAliveRequest({
     required AttriaxSessionSnapshot session,
     required DateTime occurredAt,
-  }) => attriaxBuildTrackSessionRequest(
-    appToken: _config.appToken,
-    deviceIdSource: requireDeviceIdSource(),
-    session: session,
-    kind: AttriaxSessionLifecycleKind.heartbeat,
-    attachDeviceIdentity: _trackingDecision().attachDeviceIdentity,
-    occurredAt: occurredAt,
-  );
+  }) {
+    final attachDeviceIdentity =
+        _trackingDecision().attachDeviceIdentity && session.deviceId != null;
+
+    return attriaxBuildTrackSessionRequest(
+      appToken: _config.appToken,
+      deviceIdSource: attachDeviceIdentity ? requireDeviceIdSource() : null,
+      session: session,
+      kind: AttriaxSessionLifecycleKind.heartbeat,
+      attachDeviceIdentity: attachDeviceIdentity,
+      occurredAt: occurredAt,
+    );
+  }
 
   AttriaxSessionSnapshot _buildSession({
-    required String deviceId,
+    required String? deviceId,
     required AttriaxContextSnapshot context,
     required DateTime now,
   }) => AttriaxSessionSnapshot(
@@ -257,7 +295,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
 
   bool _shouldContinueSession(
     AttriaxSessionSnapshot? session, {
-    required String deviceId,
+    required String? deviceId,
     required AttriaxContextSnapshot context,
     required DateTime now,
   }) {

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0
+
+### Added
+- `Attriax.tracking` as the focused facade for custom events, page views, revenue, ads, uninstall-token registration, user identity, and manual error reporting.
+- `anonymousTracking` on `AttriaxConfig`, `AttriaxTracking.anonymousTrackingEnabled` for runtime control, and `AttriaxConsentGdpr.requestDataErasure()` for GDPR-erasure flows.
+
+### Changed
+- Breaking: removed the legacy top-level tracking, ad, revenue, uninstall-token, and identity methods from `Attriax`; use `tracking.*` instead.
+- Breaking: moved the event-delivery toggle from `eventsEnabled` to `tracking.enabled`.
+- Breaking: moved dynamic-link creation and manual deep-link forwarding to `deepLinks.createDynamicLink(...)` and `deepLinks.recordDeepLink(...)`.
+- Breaking: removed the remaining root ATT aliases in favor of `consent.att.*`.
+- GDPR-enabled runtimes now send anonymous-capable analytics, crash, session, and deep-link activity immediately by default while consent is unresolved, without materializing device identity. Set `anonymousTracking` to `false` to keep that work in memory until consent allows identified delivery.
+
+### Fixed
+- First-launch state now persists independently of device identity, so unresolved-consent restarts are no longer treated as first launch.
+
 ## 0.3.0
 
 ### Added

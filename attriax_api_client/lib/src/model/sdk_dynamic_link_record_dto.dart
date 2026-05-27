@@ -38,8 +38,6 @@ class SdkDynamicLinkRecordDto {
 
     this.previewDescription,
 
-    this.previewImagePath,
-
     this.previewTitle,
 
     required this.shortUrl,
@@ -88,9 +86,6 @@ class SdkDynamicLinkRecordDto {
   @JsonKey(name: r'previewDescription', required: false, includeIfNull: false)
   final String? previewDescription;
 
-  @JsonKey(name: r'previewImagePath', required: false, includeIfNull: false)
-  final String? previewImagePath;
-
   @JsonKey(name: r'previewTitle', required: false, includeIfNull: false)
   final String? previewTitle;
 
@@ -127,7 +122,6 @@ class SdkDynamicLinkRecordDto {
           other.path == path &&
           other.prefix == prefix &&
           other.previewDescription == previewDescription &&
-          other.previewImagePath == previewImagePath &&
           other.previewTitle == previewTitle &&
           other.shortUrl == shortUrl &&
           other.utmCampaign == utmCampaign &&
@@ -149,7 +143,6 @@ class SdkDynamicLinkRecordDto {
       path.hashCode +
       (prefix == null ? 0 : prefix.hashCode) +
       (previewDescription == null ? 0 : previewDescription.hashCode) +
-      (previewImagePath == null ? 0 : previewImagePath.hashCode) +
       (previewTitle == null ? 0 : previewTitle.hashCode) +
       shortUrl.hashCode +
       (utmCampaign == null ? 0 : utmCampaign.hashCode) +

@@ -239,7 +239,9 @@ class AttriaxRuntime {
         syncRuntimePersistenceMode: _syncRuntimePersistenceMode,
         restoreRuntimePreferences: _runtimeSettingsStore.restore,
         restoreSettings: _settingsState.restore,
-        initContext: _contextManager.init,
+        initContext: ({required bool allowDeviceIdentity}) =>
+            _contextManager.init(allowDeviceIdentity: allowDeviceIdentity),
+        allowDeviceIdentity: () => _shouldMaterializeIdentifiedContext,
         isFirstLaunch: () => _contextManager.isFirstLaunch,
         initSkan: ({required bool isFirstLaunch}) =>
             _skanManager.init(isFirstLaunch: isFirstLaunch),
@@ -328,6 +330,7 @@ class AttriaxRuntime {
   bool get isInitialized => _initialized;
   bool get isEnabled => _settingsState.isEnabled;
   bool get areEventsEnabled => _settingsState.areEventsEnabled;
+  bool get anonymousTrackingEnabled => _consentManager.anonymousTrackingEnabled;
   bool get isFirstLaunch => _contextManager.isFirstLaunch;
   String? get deviceId => _contextManager.deviceId;
   AttriaxGdprConsentState get gdprConsentState =>
@@ -385,6 +388,14 @@ class AttriaxRuntime {
 
   bool get _shouldDeferNetworkDispatch =>
       _consentManager.shouldDeferNetworkDispatch;
+
+  bool get _shouldMaterializeIdentifiedContext =>
+      !config.gdprEnabled ||
+      _consentManager.gdprConsentState == AttriaxGdprConsentState.notRequired ||
+      (_consentManager.gdprConsentState == AttriaxGdprConsentState.granted &&
+          (_allowsAnalyticsTracking ||
+              _allowsAdEventsTracking ||
+              _allowsAttributionTracking));
 
   bool get _allowsAttributionTracking =>
       _consentManager.allowsAttributionTracking;
@@ -689,7 +700,6 @@ class AttriaxRuntime {
           : AttriaxDynamicLinkSocialPreview(
               title: _trimOrNull(socialPreview.title),
               description: _trimOrNull(socialPreview.description),
-              imagePath: _trimOrNull(socialPreview.imagePath),
             ),
       utms: utms == null
           ? null
@@ -722,14 +732,9 @@ class AttriaxRuntime {
   }) async {
     _assertInitialized();
 
-    final currentDeviceId = deviceId;
-    if (currentDeviceId == null) {
-      throw StateError('Attriax SDK did not restore a device id.');
-    }
-
     final request = attriaxBuildValidateRevenueReceiptRequest(
       appToken: config.appToken,
-      deviceId: currentDeviceId,
+      deviceId: deviceId,
       clientOccurredAt: _clock.now(),
       provider: _trimOrNull(provider),
       environment: _trimOrNull(environment),
@@ -903,6 +908,9 @@ class AttriaxRuntime {
   void setEventsEnabled({required bool enabled}) =>
       _settingsState.setEventsEnabled(enabled: enabled);
 
+  void setAnonymousTrackingEnabled({required bool enabled}) =>
+      _consentManager.setAnonymousTrackingEnabled(enabled: enabled);
+
   // ---------- app open ------------------------------------------------------ //
 
   // ---------- dispose ------------------------------------------------------- //
@@ -1007,28 +1015,31 @@ class AttriaxRuntime {
 
   Future<void> _applyConsentStateChange() async {
     await _syncRuntimePersistenceMode();
+    await _ensureIdentifiedContextForCurrentConsent();
 
     final synchronizer = _synchronizer;
     if (config.gdprEnabled &&
         !_consentManager.isWaitingForGdprConsent &&
         synchronizer != null) {
-      if (_consentManager.gdprConsentState ==
-          AttriaxGdprConsentState.notRequired) {
-        final deviceId = _contextManager.deviceId;
-        if (deviceId != null) {
-          final deviceIdSource = _requireDeviceIdSource();
-          final identifiedCount = await synchronizer.rewriteQueuedRequestsWhere(
-            (queuedRequest) => attriaxIdentifyRequestForConsentNotRequired(
-              queuedRequest.request,
-              deviceId: deviceId,
-              deviceIdSource: deviceIdSource,
-            ),
+      final deviceId = _contextManager.deviceId;
+      if (deviceId != null) {
+        final deviceIdSource = _requireDeviceIdSource();
+        final identifiedCount = await synchronizer.rewriteQueuedRequestsWhere(
+          (queuedRequest) =>
+              _shouldIdentifyQueuedRequestForResolvedConsent(
+                queuedRequest.request,
+              )
+              ? attriaxIdentifyRequestForConsentNotRequired(
+                  queuedRequest.request,
+                  deviceId: deviceId,
+                  deviceIdSource: deviceIdSource,
+                )
+              : null,
+        );
+        if (identifiedCount > 0) {
+          _logger.verbose(
+            'Attached device identity to $identifiedCount queued request(s) after GDPR resolved to identified tracking.',
           );
-          if (identifiedCount > 0) {
-            _logger.verbose(
-              'Attached device identity to $identifiedCount queued request(s) after GDPR resolved as not required.',
-            );
-          }
         }
       }
 
@@ -1082,11 +1093,15 @@ class AttriaxRuntime {
       return;
     }
 
+    if (currentSession.deviceId == null) {
+      return;
+    }
+
     try {
       await _ensureTransport().send(
         _sessionManager.buildHeartbeatKeepAliveRequest(
-        session: currentSession,
-        occurredAt: _clock.now(),
+          session: currentSession,
+          occurredAt: _clock.now(),
         ),
       );
     } catch (error, stackTrace) {
@@ -1098,34 +1113,72 @@ class AttriaxRuntime {
     }
   }
 
+  Future<void> _ensureIdentifiedContextForCurrentConsent() async {
+    if (!_shouldMaterializeIdentifiedContext) {
+      return;
+    }
+
+    await _contextManager.ensureIdentifiedContext(
+      waitForTrackingAuthorization: false,
+    );
+    await _sessionManager.syncCurrentSessionContext();
+  }
+
+  AttriaxTrackingDecision? _trackingDecisionForQueuedRequest(
+    AttriaxApiRequest request,
+  ) => switch (request) {
+    AttriaxTrackEventRequest(:final payload) => _trackingDecisionFor(
+      _isAdEventName(payload.eventName)
+          ? AttriaxTrackingSignal.adEvents
+          : AttriaxTrackingSignal.analytics,
+    ),
+    AttriaxTrackCrashRequest() => _trackingDecisionFor(
+      AttriaxTrackingSignal.analytics,
+    ),
+    AttriaxTrackSessionRequest() => _trackingDecisionFor(
+      AttriaxTrackingSignal.session,
+    ),
+    AttriaxResolveDeepLinkRequest() => _trackingDecisionFor(
+      AttriaxTrackingSignal.deepLink,
+    ),
+    _ => null,
+  };
+
+  bool _shouldIdentifyQueuedRequestForResolvedConsent(
+    AttriaxApiRequest request,
+  ) {
+    if (_isWaitingForGdprConsent) {
+      return false;
+    }
+
+    final decision = _trackingDecisionForQueuedRequest(request);
+    return decision != null &&
+        decision.capture &&
+        decision.attachDeviceIdentity;
+  }
+
   bool _isRequestAllowedByResolvedConsent(AttriaxApiRequest request) =>
       switch (request) {
-        AttriaxTrackEventRequest() => !_isWaitingForGdprConsent,
-        AttriaxTrackCrashRequest() => !_isWaitingForGdprConsent,
-        AttriaxTrackSessionRequest() => !_isWaitingForGdprConsent,
+        AttriaxTrackEventRequest() ||
+        AttriaxTrackCrashRequest() ||
+        AttriaxTrackSessionRequest() ||
+        AttriaxResolveDeepLinkRequest() =>
+          _trackingDecisionForQueuedRequest(request)?.capture ?? false,
         AttriaxUserRequest() => _allowsAttributionTracking,
         AttriaxOpenRequest() => _allowsAttributionTracking,
-        AttriaxResolveDeepLinkRequest() => true,
         AttriaxRegisterUninstallTokenRequest() => _allowsAttributionTracking,
         AttriaxCreateDynamicLinkRequest() => true,
       };
 
   bool _shouldAnonymizeQueuedRequest(AttriaxApiRequest request) {
-    if (_isWaitingForGdprConsent) {
+    if (_isWaitingForGdprConsent || !_consentManager.anonymousTrackingEnabled) {
       return false;
     }
 
-    return switch (request) {
-      AttriaxTrackEventRequest(:final payload) =>
-        _isAdEventName(payload.eventName)
-            ? !_allowsAdEventsTracking
-            : !_allowsAnalyticsTracking,
-      AttriaxTrackCrashRequest() => !_allowsAnalyticsTracking,
-      AttriaxTrackSessionRequest() =>
-        !(_allowsAnalyticsTracking || _allowsAdEventsTracking),
-      AttriaxResolveDeepLinkRequest() => !_allowsAttributionTracking,
-      _ => false,
-    };
+    final decision = _trackingDecisionForQueuedRequest(request);
+    return decision != null &&
+        decision.capture &&
+        !decision.attachDeviceIdentity;
   }
 
   bool _isAdEventName(String eventName) =>

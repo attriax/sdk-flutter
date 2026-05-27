@@ -33,6 +33,10 @@ class SdkV1DeepLinkResolveDto {
 
     this.rawUrl,
 
+    this.sessionId,
+
+    this.sessionRelativeTimeMs,
+
     this.source_,
   });
 
@@ -60,6 +64,17 @@ class SdkV1DeepLinkResolveDto {
   @JsonKey(name: r'rawUrl', required: false, includeIfNull: false)
   final String? rawUrl;
 
+  @JsonKey(name: r'sessionId', required: false, includeIfNull: false)
+  final String? sessionId;
+
+  /// Milliseconds since the session started. Fractional values are allowed.
+  @JsonKey(
+    name: r'sessionRelativeTimeMs',
+    required: false,
+    includeIfNull: false,
+  )
+  final num? sessionRelativeTimeMs;
+
   @JsonKey(name: r'source', required: false, includeIfNull: false)
   final String? source_;
 
@@ -75,6 +90,8 @@ class SdkV1DeepLinkResolveDto {
           other.metadata == metadata &&
           other.platform == platform &&
           other.rawUrl == rawUrl &&
+          other.sessionId == sessionId &&
+          other.sessionRelativeTimeMs == sessionRelativeTimeMs &&
           other.source_ == source_;
 
   @override
@@ -87,6 +104,8 @@ class SdkV1DeepLinkResolveDto {
       metadata.hashCode +
       platform.hashCode +
       rawUrl.hashCode +
+      sessionId.hashCode +
+      sessionRelativeTimeMs.hashCode +
       source_.hashCode;
 
   factory SdkV1DeepLinkResolveDto.fromJson(Map<String, dynamic> json) =>

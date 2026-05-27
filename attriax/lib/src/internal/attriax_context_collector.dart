@@ -10,6 +10,7 @@ import 'attriax_native_context_capture.dart';
 import 'attriax_platform_install_referrer_manager.dart';
 import 'attriax_preferences_store.dart';
 import 'attriax_tracking_authorization_manager.dart';
+import 'attriax_web_platform.dart';
 
 export 'attriax_context_services.dart'
     show attriaxPersistentStorageDeviceIdSource, AttriaxResolvedDeviceId;
@@ -147,6 +148,15 @@ class AttriaxContextCollector implements AttriaxContextRuntimeServices {
   }
 
   @override
+  AttriaxContextSnapshot buildAnonymousStartupSnapshot({
+    required bool isFirstLaunch,
+    String? timezone,
+  }) => _snapshotBuilder.buildAnonymousStartupSnapshot(
+    isFirstLaunch: isFirstLaunch,
+    timezone: timezone,
+  );
+
+  @override
   Future<AttriaxResolvedDeviceId> resolvePreferredDeviceId({
     required String fallbackDeviceId,
   }) => _nativeContextCapture.resolvePreferredDeviceId(
@@ -155,6 +165,13 @@ class AttriaxContextCollector implements AttriaxContextRuntimeServices {
   );
 
   @override
-  Future<String?> resolveDeviceTimezone() => _nativeContextCapture
-      .resolveDeviceTimezone(deviceIdentityResolver: _deviceIdentityResolver);
+  Future<String?> resolveDeviceTimezone() async {
+    final platform = platformInstance;
+    if (platform is AttriaxWebPlatform) {
+      return platform.resolveEnvironmentTimezone() ??
+          _deviceIdentityResolver.resolveDeviceTimezone();
+    }
+
+    return _deviceIdentityResolver.resolveDeviceTimezone();
+  }
 }

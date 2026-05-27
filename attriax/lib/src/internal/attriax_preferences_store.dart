@@ -103,6 +103,8 @@ class AttriaxStoredGdprConsentData {
 }
 
 abstract interface class AttriaxContextIdentityStore {
+  Future<bool> restoreFirstLaunchState();
+
   Future<AttriaxStoredDeviceData> restoreDeviceData({
     required String Function() deviceIdFactory,
   });
@@ -259,7 +261,6 @@ class AttriaxPreferencesStore
     deviceIdSourceStorageKey,
     enabledStorageKey,
     eventsEnabledStorageKey,
-    firstLaunchSeenStorageKey,
     platformInstallReferrerStorageKey,
     platformInstallReferrerLoadedStorageKey,
     installReferrerDetailsStorageKey,
@@ -275,6 +276,7 @@ class AttriaxPreferencesStore
   };
 
   static const Set<String> _consentScopedStorageKeys = <String>{
+    firstLaunchSeenStorageKey,
     gdprConsentStorageKey,
     gdprConsentIdStorageKey,
   };
@@ -336,19 +338,25 @@ class AttriaxPreferencesStore
     );
   }
 
-  Future<AttriaxStoredDeviceData> restoreDeviceData({
-    required String Function() deviceIdFactory,
-  }) async {
-    final storedDeviceIdentity = await ensureDeviceIdentity(
-      deviceIdFactory: deviceIdFactory,
-    );
-
+  @override
+  Future<bool> restoreFirstLaunchState() async {
     final hasSeenFirstLaunch =
         await _readBool(firstLaunchSeenStorageKey) ?? false;
     final isFirstLaunch = !hasSeenFirstLaunch;
     if (!hasSeenFirstLaunch) {
       await _writeBool(firstLaunchSeenStorageKey, true);
     }
+
+    return isFirstLaunch;
+  }
+
+  Future<AttriaxStoredDeviceData> restoreDeviceData({
+    required String Function() deviceIdFactory,
+  }) async {
+    final storedDeviceIdentity = await ensureDeviceIdentity(
+      deviceIdFactory: deviceIdFactory,
+    );
+    final isFirstLaunch = await restoreFirstLaunchState();
 
     return AttriaxStoredDeviceData(
       deviceId: storedDeviceIdentity.deviceId,

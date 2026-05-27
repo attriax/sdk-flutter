@@ -21,7 +21,7 @@ class AttriaxSessionSnapshot {
 
     return AttriaxSessionSnapshot(
       id: _requireJsonString(json, 'id'),
-      deviceId: _requireJsonString(json, 'deviceId'),
+      deviceId: _jsonString(json['deviceId']),
       platform: _parsePlatformType(_jsonString(json['platform'])),
       locale: _jsonString(json['locale']),
       isFirstLaunch: _jsonBool(json['isFirstLaunch']) ?? false,
@@ -36,7 +36,7 @@ class AttriaxSessionSnapshot {
   }
 
   final String id;
-  final String deviceId;
+  final String? deviceId;
   final AttriaxPlatformType platform;
   final String? locale;
   final bool isFirstLaunch;
@@ -78,7 +78,7 @@ class AttriaxSessionSnapshot {
 
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,
-    'deviceId': deviceId,
+    if (deviceId != null) 'deviceId': deviceId,
     'platform': platform.name,
     if (locale != null) 'locale': locale,
     'isFirstLaunch': isFirstLaunch,
@@ -113,6 +113,7 @@ class AttriaxConfig {
     this.automaticBrowserHandling = true,
     this.gdprEnabled = false,
     this.gdprAutoDetect = true,
+    this.anonymousTracking = true,
     this.sessionTrackingEnabled = true,
     this.sessionHeartbeatInterval = const Duration(minutes: 5),
     this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 30),
@@ -138,6 +139,15 @@ class AttriaxConfig {
   final bool automaticBrowserHandling;
   final bool gdprEnabled;
   final bool gdprAutoDetect;
+
+  /// Enables GDPR-safe anonymous tracking while consent is unresolved.
+  ///
+  /// When this is `true`, anonymous-capable analytics, crash, session, and
+  /// deep-link requests can still be sent without Attriax device identity.
+  /// When this is `false`, the SDK buffers that traffic locally until consent
+  /// allows identified delivery, or drops it if the resolved consent denies
+  /// the relevant categories.
+  final bool anonymousTracking;
   final bool sessionTrackingEnabled;
   final Duration sessionHeartbeatInterval;
   final Duration firstLaunchSessionHeartbeatInterval;

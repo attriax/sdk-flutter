@@ -215,6 +215,52 @@ void main() {
     );
 
     test(
+      'initializes pending GDPR state without restoring device identity',
+      () async {
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          AttriaxPreferencesStore.gdprConsentStorageKey:
+              jsonEncode(<String, Object?>{
+                'state': 'pending',
+                'pendingSync': false,
+                'countryCode': 'DE',
+                'regionSource': 'manual',
+                'checkedAt': '2026-05-24T00:00:00.000Z',
+              }),
+        });
+        prefs = await SharedPreferences.getInstance();
+        contextCollector = CountingContextCollector();
+        sdk = Attriax.test(
+          config: const AttriaxConfig(
+            appToken: 'ax_test_token',
+            gdprEnabled: true,
+            gdprAutoDetect: false,
+          ),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init();
+
+        expect(sdk.deviceId, isNull);
+        expect(contextCollector.resolvePreferredDeviceIdCalls, 0);
+        expect(contextCollector.collectContextSnapshotCalls, 0);
+        expect(contextCollector.anonymousSnapshotBuildCalls, 1);
+        expect(
+          prefs.getString(AttriaxPreferencesStore.deviceIdStorageKey),
+          isNull,
+        );
+        expect(
+          prefs.getString(AttriaxPreferencesStore.deviceIdSourceStorageKey),
+          isNull,
+        );
+      },
+    );
+
+    test(
       'imports pending native crash reports during init and clears retry storage after ack',
       () async {
         final crashPlatform = FakeCrashReportingPlatform(
@@ -989,7 +1035,7 @@ void main() {
           expect(request.url.path, '/api/sdk/v1/revenue/receipts/validate');
           final body = jsonDecode(request.body) as Map<String, Object?>;
           expect(body['appToken'], 'ax_test_token');
-          expect(body['deviceId'], isNotEmpty);
+          expect(body['deviceId'], isNull);
           expect(body['provider'], 'unity');
 
           return http.Response(
@@ -1028,6 +1074,7 @@ void main() {
 
         await sdk.init();
         expect(sdk.consent.gdpr.isWaitingForConsent, isTrue);
+        expect(sdk.deviceId, isNull);
 
         sdk.enabled = false;
         sdk.tracking.enabled = false;
@@ -1629,6 +1676,7 @@ class CountingContextCollector extends AttriaxContextCollector {
     : super(config: const AttriaxConfig(appToken: 'ax_test_token'));
 
   int collectContextSnapshotCalls = 0;
+  int anonymousSnapshotBuildCalls = 0;
   int resolvePreferredDeviceIdCalls = 0;
   final List<String> collectedContextDeviceIds = <String>[];
   AttriaxResolvedDeviceId? resolvedDeviceId;
@@ -1651,6 +1699,7 @@ class CountingContextCollector extends AttriaxContextCollector {
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
+    bool waitForTrackingAuthorization = false,
   }) async {
     collectContextSnapshotCalls += 1;
     collectedContextDeviceIds.add(deviceId);
@@ -1668,6 +1717,29 @@ class CountingContextCollector extends AttriaxContextCollector {
         packageName: 'com.attriax.test',
       ),
       device: const AttriaxDeviceSnapshot(model: 'Test Device', osVersion: '1'),
+    );
+  }
+
+  @override
+  AttriaxContextSnapshot buildAnonymousStartupSnapshot({
+    required bool isFirstLaunch,
+    String? timezone,
+  }) {
+    anonymousSnapshotBuildCalls += 1;
+    return AttriaxContextSnapshot(
+      platform: platform,
+      deviceId: null,
+      isFirstLaunch: isFirstLaunch,
+      sdk: const AttriaxSdkSnapshot(
+        apiVersion: attriaxSdkApiVersion,
+        packageVersion: attriaxSdkPackageVersion,
+      ),
+      app: const AttriaxAppSnapshot(
+        version: '1.0.0',
+        buildNumber: '1',
+        packageName: 'com.attriax.test',
+      ),
+      device: AttriaxDeviceSnapshot(timezone: timezone),
     );
   }
 }

@@ -217,7 +217,6 @@ class AttriaxDynamicLinkRecord {
     this.data,
     this.previewTitle,
     this.previewDescription,
-    this.previewImagePath,
     this.iosRedirect,
     this.androidRedirect,
     this.utmSource,
@@ -240,7 +239,6 @@ class AttriaxDynamicLinkRecord {
         data: _jsonObject(json['data']),
         previewTitle: _jsonString(json['previewTitle']),
         previewDescription: _jsonString(json['previewDescription']),
-        previewImagePath: _jsonString(json['previewImagePath']),
         iosRedirect: _jsonBool(json['iosRedirect']),
         androidRedirect: _jsonBool(json['androidRedirect']),
         utmSource: _jsonString(json['utmSource']),
@@ -261,7 +259,6 @@ class AttriaxDynamicLinkRecord {
   final Map<String, Object?>? data;
   final String? previewTitle;
   final String? previewDescription;
-  final String? previewImagePath;
   final bool? iosRedirect;
   final bool? androidRedirect;
   final String? utmSource;
@@ -273,15 +270,10 @@ class AttriaxDynamicLinkRecord {
 }
 
 class AttriaxDynamicLinkSocialPreview {
-  const AttriaxDynamicLinkSocialPreview({
-    this.title,
-    this.description,
-    this.imagePath,
-  });
+  const AttriaxDynamicLinkSocialPreview({this.title, this.description});
 
   final String? title;
   final String? description;
-  final String? imagePath;
 }
 
 class AttriaxDynamicLinkRedirects {

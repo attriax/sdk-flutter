@@ -73,9 +73,19 @@ class AttriaxContextManager implements AttriaxTrackingContext {
     );
   }
 
-  Future<void> init() async {
-    await _restoreDeviceState();
-    await refreshSnapshot(waitForTrackingAuthorization: false);
+  Future<void> init({bool allowDeviceIdentity = true}) async {
+    _isFirstLaunch = await _preferencesStore.restoreFirstLaunchState();
+
+    if (!allowDeviceIdentity) {
+      final timezone = await resolveTimezone();
+      _snapshot = _contextCollector.buildAnonymousStartupSnapshot(
+        isFirstLaunch: _isFirstLaunch,
+        timezone: timezone,
+      );
+      return;
+    }
+
+    await ensureIdentifiedContext(waitForTrackingAuthorization: false);
   }
 
   Future<AttriaxTrackingAuthorizationStatus> requestTrackingAuthorization({
@@ -91,6 +101,15 @@ class AttriaxContextManager implements AttriaxTrackingContext {
   Future<void> setAutomaticCrashReportingEnabled({required bool enabled}) =>
       _contextCollector.setAutomaticCrashReportingEnabled(enabled: enabled);
 
+  Future<AttriaxContextSnapshot> ensureIdentifiedContext({
+    bool waitForTrackingAuthorization = false,
+  }) async {
+    await ensureDeviceIdentity();
+    return refreshSnapshot(
+      waitForTrackingAuthorization: waitForTrackingAuthorization,
+    );
+  }
+
   Future<AttriaxContextSnapshot> refreshSnapshot({
     bool waitForTrackingAuthorization = false,
   }) async {
@@ -105,7 +124,7 @@ class AttriaxContextManager implements AttriaxTrackingContext {
 
   Future<AttriaxContextSnapshot> ensureResolvedForAppOpen({
     bool waitForTrackingAuthorization = true,
-  }) => refreshSnapshot(
+  }) => ensureIdentifiedContext(
     waitForTrackingAuthorization: waitForTrackingAuthorization,
   );
 
@@ -159,19 +178,5 @@ class AttriaxContextManager implements AttriaxTrackingContext {
     _logger.verbose(
       'Using device ID (${resolvedDeviceId.source}): $requiredDeviceId',
     );
-  }
-
-  Future<void> _restoreDeviceState() async {
-    final storedDeviceData = await _preferencesStore.restoreDeviceData(
-      deviceIdFactory: attriaxGenerateId,
-    );
-
-    _deviceId ??= storedDeviceData.deviceId;
-    _deviceIdSource ??= storedDeviceData.deviceIdSource;
-    await _ensureResolvedDeviceIdentity(
-      hasPersistedDeviceId: storedDeviceData.hasPersistedDeviceId,
-    );
-
-    _isFirstLaunch = storedDeviceData.isFirstLaunch;
   }
 }

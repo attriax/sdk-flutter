@@ -611,6 +611,11 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
   String? sessionId,
   DateTime? sessionStartedAt,
 }) {
+  final deviceId = context.deviceId;
+  if (deviceId == null || deviceId.isEmpty) {
+    throw StateError('Attriax open requests require an identified device id.');
+  }
+
   final installReferrerMetadata =
       platformInstallReferrerContext?.metadata ?? const <String, Object?>{};
   final requestDto = sdk.SdkV1OpenDto(
@@ -620,7 +625,7 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
       context.device,
       metadataOverrides: deviceMetadataOverrides,
     ),
-    deviceId: context.deviceId,
+    deviceId: deviceId,
     deviceIdSource: deviceIdSource,
     googlePlayInstantParam: attriaxBoolValue(
       installReferrerMetadata['googlePlayInstantParam'],
@@ -926,7 +931,6 @@ AttriaxCreateDynamicLinkRequest attriaxBuildCreateDynamicLinkRequest({
     name: attriaxStringValue(name),
     prefix: attriaxStringValue(prefix),
     previewDescription: attriaxStringValue(socialPreview?.description),
-    previewImagePath: attriaxStringValue(socialPreview?.imagePath),
     previewTitle: attriaxStringValue(socialPreview?.title),
     utmCampaign: attriaxStringValue(utms?.campaign),
     utmContent: attriaxStringValue(utms?.content),
@@ -940,7 +944,7 @@ AttriaxCreateDynamicLinkRequest attriaxBuildCreateDynamicLinkRequest({
 
 Map<String, Object?> attriaxBuildValidateRevenueReceiptRequest({
   required String appToken,
-  required String deviceId,
+  required String? deviceId,
   required DateTime clientOccurredAt,
   String? provider,
   String? environment,
@@ -956,7 +960,7 @@ Map<String, Object?> attriaxBuildValidateRevenueReceiptRequest({
   bool? test,
 }) => <String, Object?>{
   'appToken': appToken,
-  'deviceId': deviceId,
+  'deviceId': ?deviceId,
   'clientOccurredAt': clientOccurredAt.toUtc().toIso8601String(),
   'provider': ?attriaxStringValue(provider),
   'environment': ?attriaxStringValue(environment),
@@ -1413,7 +1417,6 @@ AttriaxDynamicLinkRecord _mapDynamicLinkRecord(
   data: _plainJsonObjectMap(link.data),
   previewTitle: link.previewTitle,
   previewDescription: link.previewDescription,
-  previewImagePath: link.previewImagePath,
   iosRedirect: link.iosRedirect,
   androidRedirect: link.androidRedirect,
   utmSource: link.utmSource,

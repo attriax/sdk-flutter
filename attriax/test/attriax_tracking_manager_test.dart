@@ -133,6 +133,30 @@ void main() {
     );
 
     test(
+      'recordPageView falls back to the current web document title when omitted',
+      () async {
+        final requestManager = _RecordingRequestManager();
+        final manager = AttriaxTrackingManager(
+          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          logger: AttriaxLogger(enableDebugLogs: false),
+          clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
+          contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+          consentState: const _FakeConsentReadView(),
+          settingsState: const _FakeRuntimeSettingsView(),
+          requestManager: requestManager,
+          sessionManager: _FakeTrackedSessionPreparer((_) async => null),
+          documentTitleProvider: () => ' Checkout ',
+        );
+
+        await manager.recordPageView('Checkout');
+
+        final body = requestManager.lastRequest!.toQueueBody();
+        final eventData = body['eventData']! as Map<String, Object?>;
+        expect(eventData['pageTitle'], 'Checkout');
+      },
+    );
+
+    test(
       'recordPageView defers flushes after first launch by default',
       () async {
         final requestManager = _RecordingRequestManager();
@@ -445,6 +469,9 @@ class _FakeConsentReadView implements AttriaxConsentReadView {
 
   @override
   final AttriaxGdprConsentValues? gdprConsentValues;
+
+  @override
+  bool get anonymousTrackingEnabled => true;
 
   @override
   bool get isWaitingForGdprConsent =>

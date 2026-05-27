@@ -26,12 +26,16 @@ import 'package:attriax_api_client/src/model/sdk_v1_batch_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_batch_item_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_batch_response_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_batch_response_envelope_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_config_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_config_response_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_config_response_envelope_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_deep_link_resolve_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_deep_link_resolve_response_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_deep_link_resolve_response_envelope_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_gdpr_consent_check_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_gdpr_consent_values_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_gdpr_consent_write_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_v1_gdpr_data_erase_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_open_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_open_response_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_v1_open_response_envelope_dto.dart';
@@ -179,6 +183,17 @@ ReturnType deserialize<ReturnType, BaseType>(
             value as Map<String, dynamic>,
           )
           as ReturnType;
+    case 'SdkV1ConfigDto':
+      return SdkV1ConfigDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SdkV1ConfigResponseDto':
+      return SdkV1ConfigResponseDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SdkV1ConfigResponseEnvelopeDto':
+      return SdkV1ConfigResponseEnvelopeDto.fromJson(
+            value as Map<String, dynamic>,
+          )
+          as ReturnType;
     case 'SdkV1DeepLinkResolveDto':
       return SdkV1DeepLinkResolveDto.fromJson(value as Map<String, dynamic>)
           as ReturnType;
@@ -200,6 +215,9 @@ ReturnType deserialize<ReturnType, BaseType>(
           as ReturnType;
     case 'SdkV1GdprConsentWriteDto':
       return SdkV1GdprConsentWriteDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SdkV1GdprDataEraseDto':
+      return SdkV1GdprDataEraseDto.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'SdkV1OpenDto':
       return SdkV1OpenDto.fromJson(value as Map<String, dynamic>) as ReturnType;

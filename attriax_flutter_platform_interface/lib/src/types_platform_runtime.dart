@@ -252,7 +252,7 @@ class AttriaxContextSnapshot {
   });
 
   final AttriaxPlatformType platform;
-  final String deviceId;
+  final String? deviceId;
   final bool isFirstLaunch;
 
   final AttriaxSdkSnapshot sdk;

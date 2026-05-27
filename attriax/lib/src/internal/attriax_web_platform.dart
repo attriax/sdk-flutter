@@ -25,6 +25,11 @@ class AttriaxWebPlatform extends AttriaxPlatform {
   final AttriaxWebEnvironmentProvider _environmentProvider;
   final AttriaxWebAppInfoLoaderFactory _appInfoLoaderFactory;
 
+  String? resolveEnvironmentTimezone() {
+    final timezone = _environmentProvider().timezone?.trim();
+    return timezone == null || timezone.isEmpty ? null : timezone;
+  }
+
   @override
   Future<AttriaxNativeContext> collectNativeContext({
     bool collectAdvertisingId = true,

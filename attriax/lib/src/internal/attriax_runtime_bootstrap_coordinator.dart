@@ -7,13 +7,16 @@ import 'attriax_session_manager.dart';
 typedef AttriaxRuntimeBootstrapBindConsentTransport =
     void Function(AttriaxGeneratedTransport transport);
 typedef AttriaxRuntimeBootstrapRestoreRuntimePreferences =
-  Future<AttriaxStoredRuntimeSettings> Function({
+    Future<AttriaxStoredRuntimeSettings> Function({
       bool? enabledOverride,
       bool? eventsEnabledOverride,
     });
 typedef AttriaxRuntimeBootstrapRestoreSettings =
     void Function({required bool enabled, required bool eventsEnabled});
+typedef AttriaxRuntimeBootstrapInitContext =
+    Future<void> Function({required bool allowDeviceIdentity});
 typedef AttriaxRuntimeBootstrapIsFirstLaunchProvider = bool Function();
+typedef AttriaxRuntimeBootstrapAllowDeviceIdentity = bool Function();
 typedef AttriaxRuntimeBootstrapInitSkan =
     Future<void> Function({required bool isFirstLaunch});
 typedef AttriaxRuntimeBootstrapInitSession =
@@ -37,7 +40,8 @@ class AttriaxRuntimeBootstrapCoordinator<TSynchronizer> {
     required AttriaxRuntimeBootstrapRestoreRuntimePreferences
     restoreRuntimePreferences,
     required AttriaxRuntimeBootstrapRestoreSettings restoreSettings,
-    required Future<void> Function() initContext,
+    required AttriaxRuntimeBootstrapInitContext initContext,
+    required AttriaxRuntimeBootstrapAllowDeviceIdentity allowDeviceIdentity,
     required AttriaxRuntimeBootstrapIsFirstLaunchProvider isFirstLaunch,
     required AttriaxRuntimeBootstrapInitSkan initSkan,
     required AttriaxRuntimeBootstrapInitSession initSession,
@@ -58,6 +62,7 @@ class AttriaxRuntimeBootstrapCoordinator<TSynchronizer> {
        _restoreRuntimePreferences = restoreRuntimePreferences,
        _restoreSettings = restoreSettings,
        _initContext = initContext,
+       _allowDeviceIdentity = allowDeviceIdentity,
        _isFirstLaunch = isFirstLaunch,
        _initSkan = initSkan,
        _initSession = initSession,
@@ -73,7 +78,8 @@ class AttriaxRuntimeBootstrapCoordinator<TSynchronizer> {
   final AttriaxRuntimeBootstrapRestoreRuntimePreferences
   _restoreRuntimePreferences;
   final AttriaxRuntimeBootstrapRestoreSettings _restoreSettings;
-  final Future<void> Function() _initContext;
+  final AttriaxRuntimeBootstrapInitContext _initContext;
+  final AttriaxRuntimeBootstrapAllowDeviceIdentity _allowDeviceIdentity;
   final AttriaxRuntimeBootstrapIsFirstLaunchProvider _isFirstLaunch;
   final AttriaxRuntimeBootstrapInitSkan _initSkan;
   final AttriaxRuntimeBootstrapInitSession _initSession;
@@ -107,7 +113,7 @@ class AttriaxRuntimeBootstrapCoordinator<TSynchronizer> {
       eventsEnabled: storedRuntimePreferences.areEventsEnabled,
     );
 
-    await _initContext();
+    await _initContext(allowDeviceIdentity: _allowDeviceIdentity());
     await _initSkan(isFirstLaunch: _isFirstLaunch());
     final sessionRestore = await _initSession(enabled: sessionTrackingEnabled);
     await _initReferrer(enabled: storedRuntimePreferences.isEnabled);

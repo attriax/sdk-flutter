@@ -17,7 +17,11 @@ Use `state`, `values`, and `isWaitingForConsent` to drive privacy UI. Use `needs
 
 ## Pending Consent
 
-When GDPR is enabled and the state is `unknown` or `pending`, the Flutter SDK sends anonymous-capable event, crash, session, and deep-link traffic immediately without `deviceId` or `deviceIdSource`. That keeps aggregate activity visible even before the app has resolved whether consent is required or before the user makes a choice.
+When GDPR is enabled and the state is `unknown` or `pending`, the Flutter SDK does not restore or generate Attriax device identity yet. It keeps startup context minimal and waits to collect the full identified device snapshot until consent is granted, consent is not required, or GDPR handling is disabled.
+
+With `anonymousTracking: true` (the default), anonymous-capable event, crash, session, and deep-link traffic is still sent immediately without `deviceId` or `deviceIdSource`. That keeps aggregate activity visible even before the app has resolved whether consent is required or before the user makes a choice.
+
+With `anonymousTracking: false`, the same anonymous-capable traffic is captured locally and buffered in memory until consent resolves. If consent later grants the relevant category, the buffered traffic is promoted to identified delivery. If consent denies that category, the SDK drops the buffered traffic instead of sending it anonymously.
 
 Attribution-only activity, user identity updates, uninstall tokens, and app-open attribution are not sent while consent is waiting.
 
@@ -35,7 +39,7 @@ When consent is granted for a category, matching SDK requests can include device
 
 When previously anonymous Flutter activity exists for the current installation, the SDK sends an immediate identified session heartbeat after consent resolves so the backend can promote the existing anonymous app-user record. The backend matches by the current SDK session ID first and falls back to the daily salted request-context hash when no same-session match exists.
 
-When analytics or ad-events consent is denied after an unresolved period, analytics-capable activity may still be sent without device identity if your integration allows anonymous analytics. Treat that as a separate lawful-basis/product decision in your consent and privacy design.
+When analytics or ad-events consent is denied after an unresolved period, analytics-capable activity may still be sent without device identity if your integration leaves anonymous tracking enabled. Treat that as a separate lawful-basis/product decision in your consent and privacy design.
 
 Attribution, user identity, uninstall tracking, and install attribution require attribution consent. If attribution is denied, those requests are withheld rather than anonymized.
 
@@ -56,6 +60,7 @@ Website integrations can rely on the shared JS SDK GDPR flow instead of a separa
 Your app should:
 
 - Enable GDPR handling only when you want the SDK to gate GDPR-regulated tracking.
+- Decide whether the default `anonymousTracking: true` behavior matches your privacy posture, or whether your app should buffer anonymous-capable traffic locally until consent resolves.
 - Present clear consent UI before calling `setConsent`.
 - Store and expose privacy choices in your app settings.
 - Call `reset()` when the app needs to re-ask.

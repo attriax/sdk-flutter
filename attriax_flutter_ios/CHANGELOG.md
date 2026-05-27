@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+### Changed
+- Package version alignment for the federated 0.4.0 grouped-tracking, anonymous-GDPR, and data-erasure release. No Apple-only public API changes are required.
+
 ## 0.3.0
 
 ### Added

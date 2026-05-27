@@ -74,6 +74,7 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
   bool _gdprAutoDetect = true;
   bool _sdkEnabled = true;
   bool _trackingEnabled = true;
+  bool _anonymousTrackingEnabled = true;
   bool _analyticsConsent = true;
   bool _attributionConsent = true;
   bool _adEventsConsent = true;
@@ -162,6 +163,7 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
       enableDebugLogs: true,
       gdprEnabled: true,
       gdprAutoDetect: _gdprAutoDetect,
+      anonymousTracking: _anonymousTrackingEnabled,
       sdkMetadata: const <String, Object?>{
         'surface': 'example_gdpr',
         'purpose': 'manual_gdpr_testing',
@@ -185,6 +187,7 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
       final nextSdk = Attriax(config: _buildConfig());
       await nextSdk.init(enabled: _sdkEnabled);
       nextSdk.tracking.enabled = _trackingEnabled;
+      nextSdk.tracking.anonymousTrackingEnabled = _anonymousTrackingEnabled;
 
       final currentState = _formatConsentState(nextSdk.consent.gdpr.state);
       final message =
@@ -228,6 +231,7 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
       final sdk = _requireInitializedSdk();
       sdk.enabled = _sdkEnabled;
       sdk.tracking.enabled = _trackingEnabled;
+      sdk.tracking.anonymousTrackingEnabled = _anonymousTrackingEnabled;
       return 'Runtime toggles updated.';
     });
   }
@@ -493,6 +497,21 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
                                 });
                               },
                       ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Anonymous tracking enabled'),
+                        subtitle: const Text(
+                          'When on, anonymous-capable GDPR traffic can be sent without device identity before consent resolves.',
+                        ),
+                        value: _anonymousTrackingEnabled,
+                        onChanged: _busy
+                            ? null
+                            : (bool value) {
+                                setState(() {
+                                  _anonymousTrackingEnabled = value;
+                                });
+                              },
+                      ),
                       const SizedBox(height: 12),
                       Wrap(
                         spacing: 8,
@@ -541,6 +560,13 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
                       _StatusTile(
                         label: 'Tracking enabled',
                         value: _formatBool(_sdk?.tracking.enabled),
+                      ),
+                      _StatusTile(
+                        label: 'Anonymous tracking',
+                        value: _formatBool(
+                          _sdk?.tracking.anonymousTrackingEnabled ??
+                              _anonymousTrackingEnabled,
+                        ),
                       ),
                       _StatusTile(
                         label: 'Consent state',

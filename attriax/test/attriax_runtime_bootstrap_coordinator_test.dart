@@ -29,7 +29,7 @@ void main() {
           'syncRuntimePersistenceMode',
           'restoreRuntimePreferences:true:false',
           'restoreSettings:false:true',
-          'initContext',
+          'initContext:false',
           'initSkan:true',
           'initSession:true',
           'initReferrer:false',
@@ -62,7 +62,7 @@ void main() {
           'syncRuntimePersistenceMode',
           'restoreRuntimePreferences:null:true',
           'restoreSettings:false:true',
-          'initContext',
+          'initContext:false',
           'initSkan:true',
           'initSession:false',
           'initReferrer:false',
@@ -93,7 +93,9 @@ class _BootstrapHarness {
           },
       restoreSettings: ({required bool enabled, required bool eventsEnabled}) =>
           calls.add('restoreSettings:$enabled:$eventsEnabled'),
-      initContext: () async => calls.add('initContext'),
+      initContext: ({required bool allowDeviceIdentity}) async =>
+          calls.add('initContext:$allowDeviceIdentity'),
+      allowDeviceIdentity: () => false,
       isFirstLaunch: () => true,
       initSkan: ({required bool isFirstLaunch}) async =>
           calls.add('initSkan:$isFirstLaunch'),

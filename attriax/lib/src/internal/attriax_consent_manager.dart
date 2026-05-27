@@ -16,6 +16,7 @@ typedef AttriaxConsentStateListener = void Function();
 abstract interface class AttriaxConsentReadView {
   AttriaxGdprConsentState get gdprConsentState;
   AttriaxGdprConsentValues? get gdprConsentValues;
+  bool get anonymousTrackingEnabled;
   bool get isWaitingForGdprConsent;
   bool get shouldDeferNetworkDispatch;
   bool get allowsAnalyticsTracking;
@@ -67,13 +68,15 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
        _clock = clock,
        _contextManager = contextManager,
        _preferencesStore = preferencesStore,
-       _logger = logger;
+       _logger = logger,
+       _anonymousTrackingEnabled = config.anonymousTracking;
 
   final AttriaxConfig _config;
   final AttriaxClock _clock;
   final AttriaxContextManager _contextManager;
   final AttriaxConsentPersistenceStore _preferencesStore;
   final AttriaxLogger _logger;
+  bool _anonymousTrackingEnabled;
 
   AttriaxGeneratedTransport? _transport;
   AttriaxConsentStateListener? onStateChanged;
@@ -96,12 +99,18 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
   AttriaxGdprConsentValues? get gdprConsentValues => _values;
 
   @override
+  bool get anonymousTrackingEnabled => _anonymousTrackingEnabled;
+
+  @override
   bool get isWaitingForGdprConsent =>
       _state == AttriaxGdprConsentState.pending ||
       _state == AttriaxGdprConsentState.unknown;
 
   @override
-  bool get shouldDeferNetworkDispatch => false;
+  bool get shouldDeferNetworkDispatch =>
+      _config.gdprEnabled &&
+      isWaitingForGdprConsent &&
+      !_anonymousTrackingEnabled;
 
   @override
   bool get allowsAnalyticsTracking =>
@@ -116,7 +125,8 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       _allowsCategory((values) => values.adEvents);
 
   @override
-  bool get canCaptureAnalytics => _canCaptureAnonymousCapableCategory();
+  bool get canCaptureAnalytics =>
+      _canCaptureSignal(AttriaxTrackingSignal.analytics);
 
   @override
   bool get canCaptureAttribution => _canCaptureCategory(
@@ -125,7 +135,8 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
   );
 
   @override
-  bool get canCaptureAdEvents => _canCaptureAnonymousCapableCategory();
+  bool get canCaptureAdEvents =>
+      _canCaptureSignal(AttriaxTrackingSignal.adEvents);
 
   @override
   bool get canCaptureUninstallTracking => _canCaptureCategory(
@@ -143,19 +154,21 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       );
     }
 
-    if (_state == AttriaxGdprConsentState.unknown) {
-      return AttriaxTrackingDecision(
-        capture: _canCaptureWhileWaiting(signal),
-        identityMode: AttriaxTrackingIdentityMode.anonymous,
-        deferNetwork: false,
-      );
-    }
+    if (_state == AttriaxGdprConsentState.unknown ||
+        _state == AttriaxGdprConsentState.pending) {
+      final capture = _canCaptureWhileWaiting(signal);
+      if (!capture) {
+        return const AttriaxTrackingDecision(
+          capture: false,
+          identityMode: AttriaxTrackingIdentityMode.withheld,
+          deferNetwork: false,
+        );
+      }
 
-    if (_state == AttriaxGdprConsentState.pending) {
       return AttriaxTrackingDecision(
-        capture: _canCaptureWhileWaiting(signal),
+        capture: true,
         identityMode: AttriaxTrackingIdentityMode.anonymous,
-        deferNetwork: false,
+        deferNetwork: !_anonymousTrackingEnabled,
       );
     }
 
@@ -185,7 +198,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       );
     }
 
-    if (_isAnonymousCapableSignal(signal)) {
+    if (_anonymousTrackingEnabled && _isAnonymousCapableSignal(signal)) {
       return const AttriaxTrackingDecision(
         capture: true,
         identityMode: AttriaxTrackingIdentityMode.anonymous,
@@ -203,6 +216,15 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
   // ignore: use_setters_to_change_properties
   void bindTransport(AttriaxGeneratedTransport? transport) {
     _transport = transport;
+  }
+
+  void setAnonymousTrackingEnabled({required bool enabled}) {
+    if (_anonymousTrackingEnabled == enabled) {
+      return;
+    }
+
+    _anonymousTrackingEnabled = enabled;
+    onStateChanged?.call();
   }
 
   Future<void> init() async {
@@ -345,12 +367,26 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     }
   }
 
-  bool _canCaptureAnonymousCapableCategory() {
+  bool _canCaptureSignal(AttriaxTrackingSignal signal) {
     if (!_config.gdprEnabled) {
       return true;
     }
 
-    return true;
+    switch (_state) {
+      case AttriaxGdprConsentState.notRequired:
+        return true;
+      case AttriaxGdprConsentState.granted:
+        final values = _values;
+        if (values == null) {
+          return false;
+        }
+
+        return _isSignalGranted(signal, values) ||
+            (_anonymousTrackingEnabled && _isAnonymousCapableSignal(signal));
+      case AttriaxGdprConsentState.pending:
+      case AttriaxGdprConsentState.unknown:
+        return _canCaptureWhileWaiting(signal);
+    }
   }
 
   bool _canCaptureWhileWaiting(AttriaxTrackingSignal signal) =>

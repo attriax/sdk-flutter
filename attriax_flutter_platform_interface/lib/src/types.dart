@@ -5,7 +5,7 @@ part 'types_deep_link_lifecycle.dart';
 part 'types_session_config.dart';
 
 const String attriaxSdkApiVersion = 'v1';
-const String attriaxSdkPackageVersion = '0.3.0';
+const String attriaxSdkPackageVersion = '0.4.0';
 
 /// Attribution classification returned by Attriax.
 enum AttributionType {

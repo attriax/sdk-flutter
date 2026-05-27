@@ -309,6 +309,115 @@ void main() {
       },
     );
 
+    test(
+      'pending consent buffers analytics until grant when anonymous tracking is disabled',
+      () async {
+        contextCollector.timezone = 'Europe/Berlin';
+        final requestPaths = <String>[];
+        final batchBodies = <Map<String, Object?>>[];
+        client = MockClient((request) async {
+          requestPaths.add(request.url.path);
+
+          if (request.url.path == '/api/sdk/v1/consent/gdpr') {
+            return http.Response(
+              _gdprEnvelope(<String, Object?>{
+                'checkedAt': '2026-05-20T12:00:01.000Z',
+                'countryCode': 'DE',
+                'needsConsent': false,
+                'regionSource': 'manual',
+                'state': 'granted',
+                'values': <String, Object?>{
+                  'analytics': true,
+                  'attribution': false,
+                  'adEvents': false,
+                },
+              }),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          if (request.url.path == '/api/sdk/v1/batch') {
+            batchBodies.add(jsonDecode(request.body) as Map<String, Object?>);
+            return http.Response(
+              _batchEnvelope(),
+              202,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          return http.Response(
+            request.url.path == '/api/sdk/v1/config'
+                ? _runtimeConfigEnvelope()
+                : _ackEnvelope(),
+            200,
+            headers: const <String, String>{'content-type': 'application/json'},
+          );
+        });
+        await sdk.dispose();
+        sdk = _createSdk(
+          config: const AttriaxConfig(
+            appToken: 'ax_test_token',
+            gdprEnabled: true,
+            gdprAutoDetect: false,
+            anonymousTracking: false,
+          ),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+        );
+
+        expect(sdk.tracking.anonymousTrackingEnabled, isFalse);
+        expect(await sdk.consent.gdpr.needsConsent(localOnly: true), isTrue);
+
+        await sdk.init();
+        await sdk.tracking.recordEvent(
+          'purchase',
+          eventData: const <String, Object?>{'value': 42},
+        );
+        await _drainMicrotasks();
+
+        expect(
+          requestPaths.where((path) => path != '/api/sdk/v1/config'),
+          isEmpty,
+        );
+        expect(sdk.deviceId, isNull);
+        expect(contextCollector.resolvePreferredDeviceIdCalls, 0);
+        expect(contextCollector.collectContextSnapshotCalls, 0);
+        expect(contextCollector.anonymousSnapshotBuildCalls, 1);
+
+        sdk.consent.gdpr.setConsent(
+          analytics: true,
+          attribution: false,
+          adEvents: false,
+        );
+        await _waitFor(() => requestPaths.contains('/api/sdk/v1/consent/gdpr'));
+        await _waitFor(() => batchBodies.isNotEmpty);
+        await _waitFor(() => sdk.deviceId == 'device_1');
+        await _waitFor(() => sdk.synchronization.isSynchronized);
+
+        final items = batchBodies.single['items']! as List<Object?>;
+        final eventItems = items
+            .cast<Map<String, Object?>>()
+            .where((item) => item['kind'] == 'event')
+            .toList(growable: false);
+        expect(eventItems, hasLength(1));
+        expect(batchBodies.single['deviceId'], 'device_1');
+        expect(batchBodies.single['deviceIdSource'], 'test_device');
+
+        final eventBody = eventItems.single['body']! as Map<String, Object?>;
+        expect(eventBody['eventName'], 'purchase');
+        expect(eventBody.containsKey('deviceId'), isFalse);
+        expect(eventBody.containsKey('deviceIdSource'), isFalse);
+      },
+    );
+
     test('setNotRequired syncs without device identity fields', () async {
       Map<String, Object?>? syncedBody;
       client = MockClient((request) async {
@@ -684,6 +793,10 @@ void main() {
         await _waitFor(() => sessionBodies.isNotEmpty);
 
         expect(requestPaths, contains('/api/sdk/v1/sessions'));
+        expect(sdk.deviceId, isNull);
+        expect(contextCollector.resolvePreferredDeviceIdCalls, 0);
+        expect(contextCollector.collectContextSnapshotCalls, 0);
+        expect(contextCollector.anonymousSnapshotBuildCalls, 1);
         expect(sessionBodies.single['deviceId'], isNull);
         expect(sessionBodies.single['deviceIdSource'], isNull);
       },
@@ -774,6 +887,10 @@ void main() {
         expect(requestPaths, contains('/api/sdk/v1/sessions'));
         expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.unknown);
         expect(sdk.consent.gdpr.isWaitingForConsent, isTrue);
+        expect(sdk.deviceId, isNull);
+        expect(contextCollector.resolvePreferredDeviceIdCalls, 0);
+        expect(contextCollector.collectContextSnapshotCalls, 0);
+        expect(contextCollector.anonymousSnapshotBuildCalls, 1);
         expect(sessionBodies.single['deviceId'], isNull);
         expect(sessionBodies.single['deviceIdSource'], isNull);
 
@@ -790,6 +907,15 @@ void main() {
         expect(requestPaths, contains('/api/sdk/v1/config'));
         expect(requestPaths, contains('/api/sdk/v1/open'));
         expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.granted);
+        expect(sdk.deviceId, 'device_1');
+        expect(
+          contextCollector.resolvePreferredDeviceIdCalls,
+          greaterThanOrEqualTo(1),
+        );
+        expect(
+          contextCollector.collectContextSnapshotCalls,
+          greaterThanOrEqualTo(1),
+        );
         expect(
           prefs.getString(AttriaxPreferencesStore.deviceIdStorageKey),
           isNotNull,
@@ -1274,33 +1400,67 @@ class _ConsentTestContextCollector extends AttriaxContextCollector {
 
   String? timezone;
   final AttriaxPlatformType platform;
+  int resolvePreferredDeviceIdCalls = 0;
+  int collectContextSnapshotCalls = 0;
+  int anonymousSnapshotBuildCalls = 0;
 
   @override
   Future<AttriaxResolvedDeviceId> resolvePreferredDeviceId({
     required String fallbackDeviceId,
-  }) async =>
-      const AttriaxResolvedDeviceId(value: 'device_1', source: 'test_device');
+  }) async {
+    resolvePreferredDeviceIdCalls += 1;
+    return const AttriaxResolvedDeviceId(
+      value: 'device_1',
+      source: 'test_device',
+    );
+  }
 
   @override
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
     bool waitForTrackingAuthorization = false,
-  }) async => AttriaxContextSnapshot(
-    platform: platform,
-    deviceId: deviceId,
-    isFirstLaunch: isFirstLaunch,
-    sdk: const AttriaxSdkSnapshot(
-      apiVersion: attriaxSdkApiVersion,
-      packageVersion: attriaxSdkPackageVersion,
-    ),
-    app: const AttriaxAppSnapshot(
-      version: '1.0.0',
-      buildNumber: '1',
-      packageName: 'com.attriax.test',
-    ),
-    device: const AttriaxDeviceSnapshot(model: 'Pixel', osVersion: '14'),
-  );
+  }) async {
+    collectContextSnapshotCalls += 1;
+    return AttriaxContextSnapshot(
+      platform: platform,
+      deviceId: deviceId,
+      isFirstLaunch: isFirstLaunch,
+      sdk: const AttriaxSdkSnapshot(
+        apiVersion: attriaxSdkApiVersion,
+        packageVersion: attriaxSdkPackageVersion,
+      ),
+      app: const AttriaxAppSnapshot(
+        version: '1.0.0',
+        buildNumber: '1',
+        packageName: 'com.attriax.test',
+      ),
+      device: const AttriaxDeviceSnapshot(model: 'Pixel', osVersion: '14'),
+    );
+  }
+
+  @override
+  AttriaxContextSnapshot buildAnonymousStartupSnapshot({
+    required bool isFirstLaunch,
+    String? timezone,
+  }) {
+    anonymousSnapshotBuildCalls += 1;
+    return AttriaxContextSnapshot(
+      platform: platform,
+      deviceId: null,
+      isFirstLaunch: isFirstLaunch,
+      sdk: const AttriaxSdkSnapshot(
+        apiVersion: attriaxSdkApiVersion,
+        packageVersion: attriaxSdkPackageVersion,
+      ),
+      app: const AttriaxAppSnapshot(
+        version: '1.0.0',
+        buildNumber: '1',
+        packageName: 'com.attriax.test',
+      ),
+      device: AttriaxDeviceSnapshot(timezone: timezone),
+    );
+  }
 
   @override
   Future<String?> resolveDeviceTimezone() async => timezone;

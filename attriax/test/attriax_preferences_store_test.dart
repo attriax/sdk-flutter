@@ -271,11 +271,10 @@ void main() {
     });
 
     test(
-      'consent-only mode keeps runtime state in memory and clears persisted keys',
+      'consent-only mode keeps the first-launch marker persisted across restarts',
       () async {
         SharedPreferences.setMockInitialValues(<String, Object>{
           AttriaxPreferencesStore.deviceIdStorageKey: 'persisted_device',
-          AttriaxPreferencesStore.firstLaunchSeenStorageKey: true,
           AttriaxPreferencesStore.queueStorageKey: '["persisted"]',
         });
         prefs = await SharedPreferences.getInstance();
@@ -299,12 +298,23 @@ void main() {
         );
         expect(
           prefs.getBool(AttriaxPreferencesStore.firstLaunchSeenStorageKey),
-          isNull,
+          isTrue,
         );
         expect(
           prefs.getString(AttriaxPreferencesStore.queueStorageKey),
           isNull,
         );
+
+        final restartedStore = AttriaxPreferencesStore(prefsOverride: prefs);
+        await restartedStore.setRuntimePersistenceMode(
+          mode: AttriaxRuntimePersistenceMode.consentOnly,
+        );
+        final restartedDevice = await restartedStore.restoreDeviceData(
+          deviceIdFactory: () => 'restarted_memory_device',
+        );
+
+        expect(restartedDevice.deviceId, 'restarted_memory_device');
+        expect(restartedDevice.isFirstLaunch, isFalse);
 
         await store.setRuntimePersistenceMode(
           mode: AttriaxRuntimePersistenceMode.fullRuntime,

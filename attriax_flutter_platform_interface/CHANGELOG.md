@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.0
+
+### Added
+- `anonymousTracking` on the shared config and runtime types used by the main Flutter SDK and federated implementations.
+
+### Changed
+- Split the shared type surface into focused modules for platform runtime, links, deep-link lifecycle, session config, and SKAdNetwork models while keeping the federated contract aligned with `attriax_flutter` 0.4.0.
+- Bumped the shared SDK package version metadata to `0.4.0`.
+
 ## 0.3.0
 
 ### Changed
