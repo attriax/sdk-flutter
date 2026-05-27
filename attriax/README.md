@@ -165,7 +165,7 @@ attriax.consent.gdpr.reset();
 Use `state`, `values`, and `isWaitingForConsent` to drive your privacy UI and
 settings screen.
 
-See [doc/gdpr-and-anonymous-analytics.md](doc/gdpr-and-anonymous-analytics.md) for the full GDPR and anonymous analytics behavior, including how pending consent defers network dispatch and how denied analytics is stored without device identity.
+See [doc/gdpr-and-anonymous-analytics.md](doc/gdpr-and-anonymous-analytics.md) for the full GDPR and anonymous analytics behavior, including how `unknown` and `pending` states dispatch anonymous-capable traffic immediately and how denied analytics is stored without device identity.
 
 ## Dynamic Link Creation
 

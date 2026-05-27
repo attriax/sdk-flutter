@@ -78,7 +78,11 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
       return null;
     }
 
-    return restoreOrStart();
+    final result = await restoreOrStart();
+    if (result.startedNewSession) {
+      _lifecycleManager.seedInitialSessionStart(result.currentSession);
+    }
+    return result;
   }
 
   Future<AttriaxSessionRestoreResult> restoreOrStart() async {

@@ -101,8 +101,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       _state == AttriaxGdprConsentState.unknown;
 
   @override
-  bool get shouldDeferNetworkDispatch =>
-      _config.gdprEnabled && isWaitingForGdprConsent;
+  bool get shouldDeferNetworkDispatch => false;
 
   @override
   bool get allowsAnalyticsTracking =>
@@ -144,11 +143,19 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       );
     }
 
-    if (isWaitingForGdprConsent) {
+    if (_state == AttriaxGdprConsentState.unknown) {
       return AttriaxTrackingDecision(
         capture: _canCaptureWhileWaiting(signal),
         identityMode: AttriaxTrackingIdentityMode.anonymous,
-        deferNetwork: true,
+        deferNetwork: false,
+      );
+    }
+
+    if (_state == AttriaxGdprConsentState.pending) {
+      return AttriaxTrackingDecision(
+        capture: _canCaptureWhileWaiting(signal),
+        identityMode: AttriaxTrackingIdentityMode.anonymous,
+        deferNetwork: false,
       );
     }
 

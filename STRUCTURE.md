@@ -10,6 +10,7 @@
 sdk-flutter/
 ├── attriax/                     # Public package surface
 │   └── example/                # Minimal public package example app
+├── example-gdpr/               # Minimal manual GDPR testing app
 ├── example-rich/               # Rich public demo app
 ├── attriax_api_client/         # Generated internal transport client
 ├── attriax_flutter_platform_interface/ # Shared contracts and types
@@ -29,6 +30,7 @@ cd sdk-flutter
 flutter pub get
 dart analyze
 cd attriax && flutter test
+cd ..\example-gdpr && flutter test
 cd ..\attriax\example && flutter test
 cd ..\example-rich && flutter test
 cd ..\..\attriax_flutter_platform_interface && flutter test
@@ -46,6 +48,11 @@ flutter run
 
 ```bash
 cd sdk-flutter\example-rich
+flutter run
+```
+
+```bash
+cd sdk-flutter\example-gdpr
 flutter run
 ```
 

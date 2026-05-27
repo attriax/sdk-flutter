@@ -251,6 +251,64 @@ void main() {
       );
     });
 
+    test(
+      'resolved pending consent sends analytics events anonymously before a manual choice',
+      () async {
+        contextCollector.timezone = 'Europe/Berlin';
+        final requestPaths = <String>[];
+        final eventBodies = <Map<String, Object?>>[];
+        client = MockClient((request) async {
+          requestPaths.add(request.url.path);
+
+          if (request.url.path == '/api/sdk/v1/events') {
+            eventBodies.add(jsonDecode(request.body) as Map<String, Object?>);
+            return http.Response(
+              _ackEnvelope(),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          return http.Response(
+            request.url.path == '/api/sdk/v1/config'
+                ? _runtimeConfigEnvelope()
+                : _ackEnvelope(),
+            200,
+            headers: const <String, String>{'content-type': 'application/json'},
+          );
+        });
+        await sdk.dispose();
+        sdk = _createSdk(
+          config: const AttriaxConfig(
+            appToken: 'ax_test_token',
+            gdprEnabled: true,
+            gdprAutoDetect: false,
+          ),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+        );
+
+        expect(await sdk.consent.gdpr.needsConsent(localOnly: true), isTrue);
+        expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.pending);
+
+        await sdk.init();
+        await sdk.tracking.recordEvent('purchase');
+        await _waitFor(() => eventBodies.isNotEmpty);
+        await _waitFor(() => sdk.synchronization.isSynchronized);
+
+        expect(requestPaths, contains('/api/sdk/v1/events'));
+        expect(requestPaths, isNot(contains('/api/sdk/v1/consent/gdpr')));
+        expect(eventBodies.single['eventName'], 'purchase');
+        expect(eventBodies.single['deviceId'], isNull);
+        expect(eventBodies.single['deviceIdSource'], isNull);
+      },
+    );
+
     test('setNotRequired syncs without device identity fields', () async {
       Map<String, Object?>? syncedBody;
       client = MockClient((request) async {
@@ -498,12 +556,24 @@ void main() {
     );
 
     test(
-      'init auto-detects local pending consent without a network request',
+      'init auto-detects local pending consent without a remote consent request',
       () async {
         final requestPaths = <String>[];
+        final sessionBodies = <Map<String, Object?>>[];
         contextCollector.timezone = 'Europe/Berlin';
         client = MockClient((request) async {
           requestPaths.add(request.url.path);
+
+          if (request.url.path == '/api/sdk/v1/sessions') {
+            sessionBodies.add(jsonDecode(request.body) as Map<String, Object?>);
+            return http.Response(
+              _ackEnvelope(),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
 
           if (request.url.path == '/api/sdk/v1/config') {
             return http.Response(
@@ -536,10 +606,15 @@ void main() {
         await _waitFor(
           () => sdk.consent.gdpr.state != AttriaxGdprConsentState.unknown,
         );
+        await _waitFor(() => sessionBodies.isNotEmpty);
 
-        expect(_nonConfigRequestPaths(requestPaths), isEmpty);
+        expect(requestPaths, contains('/api/sdk/v1/sessions'));
+        expect(requestPaths, isNot(contains('/api/sdk/v1/consent/gdpr')));
+        expect(requestPaths, isNot(contains('/api/sdk/v1/consent/gdpr/check')));
         expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.pending);
         expect(sdk.consent.gdpr.isWaitingForConsent, isTrue);
+        expect(sessionBodies.single['deviceId'], isNull);
+        expect(sessionBodies.single['deviceIdSource'], isNull);
         expect(
           prefs.getString(AttriaxPreferencesStore.deviceIdStorageKey),
           isNull,
@@ -556,11 +631,82 @@ void main() {
     );
 
     test(
-      'init does not run remote consent checks and app-open resumes after manual grant',
+      'init auto-detected pending consent still sends an anonymous session request',
       () async {
         final requestPaths = <String>[];
+        final sessionBodies = <Map<String, Object?>>[];
+        contextCollector.timezone = 'Europe/Berlin';
         client = MockClient((request) async {
           requestPaths.add(request.url.path);
+
+          if (request.url.path == '/api/sdk/v1/sessions') {
+            sessionBodies.add(jsonDecode(request.body) as Map<String, Object?>);
+            return http.Response(
+              _ackEnvelope(),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          if (request.url.path == '/api/sdk/v1/config') {
+            return http.Response(
+              _runtimeConfigEnvelope(),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          throw StateError(
+            'Unexpected request during local pending init: ${request.method} ${request.url.path}',
+          );
+        });
+        await sdk.dispose();
+        sdk = _createSdk(
+          config: const AttriaxConfig(
+            appToken: 'ax_test_token',
+            gdprEnabled: true,
+          ),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+        );
+
+        await sdk.init();
+        await _waitFor(
+          () => sdk.consent.gdpr.state == AttriaxGdprConsentState.pending,
+        );
+        await _waitFor(() => sessionBodies.isNotEmpty);
+
+        expect(requestPaths, contains('/api/sdk/v1/sessions'));
+        expect(sessionBodies.single['deviceId'], isNull);
+        expect(sessionBodies.single['deviceIdSource'], isNull);
+      },
+    );
+
+    test(
+      'init in unknown consent state still sends anonymous startup traffic',
+      () async {
+        final requestPaths = <String>[];
+        final sessionBodies = <Map<String, Object?>>[];
+        client = MockClient((request) async {
+          requestPaths.add(request.url.path);
+
+          if (request.url.path == '/api/sdk/v1/sessions') {
+            sessionBodies.add(jsonDecode(request.body) as Map<String, Object?>);
+            return http.Response(
+              _ackEnvelope(),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
 
           if (request.url.path == '/api/sdk/v1/consent/gdpr') {
             return http.Response(
@@ -622,11 +768,14 @@ void main() {
         );
 
         await sdk.init();
-        await _drainMicrotasks();
+        await _waitFor(() => sessionBodies.isNotEmpty);
+        await _waitFor(() => sdk.synchronization.isSynchronized);
 
-        expect(_nonConfigRequestPaths(requestPaths), isEmpty);
+        expect(requestPaths, contains('/api/sdk/v1/sessions'));
         expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.unknown);
         expect(sdk.consent.gdpr.isWaitingForConsent, isTrue);
+        expect(sessionBodies.single['deviceId'], isNull);
+        expect(sessionBodies.single['deviceIdSource'], isNull);
 
         sdk.consent.gdpr.setConsent(
           analytics: true,
@@ -653,10 +802,11 @@ void main() {
     );
 
     test(
-      'pending consent buffers analytics events and flushes them after grant',
+      'unknown consent sends analytics events anonymously and syncs consent after grant',
       () async {
         final requestPaths = <String>[];
         final eventBodies = <Map<String, Object?>>[];
+        final sessionBodies = <Map<String, Object?>>[];
         client = MockClient((request) async {
           requestPaths.add(request.url.path);
 
@@ -683,6 +833,17 @@ void main() {
 
           if (request.url.path == '/api/sdk/v1/events') {
             eventBodies.add(jsonDecode(request.body) as Map<String, Object?>);
+            return http.Response(
+              _ackEnvelope(),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
+          if (request.url.path == '/api/sdk/v1/sessions') {
+            sessionBodies.add(jsonDecode(request.body) as Map<String, Object?>);
             return http.Response(
               _ackEnvelope(),
               200,
@@ -731,24 +892,32 @@ void main() {
         );
 
         await sdk.init();
+        await _waitFor(() => sessionBodies.isNotEmpty);
         await sdk.tracking.recordEvent(
           'purchase',
           eventData: const <String, Object?>{'value': 42},
         );
-        await _drainMicrotasks();
+        await _waitFor(() => eventBodies.isNotEmpty);
+        await _waitFor(() => sdk.synchronization.isSynchronized);
 
-        expect(_nonConfigRequestPaths(requestPaths), isEmpty);
+        expect(requestPaths, contains('/api/sdk/v1/events'));
+        expect(requestPaths, contains('/api/sdk/v1/sessions'));
+        expect(requestPaths, isNot(contains('/api/sdk/v1/consent/gdpr')));
+        expect(eventBodies.single['eventName'], 'purchase');
+        expect(eventBodies.single['deviceId'], isNull);
+        expect(eventBodies.single['deviceIdSource'], isNull);
 
         sdk.consent.gdpr.setConsent(
           analytics: true,
           attribution: false,
           adEvents: true,
         );
-        await _waitFor(() => eventBodies.isNotEmpty);
+        await _waitFor(() => requestPaths.contains('/api/sdk/v1/consent/gdpr'));
         await _waitFor(() => sdk.synchronization.isSynchronized);
 
         expect(requestPaths, contains('/api/sdk/v1/consent/gdpr'));
         expect(requestPaths, contains('/api/sdk/v1/events'));
+        expect(requestPaths, contains('/api/sdk/v1/sessions'));
         expect(requestPaths, isNot(contains('/api/sdk/v1/batch')));
         expect(eventBodies.single['eventName'], 'purchase');
         expect(eventBodies.single['deviceId'], isNull);
@@ -757,11 +926,10 @@ void main() {
     );
 
     test(
-      'pending consent identifies buffered analytics events when GDPR is not required',
+      'unknown consent sends analytics events anonymously before GDPR is not required',
       () async {
         final requestPaths = <String>[];
         final eventBodies = <Map<String, Object?>>[];
-        final batchBodies = <Map<String, Object?>>[];
         client = MockClient((request) async {
           requestPaths.add(request.url.path);
 
@@ -785,17 +953,6 @@ void main() {
             eventBodies.add(jsonDecode(request.body) as Map<String, Object?>);
             return http.Response(
               _ackEnvelope(),
-              200,
-              headers: const <String, String>{
-                'content-type': 'application/json',
-              },
-            );
-          }
-
-          if (request.url.path == '/api/sdk/v1/batch') {
-            batchBodies.add(jsonDecode(request.body) as Map<String, Object?>);
-            return http.Response(
-              _batchEnvelope(),
               200,
               headers: const <String, String>{
                 'content-type': 'application/json',
@@ -843,36 +1000,28 @@ void main() {
 
         await sdk.init();
         await sdk.tracking.recordEvent('purchase');
-        await _drainMicrotasks();
+        await _waitFor(() => eventBodies.isNotEmpty);
+        await _waitFor(() => sdk.synchronization.isSynchronized);
 
-        expect(_nonConfigRequestPaths(requestPaths), isEmpty);
+        expect(requestPaths, contains('/api/sdk/v1/events'));
+        expect(eventBodies.single['eventName'], 'purchase');
+        expect(eventBodies.single['deviceId'], isNull);
+        expect(eventBodies.single['deviceIdSource'], isNull);
 
         sdk.consent.gdpr.setNotRequired();
-        await _waitFor(() => eventBodies.isNotEmpty || batchBodies.isNotEmpty);
+        await _waitFor(() => requestPaths.contains('/api/sdk/v1/consent/gdpr'));
         await _waitFor(() => sdk.synchronization.isSynchronized);
 
         expect(requestPaths, contains('/api/sdk/v1/consent/gdpr'));
-        if (eventBodies.isNotEmpty) {
-          expect(requestPaths, contains('/api/sdk/v1/events'));
-          expect(eventBodies.single['eventName'], 'purchase');
-          expect(eventBodies.single['deviceId'], 'device_1');
-          expect(eventBodies.single['deviceIdSource'], 'test_device');
-        } else {
-          expect(requestPaths, contains('/api/sdk/v1/batch'));
-          expect(batchBodies.single['deviceId'], 'device_1');
-          expect(batchBodies.single['deviceIdSource'], 'test_device');
-          final items = batchBodies.single['items']! as List<Object?>;
-          final eventItem = items.cast<Map<String, Object?>>().firstWhere(
-            (item) => item['kind'] == 'event',
-          );
-          final eventBody = eventItem['body']! as Map<String, Object?>;
-          expect(eventBody['eventName'], 'purchase');
-        }
+        expect(requestPaths, contains('/api/sdk/v1/events'));
+        expect(eventBodies.single['eventName'], 'purchase');
+        expect(eventBodies.single['deviceId'], isNull);
+        expect(eventBodies.single['deviceIdSource'], isNull);
       },
     );
 
     test(
-      'pending consent flushes buffered analytics events anonymously when denied',
+      'unknown consent sends analytics events anonymously before denial',
       () async {
         final requestPaths = <String>[];
         final eventBodies = <Map<String, Object?>>[];
@@ -935,16 +1084,20 @@ void main() {
 
         await sdk.init();
         await sdk.tracking.recordEvent('purchase');
-        await _drainMicrotasks();
+        await _waitFor(() => eventBodies.isNotEmpty);
+        await _waitFor(() => sdk.synchronization.isSynchronized);
 
-        expect(_nonConfigRequestPaths(requestPaths), isEmpty);
+        expect(requestPaths, contains('/api/sdk/v1/events'));
+        expect(eventBodies.single['eventName'], 'purchase');
+        expect(eventBodies.single['deviceId'], isNull);
+        expect(eventBodies.single['deviceIdSource'], isNull);
 
         sdk.consent.gdpr.setConsent(
           analytics: false,
           attribution: false,
           adEvents: false,
         );
-        await _waitFor(() => eventBodies.isNotEmpty);
+        await _waitFor(() => requestPaths.contains('/api/sdk/v1/consent/gdpr'));
         await _waitFor(() => sdk.synchronization.isSynchronized);
 
         expect(requestPaths, contains('/api/sdk/v1/consent/gdpr'));
@@ -1044,15 +1197,18 @@ void main() {
 
         await sdk.init();
         await sdk.tracking.registerApplePushToken('apns_token_1');
-        await _drainMicrotasks();
+        await _waitFor(() => requestPaths.contains('/api/sdk/v1/sessions'));
+        await _waitFor(() => sdk.synchronization.isSynchronized);
 
-        expect(_nonConfigRequestPaths(requestPaths), isEmpty);
+        expect(requestPaths, contains('/api/sdk/v1/sessions'));
+        expect(requestPaths, isNot(contains('/api/sdk/v1/uninstall-tokens')));
 
         sdk.consent.gdpr.setConsent(
           analytics: false,
           attribution: true,
           adEvents: false,
         );
+        await _waitFor(() => requestPaths.contains('/api/sdk/v1/consent/gdpr'));
         await _waitFor(() => requestPaths.contains('/api/sdk/v1/open'));
         await _waitFor(() => sdk.synchronization.isSynchronized);
 
@@ -1129,6 +1285,7 @@ class _ConsentTestContextCollector extends AttriaxContextCollector {
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
+    bool waitForTrackingAuthorization = false,
   }) async => AttriaxContextSnapshot(
     platform: platform,
     deviceId: deviceId,

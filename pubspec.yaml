@@ -9,6 +9,7 @@ workspace:
   - attriax
   - attriax_api_client
   - attriax/example
+  - example-gdpr
   - example-rich
   - attriax_flutter_android
   - attriax_flutter_ios

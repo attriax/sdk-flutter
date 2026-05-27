@@ -85,7 +85,7 @@ await attriax.tracking.recordAdEvent(
 - Install-referrer access on Android when it is available.
 - Firebase and APNs token registration for uninstall-tracking flows.
 - Dynamic-link creation from the app runtime.
-- GDPR-aware consent helpers under `attriax.consent.gdpr`, including pending dispatch gates and anonymous analytics-capable delivery for denied analytics paths.
+- GDPR-aware consent helpers under `attriax.consent.gdpr`, including immediate anonymous-capable dispatch while consent is `unknown` or `pending` and anonymous analytics-capable delivery for denied analytics paths.
 
 ## Platform Notes
 

@@ -1063,6 +1063,39 @@ class AttriaxRuntime {
       enabled: true,
       state: _runtimeActivationState,
     );
+
+    await _enqueueIdentifiedSessionHeartbeatIfNeeded();
+  }
+
+  Future<void> _enqueueIdentifiedSessionHeartbeatIfNeeded() async {
+    if (_isWaitingForGdprConsent || !_shouldActivateSessionTracking) {
+      return;
+    }
+
+    final decision = _sessionTrackingDecision;
+    if (!decision.capture || !decision.attachDeviceIdentity) {
+      return;
+    }
+
+    final currentSession = _sessionManager.currentSession;
+    if (currentSession == null) {
+      return;
+    }
+
+    try {
+      await _ensureTransport().send(
+        _sessionManager.buildHeartbeatKeepAliveRequest(
+        session: currentSession,
+        occurredAt: _clock.now(),
+        ),
+      );
+    } catch (error, stackTrace) {
+      _logger.warning(
+        'Failed to send the consent-upgrade session heartbeat. Attriax will retry promotion on the next identified request.',
+        error: error,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   bool _isRequestAllowedByResolvedConsent(AttriaxApiRequest request) =>

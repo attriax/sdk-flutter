@@ -17,7 +17,7 @@ Use `state`, `values`, and `isWaitingForConsent` to drive privacy UI. Use `needs
 
 ## Pending Consent
 
-When GDPR is enabled and the state is `unknown` or `pending`, the SDK may queue local event, crash, session, and deep-link activity, but it does not send network tracking requests. Network dispatch resumes only after consent is resolved to `granted` or `notRequired`.
+When GDPR is enabled and the state is `unknown` or `pending`, the Flutter SDK sends anonymous-capable event, crash, session, and deep-link traffic immediately without `deviceId` or `deviceIdSource`. That keeps aggregate activity visible even before the app has resolved whether consent is required or before the user makes a choice.
 
 Attribution-only activity, user identity updates, uninstall tokens, and app-open attribution are not sent while consent is waiting.
 
@@ -33,7 +33,9 @@ The backend consent record is keyed by app and consent ID. It stores the consent
 
 When consent is granted for a category, matching SDK requests can include device identity where the request type requires identified tracking.
 
-When analytics or ad-events consent is denied after a pending period, queued analytics-capable activity may still be sent without device identity if your integration allows anonymous analytics. Treat that as a separate lawful-basis/product decision in your consent and privacy design.
+When previously anonymous Flutter activity exists for the current installation, the SDK sends an immediate identified session heartbeat after consent resolves so the backend can promote the existing anonymous app-user record. The backend matches by the current SDK session ID first and falls back to the daily salted request-context hash when no same-session match exists.
+
+When analytics or ad-events consent is denied after an unresolved period, analytics-capable activity may still be sent without device identity if your integration allows anonymous analytics. Treat that as a separate lawful-basis/product decision in your consent and privacy design.
 
 Attribution, user identity, uninstall tracking, and install attribution require attribution consent. If attribution is denied, those requests are withheld rather than anonymized.
 
@@ -43,7 +45,7 @@ When all granted categories are effectively off and the SDK is only allowed to e
 
 Anonymous analytics means the SDK does not send Attriax device identity, app-user identity, or external user identity. It is not a promise of irreversible legal anonymization by itself.
 
-Anonymous traffic is bound server-side to anonymous sessions, not to device IDs or app users. The backend derives a daily salted hash from request context and app ID, then groups anonymous events, crashes, sessions, and deep-link diagnostics under an anonymous session ID. Raw IP and user-agent values are not stored in anonymous session rows.
+Anonymous traffic is bound server-side to anonymous app users and sessions, not to device IDs. The backend derives a daily salted hash from request context and app ID, then groups anonymous events, crashes, sessions, and deep-link diagnostics under that anonymous identity. Raw IP and user-agent values are not stored in anonymous rows.
 
 Daily salts limit long-term linkability and are pruned after a short operational window. While a salt exists, anonymous session data should still be treated as daily-scoped pseudonymous data for GDPR analysis. Anonymous analytics is useful for aggregate counts, trends, crash volume, and deep-link diagnostics, but it intentionally does not support user explorer history, uninstall tracking, cross-day identity stitching, or attribution decisions.
 

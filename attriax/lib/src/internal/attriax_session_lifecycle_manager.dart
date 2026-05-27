@@ -36,6 +36,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
   Timer? _heartbeatTimer;
   bool _isInBackground = false;
   bool _isObserverRegistered = false;
+  AttriaxSessionSnapshot? _pendingInitialSessionStart;
   AttriaxSessionSnapshot? _pendingRecoveredSessionEnd;
 
   static AttriaxTrackingDecision _identifiedTrackingDecision() =>
@@ -57,9 +58,14 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
     _pendingRecoveredSessionEnd = session;
   }
 
+  void seedInitialSessionStart(AttriaxSessionSnapshot? session) {
+    _pendingInitialSessionStart = session;
+  }
+
   void activate() {
     _registerObserver();
     syncLifecycleState(WidgetsBinding.instance.lifecycleState);
+    unawaited(_flushPendingInitialSessionStart());
     _restartHeartbeatTimer();
   }
 
@@ -75,6 +81,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
   void reset() {
     deactivate();
     _isInBackground = false;
+    _pendingInitialSessionStart = null;
     _pendingRecoveredSessionEnd = null;
   }
 
@@ -279,6 +286,23 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
       session: session,
       occurredAt: _sessionManager.inferredEndAt(session),
       metadata: const <String, Object?>{'recovered': true},
+    );
+  }
+
+  Future<void> _flushPendingInitialSessionStart() async {
+    final pendingSession = _pendingInitialSessionStart;
+    if (!_sessionManager.isTrackingEnabled ||
+        pendingSession == null ||
+        !_settingsState.isEnabled ||
+        _isInBackground) {
+      return;
+    }
+
+    _pendingInitialSessionStart = null;
+    await _enqueueSessionLifecycle(
+      kind: AttriaxSessionLifecycleKind.start,
+      session: pendingSession,
+      occurredAt: pendingSession.startedAt,
     );
   }
 
