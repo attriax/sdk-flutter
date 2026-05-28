@@ -29,7 +29,7 @@ void main() {
       client = http.Client();
 
       sdk = Attriax.test(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         client: client,
         deepLinkSource: FakeDeepLinkSource(),
         connectivity: connectivity,
@@ -140,12 +140,13 @@ class FakeConnectivityPlatform extends ConnectivityPlatform {
 
 class StaticPreparedContextCollector extends AttriaxContextCollector {
   StaticPreparedContextCollector()
-    : super(config: const AttriaxConfig(appToken: 'ax_test_token'));
+    : super(config: const AttriaxConfig(projectToken: 'ax_test_token'));
 
   @override
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
+    bool waitForTrackingAuthorization = false,
   }) async => AttriaxContextSnapshot(
     platform: AttriaxPlatformType.android,
     deviceId: deviceId,

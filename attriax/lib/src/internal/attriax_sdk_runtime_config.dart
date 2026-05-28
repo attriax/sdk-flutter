@@ -36,7 +36,7 @@ Map<String, Object?> attriaxBuildSdkRuntimeConfigRequest({
       : const <String>[];
 
   return <String, Object?>{
-    'appToken': config.appToken,
+    'appToken': config.projectToken,
     'platform': context.platform.name,
     if (packageName != null) 'packageName': packageName,
     if (signatureHashes.isNotEmpty) 'signatureHashes': signatureHashes,

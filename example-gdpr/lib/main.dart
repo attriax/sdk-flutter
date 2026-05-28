@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:attriax_flutter/attriax_flutter.dart';
 import 'package:flutter/material.dart';
 
-const String _defaultAppToken = String.fromEnvironment(
-  'ATTRIAX_APP_TOKEN',
+const String _defaultProjectToken = String.fromEnvironment(
+  'ATTRIAX_PROJECT_TOKEN',
   defaultValue: 'ax_4961d1f22e274281919b1b021ec2eb48',
 );
 const String _defaultApiBaseUrl = String.fromEnvironment(
@@ -51,8 +51,8 @@ class ExampleGdprHomePage extends StatefulWidget {
 }
 
 class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
-  late final TextEditingController _appTokenController = TextEditingController(
-    text: _defaultAppToken,
+  late final TextEditingController _projectTokenController = TextEditingController(
+    text: _defaultProjectToken,
   );
   late final TextEditingController _apiBaseUrlController =
       TextEditingController(text: _defaultApiBaseUrl);
@@ -87,7 +87,7 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
 
   @override
   void dispose() {
-    _appTokenController.dispose();
+    _projectTokenController.dispose();
     _apiBaseUrlController.dispose();
     _eventNameController.dispose();
     _pageNameController.dispose();
@@ -148,17 +148,17 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
   }
 
   AttriaxConfig _buildConfig() {
-    final appToken = _appTokenController.text.trim();
+    final projectToken = _projectTokenController.text.trim();
     final apiBaseUrl = _apiBaseUrlController.text.trim();
-    if (appToken.isEmpty) {
-      throw StateError('App token is required.');
+    if (projectToken.isEmpty) {
+      throw StateError('Project token is required.');
     }
     if (apiBaseUrl.isEmpty) {
       throw StateError('API base URL is required.');
     }
 
     return AttriaxConfig(
-      appToken: appToken,
+      projectToken: projectToken,
       apiBaseUrl: apiBaseUrl,
       enableDebugLogs: true,
       gdprEnabled: true,
@@ -414,9 +414,9 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       TextField(
-                        controller: _appTokenController,
+                        controller: _projectTokenController,
                         decoration: const InputDecoration(
-                          labelText: 'App token',
+                          labelText: 'Project token',
                           border: OutlineInputBorder(),
                         ),
                         enabled: !_busy,

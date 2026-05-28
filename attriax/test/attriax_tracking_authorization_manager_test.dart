@@ -15,7 +15,7 @@ void main() {
             AttriaxTrackingAuthorizationStatus.authorized;
       final manager = AttriaxTrackingAuthorizationManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           collectAdvertisingId: false,
         ),
         platform: platform,
@@ -41,7 +41,7 @@ void main() {
             AttriaxTrackingAuthorizationStatus.authorized;
       final manager = AttriaxTrackingAuthorizationManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           collectAdvertisingId: false,
         ),
         platform: platform,
@@ -63,7 +63,7 @@ void main() {
         ..requestTrackingAuthorizationStatus =
             AttriaxTrackingAuthorizationStatus.authorized;
       final manager = AttriaxTrackingAuthorizationManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         platform: platform,
         platformType: AttriaxPlatformType.ios,
       );
@@ -95,7 +95,7 @@ void main() {
       final platform = FakeAttriaxPlatform();
       final manager = AttriaxTrackingAuthorizationManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           requestTrackingAuthorizationOnInit: true,
         ),
         platform: platform,
@@ -126,7 +126,7 @@ void main() {
               AttriaxTrackingAuthorizationStatus.authorized,
             ];
       final manager = AttriaxTrackingAuthorizationManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         platform: platform,
         platformType: AttriaxPlatformType.ios,
       );
@@ -157,7 +157,7 @@ void main() {
         ..requestTrackingAuthorizationCompleter = requestCompleter;
       final manager = AttriaxTrackingAuthorizationManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           trackingAuthorizationStatusTimeout: Duration(seconds: 5),
         ),
         platform: platform,
@@ -211,7 +211,7 @@ void main() {
               AttriaxTrackingAuthorizationStatus.authorized,
             ];
       final manager = AttriaxTrackingAuthorizationManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         platform: platform,
         platformType: AttriaxPlatformType.ios,
       );
@@ -238,7 +238,7 @@ void main() {
         ..trackingAuthorizationStatus =
             AttriaxTrackingAuthorizationStatus.notDetermined;
       final manager = AttriaxTrackingAuthorizationManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         platform: platform,
         platformType: AttriaxPlatformType.ios,
       );
@@ -270,7 +270,7 @@ void main() {
               AttriaxTrackingAuthorizationStatus.authorized,
             ];
       final manager = AttriaxTrackingAuthorizationManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         platform: platform,
         platformType: AttriaxPlatformType.ios,
       );

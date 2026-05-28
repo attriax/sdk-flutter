@@ -28,7 +28,7 @@ void main() {
       connectivity = Connectivity();
 
       sdk = Attriax.test(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         client: MockClient((request) async {
           if (request.url.path.endsWith('/api/sdk/v1/open')) {
             return http.Response(
@@ -92,7 +92,7 @@ void main() {
       () async {
         var appOpenRequests = 0;
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: MockClient((request) async {
             if (request.url.path.endsWith('/api/sdk/v1/open')) {
               appOpenRequests += 1;
@@ -172,7 +172,7 @@ void main() {
 
         sdk = Attriax.test(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -266,7 +266,7 @@ void main() {
 
         sdk = Attriax.test(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -340,7 +340,7 @@ void main() {
           connectivity: connectivity,
           contextCollector: AttriaxContextCollector(
             config: const AttriaxConfig(
-              appToken: 'ax_test_token',
+              projectToken: 'ax_test_token',
               gdprEnabled: true,
               gdprAutoDetect: false,
             ),
@@ -397,7 +397,7 @@ void main() {
 
         sdk = Attriax.test(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -478,7 +478,7 @@ void main() {
           connectivity: connectivity,
           contextCollector: AttriaxContextCollector(
             config: const AttriaxConfig(
-              appToken: 'ax_test_token',
+              projectToken: 'ax_test_token',
               gdprEnabled: true,
               gdprAutoDetect: false,
             ),
@@ -537,7 +537,7 @@ void main() {
 
         sdk = Attriax.test(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -605,7 +605,7 @@ void main() {
           connectivity: connectivity,
           contextCollector: AttriaxContextCollector(
             config: const AttriaxConfig(
-              appToken: 'ax_test_token',
+              projectToken: 'ax_test_token',
               gdprEnabled: true,
               gdprAutoDetect: false,
             ),
@@ -663,12 +663,13 @@ class FakeConnectivityPlatform extends ConnectivityPlatform {
 
 class StaticPreparedContextCollector extends AttriaxContextCollector {
   StaticPreparedContextCollector()
-    : super(config: const AttriaxConfig(appToken: 'ax_test_token'));
+    : super(config: const AttriaxConfig(projectToken: 'ax_test_token'));
 
   @override
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
+    bool waitForTrackingAuthorization = false,
   }) async => AttriaxContextSnapshot(
     platform: AttriaxPlatformType.android,
     deviceId: deviceId,
@@ -689,7 +690,7 @@ class StaticPreparedContextCollector extends AttriaxContextCollector {
 class AndroidPreparedContextCollector extends AttriaxContextCollector {
   AndroidPreparedContextCollector({required AttriaxPlatform platform})
     : super(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         platform: platform,
         platformType: AttriaxPlatformType.android,
       );
@@ -698,6 +699,7 @@ class AndroidPreparedContextCollector extends AttriaxContextCollector {
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
+    bool waitForTrackingAuthorization = false,
   }) async => AttriaxContextSnapshot(
     platform: AttriaxPlatformType.android,
     deviceId: deviceId,

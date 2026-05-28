@@ -329,6 +329,33 @@ bool attriaxCanBatchRequest(AttriaxApiRequest request) => switch (request) {
   _ => false,
 };
 
+String _attriaxResolveCompatibleToken({
+  required String context,
+  String? projectToken,
+  String? appToken,
+}) {
+  final normalizedProjectToken = attriaxStringValue(projectToken)?.trim();
+  final normalizedAppToken = attriaxStringValue(appToken)?.trim();
+
+  if (
+      normalizedProjectToken != null &&
+      normalizedAppToken != null &&
+      normalizedProjectToken != normalizedAppToken) {
+    throw ArgumentError(
+      '$context received mismatched projectToken and deprecated appToken values.',
+    );
+  }
+
+  final resolvedToken = normalizedProjectToken ?? normalizedAppToken;
+  if (resolvedToken == null || resolvedToken.isEmpty) {
+    throw ArgumentError(
+      '$context requires projectToken or the deprecated appToken alias.',
+    );
+  }
+
+  return resolvedToken;
+}
+
 final class AttriaxBatchRequestIdentity {
   const AttriaxBatchRequestIdentity({
     required this.appToken,
@@ -347,19 +374,31 @@ AttriaxBatchRequestIdentity attriaxBatchRequestIdentity(
   switch (request) {
     case AttriaxTrackEventRequest(:final payload):
       return AttriaxBatchRequestIdentity(
-        appToken: payload.appToken,
+        appToken: _attriaxResolveCompatibleToken(
+          context: 'Attriax event batch identity',
+          projectToken: payload.projectToken,
+          appToken: payload.appToken,
+        ),
         deviceId: payload.deviceId!,
         deviceIdSource: attriaxStringValue(payload.deviceIdSource),
       );
     case AttriaxTrackSessionRequest(:final payload):
       return AttriaxBatchRequestIdentity(
-        appToken: payload.appToken,
+        appToken: _attriaxResolveCompatibleToken(
+          context: 'Attriax session batch identity',
+          projectToken: null,
+          appToken: payload.appToken,
+        ),
         deviceId: payload.deviceId!,
         deviceIdSource: attriaxStringValue(payload.deviceIdSource),
       );
     case AttriaxUserRequest(:final payload):
       return AttriaxBatchRequestIdentity(
-        appToken: payload.appToken,
+        appToken: _attriaxResolveCompatibleToken(
+          context: 'Attriax user batch identity',
+          projectToken: payload.projectToken,
+          appToken: payload.appToken,
+        ),
         deviceId: payload.deviceId,
         deviceIdSource: attriaxStringValue(payload.deviceIdSource),
       );
@@ -394,6 +433,7 @@ Map<String, Object?> attriaxBatchBody(AttriaxApiRequest request) {
 
   final body = Map<String, Object?>.from(request.toQueueBody())
     ..remove('appToken')
+    ..remove('projectToken')
     ..remove('deviceId')
     ..remove('deviceIdSource');
   return body;
@@ -416,7 +456,11 @@ AttriaxApiRequest attriaxAnonymizeRequestForConsent(
 ) => switch (request) {
   AttriaxTrackEventRequest(:final payload) => AttriaxTrackEventRequest(
     sdk.SdkEventDto(
-      appToken: payload.appToken,
+      appToken: _attriaxResolveCompatibleToken(
+        context: 'Attriax anonymized event request',
+        projectToken: payload.projectToken,
+        appToken: payload.appToken,
+      ),
       clientOccurredAt: payload.clientOccurredAt,
       eventData: payload.eventData,
       eventName: payload.eventName,
@@ -468,7 +512,11 @@ AttriaxApiRequest attriaxAnonymizeRequestForConsent(
   AttriaxResolveDeepLinkRequest(:final payload) =>
     AttriaxResolveDeepLinkRequest(
       sdk.SdkV1DeepLinkResolveDto(
-        appToken: payload.appToken,
+        appToken: _attriaxResolveCompatibleToken(
+          context: 'Attriax anonymized deep-link request',
+          projectToken: payload.projectToken,
+          appToken: payload.appToken,
+        ),
         isFirstLaunch: payload.isFirstLaunch,
         linkPath: payload.linkPath,
         metadata: payload.metadata,
@@ -488,7 +536,11 @@ AttriaxApiRequest? attriaxIdentifyRequestForConsentNotRequired(
   AttriaxTrackEventRequest(:final payload) when payload.deviceId == null =>
     AttriaxTrackEventRequest(
       sdk.SdkEventDto(
-        appToken: payload.appToken,
+        appToken: _attriaxResolveCompatibleToken(
+          context: 'Attriax identified event request',
+          projectToken: payload.projectToken,
+          appToken: payload.appToken,
+        ),
         clientOccurredAt: payload.clientOccurredAt,
         deviceId: deviceId,
         deviceIdSource: deviceIdSource,
@@ -548,7 +600,11 @@ AttriaxApiRequest? attriaxIdentifyRequestForConsentNotRequired(
   AttriaxResolveDeepLinkRequest(:final payload) when payload.deviceId == null =>
     AttriaxResolveDeepLinkRequest(
       sdk.SdkV1DeepLinkResolveDto(
-        appToken: payload.appToken,
+        appToken: _attriaxResolveCompatibleToken(
+          context: 'Attriax identified deep-link request',
+          projectToken: payload.projectToken,
+          appToken: payload.appToken,
+        ),
         deviceId: deviceId,
         deviceIdSource: deviceIdSource,
         isFirstLaunch: payload.isFirstLaunch,
@@ -620,7 +676,7 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
       platformInstallReferrerContext?.metadata ?? const <String, Object?>{};
   final requestDto = sdk.SdkV1OpenDto(
     app: _generatedAppVersionContext(context.app),
-    appToken: config.appToken,
+    appToken: config.projectToken,
     device: _generatedDeviceContext(
       context.device,
       metadataOverrides: deviceMetadataOverrides,
@@ -706,7 +762,8 @@ AttriaxInstallReferrerDetails? attriaxBuildLocalInstallReferrerDetails(
 }
 
 AttriaxTrackEventRequest attriaxBuildTrackEventRequest({
-  required String appToken,
+  String? projectToken,
+  @Deprecated('Use projectToken instead.') String? appToken,
   required String eventName,
   String? deviceId,
   String? deviceIdSource,
@@ -715,8 +772,13 @@ AttriaxTrackEventRequest attriaxBuildTrackEventRequest({
   int? sessionRelativeTimeMs,
   DateTime? clientOccurredAt,
 }) {
-  final requestDto = sdk.SdkEventDto(
+  final resolvedToken = _attriaxResolveCompatibleToken(
+    context: 'Attriax track-event request',
+    projectToken: projectToken,
     appToken: appToken,
+  );
+  final requestDto = sdk.SdkEventDto(
+    appToken: resolvedToken,
     clientOccurredAt: clientOccurredAt?.toUtc(),
     deviceId: deviceId,
     deviceIdSource: deviceIdSource,
@@ -730,7 +792,8 @@ AttriaxTrackEventRequest attriaxBuildTrackEventRequest({
 }
 
 AttriaxTrackCrashRequest attriaxBuildTrackCrashRequest({
-  required String appToken,
+  String? projectToken,
+  @Deprecated('Use projectToken instead.') String? appToken,
   required AttriaxContextSnapshot context,
   required String source,
   required bool isFatal,
@@ -744,6 +807,11 @@ AttriaxTrackCrashRequest attriaxBuildTrackCrashRequest({
   String? reason,
   Map<String, Object?>? metadata,
 }) {
+  final resolvedToken = _attriaxResolveCompatibleToken(
+    context: 'Attriax track-crash request',
+    projectToken: projectToken,
+    appToken: appToken,
+  );
   final occurredAt = clientOccurredAt?.toUtc() ?? DateTime.now().toUtc();
   final sessionRelativeTimeMs = session == null
       ? null
@@ -754,7 +822,7 @@ AttriaxTrackCrashRequest attriaxBuildTrackCrashRequest({
 
   return AttriaxTrackCrashRequest(
     AttriaxCrashReportPayload(
-      appToken: appToken,
+      appToken: resolvedToken,
       deviceId: deviceId,
       deviceIdSource: deviceIdSource,
       source: source,
@@ -780,7 +848,8 @@ AttriaxTrackCrashRequest attriaxBuildTrackCrashRequest({
 }
 
 AttriaxTrackSessionRequest attriaxBuildTrackSessionRequest({
-  required String appToken,
+  String? projectToken,
+  @Deprecated('Use projectToken instead.') String? appToken,
   required AttriaxSessionSnapshot session,
   required AttriaxSessionLifecycleKind kind,
   String? deviceIdSource,
@@ -788,6 +857,11 @@ AttriaxTrackSessionRequest attriaxBuildTrackSessionRequest({
   DateTime? occurredAt,
   Map<String, Object?>? metadata,
 }) {
+  final resolvedToken = _attriaxResolveCompatibleToken(
+    context: 'Attriax track-session request',
+    projectToken: projectToken,
+    appToken: appToken,
+  );
   final clientOccurredAt = (occurredAt ?? session.lastActivityAt).toUtc();
   final sessionRelativeTimeMs = clientOccurredAt
       .difference(session.startedAt)
@@ -796,7 +870,7 @@ AttriaxTrackSessionRequest attriaxBuildTrackSessionRequest({
 
   return AttriaxTrackSessionRequest(
     AttriaxSessionLifecyclePayload(
-      appToken: appToken,
+      appToken: resolvedToken,
       deviceId: attachDeviceIdentity ? session.deviceId : null,
       deviceIdSource: attachDeviceIdentity ? deviceIdSource : null,
       kind: kind,
@@ -851,7 +925,8 @@ Map<String, Object> attriaxGeneratedJsonObjectMap(Map<String, Object?> value) =>
     Map<String, Object>.from(_generatedJsonMap(value));
 
 AttriaxUserRequest attriaxBuildUserRequest({
-  required String appToken,
+  String? projectToken,
+  @Deprecated('Use projectToken instead.') String? appToken,
   required String deviceId,
   required String deviceIdSource,
   String? externalUserId,
@@ -861,12 +936,17 @@ AttriaxUserRequest attriaxBuildUserRequest({
   List<String>? clearPropertyKeys,
   bool clearAllProperties = false,
 }) {
+  final resolvedToken = _attriaxResolveCompatibleToken(
+    context: 'Attriax user request',
+    projectToken: projectToken,
+    appToken: appToken,
+  );
   final normalizedClearPropertyKeys = clearPropertyKeys
       ?.map((value) => value.trim())
       .where((value) => value.isNotEmpty)
       .toList(growable: false);
   final requestDto = sdk.SdkUserDto(
-    appToken: appToken,
+    appToken: resolvedToken,
     clearAllProperties: clearAllProperties ? true : null,
     clearExternalUser: clearExternalUser ? true : null,
     clearPropertyKeys:
@@ -885,7 +965,8 @@ AttriaxUserRequest attriaxBuildUserRequest({
 }
 
 AttriaxResolveDeepLinkRequest attriaxBuildResolveDeepLinkRequest({
-  required String appToken,
+  String? projectToken,
+  @Deprecated('Use projectToken instead.') String? appToken,
   required AttriaxPlatformType platform,
   required String source,
   required bool isFirstLaunch,
@@ -895,8 +976,13 @@ AttriaxResolveDeepLinkRequest attriaxBuildResolveDeepLinkRequest({
   String? linkPath,
   Map<String, Object?>? metadata,
 }) {
-  final requestDto = sdk.SdkV1DeepLinkResolveDto(
+  final resolvedToken = _attriaxResolveCompatibleToken(
+    context: 'Attriax resolve-deep-link request',
+    projectToken: projectToken,
     appToken: appToken,
+  );
+  final requestDto = sdk.SdkV1DeepLinkResolveDto(
+    appToken: resolvedToken,
     deviceId: deviceId,
     deviceIdSource: deviceIdSource,
     isFirstLaunch: isFirstLaunch,
@@ -911,7 +997,8 @@ AttriaxResolveDeepLinkRequest attriaxBuildResolveDeepLinkRequest({
 }
 
 AttriaxCreateDynamicLinkRequest attriaxBuildCreateDynamicLinkRequest({
-  required String appToken,
+  String? projectToken,
+  @Deprecated('Use projectToken instead.') String? appToken,
   String? name,
   String? destinationUrl,
   String? group,
@@ -921,9 +1008,14 @@ AttriaxCreateDynamicLinkRequest attriaxBuildCreateDynamicLinkRequest({
   AttriaxDynamicLinkUtms? utms,
   Map<String, Object?>? data,
 }) {
+  final resolvedToken = _attriaxResolveCompatibleToken(
+    context: 'Attriax create-dynamic-link request',
+    projectToken: projectToken,
+    appToken: appToken,
+  );
   final requestDto = sdk.SdkCreateDynamicLinkDto(
     androidRedirect: redirects?.android,
-    appToken: appToken,
+    appToken: resolvedToken,
     data: _generatedOptionalJsonObjectMap(data),
     destinationUrl: attriaxStringValue(destinationUrl),
     group: attriaxStringValue(group),
@@ -943,7 +1035,8 @@ AttriaxCreateDynamicLinkRequest attriaxBuildCreateDynamicLinkRequest({
 }
 
 Map<String, Object?> attriaxBuildValidateRevenueReceiptRequest({
-  required String appToken,
+  String? projectToken,
+  @Deprecated('Use projectToken instead.') String? appToken,
   required String? deviceId,
   required DateTime clientOccurredAt,
   String? provider,
@@ -958,45 +1051,74 @@ Map<String, Object?> attriaxBuildValidateRevenueReceiptRequest({
   String? signedPayload,
   String? receiptSignature,
   bool? test,
-}) => <String, Object?>{
-  'appToken': appToken,
-  'deviceId': ?deviceId,
+}) {
+  final resolvedToken = _attriaxResolveCompatibleToken(
+    context: 'Attriax validate-revenue-receipt request',
+    projectToken: projectToken,
+    appToken: appToken,
+  );
+
+  return <String, Object?>{
+  'appToken': resolvedToken,
+  if (deviceId != null) 'deviceId': deviceId,
   'clientOccurredAt': clientOccurredAt.toUtc().toIso8601String(),
-  'provider': ?attriaxStringValue(provider),
-  'environment': ?attriaxStringValue(environment),
-  'transactionId': ?attriaxStringValue(transactionId),
-  'originalTransactionId': ?attriaxStringValue(originalTransactionId),
-  'productId': ?attriaxStringValue(productId),
-  'store': ?attriaxStringValue(store),
-  'packageName': ?attriaxStringValue(packageName),
-  'purchaseToken': ?attriaxStringValue(purchaseToken),
-  'receiptData': ?attriaxStringValue(receiptData),
-  'signedPayload': ?attriaxStringValue(signedPayload),
-  'receiptSignature': ?attriaxStringValue(receiptSignature),
-  'test': ?test,
+  if (attriaxStringValue(provider) != null)
+    'provider': attriaxStringValue(provider),
+  if (attriaxStringValue(environment) != null)
+    'environment': attriaxStringValue(environment),
+  if (attriaxStringValue(transactionId) != null)
+    'transactionId': attriaxStringValue(transactionId),
+  if (attriaxStringValue(originalTransactionId) != null)
+    'originalTransactionId': attriaxStringValue(originalTransactionId),
+  if (attriaxStringValue(productId) != null)
+    'productId': attriaxStringValue(productId),
+  if (attriaxStringValue(store) != null)
+    'store': attriaxStringValue(store),
+  if (attriaxStringValue(packageName) != null)
+    'packageName': attriaxStringValue(packageName),
+  if (attriaxStringValue(purchaseToken) != null)
+    'purchaseToken': attriaxStringValue(purchaseToken),
+  if (attriaxStringValue(receiptData) != null)
+    'receiptData': attriaxStringValue(receiptData),
+  if (attriaxStringValue(signedPayload) != null)
+    'signedPayload': attriaxStringValue(signedPayload),
+  if (attriaxStringValue(receiptSignature) != null)
+    'receiptSignature': attriaxStringValue(receiptSignature),
+  if (test != null) 'test': test,
 };
+}
 
 Map<String, Object?> attriaxBuildRegisterUninstallTokenRequest({
-  required String appToken,
+  String? projectToken,
+  @Deprecated('Use projectToken instead.') String? appToken,
   required String deviceId,
   required String deviceIdSource,
   required AttriaxPlatformType platform,
   required String provider,
   String? token,
   Map<String, Object?>? metadata,
-}) => <String, Object?>{
-  'appToken': appToken,
+}) {
+  final resolvedToken = _attriaxResolveCompatibleToken(
+    context: 'Attriax register-uninstall-token request',
+    projectToken: projectToken,
+    appToken: appToken,
+  );
+
+  return <String, Object?>{
+  'appToken': resolvedToken,
   'deviceId': deviceId,
   'deviceIdSource': deviceIdSource,
   'platform': _uninstallTrackingPlatformName(platform),
   'provider': provider,
-  'token': ?attriaxStringValue(token),
-  'metadata': ?metadata,
+  if (attriaxStringValue(token) != null) 'token': attriaxStringValue(token),
+  if (metadata != null) 'metadata': metadata,
 };
+}
 
 AttriaxRegisterUninstallTokenRequest
 attriaxBuildRegisterUninstallTokenQueueRequest({
-  required String appToken,
+  String? projectToken,
+  @Deprecated('Use projectToken instead.') String? appToken,
   required String deviceId,
   required String deviceIdSource,
   required AttriaxPlatformType platform,
@@ -1005,6 +1127,7 @@ attriaxBuildRegisterUninstallTokenQueueRequest({
   Map<String, Object?>? metadata,
 }) => AttriaxRegisterUninstallTokenRequest(
   attriaxBuildRegisterUninstallTokenRequest(
+    projectToken: projectToken,
     appToken: appToken,
     deviceId: deviceId,
     deviceIdSource: deviceIdSource,

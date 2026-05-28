@@ -18,13 +18,15 @@ part 'sdk_v1_gdpr_consent_write_dto.g.dart';
 class SdkV1GdprConsentWriteDto {
   /// Returns a new [SdkV1GdprConsentWriteDto] instance.
   SdkV1GdprConsentWriteDto({
-    required this.appToken,
+    this.appToken,
 
     this.clientOccurredAt,
 
     this.consentId,
 
     this.countryCode,
+
+    this.projectToken,
 
     this.regionSource,
 
@@ -33,8 +35,10 @@ class SdkV1GdprConsentWriteDto {
     this.values,
   });
 
-  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
-  final String appToken;
+  /// Deprecated alias for projectToken kept for released SDK compatibility.
+  @Deprecated('appToken has been deprecated')
+  @JsonKey(name: r'appToken', required: false, includeIfNull: false)
+  final String? appToken;
 
   @JsonKey(name: r'clientOccurredAt', required: false, includeIfNull: false)
   final DateTime? clientOccurredAt;
@@ -44,6 +48,10 @@ class SdkV1GdprConsentWriteDto {
 
   @JsonKey(name: r'countryCode', required: false, includeIfNull: false)
   final String? countryCode;
+
+  /// Attriax project token that scopes the SDK request.
+  @JsonKey(name: r'projectToken', required: false, includeIfNull: false)
+  final String? projectToken;
 
   @JsonKey(name: r'regionSource', required: false, includeIfNull: false)
   final String? regionSource;
@@ -62,6 +70,7 @@ class SdkV1GdprConsentWriteDto {
           other.clientOccurredAt == clientOccurredAt &&
           other.consentId == consentId &&
           other.countryCode == countryCode &&
+          other.projectToken == projectToken &&
           other.regionSource == regionSource &&
           other.state == state &&
           other.values == values;
@@ -72,6 +81,7 @@ class SdkV1GdprConsentWriteDto {
       clientOccurredAt.hashCode +
       consentId.hashCode +
       countryCode.hashCode +
+      projectToken.hashCode +
       regionSource.hashCode +
       state.hashCode +
       values.hashCode;

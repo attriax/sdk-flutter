@@ -15,6 +15,33 @@ import 'attriax_sdk_runtime_config.dart';
 const int _attriaxBatchMaxItemCount = 100;
 const int _attriaxBatchMaxBodyBytes = 48 * 1024;
 
+String _resolveTransportProjectToken({
+  required String context,
+  String? projectToken,
+  String? appToken,
+}) {
+  final normalizedProjectToken = projectToken?.trim();
+  final normalizedAppToken = appToken?.trim();
+
+  if (
+      normalizedProjectToken != null &&
+      normalizedAppToken != null &&
+      normalizedProjectToken != normalizedAppToken) {
+    throw ArgumentError(
+      '$context received mismatched projectToken and deprecated appToken values.',
+    );
+  }
+
+  final resolvedToken = normalizedProjectToken ?? normalizedAppToken;
+  if (resolvedToken == null || resolvedToken.isEmpty) {
+    throw ArgumentError(
+      '$context requires projectToken or the deprecated appToken alias.',
+    );
+  }
+
+  return resolvedToken;
+}
+
 class AttriaxTransportSuccess {
   const AttriaxTransportSuccess({
     required this.statusCode,
@@ -250,13 +277,20 @@ class AttriaxGeneratedTransport {
   }
 
   Future<sdk.SdkGdprConsentStatusDto> checkGdprConsent({
-    required String appToken,
+    String? projectToken,
+    @Deprecated('Use projectToken instead.') String? appToken,
     required String consentId,
   }) async {
+    final resolvedToken = _resolveTransportProjectToken(
+      context: 'Attriax GDPR consent check',
+      projectToken: projectToken,
+      appToken: appToken,
+    );
+
     try {
       final response = await _sdkApi.sdkControllerCheckGdprConsentV1(
         sdkV1GdprConsentCheckDto: sdk.SdkV1GdprConsentCheckDto(
-          appToken: appToken,
+          appToken: resolvedToken,
           consentId: consentId,
         ),
         validateStatus: _allowAnyStatus,
@@ -272,7 +306,8 @@ class AttriaxGeneratedTransport {
   }
 
   Future<sdk.SdkGdprConsentStatusDto> upsertGdprConsent({
-    required String appToken,
+    String? projectToken,
+    @Deprecated('Use projectToken instead.') String? appToken,
     required String consentId,
     required sdk.AppUserGdprConsentState state,
     sdk.SdkV1GdprConsentValuesDto? values,
@@ -280,10 +315,16 @@ class AttriaxGeneratedTransport {
     String? regionSource,
     DateTime? clientOccurredAt,
   }) async {
+    final resolvedToken = _resolveTransportProjectToken(
+      context: 'Attriax GDPR consent upsert',
+      projectToken: projectToken,
+      appToken: appToken,
+    );
+
     try {
       final response = await _sdkApi.sdkControllerUpsertGdprConsentV1(
         sdkV1GdprConsentWriteDto: sdk.SdkV1GdprConsentWriteDto(
-          appToken: appToken,
+          appToken: resolvedToken,
           consentId: consentId,
           state: state,
           values: values,
@@ -378,13 +419,20 @@ class AttriaxGeneratedTransport {
   }
 
   Future<void> eraseGdprData({
-    required String appToken,
+    String? projectToken,
+    @Deprecated('Use projectToken instead.') String? appToken,
     required String deviceId,
   }) async {
+    final resolvedToken = _resolveTransportProjectToken(
+      context: 'Attriax GDPR data erasure',
+      projectToken: projectToken,
+      appToken: appToken,
+    );
+
     final response = await _dio.post<Object?>(
       '/api/sdk/v1/privacy/gdpr/erase',
       data: attriaxNormalizeJsonMap(<String, Object?>{
-        'appToken': appToken,
+        'appToken': resolvedToken,
         'deviceId': deviceId,
       }),
       options: Options(validateStatus: _allowAnyStatus),

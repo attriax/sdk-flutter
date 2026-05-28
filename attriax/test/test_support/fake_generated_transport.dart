@@ -77,13 +77,15 @@ class FakeGeneratedTransport implements AttriaxGeneratedTransport {
 
   @override
   Future<void> eraseGdprData({
-    required String appToken,
+    String? projectToken,
+    String? appToken,
     required String deviceId,
   }) async {}
 
   @override
   Future<sdk.SdkGdprConsentStatusDto> checkGdprConsent({
-    required String appToken,
+    String? projectToken,
+    String? appToken,
     required String consentId,
   }) async => sdk.SdkGdprConsentStatusDto(
     checkedAt: DateTime.utc(2026, 5, 20),
@@ -93,7 +95,8 @@ class FakeGeneratedTransport implements AttriaxGeneratedTransport {
 
   @override
   Future<sdk.SdkGdprConsentStatusDto> upsertGdprConsent({
-    required String appToken,
+    String? projectToken,
+    String? appToken,
     required String consentId,
     required sdk.AppUserGdprConsentState state,
     sdk.SdkV1GdprConsentValuesDto? values,

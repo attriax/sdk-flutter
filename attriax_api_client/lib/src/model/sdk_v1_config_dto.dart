@@ -17,23 +17,31 @@ part 'sdk_v1_config_dto.g.dart';
 class SdkV1ConfigDto {
   /// Returns a new [SdkV1ConfigDto] instance.
   SdkV1ConfigDto({
-    required this.appToken,
+    this.appToken,
 
     this.packageName,
 
     required this.platform,
 
+    this.projectToken,
+
     this.signatureHashes,
   });
 
-  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
-  final String appToken;
+  /// Deprecated alias for projectToken kept for released SDK compatibility.
+  @Deprecated('appToken has been deprecated')
+  @JsonKey(name: r'appToken', required: false, includeIfNull: false)
+  final String? appToken;
 
   @JsonKey(name: r'packageName', required: false, includeIfNull: false)
   final String? packageName;
 
   @JsonKey(name: r'platform', required: true, includeIfNull: false)
   final Platform platform;
+
+  /// Attriax project token that scopes the SDK request.
+  @JsonKey(name: r'projectToken', required: false, includeIfNull: false)
+  final String? projectToken;
 
   @JsonKey(name: r'signatureHashes', required: false, includeIfNull: false)
   final List<String>? signatureHashes;
@@ -45,6 +53,7 @@ class SdkV1ConfigDto {
           other.appToken == appToken &&
           other.packageName == packageName &&
           other.platform == platform &&
+          other.projectToken == projectToken &&
           other.signatureHashes == signatureHashes;
 
   @override
@@ -52,6 +61,7 @@ class SdkV1ConfigDto {
       appToken.hashCode +
       packageName.hashCode +
       platform.hashCode +
+      projectToken.hashCode +
       signatureHashes.hashCode;
 
   factory SdkV1ConfigDto.fromJson(Map<String, dynamic> json) =>

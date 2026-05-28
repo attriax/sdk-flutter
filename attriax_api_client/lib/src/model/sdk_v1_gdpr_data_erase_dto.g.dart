@@ -9,10 +9,11 @@ part of 'sdk_v1_gdpr_data_erase_dto.dart';
 SdkV1GdprDataEraseDto _$SdkV1GdprDataEraseDtoFromJson(
   Map<String, dynamic> json,
 ) => $checkedCreate('SdkV1GdprDataEraseDto', json, ($checkedConvert) {
-  $checkKeys(json, requiredKeys: const ['appToken', 'deviceId']);
+  $checkKeys(json, requiredKeys: const ['deviceId']);
   final val = SdkV1GdprDataEraseDto(
-    appToken: $checkedConvert('appToken', (v) => v as String),
+    appToken: $checkedConvert('appToken', (v) => v as String?),
     deviceId: $checkedConvert('deviceId', (v) => v as String),
+    projectToken: $checkedConvert('projectToken', (v) => v as String?),
   );
   return val;
 });
@@ -20,6 +21,7 @@ SdkV1GdprDataEraseDto _$SdkV1GdprDataEraseDtoFromJson(
 Map<String, dynamic> _$SdkV1GdprDataEraseDtoToJson(
   SdkV1GdprDataEraseDto instance,
 ) => <String, dynamic>{
-  'appToken': instance.appToken,
+  'appToken': ?instance.appToken,
   'deviceId': instance.deviceId,
+  'projectToken': ?instance.projectToken,
 };

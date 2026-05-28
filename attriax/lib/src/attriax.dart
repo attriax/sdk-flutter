@@ -30,7 +30,7 @@ part 'attriax_tracking.dart';
 /// ```dart
 /// final attriax = Attriax(
 ///   config: const AttriaxConfig(
-///     appToken: 'ax_your_app_token',
+///     projectToken: 'ax_your_project_token',
 ///   ),
 /// );
 ///

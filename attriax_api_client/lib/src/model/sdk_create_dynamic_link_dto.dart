@@ -18,7 +18,7 @@ class SdkCreateDynamicLinkDto {
   SdkCreateDynamicLinkDto({
     this.androidRedirect,
 
-    required this.appToken,
+    this.appToken,
 
     this.data,
 
@@ -36,6 +36,8 @@ class SdkCreateDynamicLinkDto {
 
     this.previewTitle,
 
+    this.projectToken,
+
     this.utmCampaign,
 
     this.utmContent,
@@ -50,8 +52,10 @@ class SdkCreateDynamicLinkDto {
   @JsonKey(name: r'androidRedirect', required: false, includeIfNull: false)
   final bool? androidRedirect;
 
-  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
-  final String appToken;
+  /// Deprecated alias for projectToken kept for released SDK compatibility.
+  @Deprecated('appToken has been deprecated')
+  @JsonKey(name: r'appToken', required: false, includeIfNull: false)
+  final String? appToken;
 
   @JsonKey(name: r'data', required: false, includeIfNull: false)
   final Map<String, Object>? data;
@@ -76,6 +80,10 @@ class SdkCreateDynamicLinkDto {
 
   @JsonKey(name: r'previewTitle', required: false, includeIfNull: false)
   final String? previewTitle;
+
+  /// Attriax project token that scopes the SDK request.
+  @JsonKey(name: r'projectToken', required: false, includeIfNull: false)
+  final String? projectToken;
 
   @JsonKey(name: r'utmCampaign', required: false, includeIfNull: false)
   final String? utmCampaign;
@@ -106,6 +114,7 @@ class SdkCreateDynamicLinkDto {
           other.prefix == prefix &&
           other.previewDescription == previewDescription &&
           other.previewTitle == previewTitle &&
+          other.projectToken == projectToken &&
           other.utmCampaign == utmCampaign &&
           other.utmContent == utmContent &&
           other.utmMedium == utmMedium &&
@@ -124,6 +133,7 @@ class SdkCreateDynamicLinkDto {
       prefix.hashCode +
       previewDescription.hashCode +
       previewTitle.hashCode +
+      projectToken.hashCode +
       utmCampaign.hashCode +
       utmContent.hashCode +
       utmMedium.hashCode +

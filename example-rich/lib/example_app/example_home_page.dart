@@ -80,8 +80,8 @@ class ExampleHomePage extends StatelessWidget {
                           : maskExampleSecret(controller.deviceId!),
                     ),
                     ExampleMetricChip(
-                      label: 'App token',
-                      value: maskExampleSecret(exampleAppToken),
+                      label: 'Project token',
+                      value: maskExampleSecret(exampleProjectToken),
                     ),
                     ExampleMetricChip(
                       label: 'Package version',

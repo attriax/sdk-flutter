@@ -45,7 +45,7 @@ void main() {
       'schedules at most one request and reuses the successful result',
       () async {
         await tracker.schedule(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           context: context,
           platformInstallReferrerContext: const AttriaxInstallReferrerContext(),
           deviceIdSource: 'android_ssaid',
@@ -54,7 +54,7 @@ void main() {
           logger: AttriaxLogger(enableDebugLogs: false),
         );
         await tracker.schedule(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           context: context,
           platformInstallReferrerContext: const AttriaxInstallReferrerContext(),
           deviceIdSource: 'android_ssaid',
@@ -82,7 +82,7 @@ void main() {
 
     test('propagates request manager errors', () async {
       await tracker.schedule(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         context: context,
         platformInstallReferrerContext: const AttriaxInstallReferrerContext(),
         deviceIdSource: 'android_ssaid',

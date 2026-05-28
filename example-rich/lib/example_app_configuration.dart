@@ -1,10 +1,10 @@
-const String exampleAppToken = 'ax_b62ee57056374b76aa09b26fa071e561';
+const String exampleProjectToken = 'ax_b62ee57056374b76aa09b26fa071e561';
 
 const String exampleDeepLinkHost = 'example-test.attriax.com';
 const String exampleDeepLinkPath = 'example/deep-link-success';
 const String exampleDeepLinkGroup = 'flutter-example';
 
-bool get isExampleAppConfigured => !exampleAppToken.startsWith('ax_your_');
+bool get isExampleProjectConfigured => !exampleProjectToken.startsWith('ax_your_');
 
 String maskExampleSecret(String value) {
   if (value.length <= 10) {
@@ -21,4 +21,4 @@ Uri buildExampleFallbackDeepLink() =>
     });
 
 String exampleConfigurationHelpText() =>
-    'Edit lib/example_app_configuration.dart to change the app token or deep-link demo defaults.';
+  'Edit lib/example_app_configuration.dart to change the project token or deep-link demo defaults.';

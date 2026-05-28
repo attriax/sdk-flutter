@@ -45,7 +45,7 @@ void main() {
         ),
       );
       sdk = Attriax.test(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         client: client,
         deepLinkSource: deepLinkSource,
         connectivity: connectivity,
@@ -91,7 +91,7 @@ void main() {
         prefs = await SharedPreferences.getInstance();
         contextCollector = CountingContextCollector();
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -127,7 +127,7 @@ void main() {
             source: 'android_ssaid',
           );
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -181,7 +181,7 @@ void main() {
         contextCollector = CountingContextCollector();
         sdk = Attriax.test(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -231,7 +231,7 @@ void main() {
         contextCollector = CountingContextCollector();
         sdk = Attriax.test(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -307,7 +307,7 @@ void main() {
         });
         contextCollector = CountingContextCollector();
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -400,7 +400,7 @@ void main() {
           );
         });
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -471,7 +471,7 @@ void main() {
         ConnectivityPlatform.instance = connectivityPlatform;
         connectivity = Connectivity();
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -537,7 +537,7 @@ void main() {
         contextCollector = CountingContextCollector();
         sdk = Attriax.test(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             automaticCrashReportingEnabled: false,
           ),
           client: client,
@@ -563,7 +563,7 @@ void main() {
     test('creates and persists a current session snapshot', () async {
       final now = DateTime.utc(2026, 5, 3, 12);
       final clock = AttriaxMutableClock(now);
-      final config = AttriaxConfig(appToken: 'ax_test_token', clock: clock);
+      final config = AttriaxConfig(projectToken: 'ax_test_token', clock: clock);
       sdk = Attriax.test(
         config: config,
         client: client,
@@ -592,7 +592,7 @@ void main() {
       final now = DateTime.utc(2026, 5, 3, 12);
       final firstClock = AttriaxMutableClock(now);
       sdk = Attriax.test(
-        config: AttriaxConfig(appToken: 'ax_test_token', clock: firstClock),
+        config: AttriaxConfig(projectToken: 'ax_test_token', clock: firstClock),
         client: client,
         deepLinkSource: deepLinkSource,
         connectivity: connectivity,
@@ -616,7 +616,7 @@ void main() {
       final secondContextCollector = CountingContextCollector();
       final secondSdk = Attriax.test(
         config: AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           clock: AttriaxMutableClock(now.add(const Duration(seconds: 5))),
         ),
         client: secondClient,
@@ -649,7 +649,7 @@ void main() {
         final now = DateTime.utc(2026, 5, 3, 12);
         final firstClock = AttriaxMutableClock(now);
         final firstConfig = AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           clock: firstClock,
         );
         sdk = Attriax.test(
@@ -681,7 +681,7 @@ void main() {
         );
         final secondSdk = Attriax.test(
           config: AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             clock: AttriaxMutableClock(resumedAt),
           ),
           client: secondClient,
@@ -714,7 +714,7 @@ void main() {
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
       sdk = Attriax.test(
-        config: AttriaxConfig(appToken: 'ax_test_token', clock: clock),
+        config: AttriaxConfig(projectToken: 'ax_test_token', clock: clock),
         client: client,
         deepLinkSource: deepLinkSource,
         connectivity: connectivity,
@@ -753,7 +753,7 @@ void main() {
         ConnectivityPlatform.instance = connectivityPlatform;
         connectivity = Connectivity();
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -803,7 +803,7 @@ void main() {
         ConnectivityPlatform.instance = connectivityPlatform;
         connectivity = Connectivity();
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -851,7 +851,7 @@ void main() {
         ConnectivityPlatform.instance = connectivityPlatform;
         connectivity = Connectivity();
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -882,7 +882,7 @@ void main() {
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
       sdk = Attriax.test(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         client: client,
         deepLinkSource: deepLinkSource,
         connectivity: connectivity,
@@ -983,7 +983,7 @@ void main() {
         });
 
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -1060,7 +1060,7 @@ void main() {
 
         sdk = Attriax.test(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -1099,7 +1099,7 @@ void main() {
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
       sdk = Attriax.test(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         client: client,
         deepLinkSource: deepLinkSource,
         connectivity: connectivity,
@@ -1139,7 +1139,7 @@ void main() {
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
       sdk = Attriax.test(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         client: client,
         deepLinkSource: deepLinkSource,
         connectivity: connectivity,
@@ -1185,7 +1185,7 @@ void main() {
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
       sdk = Attriax.test(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         client: client,
         deepLinkSource: deepLinkSource,
         connectivity: connectivity,
@@ -1214,7 +1214,7 @@ void main() {
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
       sdk = Attriax.test(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         client: client,
         deepLinkSource: deepLinkSource,
         connectivity: connectivity,
@@ -1303,7 +1303,7 @@ void main() {
         });
 
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -1362,7 +1362,7 @@ void main() {
         });
 
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -1423,7 +1423,7 @@ void main() {
         });
 
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -1447,7 +1447,7 @@ void main() {
           platform: AttriaxPlatformType.windows,
         );
         sdk = Attriax.test(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -1475,7 +1475,7 @@ void main() {
         connectivity = Connectivity();
         sdk = Attriax.test(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             sessionHeartbeatInterval: Duration(milliseconds: 25),
             firstLaunchSessionHeartbeatInterval: Duration(milliseconds: 25),
           ),
@@ -1512,7 +1512,7 @@ void main() {
         ConnectivityPlatform.instance = connectivityPlatform;
         connectivity = Connectivity();
         sdk = Attriax.test(
-          config: AttriaxConfig(appToken: 'ax_test_token', clock: clock),
+          config: AttriaxConfig(projectToken: 'ax_test_token', clock: clock),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -1562,7 +1562,7 @@ void main() {
         ConnectivityPlatform.instance = connectivityPlatform;
         connectivity = Connectivity();
         sdk = Attriax.test(
-          config: AttriaxConfig(appToken: 'ax_test_token', clock: clock),
+          config: AttriaxConfig(projectToken: 'ax_test_token', clock: clock),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -1673,7 +1673,7 @@ class FakeConnectivityPlatform extends ConnectivityPlatform {
 
 class CountingContextCollector extends AttriaxContextCollector {
   CountingContextCollector({this.platform = AttriaxPlatformType.android})
-    : super(config: const AttriaxConfig(appToken: 'ax_test_token'));
+    : super(config: const AttriaxConfig(projectToken: 'ax_test_token'));
 
   int collectContextSnapshotCalls = 0;
   int anonymousSnapshotBuildCalls = 0;

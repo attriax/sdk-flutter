@@ -9,12 +9,9 @@ part of 'sdk_register_uninstall_token_dto.dart';
 SdkRegisterUninstallTokenDto _$SdkRegisterUninstallTokenDtoFromJson(
   Map<String, dynamic> json,
 ) => $checkedCreate('SdkRegisterUninstallTokenDto', json, ($checkedConvert) {
-  $checkKeys(
-    json,
-    requiredKeys: const ['appToken', 'deviceId', 'platform', 'provider'],
-  );
+  $checkKeys(json, requiredKeys: const ['deviceId', 'platform', 'provider']);
   final val = SdkRegisterUninstallTokenDto(
-    appToken: $checkedConvert('appToken', (v) => v as String),
+    appToken: $checkedConvert('appToken', (v) => v as String?),
     deviceId: $checkedConvert('deviceId', (v) => v as String),
     deviceIdSource: $checkedConvert('deviceIdSource', (v) => v as String?),
     metadata: $checkedConvert(
@@ -26,6 +23,7 @@ SdkRegisterUninstallTokenDto _$SdkRegisterUninstallTokenDtoFromJson(
       'platform',
       (v) => $enumDecode(_$PlatformEnumMap, v),
     ),
+    projectToken: $checkedConvert('projectToken', (v) => v as String?),
     provider: $checkedConvert(
       'provider',
       (v) => $enumDecode(_$AppUserUninstallTokenProviderEnumMap, v),
@@ -38,11 +36,12 @@ SdkRegisterUninstallTokenDto _$SdkRegisterUninstallTokenDtoFromJson(
 Map<String, dynamic> _$SdkRegisterUninstallTokenDtoToJson(
   SdkRegisterUninstallTokenDto instance,
 ) => <String, dynamic>{
-  'appToken': instance.appToken,
+  'appToken': ?instance.appToken,
   'deviceId': instance.deviceId,
   'deviceIdSource': ?instance.deviceIdSource,
   'metadata': ?instance.metadata,
   'platform': _$PlatformEnumMap[instance.platform]!,
+  'projectToken': ?instance.projectToken,
   'provider': _$AppUserUninstallTokenProviderEnumMap[instance.provider]!,
   'token': ?instance.token,
 };

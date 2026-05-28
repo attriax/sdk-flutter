@@ -13,7 +13,7 @@ void main() {
     () async {
       final collector = AttriaxContextCollector(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           sdkMetadata: <String, Object?>{
             'clientRuntime': 'custom',
             'customField': 'kept',
@@ -37,7 +37,7 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
     final collector = AttriaxContextCollector(
-      config: const AttriaxConfig(appToken: 'ax_test_token'),
+      config: const AttriaxConfig(projectToken: 'ax_test_token'),
       platform: FakeAttriaxPlatform.withNativeContext(
         const AttriaxNativeContext(
           androidId: 'android-ssaid',
@@ -78,7 +78,7 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
     final collector = AttriaxContextCollector(
-      config: const AttriaxConfig(appToken: 'ax_test_token'),
+      config: const AttriaxConfig(projectToken: 'ax_test_token'),
       platform: FakeAttriaxPlatform.withNativeContext(
         const AttriaxNativeContext(
           androidId: 'android-ssaid',
@@ -101,7 +101,7 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
     final collector = AttriaxContextCollector(
-      config: const AttriaxConfig(appToken: 'ax_test_token'),
+      config: const AttriaxConfig(projectToken: 'ax_test_token'),
       platform: FakeAttriaxPlatform.withNativeContext(
         const AttriaxNativeContext(advertisingId: 'android-gaid'),
       ),
@@ -121,7 +121,7 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
     final collector = AttriaxContextCollector(
-      config: const AttriaxConfig(appToken: 'ax_test_token'),
+      config: const AttriaxConfig(projectToken: 'ax_test_token'),
       platform:
           FakeAttriaxPlatform.withNativeContext(
               const AttriaxNativeContext(
@@ -148,7 +148,7 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
     final collector = AttriaxContextCollector(
-      config: const AttriaxConfig(appToken: 'ax_test_token'),
+      config: const AttriaxConfig(projectToken: 'ax_test_token'),
       platform:
           FakeAttriaxPlatform.withNativeContext(
               const AttriaxNativeContext(
@@ -215,7 +215,7 @@ void main() {
     addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
     final collector = AttriaxContextCollector(
-      config: const AttriaxConfig(appToken: 'ax_test_token'),
+      config: const AttriaxConfig(projectToken: 'ax_test_token'),
       platform: FakeAttriaxPlatform.withNativeContext(
         const AttriaxNativeContext(
           metadata: <String, Object?>{'keychainDeviceId': 'macos-keychain-id'},
@@ -238,7 +238,7 @@ void main() {
       addTearDown(() => debugDefaultTargetPlatformOverride = null);
 
       final collector = AttriaxContextCollector(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         platform: FakeAttriaxPlatform.withNativeContext(
           const AttriaxNativeContext(
             metadata: <String, Object?>{
@@ -282,7 +282,7 @@ void main() {
 
   test('builds web app and device snapshots from platform metadata', () async {
     final collector = AttriaxContextCollector(
-      config: const AttriaxConfig(appToken: 'ax_test_token'),
+      config: const AttriaxConfig(projectToken: 'ax_test_token'),
       platformType: AttriaxPlatformType.web,
       platform: FakeAttriaxPlatform.withNativeContext(
         const AttriaxNativeContext(
@@ -320,7 +320,7 @@ void main() {
       );
       final collector = AttriaxContextCollector(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           collectAdvertisingId: false,
         ),
         platform: platform,
@@ -352,7 +352,7 @@ void main() {
                 ];
       final collector = AttriaxContextCollector(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           trackingAuthorizationStatusTimeout: Duration(milliseconds: 100),
         ),
         platform: platform,

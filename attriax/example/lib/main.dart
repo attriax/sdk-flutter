@@ -12,7 +12,7 @@ export 'integration_example_app.dart'
 
 final Attriax _exampleSdk = Attriax(
   config: AttriaxConfig(
-    appToken: exampleAppToken,
+    projectToken: exampleProjectToken,
     gdprEnabled: true,
     gdprAutoDetect: true,
   ),
@@ -22,9 +22,9 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   String? bootstrapError;
-  if (!isExampleAppConfigured) {
+  if (!isExampleProjectConfigured) {
     bootstrapError =
-        'Set a real Attriax app token in lib/example_app_configuration.dart before running this example.';
+      'Set a real Attriax project token in lib/example_app_configuration.dart before running this example.';
   } else {
     try {
       await _exampleSdk.init();

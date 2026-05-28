@@ -300,7 +300,7 @@ class AttriaxRuntime {
     },
     scheduleFlush: () => _synchronizer?.scheduleFlush(),
     flushPendingSync: () {
-      unawaited(_consentManager.flushPendingSync(appToken: config.appToken));
+      unawaited(_consentManager.flushPendingSync(appToken: config.projectToken));
     },
     scheduleAppOpenIfNeeded: () {
       unawaited(_scheduleAppOpenIfNeeded());
@@ -514,7 +514,7 @@ class AttriaxRuntime {
     }
 
     await _ensureTransport().eraseGdprData(
-      appToken: config.appToken,
+      appToken: config.projectToken,
       deviceId: deviceId,
     );
 
@@ -639,7 +639,7 @@ class AttriaxRuntime {
   Future<bool> needsGdprConsent({bool localOnly = false}) {
     _consentManager.bindTransport(_ensureTransport());
     return _consentManager.needsConsent(
-      appToken: config.appToken,
+      appToken: config.projectToken,
       localOnly: localOnly,
     );
   }
@@ -652,7 +652,7 @@ class AttriaxRuntime {
     _consentManager
       ..bindTransport(_ensureTransport())
       ..setConsent(
-        appToken: config.appToken,
+        appToken: config.projectToken,
         analytics: analytics,
         attribution: attribution,
         adEvents: adEvents,
@@ -662,13 +662,13 @@ class AttriaxRuntime {
   void setGdprConsentNotRequired() {
     _consentManager
       ..bindTransport(_ensureTransport())
-      ..setNotRequired(appToken: config.appToken);
+      ..setNotRequired(appToken: config.projectToken);
   }
 
   void resetGdprConsent() {
     _consentManager
       ..bindTransport(_ensureTransport())
-      ..reset(appToken: config.appToken);
+      ..reset(appToken: config.projectToken);
   }
 
   Future<AttriaxCreateDynamicLinkResult> createDynamicLink({
@@ -684,7 +684,7 @@ class AttriaxRuntime {
     _assertInitialized();
 
     final request = attriaxBuildCreateDynamicLinkRequest(
-      appToken: config.appToken,
+      appToken: config.projectToken,
       name: _trimOrNull(name),
       destinationUrl: _trimOrNull(destinationUrl),
       group: _trimOrNull(group),
@@ -733,7 +733,7 @@ class AttriaxRuntime {
     _assertInitialized();
 
     final request = attriaxBuildValidateRevenueReceiptRequest(
-      appToken: config.appToken,
+      appToken: config.projectToken,
       deviceId: deviceId,
       clientOccurredAt: _clock.now(),
       provider: _trimOrNull(provider),
@@ -798,7 +798,7 @@ class AttriaxRuntime {
     }
 
     final request = attriaxBuildRegisterUninstallTokenQueueRequest(
-      appToken: config.appToken,
+      appToken: config.projectToken,
       deviceId: currentDeviceId,
       deviceIdSource: _contextManager.requireDeviceIdSource(),
       platform: _contextManager.requiredSnapshot.platform,
@@ -932,8 +932,8 @@ class AttriaxRuntime {
   // ---------- private ------------------------------------------------------- //
 
   void _validateConfig() {
-    if (config.appToken.trim().isEmpty) {
-      throw ArgumentError('Attriax appToken must not be empty.');
+    if (config.projectToken.trim().isEmpty) {
+      throw ArgumentError('Attriax projectToken must not be empty.');
     }
     _apiBaseUrlConfig;
     if (config.maxQueueSize <= 0) {
@@ -1067,7 +1067,7 @@ class AttriaxRuntime {
     }
 
     if (!_shouldDeferNetworkDispatch) {
-      unawaited(_consentManager.flushPendingSync(appToken: config.appToken));
+      unawaited(_consentManager.flushPendingSync(appToken: config.projectToken));
     }
 
     await _runtimeActivationCoordinator.apply(
@@ -1249,7 +1249,7 @@ class AttriaxRuntime {
     }
 
     final result = await transport.convertRevenueToUsd(<String, Object?>{
-      'appToken': config.appToken,
+      'appToken': config.projectToken,
       'currency': currency,
       'amountMicros': amountMicros.toString(),
       'clientOccurredAt': clientOccurredAt.toUtc().toIso8601String(),

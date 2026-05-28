@@ -20,11 +20,13 @@ class SdkV1RevenueConvertToUsdDto {
 
     this.amountMicros,
 
-    required this.appToken,
+    this.appToken,
 
     this.clientOccurredAt,
 
     required this.currency,
+
+    this.projectToken,
 
     this.revenueInMicros,
   });
@@ -37,14 +39,20 @@ class SdkV1RevenueConvertToUsdDto {
   @JsonKey(name: r'amountMicros', required: false, includeIfNull: false)
   final String? amountMicros;
 
-  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
-  final String appToken;
+  /// Deprecated alias for projectToken kept for released SDK compatibility.
+  @Deprecated('appToken has been deprecated')
+  @JsonKey(name: r'appToken', required: false, includeIfNull: false)
+  final String? appToken;
 
   @JsonKey(name: r'clientOccurredAt', required: false, includeIfNull: false)
   final String? clientOccurredAt;
 
   @JsonKey(name: r'currency', required: true, includeIfNull: false)
   final String currency;
+
+  /// Attriax project token that scopes the SDK request.
+  @JsonKey(name: r'projectToken', required: false, includeIfNull: false)
+  final String? projectToken;
 
   /// Treat amount as micros when amountMicros is not supplied.
   @JsonKey(name: r'revenueInMicros', required: false, includeIfNull: false)
@@ -59,6 +67,7 @@ class SdkV1RevenueConvertToUsdDto {
           other.appToken == appToken &&
           other.clientOccurredAt == clientOccurredAt &&
           other.currency == currency &&
+          other.projectToken == projectToken &&
           other.revenueInMicros == revenueInMicros;
 
   @override
@@ -68,6 +77,7 @@ class SdkV1RevenueConvertToUsdDto {
       appToken.hashCode +
       clientOccurredAt.hashCode +
       currency.hashCode +
+      projectToken.hashCode +
       revenueInMicros.hashCode;
 
   factory SdkV1RevenueConvertToUsdDto.fromJson(Map<String, dynamic> json) =>

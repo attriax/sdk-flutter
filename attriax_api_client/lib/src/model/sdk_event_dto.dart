@@ -16,7 +16,7 @@ part 'sdk_event_dto.g.dart';
 class SdkEventDto {
   /// Returns a new [SdkEventDto] instance.
   SdkEventDto({
-    required this.appToken,
+    this.appToken,
 
     this.clientOccurredAt,
 
@@ -28,13 +28,17 @@ class SdkEventDto {
 
     required this.eventName,
 
+    this.projectToken,
+
     this.sessionId,
 
     this.sessionRelativeTimeMs,
   });
 
-  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
-  final String appToken;
+  /// Deprecated alias for projectToken kept for released SDK compatibility.
+  @Deprecated('appToken has been deprecated')
+  @JsonKey(name: r'appToken', required: false, includeIfNull: false)
+  final String? appToken;
 
   @JsonKey(name: r'clientOccurredAt', required: false, includeIfNull: false)
   final DateTime? clientOccurredAt;
@@ -50,6 +54,10 @@ class SdkEventDto {
 
   @JsonKey(name: r'eventName', required: true, includeIfNull: false)
   final String eventName;
+
+  /// Attriax project token that scopes the SDK request.
+  @JsonKey(name: r'projectToken', required: false, includeIfNull: false)
+  final String? projectToken;
 
   @JsonKey(name: r'sessionId', required: false, includeIfNull: false)
   final String? sessionId;
@@ -72,6 +80,7 @@ class SdkEventDto {
           other.deviceIdSource == deviceIdSource &&
           other.eventData == eventData &&
           other.eventName == eventName &&
+          other.projectToken == projectToken &&
           other.sessionId == sessionId &&
           other.sessionRelativeTimeMs == sessionRelativeTimeMs;
 
@@ -83,6 +92,7 @@ class SdkEventDto {
       deviceIdSource.hashCode +
       eventData.hashCode +
       eventName.hashCode +
+      projectToken.hashCode +
       sessionId.hashCode +
       sessionRelativeTimeMs.hashCode;
 

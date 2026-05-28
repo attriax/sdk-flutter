@@ -38,7 +38,7 @@ void main() {
       });
       sdk = _createSdk(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           gdprEnabled: true,
         ),
         client: client,
@@ -107,7 +107,7 @@ void main() {
       await sdk.dispose();
       sdk = _createSdk(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           gdprEnabled: true,
           gdprAutoDetect: false,
         ),
@@ -132,7 +132,7 @@ void main() {
         contextCollector.timezone = 'Europe/Berlin';
         await sdk.dispose();
         sdk = _createSdk(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           client: client,
           deepLinkSource: deepLinkSource,
           connectivity: connectivity,
@@ -183,7 +183,7 @@ void main() {
       await sdk.dispose();
       sdk = _createSdk(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           gdprEnabled: true,
         ),
         client: client,
@@ -224,7 +224,7 @@ void main() {
 
       final secondSdk = _createSdk(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           gdprEnabled: true,
         ),
         client: client,
@@ -282,7 +282,7 @@ void main() {
         await sdk.dispose();
         sdk = _createSdk(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -361,7 +361,7 @@ void main() {
         await sdk.dispose();
         sdk = _createSdk(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
             anonymousTracking: false,
@@ -443,7 +443,7 @@ void main() {
       await sdk.dispose();
       sdk = _createSdk(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           gdprEnabled: true,
           gdprAutoDetect: false,
         ),
@@ -511,7 +511,7 @@ void main() {
         await sdk.dispose();
         sdk = _createSdk(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -612,7 +612,7 @@ void main() {
         await sdk.dispose();
         sdk = _createSdk(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -701,7 +701,7 @@ void main() {
         await sdk.dispose();
         sdk = _createSdk(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
           ),
           client: client,
@@ -776,7 +776,7 @@ void main() {
         await sdk.dispose();
         sdk = _createSdk(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
           ),
           client: client,
@@ -869,7 +869,7 @@ void main() {
         await sdk.dispose();
         sdk = _createSdk(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -1006,7 +1006,7 @@ void main() {
         await sdk.dispose();
         sdk = _createSdk(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -1113,7 +1113,7 @@ void main() {
         await sdk.dispose();
         sdk = _createSdk(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -1197,7 +1197,7 @@ void main() {
         await sdk.dispose();
         sdk = _createSdk(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -1310,7 +1310,7 @@ void main() {
         await sdk.dispose();
         sdk = _createSdk(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             gdprEnabled: true,
             gdprAutoDetect: false,
           ),
@@ -1370,7 +1370,7 @@ void main() {
       await sdk.dispose();
       sdk = _createSdk(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           gdprEnabled: true,
         ),
         client: client,
@@ -1394,7 +1394,7 @@ class _ConsentTestContextCollector extends AttriaxContextCollector {
   _ConsentTestContextCollector()
     : platform = AttriaxPlatformType.ios,
       super(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         platformType: AttriaxPlatformType.ios,
       );
 
@@ -1517,11 +1517,6 @@ String _gdprEnvelope(Map<String, Object?> data) => jsonEncode(<String, Object?>{
   'timestamp': '2026-05-20T12:00:00.000Z',
   'data': data,
 });
-
-List<String> _nonConfigRequestPaths(Iterable<String> requestPaths) =>
-    requestPaths
-        .where((path) => path != '/api/sdk/v1/config')
-        .toList(growable: false);
 
 Future<void> _drainMicrotasks() async {
   for (var attempt = 0; attempt < 20; attempt += 1) {

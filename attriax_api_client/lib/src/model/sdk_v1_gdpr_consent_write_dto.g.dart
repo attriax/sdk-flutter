@@ -9,15 +9,16 @@ part of 'sdk_v1_gdpr_consent_write_dto.dart';
 SdkV1GdprConsentWriteDto _$SdkV1GdprConsentWriteDtoFromJson(
   Map<String, dynamic> json,
 ) => $checkedCreate('SdkV1GdprConsentWriteDto', json, ($checkedConvert) {
-  $checkKeys(json, requiredKeys: const ['appToken', 'state']);
+  $checkKeys(json, requiredKeys: const ['state']);
   final val = SdkV1GdprConsentWriteDto(
-    appToken: $checkedConvert('appToken', (v) => v as String),
+    appToken: $checkedConvert('appToken', (v) => v as String?),
     clientOccurredAt: $checkedConvert(
       'clientOccurredAt',
       (v) => v == null ? null : DateTime.parse(v as String),
     ),
     consentId: $checkedConvert('consentId', (v) => v as String?),
     countryCode: $checkedConvert('countryCode', (v) => v as String?),
+    projectToken: $checkedConvert('projectToken', (v) => v as String?),
     regionSource: $checkedConvert('regionSource', (v) => v as String?),
     state: $checkedConvert(
       'state',
@@ -36,10 +37,11 @@ SdkV1GdprConsentWriteDto _$SdkV1GdprConsentWriteDtoFromJson(
 Map<String, dynamic> _$SdkV1GdprConsentWriteDtoToJson(
   SdkV1GdprConsentWriteDto instance,
 ) => <String, dynamic>{
-  'appToken': instance.appToken,
+  'appToken': ?instance.appToken,
   'clientOccurredAt': ?instance.clientOccurredAt?.toIso8601String(),
   'consentId': ?instance.consentId,
   'countryCode': ?instance.countryCode,
+  'projectToken': ?instance.projectToken,
   'regionSource': ?instance.regionSource,
   'state': _$AppUserGdprConsentStateEnumMap[instance.state]!,
   'values': ?instance.values?.toJson(),

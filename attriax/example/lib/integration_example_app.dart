@@ -169,7 +169,7 @@ class _AttriaxIntegrationExampleAppState
               statusMessage: _statusMessage,
               latestDeepLinkLabel: _latestDeepLinkLabel,
               lastRecordedEventLabel: _lastRecordedEventLabel,
-              currentTokenLabel: maskExampleSecret(exampleAppToken),
+              currentTokenLabel: maskExampleSecret(exampleProjectToken),
               configurationHelpText: exampleConfigurationHelpText(),
               isRecordingEvent: _isRecordingEvent,
               onOpenCheckout: _openCheckoutScreen,
@@ -179,7 +179,7 @@ class _AttriaxIntegrationExampleAppState
             )
           : AttriaxIntegrationExampleSetupPage(
               errorMessage: bootstrapError,
-              currentTokenLabel: maskExampleSecret(exampleAppToken),
+              currentTokenLabel: maskExampleSecret(exampleProjectToken),
               configurationHelpText: exampleConfigurationHelpText(),
             ),
     );
@@ -258,7 +258,7 @@ class AttriaxIntegrationExampleHome extends StatelessWidget {
                     value: synchronizationState.name,
                   ),
                   _ExampleKeyValue(
-                    label: 'Current app token',
+                    label: 'Current project token',
                     value: currentTokenLabel,
                   ),
                   _ExampleKeyValue(
@@ -332,12 +332,12 @@ class AttriaxIntegrationExampleSetupPage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             const Text(
-              'This minimal example only boots when a real Attriax app token is configured.',
+              'This minimal example only boots when a real Attriax project token is configured.',
             ),
             const SizedBox(height: 12),
             Text(errorMessage),
             const SizedBox(height: 12),
-            Text('Current token: $currentTokenLabel'),
+            Text('Current project token: $currentTokenLabel'),
             const SizedBox(height: 12),
             Text(configurationHelpText),
           ],

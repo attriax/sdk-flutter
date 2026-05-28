@@ -18,7 +18,7 @@ part 'sdk_register_uninstall_token_dto.g.dart';
 class SdkRegisterUninstallTokenDto {
   /// Returns a new [SdkRegisterUninstallTokenDto] instance.
   SdkRegisterUninstallTokenDto({
-    required this.appToken,
+    this.appToken,
 
     required this.deviceId,
 
@@ -28,13 +28,17 @@ class SdkRegisterUninstallTokenDto {
 
     required this.platform,
 
+    this.projectToken,
+
     required this.provider,
 
     this.token,
   });
 
-  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
-  final String appToken;
+  /// Deprecated alias for projectToken kept for released SDK compatibility.
+  @Deprecated('appToken has been deprecated')
+  @JsonKey(name: r'appToken', required: false, includeIfNull: false)
+  final String? appToken;
 
   @JsonKey(name: r'deviceId', required: true, includeIfNull: false)
   final String deviceId;
@@ -47,6 +51,10 @@ class SdkRegisterUninstallTokenDto {
 
   @JsonKey(name: r'platform', required: true, includeIfNull: false)
   final Platform platform;
+
+  /// Attriax project token that scopes the SDK request.
+  @JsonKey(name: r'projectToken', required: false, includeIfNull: false)
+  final String? projectToken;
 
   @JsonKey(name: r'provider', required: true, includeIfNull: false)
   final AppUserUninstallTokenProvider provider;
@@ -63,6 +71,7 @@ class SdkRegisterUninstallTokenDto {
           other.deviceIdSource == deviceIdSource &&
           other.metadata == metadata &&
           other.platform == platform &&
+          other.projectToken == projectToken &&
           other.provider == provider &&
           other.token == token;
 
@@ -73,6 +82,7 @@ class SdkRegisterUninstallTokenDto {
       deviceIdSource.hashCode +
       metadata.hashCode +
       platform.hashCode +
+      projectToken.hashCode +
       provider.hashCode +
       (token == null ? 0 : token.hashCode);
 

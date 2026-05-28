@@ -22,7 +22,7 @@ class SdkV1OpenDto {
   SdkV1OpenDto({
     required this.app,
 
-    required this.appToken,
+    this.appToken,
 
     required this.device,
 
@@ -40,6 +40,8 @@ class SdkV1OpenDto {
 
     required this.platform,
 
+    this.projectToken,
+
     this.referrerClickTimestampSeconds,
 
     required this.sdk,
@@ -52,8 +54,10 @@ class SdkV1OpenDto {
   @JsonKey(name: r'app', required: true, includeIfNull: false)
   final AppVersionContextDto app;
 
-  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
-  final String appToken;
+  /// Deprecated alias for projectToken kept for released SDK compatibility.
+  @Deprecated('appToken has been deprecated')
+  @JsonKey(name: r'appToken', required: false, includeIfNull: false)
+  final String? appToken;
 
   @JsonKey(name: r'device', required: true, includeIfNull: false)
   final DeviceContextDto device;
@@ -87,6 +91,10 @@ class SdkV1OpenDto {
   @JsonKey(name: r'platform', required: true, includeIfNull: false)
   final Platform platform;
 
+  /// Attriax project token that scopes the SDK request.
+  @JsonKey(name: r'projectToken', required: false, includeIfNull: false)
+  final String? projectToken;
+
   @JsonKey(
     name: r'referrerClickTimestampSeconds',
     required: false,
@@ -117,6 +125,7 @@ class SdkV1OpenDto {
           other.installReferrer == installReferrer &&
           other.isFirstLaunch == isFirstLaunch &&
           other.platform == platform &&
+          other.projectToken == projectToken &&
           other.referrerClickTimestampSeconds ==
               referrerClickTimestampSeconds &&
           other.sdk == sdk &&
@@ -135,6 +144,7 @@ class SdkV1OpenDto {
       installReferrer.hashCode +
       isFirstLaunch.hashCode +
       platform.hashCode +
+      projectToken.hashCode +
       referrerClickTimestampSeconds.hashCode +
       sdk.hashCode +
       sessionId.hashCode +

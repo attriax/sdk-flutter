@@ -8,12 +8,9 @@ part of 'sdk_v1_batch_dto.dart';
 
 SdkV1BatchDto _$SdkV1BatchDtoFromJson(Map<String, dynamic> json) =>
     $checkedCreate('SdkV1BatchDto', json, ($checkedConvert) {
-      $checkKeys(
-        json,
-        requiredKeys: const ['appToken', 'deviceId', 'items', 'requestId'],
-      );
+      $checkKeys(json, requiredKeys: const ['deviceId', 'items', 'requestId']);
       final val = SdkV1BatchDto(
-        appToken: $checkedConvert('appToken', (v) => v as String),
+        appToken: $checkedConvert('appToken', (v) => v as String?),
         deviceId: $checkedConvert('deviceId', (v) => v as String),
         deviceIdSource: $checkedConvert('deviceIdSource', (v) => v as String?),
         items: $checkedConvert(
@@ -22,6 +19,7 @@ SdkV1BatchDto _$SdkV1BatchDtoFromJson(Map<String, dynamic> json) =>
               .map((e) => SdkV1BatchItemDto.fromJson(e as Map<String, dynamic>))
               .toList(),
         ),
+        projectToken: $checkedConvert('projectToken', (v) => v as String?),
         requestId: $checkedConvert('requestId', (v) => v as String),
       );
       return val;
@@ -29,9 +27,10 @@ SdkV1BatchDto _$SdkV1BatchDtoFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$SdkV1BatchDtoToJson(SdkV1BatchDto instance) =>
     <String, dynamic>{
-      'appToken': instance.appToken,
+      'appToken': ?instance.appToken,
       'deviceId': instance.deviceId,
       'deviceIdSource': ?instance.deviceIdSource,
       'items': instance.items.map((e) => e.toJson()).toList(),
+      'projectToken': ?instance.projectToken,
       'requestId': instance.requestId,
     };

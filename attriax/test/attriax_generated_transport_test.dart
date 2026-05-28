@@ -35,7 +35,7 @@ void main() {
 
     test('omits null metadata values from generated open requests', () async {
       final request = attriaxBuildOpenRequest(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         context: const AttriaxContextSnapshot(
           platform: AttriaxPlatformType.android,
           deviceId: 'device_123',
@@ -90,7 +90,7 @@ void main() {
 
     test('serializes typed device metrics in open requests', () async {
       final request = attriaxBuildOpenRequest(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         context: const AttriaxContextSnapshot(
           platform: AttriaxPlatformType.windows,
           deviceId: 'device_windows_1',
@@ -141,7 +141,7 @@ void main() {
 
     test('fetches launch-time runtime config over the JSON endpoint', () async {
       final request = attriaxBuildSdkRuntimeConfigRequest(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         context: const AttriaxContextSnapshot(
           platform: AttriaxPlatformType.android,
           deviceId: 'device_123',
@@ -414,7 +414,7 @@ void main() {
 
       final transport = _createTransport(client);
       await transport.eraseGdprData(
-        appToken: 'ax_test_token',
+        projectToken: 'ax_test_token',
         deviceId: 'device_123',
       );
     });
@@ -563,7 +563,7 @@ List<AttriaxQueuedRequest> _batchRequests() => <AttriaxQueuedRequest>[
 AttriaxResolveDeepLinkRequest _resolveRequest() =>
     AttriaxResolveDeepLinkRequest(
       sdk.SdkV1DeepLinkResolveDto(
-        appToken: 'ax_test_token',
+        projectToken: 'ax_test_token',
         deviceId: 'device_123',
         deviceIdSource: 'android_ssaid',
         isFirstLaunch: true,
@@ -577,7 +577,7 @@ AttriaxResolveDeepLinkRequest _resolveRequest() =>
 AttriaxCreateDynamicLinkRequest _dynamicLinkRequest() =>
     AttriaxCreateDynamicLinkRequest(
       sdk.SdkCreateDynamicLinkDto(
-        appToken: 'ax_test_token',
+        projectToken: 'ax_test_token',
         name: 'Spring promo',
         destinationUrl: 'https://example.com/spring',
       ),

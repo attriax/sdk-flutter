@@ -9,7 +9,7 @@ export 'example_app/example_app_shell.dart' show AttriaxPackageExampleApp;
 
 final Attriax _exampleSdk = Attriax(
   config: AttriaxConfig(
-    appToken: exampleAppToken,
+    projectToken: exampleProjectToken,
     gdprEnabled: true,
     gdprAutoDetect: true,
   ),
@@ -41,9 +41,9 @@ class _ExampleBootstrapAppState extends State<_ExampleBootstrapApp> {
 
   Future<void> _bootstrap() async {
     String? bootstrapError;
-    if (!isExampleAppConfigured) {
+    if (!isExampleProjectConfigured) {
       bootstrapError =
-          'Set a real Attriax app token in lib/example_app_configuration.dart before running this example.';
+          'Set a real Attriax project token in lib/example_app_configuration.dart before running this example.';
     } else {
       try {
         await widget.sdk.init();

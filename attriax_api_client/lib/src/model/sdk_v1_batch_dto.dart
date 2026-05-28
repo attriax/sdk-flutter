@@ -17,7 +17,7 @@ part 'sdk_v1_batch_dto.g.dart';
 class SdkV1BatchDto {
   /// Returns a new [SdkV1BatchDto] instance.
   SdkV1BatchDto({
-    required this.appToken,
+    this.appToken,
 
     required this.deviceId,
 
@@ -25,12 +25,15 @@ class SdkV1BatchDto {
 
     required this.items,
 
+    this.projectToken,
+
     required this.requestId,
   });
 
-  /// Shared app token for every item in the batch.
-  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
-  final String appToken;
+  /// Deprecated alias for projectToken kept for released SDK compatibility.
+  @Deprecated('appToken has been deprecated')
+  @JsonKey(name: r'appToken', required: false, includeIfNull: false)
+  final String? appToken;
 
   /// Shared device identifier for every item in the batch.
   @JsonKey(name: r'deviceId', required: true, includeIfNull: false)
@@ -42,6 +45,10 @@ class SdkV1BatchDto {
 
   @JsonKey(name: r'items', required: true, includeIfNull: false)
   final List<SdkV1BatchItemDto> items;
+
+  /// Attriax project token that scopes the SDK request.
+  @JsonKey(name: r'projectToken', required: false, includeIfNull: false)
+  final String? projectToken;
 
   /// Stable client-generated batch identifier used for idempotent retries.
   @JsonKey(name: r'requestId', required: true, includeIfNull: false)
@@ -55,6 +62,7 @@ class SdkV1BatchDto {
           other.deviceId == deviceId &&
           other.deviceIdSource == deviceIdSource &&
           other.items == items &&
+          other.projectToken == projectToken &&
           other.requestId == requestId;
 
   @override
@@ -63,6 +71,7 @@ class SdkV1BatchDto {
       deviceId.hashCode +
       deviceIdSource.hashCode +
       items.hashCode +
+      projectToken.hashCode +
       requestId.hashCode;
 
   factory SdkV1BatchDto.fromJson(Map<String, dynamic> json) =>

@@ -265,7 +265,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
         _trackingDecision().attachDeviceIdentity && session.deviceId != null;
 
     return attriaxBuildTrackSessionRequest(
-      appToken: _config.appToken,
+      appToken: _config.projectToken,
       deviceIdSource: attachDeviceIdentity ? requireDeviceIdSource() : null,
       session: session,
       kind: AttriaxSessionLifecycleKind.heartbeat,

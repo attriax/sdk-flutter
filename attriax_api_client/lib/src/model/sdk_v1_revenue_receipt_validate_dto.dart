@@ -16,7 +16,7 @@ part 'sdk_v1_revenue_receipt_validate_dto.g.dart';
 class SdkV1RevenueReceiptValidateDto {
   /// Returns a new [SdkV1RevenueReceiptValidateDto] instance.
   SdkV1RevenueReceiptValidateDto({
-    required this.appToken,
+    this.appToken,
 
     this.clientOccurredAt,
 
@@ -29,6 +29,8 @@ class SdkV1RevenueReceiptValidateDto {
     this.packageName,
 
     this.productId,
+
+    this.projectToken,
 
     this.provider,
 
@@ -47,8 +49,10 @@ class SdkV1RevenueReceiptValidateDto {
     this.transactionId,
   });
 
-  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
-  final String appToken;
+  /// Deprecated alias for projectToken kept for released SDK compatibility.
+  @Deprecated('appToken has been deprecated')
+  @JsonKey(name: r'appToken', required: false, includeIfNull: false)
+  final String? appToken;
 
   @JsonKey(name: r'clientOccurredAt', required: false, includeIfNull: false)
   final String? clientOccurredAt;
@@ -71,6 +75,10 @@ class SdkV1RevenueReceiptValidateDto {
 
   @JsonKey(name: r'productId', required: false, includeIfNull: false)
   final String? productId;
+
+  /// Attriax project token that scopes the SDK request.
+  @JsonKey(name: r'projectToken', required: false, includeIfNull: false)
+  final String? projectToken;
 
   @JsonKey(name: r'provider', required: false, includeIfNull: false)
   final String? provider;
@@ -107,6 +115,7 @@ class SdkV1RevenueReceiptValidateDto {
           other.originalTransactionId == originalTransactionId &&
           other.packageName == packageName &&
           other.productId == productId &&
+          other.projectToken == projectToken &&
           other.provider == provider &&
           other.purchaseToken == purchaseToken &&
           other.receiptData == receiptData &&
@@ -125,6 +134,7 @@ class SdkV1RevenueReceiptValidateDto {
       originalTransactionId.hashCode +
       packageName.hashCode +
       productId.hashCode +
+      projectToken.hashCode +
       provider.hashCode +
       purchaseToken.hashCode +
       receiptData.hashCode +

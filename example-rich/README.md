@@ -6,13 +6,13 @@ This example now follows the recommended integration shape for real apps:
 
 - one global Attriax instance
 - awaited `init()` in `main()`
-- app token configured directly in source
+- project token configured directly in source
 - a small custom GDPR prompt on the home page when consent is pending
 - page-based UI for diagnostics and demo flows instead of a setup wizard
 
 ## Configuration
 
-Set the example app token in `lib/example_app_configuration.dart`.
+Set the example project token in `lib/example_app_configuration.dart`.
 
 The example bootstrap intentionally enables `gdprEnabled: true` and keeps
 `gdprAutoDetect: true` so the Controls page can demonstrate pending,
@@ -21,7 +21,7 @@ runs.
 
 The example intentionally does not store the token in local device storage and
 does not expose a UI to edit it at runtime. Update the source file when you
-want to point the example at a different Attriax app.
+want to point the example at a different Attriax project.
 
 The same file also defines the default deep-link host used by the demo:
 

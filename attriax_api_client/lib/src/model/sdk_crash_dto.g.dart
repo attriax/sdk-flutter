@@ -11,7 +11,6 @@ SdkCrashDto _$SdkCrashDtoFromJson(Map<String, dynamic> json) =>
       $checkKeys(
         json,
         requiredKeys: const [
-          'appToken',
           'clientOccurredAt',
           'exceptionType',
           'isFatal',
@@ -25,7 +24,7 @@ SdkCrashDto _$SdkCrashDtoFromJson(Map<String, dynamic> json) =>
       final val = SdkCrashDto(
         appBuildNumber: $checkedConvert('appBuildNumber', (v) => v as String?),
         appPackageName: $checkedConvert('appPackageName', (v) => v as String?),
-        appToken: $checkedConvert('appToken', (v) => v as String),
+        appToken: $checkedConvert('appToken', (v) => v as String?),
         appVersion: $checkedConvert('appVersion', (v) => v as String?),
         clientOccurredAt: $checkedConvert(
           'clientOccurredAt',
@@ -48,6 +47,7 @@ SdkCrashDto _$SdkCrashDtoFromJson(Map<String, dynamic> json) =>
           'platform',
           (v) => $enumDecode(_$PlatformEnumMap, v),
         ),
+        projectToken: $checkedConvert('projectToken', (v) => v as String?),
         reason: $checkedConvert('reason', (v) => v as String?),
         sdkApiVersion: $checkedConvert('sdkApiVersion', (v) => v as String?),
         sdkPackageVersion: $checkedConvert(
@@ -69,7 +69,7 @@ Map<String, dynamic> _$SdkCrashDtoToJson(SdkCrashDto instance) =>
     <String, dynamic>{
       'appBuildNumber': ?instance.appBuildNumber,
       'appPackageName': ?instance.appPackageName,
-      'appToken': instance.appToken,
+      'appToken': ?instance.appToken,
       'appVersion': ?instance.appVersion,
       'clientOccurredAt': instance.clientOccurredAt.toIso8601String(),
       'deviceId': ?instance.deviceId,
@@ -81,6 +81,7 @@ Map<String, dynamic> _$SdkCrashDtoToJson(SdkCrashDto instance) =>
       'message': instance.message,
       'metadata': ?instance.metadata,
       'platform': _$PlatformEnumMap[instance.platform]!,
+      'projectToken': ?instance.projectToken,
       'reason': ?instance.reason,
       'sdkApiVersion': ?instance.sdkApiVersion,
       'sdkPackageVersion': ?instance.sdkPackageVersion,

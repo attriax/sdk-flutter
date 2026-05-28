@@ -9,10 +9,10 @@ part of 'sdk_v1_gdpr_consent_check_dto.dart';
 SdkV1GdprConsentCheckDto _$SdkV1GdprConsentCheckDtoFromJson(
   Map<String, dynamic> json,
 ) => $checkedCreate('SdkV1GdprConsentCheckDto', json, ($checkedConvert) {
-  $checkKeys(json, requiredKeys: const ['appToken']);
   final val = SdkV1GdprConsentCheckDto(
-    appToken: $checkedConvert('appToken', (v) => v as String),
+    appToken: $checkedConvert('appToken', (v) => v as String?),
     consentId: $checkedConvert('consentId', (v) => v as String?),
+    projectToken: $checkedConvert('projectToken', (v) => v as String?),
   );
   return val;
 });
@@ -20,6 +20,7 @@ SdkV1GdprConsentCheckDto _$SdkV1GdprConsentCheckDtoFromJson(
 Map<String, dynamic> _$SdkV1GdprConsentCheckDtoToJson(
   SdkV1GdprConsentCheckDto instance,
 ) => <String, dynamic>{
-  'appToken': instance.appToken,
+  'appToken': ?instance.appToken,
   'consentId': ?instance.consentId,
+  'projectToken': ?instance.projectToken,
 };

@@ -94,7 +94,8 @@ class AttriaxSessionSnapshot {
 
 class AttriaxConfig {
   const AttriaxConfig({
-    required this.appToken,
+    String? projectToken,
+    @Deprecated('Use projectToken instead.') String? appToken,
     this.apiBaseUrl = 'https://api.attriax.com',
     this.appVersion,
     this.appBuildNumber,
@@ -118,9 +119,20 @@ class AttriaxConfig {
     this.sessionHeartbeatInterval = const Duration(minutes: 5),
     this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 30),
     this.skan,
-  });
+  }) : assert(
+         projectToken != null || appToken != null,
+         'AttriaxConfig requires projectToken or the deprecated appToken alias.',
+       ),
+       assert(
+         projectToken == null || appToken == null || projectToken == appToken,
+         'projectToken and appToken must match when both are provided.',
+       ),
+       projectToken = projectToken ?? appToken ?? '';
 
-  final String appToken;
+  final String projectToken;
+
+  @Deprecated('Use projectToken instead.')
+  String get appToken => projectToken;
   final String apiBaseUrl;
   final String? appVersion;
   final String? appBuildNumber;

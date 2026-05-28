@@ -8,9 +8,9 @@ part of 'sdk_event_dto.dart';
 
 SdkEventDto _$SdkEventDtoFromJson(Map<String, dynamic> json) =>
     $checkedCreate('SdkEventDto', json, ($checkedConvert) {
-      $checkKeys(json, requiredKeys: const ['appToken', 'eventName']);
+      $checkKeys(json, requiredKeys: const ['eventName']);
       final val = SdkEventDto(
-        appToken: $checkedConvert('appToken', (v) => v as String),
+        appToken: $checkedConvert('appToken', (v) => v as String?),
         clientOccurredAt: $checkedConvert(
           'clientOccurredAt',
           (v) => v == null ? null : DateTime.parse(v as String),
@@ -24,6 +24,7 @@ SdkEventDto _$SdkEventDtoFromJson(Map<String, dynamic> json) =>
           ),
         ),
         eventName: $checkedConvert('eventName', (v) => v as String),
+        projectToken: $checkedConvert('projectToken', (v) => v as String?),
         sessionId: $checkedConvert('sessionId', (v) => v as String?),
         sessionRelativeTimeMs: $checkedConvert(
           'sessionRelativeTimeMs',
@@ -35,12 +36,13 @@ SdkEventDto _$SdkEventDtoFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$SdkEventDtoToJson(SdkEventDto instance) =>
     <String, dynamic>{
-      'appToken': instance.appToken,
+      'appToken': ?instance.appToken,
       'clientOccurredAt': ?instance.clientOccurredAt?.toIso8601String(),
       'deviceId': ?instance.deviceId,
       'deviceIdSource': ?instance.deviceIdSource,
       'eventData': ?instance.eventData,
       'eventName': instance.eventName,
+      'projectToken': ?instance.projectToken,
       'sessionId': ?instance.sessionId,
       'sessionRelativeTimeMs': ?instance.sessionRelativeTimeMs,
     };

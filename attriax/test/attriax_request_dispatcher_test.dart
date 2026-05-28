@@ -439,7 +439,7 @@ void main() {
         final openRequest = AttriaxQueuedRequest(
           id: 'req_open',
           request: attriaxBuildOpenRequest(
-            config: const AttriaxConfig(appToken: 'ax_test_token'),
+            config: const AttriaxConfig(projectToken: 'ax_test_token'),
             context: const AttriaxContextSnapshot(
               platform: AttriaxPlatformType.android,
               deviceId: 'device_1',
@@ -514,7 +514,7 @@ void main() {
         final openRequest = AttriaxQueuedRequest(
           id: 'req_open',
           request: attriaxBuildOpenRequest(
-            config: const AttriaxConfig(appToken: 'ax_test_token'),
+            config: const AttriaxConfig(projectToken: 'ax_test_token'),
             context: const AttriaxContextSnapshot(
               platform: AttriaxPlatformType.android,
               deviceId: 'device_1',
@@ -598,7 +598,7 @@ void main() {
         final resolveRequest = AttriaxQueuedRequest(
           id: 'req_resolve',
           request: attriaxBuildResolveDeepLinkRequest(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             deviceId: 'device_1',
             deviceIdSource: 'android_ssaid',
             platform: AttriaxPlatformType.android,

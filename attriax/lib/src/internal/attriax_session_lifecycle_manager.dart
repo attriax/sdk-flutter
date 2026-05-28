@@ -335,7 +335,7 @@ class AttriaxSessionLifecycleManager with WidgetsBindingObserver {
 
     await _requestManager.enqueue(
       attriaxBuildTrackSessionRequest(
-        appToken: _config.appToken,
+        appToken: _config.projectToken,
         deviceIdSource: _sessionManager.requireDeviceIdSource(),
         session: session,
         kind: kind,

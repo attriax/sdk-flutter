@@ -9,9 +9,9 @@ part of 'sdk_user_dto.dart';
 SdkUserDto _$SdkUserDtoFromJson(
   Map<String, dynamic> json,
 ) => $checkedCreate('SdkUserDto', json, ($checkedConvert) {
-  $checkKeys(json, requiredKeys: const ['appToken', 'deviceId']);
+  $checkKeys(json, requiredKeys: const ['deviceId']);
   final val = SdkUserDto(
-    appToken: $checkedConvert('appToken', (v) => v as String),
+    appToken: $checkedConvert('appToken', (v) => v as String?),
     clearAllProperties: $checkedConvert(
       'clearAllProperties',
       (v) => v as bool?,
@@ -25,6 +25,7 @@ SdkUserDto _$SdkUserDtoFromJson(
     deviceIdSource: $checkedConvert('deviceIdSource', (v) => v as String?),
     externalUserId: $checkedConvert('externalUserId', (v) => v as String?),
     externalUserName: $checkedConvert('externalUserName', (v) => v as String?),
+    projectToken: $checkedConvert('projectToken', (v) => v as String?),
     properties: $checkedConvert(
       'properties',
       (v) =>
@@ -36,7 +37,7 @@ SdkUserDto _$SdkUserDtoFromJson(
 
 Map<String, dynamic> _$SdkUserDtoToJson(SdkUserDto instance) =>
     <String, dynamic>{
-      'appToken': instance.appToken,
+      'appToken': ?instance.appToken,
       'clearAllProperties': ?instance.clearAllProperties,
       'clearExternalUser': ?instance.clearExternalUser,
       'clearPropertyKeys': ?instance.clearPropertyKeys,
@@ -44,5 +45,6 @@ Map<String, dynamic> _$SdkUserDtoToJson(SdkUserDto instance) =>
       'deviceIdSource': ?instance.deviceIdSource,
       'externalUserId': ?instance.externalUserId,
       'externalUserName': ?instance.externalUserName,
+      'projectToken': ?instance.projectToken,
       'properties': ?instance.properties,
     };

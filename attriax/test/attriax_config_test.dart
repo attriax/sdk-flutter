@@ -5,7 +5,7 @@ void main() {
   test(
     'AttriaxConfig defaults to 60-second batching and foreground session heartbeats',
     () {
-      const config = AttriaxConfig(appToken: 'ax_test_token');
+      const config = AttriaxConfig(projectToken: 'ax_test_token');
 
       expect(config.eventFlushInterval, const Duration(seconds: 60));
       expect(config.sessionHeartbeatInterval, const Duration(minutes: 5));
@@ -20,7 +20,7 @@ void main() {
 
   test('AttriaxConfig keeps the optional SKAN configuration', () {
     const config = AttriaxConfig(
-      appToken: 'ax_test_token',
+      projectToken: 'ax_test_token',
       skan: AttriaxSkanConfig(enabled: false, registerFirstLaunchValue: false),
     );
 

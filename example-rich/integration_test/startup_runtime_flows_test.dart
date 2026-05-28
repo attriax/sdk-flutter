@@ -80,7 +80,7 @@ void main() {
       client: client,
       prefs: prefs,
       config: const AttriaxConfig(
-        appToken: 'ax_test_token',
+        projectToken: 'ax_test_token',
         apiBaseUrl: 'https://api.attriax.test',
         requestTimeout: Duration(seconds: 5),
         automaticCrashReportingEnabled: true,
@@ -155,7 +155,7 @@ void main() {
       client: client,
       prefs: prefs,
       config: const AttriaxConfig(
-        appToken: 'ax_test_token',
+        projectToken: 'ax_test_token',
         apiBaseUrl: 'https://api.attriax.test',
         requestTimeout: Duration(seconds: 5),
         automaticCrashReportingEnabled: false,

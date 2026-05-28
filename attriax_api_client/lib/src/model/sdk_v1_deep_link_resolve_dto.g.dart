@@ -9,9 +9,9 @@ part of 'sdk_v1_deep_link_resolve_dto.dart';
 SdkV1DeepLinkResolveDto _$SdkV1DeepLinkResolveDtoFromJson(
   Map<String, dynamic> json,
 ) => $checkedCreate('SdkV1DeepLinkResolveDto', json, ($checkedConvert) {
-  $checkKeys(json, requiredKeys: const ['appToken', 'platform']);
+  $checkKeys(json, requiredKeys: const ['platform']);
   final val = SdkV1DeepLinkResolveDto(
-    appToken: $checkedConvert('appToken', (v) => v as String),
+    appToken: $checkedConvert('appToken', (v) => v as String?),
     deviceId: $checkedConvert('deviceId', (v) => v as String?),
     deviceIdSource: $checkedConvert('deviceIdSource', (v) => v as String?),
     isFirstLaunch: $checkedConvert('isFirstLaunch', (v) => v as bool?),
@@ -25,6 +25,7 @@ SdkV1DeepLinkResolveDto _$SdkV1DeepLinkResolveDtoFromJson(
       'platform',
       (v) => $enumDecode(_$PlatformEnumMap, v),
     ),
+    projectToken: $checkedConvert('projectToken', (v) => v as String?),
     rawUrl: $checkedConvert('rawUrl', (v) => v as String?),
     sessionId: $checkedConvert('sessionId', (v) => v as String?),
     sessionRelativeTimeMs: $checkedConvert(
@@ -39,13 +40,14 @@ SdkV1DeepLinkResolveDto _$SdkV1DeepLinkResolveDtoFromJson(
 Map<String, dynamic> _$SdkV1DeepLinkResolveDtoToJson(
   SdkV1DeepLinkResolveDto instance,
 ) => <String, dynamic>{
-  'appToken': instance.appToken,
+  'appToken': ?instance.appToken,
   'deviceId': ?instance.deviceId,
   'deviceIdSource': ?instance.deviceIdSource,
   'isFirstLaunch': ?instance.isFirstLaunch,
   'linkPath': ?instance.linkPath,
   'metadata': ?instance.metadata,
   'platform': _$PlatformEnumMap[instance.platform]!,
+  'projectToken': ?instance.projectToken,
   'rawUrl': ?instance.rawUrl,
   'sessionId': ?instance.sessionId,
   'sessionRelativeTimeMs': ?instance.sessionRelativeTimeMs,

@@ -22,7 +22,7 @@ class SdkSessionDto {
 
     this.appPackageName,
 
-    required this.appToken,
+    this.appToken,
 
     this.appVersion,
 
@@ -42,6 +42,8 @@ class SdkSessionDto {
 
     this.platform,
 
+    this.projectToken,
+
     this.sdkApiVersion,
 
     this.sdkPackageVersion,
@@ -57,8 +59,10 @@ class SdkSessionDto {
   @JsonKey(name: r'appPackageName', required: false, includeIfNull: false)
   final String? appPackageName;
 
-  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
-  final String appToken;
+  /// Deprecated alias for projectToken kept for released SDK compatibility.
+  @Deprecated('appToken has been deprecated')
+  @JsonKey(name: r'appToken', required: false, includeIfNull: false)
+  final String? appToken;
 
   @JsonKey(name: r'appVersion', required: false, includeIfNull: false)
   final String? appVersion;
@@ -86,6 +90,10 @@ class SdkSessionDto {
 
   @JsonKey(name: r'platform', required: false, includeIfNull: false)
   final Platform? platform;
+
+  /// Attriax project token that scopes the SDK request.
+  @JsonKey(name: r'projectToken', required: false, includeIfNull: false)
+  final String? projectToken;
 
   @JsonKey(name: r'sdkApiVersion', required: false, includeIfNull: false)
   final String? sdkApiVersion;
@@ -120,6 +128,7 @@ class SdkSessionDto {
           other.locale == locale &&
           other.metadata == metadata &&
           other.platform == platform &&
+          other.projectToken == projectToken &&
           other.sdkApiVersion == sdkApiVersion &&
           other.sdkPackageVersion == sdkPackageVersion &&
           other.sessionId == sessionId &&
@@ -139,6 +148,7 @@ class SdkSessionDto {
       locale.hashCode +
       metadata.hashCode +
       platform.hashCode +
+      projectToken.hashCode +
       sdkApiVersion.hashCode +
       sdkPackageVersion.hashCode +
       sessionId.hashCode +

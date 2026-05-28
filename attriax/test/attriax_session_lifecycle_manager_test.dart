@@ -177,7 +177,7 @@ Future<AttriaxSessionManager> _createSessionManager({
   await contextManager.init();
 
   final sessionManager = AttriaxSessionManager(
-    config: const AttriaxConfig(appToken: 'ax_test_token'),
+    config: const AttriaxConfig(projectToken: 'ax_test_token'),
     contextManager: contextManager,
     preferencesStore: preferencesStore,
     logger: logger,
@@ -218,12 +218,13 @@ class _RecordingRequestManager extends AttriaxRequestManager {
 
 class _StaticContextCollector extends AttriaxContextCollector {
   _StaticContextCollector()
-    : super(config: const AttriaxConfig(appToken: 'ax_test_token'));
+    : super(config: const AttriaxConfig(projectToken: 'ax_test_token'));
 
   @override
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
+    bool waitForTrackingAuthorization = false,
   }) async => AttriaxContextSnapshot(
     platform: AttriaxPlatformType.android,
     deviceId: deviceId,

@@ -18,7 +18,7 @@ void main() {
           lastRecordedEventLabel: 'integration_checkout_started',
           currentTokenLabel: 'ax_b62...e561',
           configurationHelpText:
-              'Edit lib/example_app_configuration.dart to set the app token or deep-link demo defaults.',
+              'Edit lib/example_app_configuration.dart to set the project token or deep-link demo defaults.',
           isRecordingEvent: false,
           onOpenCheckout: _noop,
           onRecordExampleEvent: _noop,
@@ -44,17 +44,17 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: AttriaxIntegrationExampleSetupPage(
-          errorMessage: 'Set a real Attriax app token before running this app.',
+          errorMessage: 'Set a real Attriax project token before running this app.',
           currentTokenLabel: 'ax_you...oken',
           configurationHelpText:
-              'Edit lib/example_app_configuration.dart to set the app token or deep-link demo defaults.',
+              'Edit lib/example_app_configuration.dart to set the project token or deep-link demo defaults.',
         ),
       ),
     );
 
     expect(find.text('Finish example setup'), findsOneWidget);
-    expect(find.textContaining('real Attriax app token'), findsWidgets);
-    expect(find.textContaining('Current token: ax_you...oken'), findsOneWidget);
+    expect(find.textContaining('real Attriax project token'), findsWidgets);
+    expect(find.textContaining('Current project token: ax_you...oken'), findsOneWidget);
   });
 }
 

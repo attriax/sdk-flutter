@@ -178,7 +178,7 @@ void main() {
     );
     expect(
       find.textContaining(
-        'Edit lib/example_app_configuration.dart to change the app token',
+        'Edit lib/example_app_configuration.dart to change the project token',
       ),
       findsOneWidget,
     );

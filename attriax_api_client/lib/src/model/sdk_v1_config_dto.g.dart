@@ -8,14 +8,15 @@ part of 'sdk_v1_config_dto.dart';
 
 SdkV1ConfigDto _$SdkV1ConfigDtoFromJson(Map<String, dynamic> json) =>
     $checkedCreate('SdkV1ConfigDto', json, ($checkedConvert) {
-      $checkKeys(json, requiredKeys: const ['appToken', 'platform']);
+      $checkKeys(json, requiredKeys: const ['platform']);
       final val = SdkV1ConfigDto(
-        appToken: $checkedConvert('appToken', (v) => v as String),
+        appToken: $checkedConvert('appToken', (v) => v as String?),
         packageName: $checkedConvert('packageName', (v) => v as String?),
         platform: $checkedConvert(
           'platform',
           (v) => $enumDecode(_$PlatformEnumMap, v),
         ),
+        projectToken: $checkedConvert('projectToken', (v) => v as String?),
         signatureHashes: $checkedConvert(
           'signatureHashes',
           (v) => (v as List<dynamic>?)?.map((e) => e as String).toList(),
@@ -26,9 +27,10 @@ SdkV1ConfigDto _$SdkV1ConfigDtoFromJson(Map<String, dynamic> json) =>
 
 Map<String, dynamic> _$SdkV1ConfigDtoToJson(SdkV1ConfigDto instance) =>
     <String, dynamic>{
-      'appToken': instance.appToken,
+      'appToken': ?instance.appToken,
       'packageName': ?instance.packageName,
       'platform': _$PlatformEnumMap[instance.platform]!,
+      'projectToken': ?instance.projectToken,
       'signatureHashes': ?instance.signatureHashes,
     };
 

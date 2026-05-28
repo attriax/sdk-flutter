@@ -39,7 +39,7 @@ final navigatorKey = GlobalKey<NavigatorState>();
 
 final attriax = Attriax(
   config: const AttriaxConfig(
-    appToken: 'ax_your_app_token',
+    projectToken: 'ax_your_app_token',
     gdprEnabled: true,
     gdprAutoDetect: true,
   ),
@@ -355,7 +355,7 @@ Use local `AttriaxConfig.skan` only when you want to disable SDK-side conversion
 ```dart
 final attriax = Attriax(
   config: const AttriaxConfig(
-    appToken: 'ax_your_app_token',
+    projectToken: 'ax_your_app_token',
     skan: AttriaxSkanConfig(enabled: false),
   ),
 );
@@ -486,7 +486,7 @@ Attriax collects only the platform context needed for attribution and analytics,
 ```dart
 final attriax = Attriax(
   config: const AttriaxConfig(
-    appToken: 'ax_your_app_token',
+    projectToken: 'ax_your_app_token',
     collectAdvertisingId: false,
     automaticCrashReportingEnabled: false,
     anonymousTracking: true,

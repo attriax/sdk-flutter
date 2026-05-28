@@ -30,7 +30,7 @@ final navigatorKey = GlobalKey<NavigatorState>();
 
 final attriax = Attriax(
 	config: const AttriaxConfig(
-		appToken: 'ax_your_app_token',
+		projectToken: 'ax_your_app_token',
 	),
 );
 

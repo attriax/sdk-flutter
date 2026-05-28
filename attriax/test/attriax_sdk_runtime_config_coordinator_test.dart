@@ -109,7 +109,7 @@ AttriaxSdkRuntimeConfigCoordinator _createCoordinator({
   required AttriaxSdkRuntimeConfigFetcher fetchRuntimeConfig,
   AttriaxSdkRuntimeConfigLoadedCallback? onLoaded,
 }) => AttriaxSdkRuntimeConfigCoordinator(
-  config: const AttriaxConfig(appToken: 'ax_test_token'),
+  config: const AttriaxConfig(projectToken: 'ax_test_token'),
   contextSnapshot: () => context,
   fetchRuntimeConfig: fetchRuntimeConfig,
   logger: AttriaxLogger(enableDebugLogs: false),

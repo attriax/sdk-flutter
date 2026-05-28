@@ -9,10 +9,9 @@ part of 'sdk_create_dynamic_link_dto.dart';
 SdkCreateDynamicLinkDto _$SdkCreateDynamicLinkDtoFromJson(
   Map<String, dynamic> json,
 ) => $checkedCreate('SdkCreateDynamicLinkDto', json, ($checkedConvert) {
-  $checkKeys(json, requiredKeys: const ['appToken']);
   final val = SdkCreateDynamicLinkDto(
     androidRedirect: $checkedConvert('androidRedirect', (v) => v as bool?),
-    appToken: $checkedConvert('appToken', (v) => v as String),
+    appToken: $checkedConvert('appToken', (v) => v as String?),
     data: $checkedConvert(
       'data',
       (v) =>
@@ -28,6 +27,7 @@ SdkCreateDynamicLinkDto _$SdkCreateDynamicLinkDtoFromJson(
       (v) => v as String?,
     ),
     previewTitle: $checkedConvert('previewTitle', (v) => v as String?),
+    projectToken: $checkedConvert('projectToken', (v) => v as String?),
     utmCampaign: $checkedConvert('utmCampaign', (v) => v as String?),
     utmContent: $checkedConvert('utmContent', (v) => v as String?),
     utmMedium: $checkedConvert('utmMedium', (v) => v as String?),
@@ -41,7 +41,7 @@ Map<String, dynamic> _$SdkCreateDynamicLinkDtoToJson(
   SdkCreateDynamicLinkDto instance,
 ) => <String, dynamic>{
   'androidRedirect': ?instance.androidRedirect,
-  'appToken': instance.appToken,
+  'appToken': ?instance.appToken,
   'data': ?instance.data,
   'destinationUrl': ?instance.destinationUrl,
   'group': ?instance.group,
@@ -50,6 +50,7 @@ Map<String, dynamic> _$SdkCreateDynamicLinkDtoToJson(
   'prefix': ?instance.prefix,
   'previewDescription': ?instance.previewDescription,
   'previewTitle': ?instance.previewTitle,
+  'projectToken': ?instance.projectToken,
   'utmCampaign': ?instance.utmCampaign,
   'utmContent': ?instance.utmContent,
   'utmMedium': ?instance.utmMedium,

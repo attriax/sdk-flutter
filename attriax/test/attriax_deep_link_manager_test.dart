@@ -47,7 +47,7 @@ void main() {
       () async {
         final emittedEvents = <Object?>[];
         final manager = AttriaxDeepLinkManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           contextManager: contextManager,
           listener: AttriaxDeepLinkListener(
             deepLinkSource: _FakeDeepLinkSource(),
@@ -102,7 +102,7 @@ void main() {
       'opens browser actions before resolving manual deep-link conversions',
       () async {
         final manager = AttriaxDeepLinkManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           contextManager: contextManager,
           listener: AttriaxDeepLinkListener(
             deepLinkSource: _FakeDeepLinkSource(),
@@ -160,7 +160,7 @@ void main() {
       () async {
         final manager = AttriaxDeepLinkManager(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             automaticBrowserHandling: false,
           ),
           contextManager: contextManager,
@@ -209,7 +209,7 @@ void main() {
     test('emits a deferred deep link from app-open results', () async {
       const currentSessionId = 'session_1';
       final manager = AttriaxDeepLinkManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         contextManager: contextManager,
         listener: AttriaxDeepLinkListener(
           deepLinkSource: _FakeDeepLinkSource(),
@@ -245,7 +245,7 @@ void main() {
       () async {
         const currentSessionId = 'session_1';
         final manager = AttriaxDeepLinkManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           contextManager: contextManager,
           listener: AttriaxDeepLinkListener(
             deepLinkSource: _FakeDeepLinkSource(),
@@ -286,7 +286,7 @@ void main() {
     test('emits a deferred app-open deep link only once per install', () async {
       const currentSessionId = 'session_1';
       final manager = AttriaxDeepLinkManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         contextManager: contextManager,
         listener: AttriaxDeepLinkListener(
           deepLinkSource: _FakeDeepLinkSource(),
@@ -317,7 +317,7 @@ void main() {
       final secondEventHub = AttriaxEventHub();
       addTearDown(secondEventHub.dispose);
       final secondManager = AttriaxDeepLinkManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         contextManager: contextManager,
         listener: AttriaxDeepLinkListener(
           deepLinkSource: _FakeDeepLinkSource(),
@@ -353,7 +353,7 @@ void main() {
         addTearDown(source.dispose);
         const currentSessionId = 'session_1';
         final manager = AttriaxDeepLinkManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           contextManager: contextManager,
           listener: AttriaxDeepLinkListener(deepLinkSource: source),
           eventHub: eventHub,
@@ -390,7 +390,7 @@ void main() {
         );
         String? currentSessionId = 'session_1';
         final manager = AttriaxDeepLinkManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           contextManager: contextManager,
           listener: AttriaxDeepLinkListener(deepLinkSource: source),
           eventHub: eventHub,
@@ -433,7 +433,7 @@ void main() {
       () async {
         const currentSessionId = 'session_2';
         final manager = AttriaxDeepLinkManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           contextManager: contextManager,
           listener: AttriaxDeepLinkListener(
             deepLinkSource: _FakeDeepLinkSource(),
@@ -473,7 +473,7 @@ void main() {
           Uri.parse('myapp://promo/launch?utm_source=test'),
         );
         final manager = AttriaxDeepLinkManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           contextManager: contextManager,
           listener: AttriaxDeepLinkListener(deepLinkSource: source),
           eventHub: eventHub,
@@ -544,12 +544,13 @@ class _FakeRequestManager extends AttriaxRequestManager {
 
 class _StaticContextCollector extends AttriaxContextCollector {
   _StaticContextCollector()
-    : super(config: const AttriaxConfig(appToken: 'ax_test_token'));
+    : super(config: const AttriaxConfig(projectToken: 'ax_test_token'));
 
   @override
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
+    bool waitForTrackingAuthorization = false,
   }) async => AttriaxContextSnapshot(
     platform: AttriaxPlatformType.android,
     deviceId: deviceId,

@@ -17,7 +17,7 @@ part 'sdk_v1_deep_link_resolve_dto.g.dart';
 class SdkV1DeepLinkResolveDto {
   /// Returns a new [SdkV1DeepLinkResolveDto] instance.
   SdkV1DeepLinkResolveDto({
-    required this.appToken,
+    this.appToken,
 
     this.deviceId,
 
@@ -31,6 +31,8 @@ class SdkV1DeepLinkResolveDto {
 
     required this.platform,
 
+    this.projectToken,
+
     this.rawUrl,
 
     this.sessionId,
@@ -40,8 +42,10 @@ class SdkV1DeepLinkResolveDto {
     this.source_,
   });
 
-  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
-  final String appToken;
+  /// Deprecated alias for projectToken kept for released SDK compatibility.
+  @Deprecated('appToken has been deprecated')
+  @JsonKey(name: r'appToken', required: false, includeIfNull: false)
+  final String? appToken;
 
   @JsonKey(name: r'deviceId', required: false, includeIfNull: false)
   final String? deviceId;
@@ -60,6 +64,10 @@ class SdkV1DeepLinkResolveDto {
 
   @JsonKey(name: r'platform', required: true, includeIfNull: false)
   final Platform platform;
+
+  /// Attriax project token that scopes the SDK request.
+  @JsonKey(name: r'projectToken', required: false, includeIfNull: false)
+  final String? projectToken;
 
   @JsonKey(name: r'rawUrl', required: false, includeIfNull: false)
   final String? rawUrl;
@@ -89,6 +97,7 @@ class SdkV1DeepLinkResolveDto {
           other.linkPath == linkPath &&
           other.metadata == metadata &&
           other.platform == platform &&
+          other.projectToken == projectToken &&
           other.rawUrl == rawUrl &&
           other.sessionId == sessionId &&
           other.sessionRelativeTimeMs == sessionRelativeTimeMs &&
@@ -103,6 +112,7 @@ class SdkV1DeepLinkResolveDto {
       linkPath.hashCode +
       metadata.hashCode +
       platform.hashCode +
+      projectToken.hashCode +
       rawUrl.hashCode +
       sessionId.hashCode +
       sessionRelativeTimeMs.hashCode +

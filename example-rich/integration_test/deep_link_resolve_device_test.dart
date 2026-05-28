@@ -53,7 +53,7 @@ void main() {
     await prefs.clear();
 
     final config = AttriaxConfig(
-      appToken: 'ax_test_token',
+      projectToken: 'ax_test_token',
       apiBaseUrl: 'https://api.attriax.test',
       requestTimeout: const Duration(seconds: 5),
       automaticCrashReportingEnabled: false,

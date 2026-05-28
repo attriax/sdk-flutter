@@ -168,7 +168,7 @@ class AttriaxTrackingManager {
     );
     await _requestManager.enqueue(
       attriaxBuildTrackCrashRequest(
-        appToken: _config.appToken,
+        appToken: _config.projectToken,
         clientOccurredAt: occurredAt,
         context: _contextManager.requiredSnapshot,
         deviceId: decision.attachDeviceIdentity
@@ -205,7 +205,7 @@ class AttriaxTrackingManager {
     await _sessionManager.prepareTrackedSessionAt(_clock.now());
     await _requestManager.enqueue(
       attriaxBuildUserRequest(
-        appToken: _config.appToken,
+        appToken: _config.projectToken,
         deviceId: _contextManager.requiredDeviceId,
         deviceIdSource: _contextManager.requireDeviceIdSource(),
         externalUserId: userId,
@@ -339,7 +339,7 @@ class AttriaxTrackingManager {
     );
     await _requestManager.enqueue(
       attriaxBuildTrackEventRequest(
-        appToken: _config.appToken,
+        appToken: _config.projectToken,
         clientOccurredAt: occurredAt,
         deviceId: decision.attachDeviceIdentity
             ? _contextManager.requiredDeviceId
@@ -373,7 +373,7 @@ class AttriaxTrackingManager {
     await _sessionManager.prepareTrackedSessionAt(_clock.now());
     await _requestManager.enqueue(
       attriaxBuildUserRequest(
-        appToken: _config.appToken,
+        appToken: _config.projectToken,
         deviceId: _contextManager.requiredDeviceId,
         deviceIdSource: _contextManager.requireDeviceIdSource(),
         externalUserId: externalUserId,

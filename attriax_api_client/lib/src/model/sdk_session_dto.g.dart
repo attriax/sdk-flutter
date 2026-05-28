@@ -8,11 +8,11 @@ part of 'sdk_session_dto.dart';
 
 SdkSessionDto _$SdkSessionDtoFromJson(Map<String, dynamic> json) =>
     $checkedCreate('SdkSessionDto', json, ($checkedConvert) {
-      $checkKeys(json, requiredKeys: const ['appToken', 'kind', 'sessionId']);
+      $checkKeys(json, requiredKeys: const ['kind', 'sessionId']);
       final val = SdkSessionDto(
         appBuildNumber: $checkedConvert('appBuildNumber', (v) => v as String?),
         appPackageName: $checkedConvert('appPackageName', (v) => v as String?),
-        appToken: $checkedConvert('appToken', (v) => v as String),
+        appToken: $checkedConvert('appToken', (v) => v as String?),
         appVersion: $checkedConvert('appVersion', (v) => v as String?),
         clientOccurredAt: $checkedConvert(
           'clientOccurredAt',
@@ -36,6 +36,7 @@ SdkSessionDto _$SdkSessionDtoFromJson(Map<String, dynamic> json) =>
           'platform',
           (v) => $enumDecodeNullable(_$PlatformEnumMap, v),
         ),
+        projectToken: $checkedConvert('projectToken', (v) => v as String?),
         sdkApiVersion: $checkedConvert('sdkApiVersion', (v) => v as String?),
         sdkPackageVersion: $checkedConvert(
           'sdkPackageVersion',
@@ -54,7 +55,7 @@ Map<String, dynamic> _$SdkSessionDtoToJson(SdkSessionDto instance) =>
     <String, dynamic>{
       'appBuildNumber': ?instance.appBuildNumber,
       'appPackageName': ?instance.appPackageName,
-      'appToken': instance.appToken,
+      'appToken': ?instance.appToken,
       'appVersion': ?instance.appVersion,
       'clientOccurredAt': ?instance.clientOccurredAt?.toIso8601String(),
       'deviceId': ?instance.deviceId,
@@ -64,6 +65,7 @@ Map<String, dynamic> _$SdkSessionDtoToJson(SdkSessionDto instance) =>
       'locale': ?instance.locale,
       'metadata': ?instance.metadata,
       'platform': ?_$PlatformEnumMap[instance.platform],
+      'projectToken': ?instance.projectToken,
       'sdkApiVersion': ?instance.sdkApiVersion,
       'sdkPackageVersion': ?instance.sdkPackageVersion,
       'sessionId': instance.sessionId,

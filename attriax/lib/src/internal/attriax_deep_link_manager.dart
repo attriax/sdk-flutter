@@ -266,7 +266,7 @@ class AttriaxDeepLinkManager {
   }) {
     final decision = _trackingDecision();
     return attriaxBuildResolveDeepLinkRequest(
-      appToken: _config.appToken,
+      appToken: _config.projectToken,
       deviceId: decision.attachDeviceIdentity
           ? _contextManager.requiredDeviceId
           : null,

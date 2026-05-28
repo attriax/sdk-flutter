@@ -12,7 +12,7 @@ class ExampleBootstrapErrorPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return ExamplePageScaffold(
       title: 'Attriax Flutter Example',
-      subtitle: 'The example now expects its app token to live in code.',
+      subtitle: 'The example now expects its project token to live in code.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -25,7 +25,7 @@ class ExampleBootstrapErrorPage extends StatelessWidget {
                 Text(exampleConfigurationHelpText()),
                 const SizedBox(height: 12),
                 SelectableText(
-                  'Current token: ${maskExampleSecret(exampleAppToken)}',
+                  'Current project token: ${maskExampleSecret(exampleProjectToken)}',
                 ),
               ],
             ),

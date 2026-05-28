@@ -10,21 +10,14 @@ SdkV1OpenDto _$SdkV1OpenDtoFromJson(Map<String, dynamic> json) =>
     $checkedCreate('SdkV1OpenDto', json, ($checkedConvert) {
       $checkKeys(
         json,
-        requiredKeys: const [
-          'app',
-          'appToken',
-          'device',
-          'deviceId',
-          'platform',
-          'sdk',
-        ],
+        requiredKeys: const ['app', 'device', 'deviceId', 'platform', 'sdk'],
       );
       final val = SdkV1OpenDto(
         app: $checkedConvert(
           'app',
           (v) => AppVersionContextDto.fromJson(v as Map<String, dynamic>),
         ),
-        appToken: $checkedConvert('appToken', (v) => v as String),
+        appToken: $checkedConvert('appToken', (v) => v as String?),
         device: $checkedConvert(
           'device',
           (v) => DeviceContextDto.fromJson(v as Map<String, dynamic>),
@@ -48,6 +41,7 @@ SdkV1OpenDto _$SdkV1OpenDtoFromJson(Map<String, dynamic> json) =>
           'platform',
           (v) => $enumDecode(_$PlatformEnumMap, v),
         ),
+        projectToken: $checkedConvert('projectToken', (v) => v as String?),
         referrerClickTimestampSeconds: $checkedConvert(
           'referrerClickTimestampSeconds',
           (v) => v as num?,
@@ -68,7 +62,7 @@ SdkV1OpenDto _$SdkV1OpenDtoFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$SdkV1OpenDtoToJson(SdkV1OpenDto instance) =>
     <String, dynamic>{
       'app': instance.app.toJson(),
-      'appToken': instance.appToken,
+      'appToken': ?instance.appToken,
       'device': instance.device.toJson(),
       'deviceId': instance.deviceId,
       'deviceIdSource': ?instance.deviceIdSource,
@@ -77,6 +71,7 @@ Map<String, dynamic> _$SdkV1OpenDtoToJson(SdkV1OpenDto instance) =>
       'installReferrer': ?instance.installReferrer,
       'isFirstLaunch': ?instance.isFirstLaunch,
       'platform': _$PlatformEnumMap[instance.platform]!,
+      'projectToken': ?instance.projectToken,
       'referrerClickTimestampSeconds': ?instance.referrerClickTimestampSeconds,
       'sdk': instance.sdk.toJson(),
       'sessionId': ?instance.sessionId,

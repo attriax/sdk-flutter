@@ -81,6 +81,7 @@ class SdkInstallReferrerResultDto {
   final String? deepLinkUri;
 
   /// Deprecated alias for deepLinkUri kept for HTTP compatibility.
+  @Deprecated('deepLinkUrl has been deprecated')
   @JsonKey(name: r'deepLinkUrl', required: false, includeIfNull: false)
   final String? deepLinkUrl;
 

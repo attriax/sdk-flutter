@@ -33,7 +33,7 @@ void main() {
     test('registers the first-launch value on iOS', () async {
       final manager = AttriaxSkanManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           skan: AttriaxSkanConfig(),
         ),
         preferencesStore: store,
@@ -60,7 +60,7 @@ void main() {
 
       final manager = AttriaxSkanManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           skan: AttriaxSkanConfig(),
         ),
         preferencesStore: store,
@@ -92,7 +92,7 @@ void main() {
     test('encodes window 1 event ranks into fine-value bit ranges', () async {
       final manager = AttriaxSkanManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           skan: AttriaxSkanConfig(registerFirstLaunchValue: false),
         ),
         preferencesStore: store,
@@ -142,7 +142,7 @@ void main() {
       final requestManager = _FakeRequestManager();
       final trackingManager = AttriaxTrackingManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           skan: AttriaxSkanConfig(registerFirstLaunchValue: false),
         ),
         logger: AttriaxLogger(enableDebugLogs: false),
@@ -171,7 +171,7 @@ void main() {
       clock = _FixedClock(DateTime.utc(2026, 5, 19, 13));
       final manager = AttriaxSkanManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           skan: AttriaxSkanConfig(registerFirstLaunchValue: false),
         ),
         preferencesStore: store,
@@ -224,7 +224,7 @@ void main() {
     test('tracks purchase count and cumulative USD revenue locally', () async {
       final manager = AttriaxSkanManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           skan: AttriaxSkanConfig(registerFirstLaunchValue: false),
         ),
         preferencesStore: store,
@@ -306,7 +306,7 @@ void main() {
       String? convertedCurrency;
       final manager = AttriaxSkanManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           skan: AttriaxSkanConfig(registerFirstLaunchValue: false),
         ),
         preferencesStore: store,
@@ -379,7 +379,7 @@ void main() {
     test('tracks purchase count without inventing revenue', () async {
       final manager = AttriaxSkanManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           skan: AttriaxSkanConfig(registerFirstLaunchValue: false),
         ),
         preferencesStore: store,
@@ -438,7 +438,7 @@ void main() {
     test('tracks ad show count locally', () async {
       final manager = AttriaxSkanManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           skan: AttriaxSkanConfig(registerFirstLaunchValue: false),
         ),
         preferencesStore: store,
@@ -499,7 +499,7 @@ void main() {
         clock = _FixedClock(DateTime.utc(2026, 5, 22, 9));
         final manager = AttriaxSkanManager(
           config: const AttriaxConfig(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             skan: AttriaxSkanConfig(registerFirstLaunchValue: false),
           ),
           preferencesStore: store,
@@ -548,7 +548,7 @@ void main() {
     test('does not update SKAN when event tracking is disabled', () async {
       final manager = AttriaxSkanManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           skan: AttriaxSkanConfig(registerFirstLaunchValue: false),
         ),
         preferencesStore: store,
@@ -588,7 +588,7 @@ void main() {
       final requestManager = _FakeRequestManager();
       final trackingManager = AttriaxTrackingManager(
         config: const AttriaxConfig(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           skan: AttriaxSkanConfig(registerFirstLaunchValue: false),
         ),
         logger: AttriaxLogger(enableDebugLogs: false),
@@ -737,6 +737,9 @@ class _FakeConsentReadView implements AttriaxConsentReadView {
         attribution: true,
         adEvents: true,
       );
+
+  @override
+  bool get anonymousTrackingEnabled => true;
 
   @override
   bool get isWaitingForGdprConsent => false;

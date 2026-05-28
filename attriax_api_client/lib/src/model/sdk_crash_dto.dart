@@ -21,7 +21,7 @@ class SdkCrashDto {
 
     this.appPackageName,
 
-    required this.appToken,
+    this.appToken,
 
     this.appVersion,
 
@@ -45,6 +45,8 @@ class SdkCrashDto {
 
     required this.platform,
 
+    this.projectToken,
+
     this.reason,
 
     this.sdkApiVersion,
@@ -66,8 +68,10 @@ class SdkCrashDto {
   @JsonKey(name: r'appPackageName', required: false, includeIfNull: false)
   final String? appPackageName;
 
-  @JsonKey(name: r'appToken', required: true, includeIfNull: false)
-  final String appToken;
+  /// Deprecated alias for projectToken kept for released SDK compatibility.
+  @Deprecated('appToken has been deprecated')
+  @JsonKey(name: r'appToken', required: false, includeIfNull: false)
+  final String? appToken;
 
   @JsonKey(name: r'appVersion', required: false, includeIfNull: false)
   final String? appVersion;
@@ -101,6 +105,10 @@ class SdkCrashDto {
 
   @JsonKey(name: r'platform', required: true, includeIfNull: false)
   final Platform platform;
+
+  /// Attriax project token that scopes the SDK request.
+  @JsonKey(name: r'projectToken', required: false, includeIfNull: false)
+  final String? projectToken;
 
   @JsonKey(name: r'reason', required: false, includeIfNull: false)
   final String? reason;
@@ -147,6 +155,7 @@ class SdkCrashDto {
           other.message == message &&
           other.metadata == metadata &&
           other.platform == platform &&
+          other.projectToken == projectToken &&
           other.reason == reason &&
           other.sdkApiVersion == sdkApiVersion &&
           other.sdkPackageVersion == sdkPackageVersion &&
@@ -171,6 +180,7 @@ class SdkCrashDto {
       message.hashCode +
       metadata.hashCode +
       platform.hashCode +
+      projectToken.hashCode +
       reason.hashCode +
       sdkApiVersion.hashCode +
       sdkPackageVersion.hashCode +

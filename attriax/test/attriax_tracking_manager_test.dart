@@ -31,7 +31,7 @@ void main() {
         sdkPackageVersion: '1.0.0',
       );
       final manager = AttriaxTrackingManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         logger: AttriaxLogger(enableDebugLogs: false),
         clock: AttriaxMutableClock(occurredAt),
         contextManager: const _StaticTrackingContext(),
@@ -63,7 +63,7 @@ void main() {
     test('recordEvent defers flushes after first launch by default', () async {
       final requestManager = _RecordingRequestManager();
       final manager = AttriaxTrackingManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         logger: AttriaxLogger(enableDebugLogs: false),
         clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
         contextManager: const _StaticTrackingContext(isFirstLaunch: false),
@@ -81,7 +81,7 @@ void main() {
     test('recordEvent flushImmediately override bypasses deferral', () async {
       final requestManager = _RecordingRequestManager();
       final manager = AttriaxTrackingManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         logger: AttriaxLogger(enableDebugLogs: false),
         clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
         contextManager: const _StaticTrackingContext(isFirstLaunch: false),
@@ -101,7 +101,7 @@ void main() {
       () async {
         final requestManager = _RecordingRequestManager();
         final manager = AttriaxTrackingManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(isFirstLaunch: false),
@@ -137,7 +137,7 @@ void main() {
       () async {
         final requestManager = _RecordingRequestManager();
         final manager = AttriaxTrackingManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(isFirstLaunch: false),
@@ -161,7 +161,7 @@ void main() {
       () async {
         final requestManager = _RecordingRequestManager();
         final manager = AttriaxTrackingManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(isFirstLaunch: false),
@@ -182,7 +182,7 @@ void main() {
       () async {
         final requestManager = _RecordingRequestManager();
         final manager = AttriaxTrackingManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(isFirstLaunch: false),
@@ -202,7 +202,7 @@ void main() {
       var prepareSessionCalls = 0;
       final requestManager = _RecordingRequestManager();
       final manager = AttriaxTrackingManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         logger: AttriaxLogger(enableDebugLogs: false),
         clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
         contextManager: const _StaticTrackingContext(),
@@ -226,7 +226,7 @@ void main() {
       () async {
         final requestManager = _RecordingRequestManager();
         final manager = AttriaxTrackingManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(),
@@ -251,7 +251,7 @@ void main() {
     test('recordError enqueues crash reports with context metadata', () async {
       final requestManager = _RecordingRequestManager();
       final manager = AttriaxTrackingManager(
-        config: const AttriaxConfig(appToken: 'ax_test_token'),
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
         logger: AttriaxLogger(enableDebugLogs: false),
         clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
         contextManager: const _StaticTrackingContext(),
@@ -305,7 +305,7 @@ void main() {
       () async {
         final requestManager = _RecordingRequestManager();
         final manager = AttriaxTrackingManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(isFirstLaunch: false),
@@ -337,7 +337,7 @@ void main() {
       () async {
         final requestManager = _RecordingRequestManager();
         final manager = AttriaxTrackingManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(),
@@ -366,7 +366,7 @@ void main() {
       () async {
         final requestManager = _RecordingRequestManager();
         final manager = AttriaxTrackingManager(
-          config: const AttriaxConfig(appToken: 'ax_test_token'),
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
           logger: AttriaxLogger(enableDebugLogs: false),
           clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
           contextManager: const _StaticTrackingContext(),

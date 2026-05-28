@@ -228,7 +228,7 @@ class AttriaxCrashReportingCoordinator {
     final decision = _analyticsTrackingDecision();
 
     return attriaxBuildTrackCrashRequest(
-      appToken: _config.appToken,
+      appToken: _config.projectToken,
       clientOccurredAt: clientOccurredAt,
       context: _contextManager.requiredSnapshot,
       deviceId: decision.attachDeviceIdentity
