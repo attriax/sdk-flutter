@@ -5,6 +5,13 @@ All notable changes to the Attriax Flutter SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-05-31
+
+### Changed
+- Breaking: removed the deprecated GDPR auto-detection toggle from the shared Flutter `AttriaxConfig`.
+- Breaking: SDK runtimes no longer run timezone auto-detection automatically during init.
+- Updated package docs/examples and federated package alignment notes for the 0.4.1 removal.
+
 ## [0.4.0] - 2026-05-27
 
 ### Added

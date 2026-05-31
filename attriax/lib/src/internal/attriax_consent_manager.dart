@@ -90,7 +90,6 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
   bool _didRestore = false;
   Future<bool>? _needsConsentFuture;
   Future<void>? _pendingSyncFuture;
-  Future<void>? _autoDetectFuture;
 
   @override
   AttriaxGdprConsentState get gdprConsentState => _state;
@@ -229,7 +228,6 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
 
   Future<void> init() async {
     await _restore();
-    _ensureAutoDetectStarted();
   }
 
   Future<void> flushPendingSync({required String appToken}) async {
@@ -242,7 +240,6 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     bool localOnly = false,
   }) async {
     await _restore();
-    _ensureAutoDetectStarted();
 
     final canUseCachedState =
         (_state == AttriaxGdprConsentState.granted ||
@@ -325,7 +322,6 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     _checkedAt = null;
     _pendingSync = false;
     _didRestore = false;
-    _autoDetectFuture = null;
   }
 
   bool _allowsCategory(
@@ -488,52 +484,6 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     );
     await _persistCurrentState();
     return true;
-  }
-
-  void _ensureAutoDetectStarted() {
-    if (!_config.gdprEnabled || !_config.gdprAutoDetect) {
-      return;
-    }
-    if (_state != AttriaxGdprConsentState.unknown || _pendingSync) {
-      return;
-    }
-
-    final inFlight = _autoDetectFuture;
-    if (inFlight != null) {
-      return;
-    }
-
-    final detection = _autoDetectLocalRequirement();
-    _autoDetectFuture = detection;
-    unawaited(
-      detection.whenComplete(() {
-        if (identical(_autoDetectFuture, detection)) {
-          _autoDetectFuture = null;
-        }
-      }),
-    );
-  }
-
-  Future<void> _autoDetectLocalRequirement() async {
-    final resolvedTimezone = await _contextManager.resolveTimezone();
-    if (_state != AttriaxGdprConsentState.unknown || _pendingSync) {
-      return;
-    }
-
-    final localState = attriaxResolveGdprStateForTimezone(resolvedTimezone);
-    if (localState == null) {
-      return;
-    }
-
-    _applyState(
-      state: localState,
-      values: null,
-      checkedAt: _clock.now(),
-      countryCode: null,
-      regionSource: 'auto_timezone',
-      pendingSync: false,
-    );
-    await _persistCurrentState();
   }
 
   Future<void> _restore() async {

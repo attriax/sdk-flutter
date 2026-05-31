@@ -71,7 +71,6 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
 
   Attriax? _sdk;
   bool _busy = false;
-  bool _gdprAutoDetect = true;
   bool _sdkEnabled = true;
   bool _trackingEnabled = true;
   bool _anonymousTrackingEnabled = true;
@@ -162,7 +161,6 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
       apiBaseUrl: apiBaseUrl,
       enableDebugLogs: true,
       gdprEnabled: true,
-      gdprAutoDetect: _gdprAutoDetect,
       anonymousTracking: _anonymousTrackingEnabled,
       sdkMetadata: const <String, Object?>{
         'surface': 'example_gdpr',
@@ -458,21 +456,6 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
                         ],
                       ),
                       const SizedBox(height: 12),
-                      SwitchListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const Text('Auto-detect GDPR requirement'),
-                        subtitle: const Text(
-                          'Turn this off when you want to control consent state locally without the remote region check.',
-                        ),
-                        value: _gdprAutoDetect,
-                        onChanged: _busy
-                            ? null
-                            : (bool value) {
-                                setState(() {
-                                  _gdprAutoDetect = value;
-                                });
-                              },
-                      ),
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
                         title: const Text('SDK enabled after init'),

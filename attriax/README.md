@@ -14,7 +14,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  attriax_flutter: ^0.4.0
+  attriax_flutter: ^0.4.1
 ```
 
 For local workspace development inside this repository, keep using the existing path-based workspace setup instead of a hosted dependency.
@@ -41,7 +41,6 @@ final attriax = Attriax(
   config: const AttriaxConfig(
     projectToken: 'ax_your_app_token',
     gdprEnabled: true,
-    gdprAutoDetect: true,
   ),
 );
 
@@ -136,8 +135,6 @@ route manually with `attriax.deepLinks.recordDeepLink(uri: incomingUri, source: 
 
 `gdprEnabled` defaults to `false`. Enable it when your app wants Attriax to
 wait for a GDPR decision before sending GDPR-gated tracking activity.
-`gdprAutoDetect` defaults to `true` and lets the SDK derive an initial GDPR
-state automatically.
 `anonymousTracking` defaults to `true` and keeps anonymous-capable traffic
 flowing without `deviceId` while consent is unresolved. Set it to `false` when
 your app wants to buffer that traffic locally until consent allows identified

@@ -183,7 +183,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: client,
           deepLinkSource: deepLinkSource,
@@ -233,7 +232,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: client,
           deepLinkSource: deepLinkSource,
@@ -293,15 +291,55 @@ void main() {
             );
           }
 
-          expect(request.url.path, '/api/sdk/v1/crashes');
-          crashRequest.complete(
-            jsonDecode(request.body) as Map<String, Object?>,
-          );
+          if (request.url.path == '/api/sdk/v1/crashes') {
+            crashRequest.complete(
+              jsonDecode(request.body) as Map<String, Object?>,
+            );
+            return http.Response(
+              jsonEncode(<String, Object?>{
+                'data': <String, Object?>{'success': true},
+              }),
+              202,
+              headers: <String, String>{'content-type': 'application/json'},
+            );
+          }
+
+          expect(request.url.path, '/api/sdk/v1/batch');
+          final decoded = jsonDecode(request.body) as Map<String, Object?>;
+          final items = (decoded['items']! as List<Object?>)
+              .cast<Map<String, Object?>>();
+          final crashItems = items
+              .where((item) => item['kind'] == 'trackCrash')
+              .toList(growable: false);
+          if (crashItems.isNotEmpty && !crashRequest.isCompleted) {
+            crashRequest.complete(
+              crashItems.single['body']! as Map<String, Object?>,
+            );
+          }
           return http.Response(
             jsonEncode(<String, Object?>{
-              'data': <String, Object?>{'success': true},
+              'success': true,
+              'timestamp': '2026-05-06T10:00:00.000Z',
+              'data': <String, Object?>{
+                'responses': items
+                    .asMap()
+                    .entries
+                    .map(
+                      (entry) => <String, Object?>{
+                        'requestId':
+                            (entry.value['id'] as String?) ??
+                            'batch_item_${entry.key}',
+                        'status': 202,
+                        'body': <String, Object?>{
+                          'data': <String, Object?>{'success': true},
+                        },
+                        'headers': <String, Object?>{},
+                      },
+                    )
+                    .toList(growable: false),
+              },
             }),
-            202,
+            200,
             headers: <String, String>{'content-type': 'application/json'},
           );
         });
@@ -484,10 +522,10 @@ void main() {
         await _flushRuntimeTransitions();
 
         final queued = _queuedEntriesFromPrefs(prefs);
-        expect(queued, hasLength(2));
+        expect(queued, hasLength(3));
         expect(
           queued.map((entry) => entry['kind']),
-          containsAll(<String>['open', 'trackCrash']),
+          containsAll(<String>['open', 'trackCrash', 'trackSession']),
         );
       },
     );
@@ -1032,6 +1070,16 @@ void main() {
             );
           }
 
+          if (request.url.path == '/api/sdk/v1/sessions') {
+            return http.Response(
+              _sdkEnvelope(<String, Object?>{'success': true}),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }
+
           expect(request.url.path, '/api/sdk/v1/revenue/receipts/validate');
           final body = jsonDecode(request.body) as Map<String, Object?>;
           expect(body['appToken'], 'ax_test_token');
@@ -1062,7 +1110,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: client,
           deepLinkSource: deepLinkSource,
@@ -1625,7 +1672,13 @@ List<Map<String, Object?>> _queuedEntriesFromPrefs(SharedPreferences prefs) {
 
 List<Map<String, Object?>> _queuedBodiesFromPrefs(SharedPreferences prefs) =>
     _queuedEntriesFromPrefs(prefs)
-        .where((entry) => entry['kind'] != 'open')
+        .where(
+          (entry) =>
+              entry['kind'] != 'open' &&
+              !(entry['kind'] == 'trackSession' &&
+                  ((entry['body']! as Map<String, Object?>)['kind'] ==
+                      'start')),
+        )
         .map((entry) => entry['body']! as Map<String, Object?>)
         .toList(growable: false);
 

@@ -174,7 +174,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: MockClient((request) async {
             if (request.url.path.endsWith('/api/sdk/v1/consent/gdpr')) {
@@ -268,7 +267,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: MockClient((request) async {
             if (request.url.path.endsWith('/api/sdk/v1/consent/gdpr')) {
@@ -342,7 +340,6 @@ void main() {
             config: const AttriaxConfig(
               projectToken: 'ax_test_token',
               gdprEnabled: true,
-              gdprAutoDetect: false,
             ),
             platform: platform,
             platformType: AttriaxPlatformType.ios,
@@ -399,7 +396,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: MockClient((request) async {
             if (request.url.path.endsWith('/api/sdk/v1/consent/gdpr')) {
@@ -480,7 +476,6 @@ void main() {
             config: const AttriaxConfig(
               projectToken: 'ax_test_token',
               gdprEnabled: true,
-              gdprAutoDetect: false,
             ),
             platform: platform,
             platformType: AttriaxPlatformType.ios,
@@ -539,7 +534,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: MockClient((request) async {
             if (request.url.path.endsWith('/api/sdk/v1/consent/gdpr')) {
@@ -607,7 +601,6 @@ void main() {
             config: const AttriaxConfig(
               projectToken: 'ax_test_token',
               gdprEnabled: true,
-              gdprAutoDetect: false,
             ),
             platform: platform,
             platformType: AttriaxPlatformType.ios,

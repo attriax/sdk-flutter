@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1
+
+### Changed
+- Breaking: removed the deprecated GDPR auto-detection toggle from `AttriaxConfig`
+- Breaking: the SDK no longer runs timezone auto-detection automatically during init.
+- Updated examples, tests, and docs to stop passing the removed config option.
+
 ## 0.4.0
 
 ### Added

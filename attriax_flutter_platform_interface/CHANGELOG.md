@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1
+
+### Changed
+- Breaking: removed the shared deprecated GDPR auto-detection config field.
+- Breaking: SDK runtimes no longer run timezone auto-detection automatically during init.
+- Bumped shared SDK package metadata to `0.4.1`.
+
 ## 0.4.0
 
 ### Added

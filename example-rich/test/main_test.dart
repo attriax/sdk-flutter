@@ -182,7 +182,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.textContaining('Current token:'), findsOneWidget);
+    expect(find.textContaining('Current project token:'), findsOneWidget);
     expect(find.text('Current SDK state'), findsNothing);
     expect(pushTokens.refreshCalls, 0);
   });

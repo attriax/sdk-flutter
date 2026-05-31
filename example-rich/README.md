@@ -14,8 +14,7 @@ This example now follows the recommended integration shape for real apps:
 
 Set the example project token in `lib/example_app_configuration.dart`.
 
-The example bootstrap intentionally enables `gdprEnabled: true` and keeps
-`gdprAutoDetect: true` so the Controls page can demonstrate pending,
+The example bootstrap intentionally enables `gdprEnabled: true` so the Controls page can demonstrate pending,
 not-required, and granted consent states without changing source files between
 runs.
 

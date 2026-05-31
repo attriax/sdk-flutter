@@ -113,7 +113,6 @@ class AttriaxConfig {
     this.trackingAuthorizationStatusTimeout = const Duration(seconds: 60),
     this.automaticBrowserHandling = true,
     this.gdprEnabled = false,
-    this.gdprAutoDetect = true,
     this.anonymousTracking = true,
     this.sessionTrackingEnabled = true,
     this.sessionHeartbeatInterval = const Duration(minutes: 5),
@@ -150,7 +149,6 @@ class AttriaxConfig {
   final Duration trackingAuthorizationStatusTimeout;
   final bool automaticBrowserHandling;
   final bool gdprEnabled;
-  final bool gdprAutoDetect;
 
   /// Enables GDPR-safe anonymous tracking while consent is unresolved.
   ///

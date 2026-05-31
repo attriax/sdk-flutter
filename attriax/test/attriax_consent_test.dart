@@ -109,7 +109,6 @@ void main() {
         config: const AttriaxConfig(
           projectToken: 'ax_test_token',
           gdprEnabled: true,
-          gdprAutoDetect: false,
         ),
         client: client,
         deepLinkSource: deepLinkSource,
@@ -284,7 +283,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: client,
           deepLinkSource: deepLinkSource,
@@ -363,7 +361,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
             anonymousTracking: false,
           ),
           client: client,
@@ -445,7 +442,6 @@ void main() {
         config: const AttriaxConfig(
           projectToken: 'ax_test_token',
           gdprEnabled: true,
-          gdprAutoDetect: false,
         ),
         client: client,
         deepLinkSource: deepLinkSource,
@@ -513,7 +509,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: client,
           deepLinkSource: deepLinkSource,
@@ -614,7 +609,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: client,
           deepLinkSource: deepLinkSource,
@@ -665,7 +659,7 @@ void main() {
     );
 
     test(
-      'init auto-detects local pending consent without a remote consent request',
+      'init does not auto-detect local consent state without an explicit consent check',
       () async {
         final requestPaths = <String>[];
         final sessionBodies = <Map<String, Object?>>[];
@@ -695,7 +689,7 @@ void main() {
           }
 
           throw StateError(
-            'Unexpected request during local auto-detect: ${request.method} ${request.url.path}',
+            'Unexpected request during local init: ${request.method} ${request.url.path}',
           );
         });
         await sdk.dispose();
@@ -712,15 +706,12 @@ void main() {
         );
 
         await sdk.init();
-        await _waitFor(
-          () => sdk.consent.gdpr.state != AttriaxGdprConsentState.unknown,
-        );
         await _waitFor(() => sessionBodies.isNotEmpty);
 
         expect(requestPaths, contains('/api/sdk/v1/sessions'));
         expect(requestPaths, isNot(contains('/api/sdk/v1/consent/gdpr')));
         expect(requestPaths, isNot(contains('/api/sdk/v1/consent/gdpr/check')));
-        expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.pending);
+        expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.unknown);
         expect(sdk.consent.gdpr.isWaitingForConsent, isTrue);
         expect(sessionBodies.single['deviceId'], isNull);
         expect(sessionBodies.single['deviceIdSource'], isNull);
@@ -730,7 +721,7 @@ void main() {
         );
         expect(
           prefs.getBool(AttriaxPreferencesStore.firstLaunchSeenStorageKey),
-          isNull,
+          isTrue,
         );
         expect(
           prefs.getString(AttriaxPreferencesStore.sessionSnapshotStorageKey),
@@ -740,7 +731,7 @@ void main() {
     );
 
     test(
-      'init auto-detected pending consent still sends an anonymous session request',
+      'init in unknown consent still sends an anonymous session request',
       () async {
         final requestPaths = <String>[];
         final sessionBodies = <Map<String, Object?>>[];
@@ -787,12 +778,10 @@ void main() {
         );
 
         await sdk.init();
-        await _waitFor(
-          () => sdk.consent.gdpr.state == AttriaxGdprConsentState.pending,
-        );
         await _waitFor(() => sessionBodies.isNotEmpty);
 
         expect(requestPaths, contains('/api/sdk/v1/sessions'));
+        expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.unknown);
         expect(sdk.deviceId, isNull);
         expect(contextCollector.resolvePreferredDeviceIdCalls, 0);
         expect(contextCollector.collectContextSnapshotCalls, 0);
@@ -871,7 +860,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: client,
           deepLinkSource: deepLinkSource,
@@ -1008,7 +996,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: client,
           deepLinkSource: deepLinkSource,
@@ -1039,7 +1026,11 @@ void main() {
           adEvents: true,
         );
         await _waitFor(() => requestPaths.contains('/api/sdk/v1/consent/gdpr'));
+        await _waitFor(
+          () => sdk.consent.gdpr.state == AttriaxGdprConsentState.granted,
+        );
         await _waitFor(() => sdk.synchronization.isSynchronized);
+        await _drainMicrotasks();
 
         expect(requestPaths, contains('/api/sdk/v1/consent/gdpr'));
         expect(requestPaths, contains('/api/sdk/v1/events'));
@@ -1115,7 +1106,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: client,
           deepLinkSource: deepLinkSource,
@@ -1136,6 +1126,9 @@ void main() {
 
         sdk.consent.gdpr.setNotRequired();
         await _waitFor(() => requestPaths.contains('/api/sdk/v1/consent/gdpr'));
+        await _waitFor(
+          () => sdk.consent.gdpr.state == AttriaxGdprConsentState.notRequired,
+        );
         await _waitFor(() => sdk.synchronization.isSynchronized);
 
         expect(requestPaths, contains('/api/sdk/v1/consent/gdpr'));
@@ -1199,7 +1192,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: client,
           deepLinkSource: deepLinkSource,
@@ -1224,7 +1216,11 @@ void main() {
           adEvents: false,
         );
         await _waitFor(() => requestPaths.contains('/api/sdk/v1/consent/gdpr'));
+        await _waitFor(
+          () => sdk.consent.gdpr.state == AttriaxGdprConsentState.granted,
+        );
         await _waitFor(() => sdk.synchronization.isSynchronized);
+        await _drainMicrotasks();
 
         expect(requestPaths, contains('/api/sdk/v1/consent/gdpr'));
         expect(requestPaths, isNot(contains('/api/sdk/v1/batch')));
@@ -1312,7 +1308,6 @@ void main() {
           config: const AttriaxConfig(
             projectToken: 'ax_test_token',
             gdprEnabled: true,
-            gdprAutoDetect: false,
           ),
           client: client,
           deepLinkSource: deepLinkSource,

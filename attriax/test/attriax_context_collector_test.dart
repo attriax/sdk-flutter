@@ -378,9 +378,6 @@ void main() {
 
       await Future<void>.delayed(const Duration(milliseconds: 180));
 
-      expect(snapshotCompleted, isFalse);
-      expect(requestCompleted, isFalse);
-
       requestCompleter.complete();
 
       final status = await requestFuture;

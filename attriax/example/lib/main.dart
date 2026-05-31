@@ -14,7 +14,6 @@ final Attriax _exampleSdk = Attriax(
   config: AttriaxConfig(
     projectToken: exampleProjectToken,
     gdprEnabled: true,
-    gdprAutoDetect: true,
   ),
 );
 

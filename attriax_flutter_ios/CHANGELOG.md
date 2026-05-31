@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.1
+
+### Changed
+- Package version alignment for the federated 0.4.1 GDPR config simplification release (the deprecated GDPR auto-detection toggle removed from shared config).
+
 ## 0.4.0
 
 ### Changed
