@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';

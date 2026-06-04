@@ -68,7 +68,7 @@ Future<void> processAttriaxStartup(Attriax attriax) async {
   );
 }
 
-await attriax.tracking.recordPurchase(
+attriax.tracking.recordPurchase(
   revenue: 99,
   currency: 'USD',
   productId: 'pro_yearly',
@@ -218,7 +218,7 @@ MaterialApp(
   ],
 );
 
-await attriax.tracking.recordPageView(
+attriax.tracking.recordPageView(
   '/checkout',
   pageClass: 'CheckoutPage',
   previousPageName: '/cart',
@@ -245,7 +245,7 @@ The most common ones are `revenue`, `currency`, `productId`, `transactionId`,
 `source`.
 
 ```dart
-await attriax.tracking.recordEvent(
+attriax.tracking.recordEvent(
   AttriaxAnalyticsEventKeys.addPaymentInfo,
   eventData: const <String, Object?>{
     AttriaxAnalyticsParamKeys.paymentType: 'apple_pay',
@@ -253,7 +253,7 @@ await attriax.tracking.recordEvent(
   },
 );
 
-await attriax.tracking.recordEvent(
+attriax.tracking.recordEvent(
   AttriaxAnalyticsEventKeys.tutorialBegin,
   eventData: const <String, Object?>{
     AttriaxAnalyticsParamKeys.source: 'first_session',
@@ -273,7 +273,7 @@ engagement, failures, rewards, and paid callbacks to show up in the same
 analytics vocabulary across SDKs.
 
 ```dart
-await attriax.tracking.recordAdEvent(
+attriax.tracking.recordAdEvent(
   AttriaxAdEventType.load,
   adNetwork: 'admob',
   adUnitId: rewardedAdUnitId,
@@ -281,7 +281,7 @@ await attriax.tracking.recordAdEvent(
   adFormat: 'rewarded',
 );
 
-await attriax.tracking.recordAdEvent(
+attriax.tracking.recordAdEvent(
   AttriaxAdEventType.show,
   adNetwork: 'admob',
   adUnitId: rewardedAdUnitId,
@@ -289,7 +289,7 @@ await attriax.tracking.recordAdEvent(
   adFormat: 'rewarded',
 );
 
-await attriax.tracking.recordAdEvent(
+attriax.tracking.recordAdEvent(
   AttriaxAdEventType.impression,
   adNetwork: 'admob',
   adUnitId: rewardedAdUnitId,
@@ -297,7 +297,7 @@ await attriax.tracking.recordAdEvent(
   adFormat: 'rewarded',
 );
 
-await attriax.tracking.recordAdEvent(
+attriax.tracking.recordAdEvent(
   AttriaxAdEventType.reward,
   adNetwork: 'admob',
   adUnitId: rewardedAdUnitId,
@@ -307,7 +307,7 @@ await attriax.tracking.recordAdEvent(
   rewardAmount: 50,
 );
 
-await attriax.tracking.recordAdRevenue(
+attriax.tracking.recordAdRevenue(
   revenue: 125000,
   currency: 'USD',
   revenueInMicros: true,

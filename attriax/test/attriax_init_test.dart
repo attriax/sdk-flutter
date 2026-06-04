@@ -448,7 +448,7 @@ void main() {
         );
 
         await sdk.init().timeout(const Duration(milliseconds: 200));
-        await sdk.tracking.recordEvent(
+        sdk.tracking.recordEvent(
           'purchase',
           eventData: const <String, Object?>{'value': 42},
         );
@@ -767,10 +767,11 @@ void main() {
 
       now = now.add(const Duration(seconds: 7));
       clock.currentTime = now;
-      await sdk.tracking.recordEvent(
+      sdk.tracking.recordEvent(
         'purchase',
         eventData: const <String, Object?>{'value': 42},
       );
+      await _flushRuntimeTransitions();
 
       final bodies = _queuedBodiesFromPrefs(prefs);
       expect(bodies, hasLength(1));
@@ -801,7 +802,7 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.tracking.recordPurchase(
+        sdk.tracking.recordPurchase(
           revenue: 4.99,
           currency: 'usd',
           productId: 'coins_500',
@@ -812,6 +813,7 @@ void main() {
           quantity: 2,
           metadata: const <String, Object?>{'placement': 'paywall'},
         );
+        await _flushRuntimeTransitions();
 
         final bodies = _queuedBodiesFromPrefs(prefs);
         expect(bodies, hasLength(1));
@@ -851,7 +853,7 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.tracking.recordPurchase(
+        sdk.tracking.recordPurchase(
           revenue: 4.99,
           currency: 'usd',
           productId: 'coins_500',
@@ -861,6 +863,7 @@ void main() {
           quantity: 2,
           metadata: const <String, Object?>{'placement': 'paywall'},
         );
+        await _flushRuntimeTransitions();
 
         final bodies = _queuedBodiesFromPrefs(prefs);
         expect(bodies, hasLength(1));
@@ -899,7 +902,8 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.tracking.recordPurchase(revenue: 4.99, currency: '  ');
+        sdk.tracking.recordPurchase(revenue: 4.99, currency: '  ');
+        await _flushRuntimeTransitions();
 
         final bodies = _queuedBodiesFromPrefs(prefs);
         expect(bodies, hasLength(1));
@@ -930,7 +934,7 @@ void main() {
       );
 
       await sdk.init();
-      await sdk.tracking.recordRefund(
+      sdk.tracking.recordRefund(
         revenue: 4.99,
         currency: 'eur',
         transactionId: 'refund_txn_123',
@@ -940,6 +944,7 @@ void main() {
         test: true,
         reason: 'chargeback',
       );
+      await _flushRuntimeTransitions();
 
       final bodies = _queuedBodiesFromPrefs(prefs);
       expect(bodies, hasLength(1));
@@ -1156,13 +1161,14 @@ void main() {
       );
 
       await sdk.init();
-      await sdk.tracking.recordAdRevenue(
+      sdk.tracking.recordAdRevenue(
         revenue: 120000,
         revenueInMicros: true,
         adNetwork: 'admob',
         adFormat: 'rewarded',
         adPlacement: 'level_end',
       );
+      await _flushRuntimeTransitions();
 
       final bodies = _queuedBodiesFromPrefs(prefs);
       expect(bodies, hasLength(1));
@@ -1196,7 +1202,7 @@ void main() {
       );
 
       await sdk.init();
-      await sdk.tracking.recordAdEvent(
+      sdk.tracking.recordAdEvent(
         AttriaxAdEventType.showFailed,
         adNetwork: 'admob',
         mediationNetwork: 'admob',
@@ -1207,6 +1213,7 @@ void main() {
         loadLatencyMs: 420,
         test: true,
       );
+      await _flushRuntimeTransitions();
 
       final bodies = _queuedBodiesFromPrefs(prefs);
       expect(bodies, hasLength(1));
@@ -1242,12 +1249,13 @@ void main() {
       );
 
       await sdk.init();
-      await sdk.tracking.recordAdEvent(
+      sdk.tracking.recordAdEvent(
         AttriaxAdEventType.load,
         adNetwork: 'admob',
         adPlacement: 'level_end',
         adFormat: 'rewarded',
       );
+      await _flushRuntimeTransitions();
 
       final bodies = _queuedBodiesFromPrefs(prefs);
       expect(bodies, hasLength(1));
@@ -1274,7 +1282,8 @@ void main() {
       final firstDeviceId = sdk.deviceId;
       expect(firstDeviceId, isNotNull);
 
-      await sdk.tracking.recordEvent('stale_event');
+      sdk.tracking.recordEvent('stale_event');
+      await _flushRuntimeTransitions();
       expect(
         _queuedBodiesFromPrefs(prefs).map((body) => body['eventName']),
         contains('stale_event'),

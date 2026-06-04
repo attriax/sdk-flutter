@@ -192,6 +192,7 @@ class _StaticContextCollector extends AttriaxContextCollector {
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
+    bool waitForTrackingAuthorization = false,
   }) async => AttriaxContextSnapshot(
     platform: AttriaxPlatformType.android,
     deviceId: deviceId,

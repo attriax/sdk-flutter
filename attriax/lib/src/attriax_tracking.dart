@@ -29,17 +29,19 @@ class AttriaxTracking {
   set anonymousTrackingEnabled(bool value) =>
       _runtime.setAnonymousTrackingEnabled(enabled: value);
 
-  Future<void> recordEvent(
+  void recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
     bool flushImmediately = false,
-  }) => _runtime.recordEvent(
-    eventName,
-    eventData: eventData,
-    flushImmediately: flushImmediately,
+  }) => unawaited(
+    _runtime.recordEvent(
+      eventName,
+      eventData: eventData,
+      flushImmediately: flushImmediately,
+    ),
   );
 
-  Future<void> recordPurchase({
+  void recordPurchase({
     required num revenue,
     String currency = 'USD',
     bool revenueInMicros = false,
@@ -80,44 +82,47 @@ class AttriaxTracking {
       currency,
     );
 
-    return _runtime.recordEvent(
-      AttriaxAnalyticsEventKeys.purchase,
-      eventData: <String, Object?>{
-        ...?metadata,
-        AttriaxAnalyticsParamKeys.revenue: normalizedRevenueCurrency.revenue,
-        AttriaxAnalyticsParamKeys.currency: normalizedRevenueCurrency.currency,
-        if (revenueInMicros) AttriaxAnalyticsParamKeys.revenueInMicros: true,
-        AttriaxAnalyticsParamKeys.purchaseType: ?_trimOrNull(purchaseType),
-        AttriaxAnalyticsParamKeys.productId: ?_trimOrNull(productId),
-        AttriaxAnalyticsParamKeys.transactionId: ?_trimOrNull(transactionId),
-        AttriaxAnalyticsParamKeys.originalTransactionId: ?_trimOrNull(
-          originalTransactionId,
-        ),
-        AttriaxAnalyticsParamKeys.validationProvider: ?_trimOrNull(
-          validationProvider,
-        ),
-        AttriaxAnalyticsParamKeys.validationEnvironment: ?_trimOrNull(
-          validationEnvironment,
-        ),
-        AttriaxAnalyticsParamKeys.purchaseToken: ?_trimOrNull(purchaseToken),
-        AttriaxAnalyticsParamKeys.receiptData: ?_trimOrNull(receiptData),
-        AttriaxAnalyticsParamKeys.signedPayload: ?_trimOrNull(signedPayload),
-        AttriaxAnalyticsParamKeys.receiptSignature: ?_trimOrNull(
-          receiptSignature,
-        ),
-        AttriaxAnalyticsParamKeys.isRenewal: ?isRenewal,
-        if (quantity != 1) AttriaxAnalyticsParamKeys.quantity: quantity,
-        AttriaxAnalyticsParamKeys.store: ?_trimOrNull(store),
-        AttriaxAnalyticsParamKeys.packageName: ?_trimOrNull(packageName),
-        AttriaxAnalyticsParamKeys.voided: ?voided,
-        AttriaxAnalyticsParamKeys.test: ?test,
-        AttriaxAnalyticsParamKeys.validationId: ?_trimOrNull(validationId),
-      },
-      flushImmediately: flushImmediately,
+    unawaited(
+      _runtime.recordEvent(
+        AttriaxAnalyticsEventKeys.purchase,
+        eventData: <String, Object?>{
+          ...?metadata,
+          AttriaxAnalyticsParamKeys.revenue: normalizedRevenueCurrency.revenue,
+          AttriaxAnalyticsParamKeys.currency:
+              normalizedRevenueCurrency.currency,
+          if (revenueInMicros) AttriaxAnalyticsParamKeys.revenueInMicros: true,
+          AttriaxAnalyticsParamKeys.purchaseType: ?_trimOrNull(purchaseType),
+          AttriaxAnalyticsParamKeys.productId: ?_trimOrNull(productId),
+          AttriaxAnalyticsParamKeys.transactionId: ?_trimOrNull(transactionId),
+          AttriaxAnalyticsParamKeys.originalTransactionId: ?_trimOrNull(
+            originalTransactionId,
+          ),
+          AttriaxAnalyticsParamKeys.validationProvider: ?_trimOrNull(
+            validationProvider,
+          ),
+          AttriaxAnalyticsParamKeys.validationEnvironment: ?_trimOrNull(
+            validationEnvironment,
+          ),
+          AttriaxAnalyticsParamKeys.purchaseToken: ?_trimOrNull(purchaseToken),
+          AttriaxAnalyticsParamKeys.receiptData: ?_trimOrNull(receiptData),
+          AttriaxAnalyticsParamKeys.signedPayload: ?_trimOrNull(signedPayload),
+          AttriaxAnalyticsParamKeys.receiptSignature: ?_trimOrNull(
+            receiptSignature,
+          ),
+          AttriaxAnalyticsParamKeys.isRenewal: ?isRenewal,
+          if (quantity != 1) AttriaxAnalyticsParamKeys.quantity: quantity,
+          AttriaxAnalyticsParamKeys.store: ?_trimOrNull(store),
+          AttriaxAnalyticsParamKeys.packageName: ?_trimOrNull(packageName),
+          AttriaxAnalyticsParamKeys.voided: ?voided,
+          AttriaxAnalyticsParamKeys.test: ?test,
+          AttriaxAnalyticsParamKeys.validationId: ?_trimOrNull(validationId),
+        },
+        flushImmediately: flushImmediately,
+      ),
     );
   }
 
-  Future<void> recordRefund({
+  void recordRefund({
     required num revenue,
     String currency = 'USD',
     bool revenueInMicros = false,
@@ -154,28 +159,32 @@ class AttriaxTracking {
         ? 0
         : -normalizedRevenueCurrency.revenue.abs();
 
-    return _runtime.recordEvent(
-      AttriaxAnalyticsEventKeys.refund,
-      eventData: <String, Object?>{
-        ...?metadata,
-        AttriaxAnalyticsParamKeys.revenue: refundRevenue,
-        AttriaxAnalyticsParamKeys.currency: normalizedRevenueCurrency.currency,
-        AttriaxAnalyticsParamKeys.revenueType: AttriaxAnalyticsEventKeys.refund,
-        if (revenueInMicros) AttriaxAnalyticsParamKeys.revenueInMicros: true,
-        AttriaxAnalyticsParamKeys.purchaseType: ?_trimOrNull(purchaseType),
-        AttriaxAnalyticsParamKeys.productId: ?_trimOrNull(productId),
-        AttriaxAnalyticsParamKeys.transactionId: ?_trimOrNull(transactionId),
-        AttriaxAnalyticsParamKeys.originalTransactionId: ?_trimOrNull(
-          originalTransactionId,
-        ),
-        if (quantity != 1) AttriaxAnalyticsParamKeys.quantity: quantity,
-        AttriaxAnalyticsParamKeys.store: ?_trimOrNull(store),
-        AttriaxAnalyticsParamKeys.packageName: ?_trimOrNull(packageName),
-        AttriaxAnalyticsParamKeys.voided: ?voided,
-        AttriaxAnalyticsParamKeys.test: ?test,
-        AttriaxAnalyticsParamKeys.reason: ?_trimOrNull(reason),
-      },
-      flushImmediately: flushImmediately,
+    unawaited(
+      _runtime.recordEvent(
+        AttriaxAnalyticsEventKeys.refund,
+        eventData: <String, Object?>{
+          ...?metadata,
+          AttriaxAnalyticsParamKeys.revenue: refundRevenue,
+          AttriaxAnalyticsParamKeys.currency:
+              normalizedRevenueCurrency.currency,
+          AttriaxAnalyticsParamKeys.revenueType:
+              AttriaxAnalyticsEventKeys.refund,
+          if (revenueInMicros) AttriaxAnalyticsParamKeys.revenueInMicros: true,
+          AttriaxAnalyticsParamKeys.purchaseType: ?_trimOrNull(purchaseType),
+          AttriaxAnalyticsParamKeys.productId: ?_trimOrNull(productId),
+          AttriaxAnalyticsParamKeys.transactionId: ?_trimOrNull(transactionId),
+          AttriaxAnalyticsParamKeys.originalTransactionId: ?_trimOrNull(
+            originalTransactionId,
+          ),
+          if (quantity != 1) AttriaxAnalyticsParamKeys.quantity: quantity,
+          AttriaxAnalyticsParamKeys.store: ?_trimOrNull(store),
+          AttriaxAnalyticsParamKeys.packageName: ?_trimOrNull(packageName),
+          AttriaxAnalyticsParamKeys.voided: ?voided,
+          AttriaxAnalyticsParamKeys.test: ?test,
+          AttriaxAnalyticsParamKeys.reason: ?_trimOrNull(reason),
+        },
+        flushImmediately: flushImmediately,
+      ),
     );
   }
 
@@ -190,7 +199,7 @@ class AttriaxTracking {
     Map<String, Object?>? metadata,
   }) => _runtime.registerApplePushToken(token: token, metadata: metadata);
 
-  Future<void> recordAdRevenue({
+  void recordAdRevenue({
     required num revenue,
     String currency = 'USD',
     bool revenueInMicros = false,
@@ -212,24 +221,27 @@ class AttriaxTracking {
       currency,
     );
 
-    return _runtime.recordEvent(
-      AttriaxAnalyticsEventKeys.adRevenue,
-      eventData: <String, Object?>{
-        ...?metadata,
-        AttriaxAnalyticsParamKeys.revenue: normalizedRevenueCurrency.revenue,
-        AttriaxAnalyticsParamKeys.currency: normalizedRevenueCurrency.currency,
-        if (revenueInMicros) AttriaxAnalyticsParamKeys.revenueInMicros: true,
-        AttriaxAnalyticsParamKeys.adNetwork: ?_trimOrNull(adNetwork),
-        AttriaxAnalyticsParamKeys.adFormat: ?_trimOrNull(adFormat),
-        AttriaxAnalyticsParamKeys.adType: ?_trimOrNull(adType),
-        AttriaxAnalyticsParamKeys.adPlacement: ?_trimOrNull(adPlacement),
-        AttriaxAnalyticsParamKeys.test: ?test,
-      },
-      flushImmediately: flushImmediately,
+    unawaited(
+      _runtime.recordEvent(
+        AttriaxAnalyticsEventKeys.adRevenue,
+        eventData: <String, Object?>{
+          ...?metadata,
+          AttriaxAnalyticsParamKeys.revenue: normalizedRevenueCurrency.revenue,
+          AttriaxAnalyticsParamKeys.currency:
+              normalizedRevenueCurrency.currency,
+          if (revenueInMicros) AttriaxAnalyticsParamKeys.revenueInMicros: true,
+          AttriaxAnalyticsParamKeys.adNetwork: ?_trimOrNull(adNetwork),
+          AttriaxAnalyticsParamKeys.adFormat: ?_trimOrNull(adFormat),
+          AttriaxAnalyticsParamKeys.adType: ?_trimOrNull(adType),
+          AttriaxAnalyticsParamKeys.adPlacement: ?_trimOrNull(adPlacement),
+          AttriaxAnalyticsParamKeys.test: ?test,
+        },
+        flushImmediately: flushImmediately,
+      ),
     );
   }
 
-  Future<void> recordAdEvent(
+  void recordAdEvent(
     AttriaxAdEventType type, {
     String? adNetwork,
     String? mediationNetwork,
@@ -263,29 +275,31 @@ class AttriaxTracking {
       );
     }
 
-    return _runtime.recordEvent(
-      type.eventName,
-      eventData: <String, Object?>{
-        ...?metadata,
-        AttriaxAnalyticsParamKeys.adNetwork: ?_trimOrNull(adNetwork),
-        AttriaxAnalyticsParamKeys.mediationNetwork: ?_trimOrNull(
-          mediationNetwork,
-        ),
-        AttriaxAnalyticsParamKeys.adUnitId: ?_trimOrNull(adUnitId),
-        AttriaxAnalyticsParamKeys.adPlacement: ?_trimOrNull(adPlacement),
-        AttriaxAnalyticsParamKeys.adFormat: ?_trimOrNull(adFormat),
-        AttriaxAnalyticsParamKeys.adType: ?_trimOrNull(adType),
-        AttriaxAnalyticsParamKeys.failureReason: ?_trimOrNull(failureReason),
-        AttriaxAnalyticsParamKeys.rewardType: ?_trimOrNull(rewardType),
-        AttriaxAnalyticsParamKeys.loadLatencyMs: ?normalizedLoadLatencyMs,
-        AttriaxAnalyticsParamKeys.rewardAmount: ?normalizedRewardAmount,
-        AttriaxAnalyticsParamKeys.test: ?test,
-      },
-      flushImmediately: flushImmediately,
+    unawaited(
+      _runtime.recordEvent(
+        type.eventName,
+        eventData: <String, Object?>{
+          ...?metadata,
+          AttriaxAnalyticsParamKeys.adNetwork: ?_trimOrNull(adNetwork),
+          AttriaxAnalyticsParamKeys.mediationNetwork: ?_trimOrNull(
+            mediationNetwork,
+          ),
+          AttriaxAnalyticsParamKeys.adUnitId: ?_trimOrNull(adUnitId),
+          AttriaxAnalyticsParamKeys.adPlacement: ?_trimOrNull(adPlacement),
+          AttriaxAnalyticsParamKeys.adFormat: ?_trimOrNull(adFormat),
+          AttriaxAnalyticsParamKeys.adType: ?_trimOrNull(adType),
+          AttriaxAnalyticsParamKeys.failureReason: ?_trimOrNull(failureReason),
+          AttriaxAnalyticsParamKeys.rewardType: ?_trimOrNull(rewardType),
+          AttriaxAnalyticsParamKeys.loadLatencyMs: ?normalizedLoadLatencyMs,
+          AttriaxAnalyticsParamKeys.rewardAmount: ?normalizedRewardAmount,
+          AttriaxAnalyticsParamKeys.test: ?test,
+        },
+        flushImmediately: flushImmediately,
+      ),
     );
   }
 
-  Future<void> recordPageView(
+  void recordPageView(
     String pageName, {
     String? pageClass,
     String? pageTitle,
@@ -293,43 +307,47 @@ class AttriaxTracking {
     Map<String, Object?>? parameters,
     String source = 'manual',
     bool flushImmediately = false,
-  }) => _runtime.recordPageView(
-    pageName,
-    pageClass: pageClass,
-    pageTitle: pageTitle,
-    previousPageName: previousPageName,
-    parameters: parameters,
-    source: source,
-    flushImmediately: flushImmediately,
+  }) => unawaited(
+    _runtime.recordPageView(
+      pageName,
+      pageClass: pageClass,
+      pageTitle: pageTitle,
+      previousPageName: previousPageName,
+      parameters: parameters,
+      source: source,
+      flushImmediately: flushImmediately,
+    ),
   );
 
-  Future<void> recordError(
+  void recordError(
     Object error,
     StackTrace stackTrace, {
     bool fatal = false,
     String source = 'manual',
     String? reason,
     Map<String, Object?>? metadata,
-  }) => _runtime.recordError(
-    error,
-    stackTrace,
-    fatal: fatal,
-    source: source,
-    reason: reason,
-    metadata: metadata,
+  }) => unawaited(
+    _runtime.recordError(
+      error,
+      stackTrace,
+      fatal: fatal,
+      source: source,
+      reason: reason,
+      metadata: metadata,
+    ),
   );
 
-  Future<void> setUser(String? userId, {String? userName}) =>
-      _runtime.setUser(userId, userName: userName);
+  void setUser(String? userId, {String? userName}) =>
+      unawaited(_runtime.setUser(userId, userName: userName));
 
-  Future<void> setUserProperty(String name, Object? value) =>
-      _runtime.setUserProperty(name, value);
+  void setUserProperty(String name, Object? value) =>
+      unawaited(_runtime.setUserProperty(name, value));
 
-  Future<void> setUserProperties(Map<String, Object?> properties) =>
-      _runtime.setUserProperties(properties);
+  void setUserProperties(Map<String, Object?> properties) =>
+      unawaited(_runtime.setUserProperties(properties));
 
-  Future<void> clearUserProperties({List<String>? propertyNames}) =>
-      _runtime.clearUserProperties(propertyNames: propertyNames);
+  void clearUserProperties({List<String>? propertyNames}) =>
+      unawaited(_runtime.clearUserProperties(propertyNames: propertyNames));
 
   _AttriaxNormalizedRevenue _normalizeRevenueCurrency(
     double revenue,

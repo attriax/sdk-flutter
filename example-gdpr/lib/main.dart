@@ -51,9 +51,8 @@ class ExampleGdprHomePage extends StatefulWidget {
 }
 
 class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
-  late final TextEditingController _projectTokenController = TextEditingController(
-    text: _defaultProjectToken,
-  );
+  late final TextEditingController _projectTokenController =
+      TextEditingController(text: _defaultProjectToken);
   late final TextEditingController _apiBaseUrlController =
       TextEditingController(text: _defaultApiBaseUrl);
   late final TextEditingController _eventNameController = TextEditingController(
@@ -323,7 +322,7 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
         throw StateError('Event name is required.');
       }
 
-      await sdk.tracking.recordEvent(
+      sdk.tracking.recordEvent(
         eventName,
         eventData: const <String, Object?>{'surface': 'example_gdpr'},
         flushImmediately: true,
@@ -340,7 +339,7 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
         throw StateError('Page name is required.');
       }
 
-      await sdk.tracking.recordPageView(
+      sdk.tracking.recordPageView(
         pageName,
         pageClass: 'ExampleGdprPage',
         source: 'manual_example_gdpr',
@@ -359,7 +358,7 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
         throw StateError('User ID is required.');
       }
 
-      await sdk.tracking.setUser(
+      sdk.tracking.setUser(
         userId,
         userName: userName.isEmpty ? null : userName,
       );
@@ -370,7 +369,7 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
   Future<void> _clearUser() async {
     await _runAction(() async {
       final sdk = _requireInitializedSdk();
-      await sdk.tracking.setUser(null);
+      sdk.tracking.setUser(null);
       return 'Cleared the current demo user.';
     });
   }

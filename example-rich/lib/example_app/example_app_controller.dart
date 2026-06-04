@@ -316,21 +316,21 @@ class ExampleAppController extends ChangeNotifier {
   }
 
   Future<void> setExampleUser(String userId, String userName) async {
-    await sdk.tracking.setUser(userId, userName: userName);
+    sdk.tracking.setUser(userId, userName: userName);
     statusMessage = 'Associated the install with $userId.';
     _pushActivity('setUser', detail: '$userId ($userName)');
     notifyListeners();
   }
 
   Future<void> clearExampleUser() async {
-    await sdk.tracking.setUser(null);
+    sdk.tracking.setUser(null);
     statusMessage = 'Cleared the associated user.';
     _pushActivity('setUser', detail: 'cleared');
     notifyListeners();
   }
 
   Future<void> setExampleUserProperties() async {
-    await sdk.tracking.setUserProperties(<String, Object?>{
+    sdk.tracking.setUserProperties(<String, Object?>{
       'plan': 'growth',
       'cohort': 'spring_launch',
       'notifications_enabled': true,
@@ -341,7 +341,7 @@ class ExampleAppController extends ChangeNotifier {
   }
 
   Future<void> clearExampleUserProperties() async {
-    await sdk.tracking.clearUserProperties();
+    sdk.tracking.clearUserProperties();
     statusMessage = 'Cleared stored user properties.';
     _pushActivity('clearUserProperties');
     notifyListeners();
@@ -351,11 +351,7 @@ class ExampleAppController extends ChangeNotifier {
     required String name,
     required Map<String, Object?> data,
   }) async {
-    await sdk.tracking.recordEvent(
-      name,
-      eventData: data,
-      flushImmediately: true,
-    );
+    sdk.tracking.recordEvent(name, eventData: data, flushImmediately: true);
     statusMessage = 'Sent $name.';
     _pushActivity(name, detail: shortExampleJson(data));
     notifyListeners();
@@ -368,7 +364,7 @@ class ExampleAppController extends ChangeNotifier {
     String? previousPageName,
     Map<String, Object?>? parameters,
   }) async {
-    await sdk.tracking.recordPageView(
+    sdk.tracking.recordPageView(
       pageName,
       pageClass: pageClass,
       pageTitle: pageTitle,
@@ -382,7 +378,7 @@ class ExampleAppController extends ChangeNotifier {
   }
 
   Future<void> sendAdLifecycle(AttriaxAdEventType type) async {
-    await sdk.tracking.recordAdEvent(
+    sdk.tracking.recordAdEvent(
       type,
       adNetwork: 'admob',
       mediationNetwork: 'example_network',
@@ -400,7 +396,7 @@ class ExampleAppController extends ChangeNotifier {
   }
 
   Future<void> sendAdRevenueExample({required int revenueMicros}) async {
-    await sdk.tracking.recordAdRevenue(
+    sdk.tracking.recordAdRevenue(
       revenue: revenueMicros,
       currency: 'USD',
       revenueInMicros: true,
@@ -428,7 +424,7 @@ class ExampleAppController extends ChangeNotifier {
     required num revenue,
     required String currency,
   }) async {
-    await sdk.tracking.recordPurchase(
+    sdk.tracking.recordPurchase(
       revenue: revenue,
       currency: currency,
       purchaseType: 'subscription_initial',
@@ -457,7 +453,7 @@ class ExampleAppController extends ChangeNotifier {
     required num revenue,
     required String currency,
   }) async {
-    await sdk.tracking.recordRefund(
+    sdk.tracking.recordRefund(
       revenue: revenue,
       currency: currency,
       purchaseType: 'subscription_initial',
@@ -677,7 +673,7 @@ class ExampleAppController extends ChangeNotifier {
 
   Future<void> noteMiniGameStarted({required String gameId}) async {
     final playerName = activeGamePlayerName;
-    await sdk.tracking.recordEvent(
+    sdk.tracking.recordEvent(
       'mini_game_started',
       eventData: <String, Object?>{
         'game': gameId,
@@ -698,7 +694,7 @@ class ExampleAppController extends ChangeNotifier {
     Map<String, Object?> metrics = const <String, Object?>{},
   }) async {
     final playerName = activeGamePlayerName;
-    await sdk.tracking.recordEvent(
+    sdk.tracking.recordEvent(
       'mini_game_milestone',
       eventData: <String, Object?>{
         'game': gameId,
@@ -725,7 +721,7 @@ class ExampleAppController extends ChangeNotifier {
     final previousBest = bestScoreForGame(gameId);
     final improved = _rememberBestScore(playerName, gameId, score);
     final bestScore = improved ? score : previousBest;
-    await sdk.tracking.recordEvent(
+    sdk.tracking.recordEvent(
       'mini_game_finished',
       eventData: <String, Object?>{
         'game': gameId,

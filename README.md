@@ -55,13 +55,13 @@ MaterialApp(
 	],
 );
 
-await attriax.tracking.recordPageView(
+attriax.tracking.recordPageView(
 	'/checkout',
 	pageClass: 'CheckoutPage',
 	previousPageName: '/cart',
 );
 
-await attriax.tracking.recordPurchase(
+attriax.tracking.recordPurchase(
 	revenue: 9.99,
 	currency: 'USD',
 	productId: 'pro_monthly',
@@ -69,7 +69,7 @@ await attriax.tracking.recordPurchase(
 	store: 'app_store',
 );
 
-await attriax.tracking.recordAdEvent(
+attriax.tracking.recordAdEvent(
 	AttriaxAdEventType.impression,
 	adNetwork: 'admob',
 	adPlacement: 'level_complete',

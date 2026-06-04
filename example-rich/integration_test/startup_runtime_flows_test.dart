@@ -171,7 +171,7 @@ void main() {
     });
 
     await attriax.init().timeout(const Duration(milliseconds: 200));
-    await attriax.tracking.recordEvent(
+    attriax.tracking.recordEvent(
       'purchase',
       eventData: const <String, Object?>{'value': 42},
     );
@@ -242,7 +242,7 @@ void main() {
     final queuedRequest = AttriaxQueuedRequest(
       id: 'req_1',
       request: attriaxBuildTrackEventRequest(
-        appToken: 'ax_test_token',
+        projectToken: 'ax_test_token',
         deviceId: 'device_test_android',
         deviceIdSource: 'android_ssaid',
         eventName: 'purchase',
@@ -423,6 +423,7 @@ class _StaticContextCollector extends AttriaxContextCollector {
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,
     required bool isFirstLaunch,
+    bool waitForTrackingAuthorization = false,
   }) async => AttriaxContextSnapshot(
     platform: AttriaxPlatformType.android,
     deviceId: deviceId,

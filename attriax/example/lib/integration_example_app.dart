@@ -104,7 +104,7 @@ class _AttriaxIntegrationExampleAppState
     });
 
     try {
-      await widget.sdk.tracking.recordEvent(
+      widget.sdk.tracking.recordEvent(
         'integration_checkout_started',
         eventData: const <String, Object?>{
           'source': 'flutter_package_example',

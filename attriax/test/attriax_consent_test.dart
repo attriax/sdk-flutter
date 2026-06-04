@@ -295,7 +295,7 @@ void main() {
         expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.pending);
 
         await sdk.init();
-        await sdk.tracking.recordEvent('purchase');
+        sdk.tracking.recordEvent('purchase');
         await _waitFor(() => eventBodies.isNotEmpty);
         await _waitFor(() => sdk.synchronization.isSynchronized);
 
@@ -374,7 +374,7 @@ void main() {
         expect(await sdk.consent.gdpr.needsConsent(localOnly: true), isTrue);
 
         await sdk.init();
-        await sdk.tracking.recordEvent(
+        sdk.tracking.recordEvent(
           'purchase',
           eventData: const <String, Object?>{'value': 42},
         );
@@ -1006,7 +1006,7 @@ void main() {
 
         await sdk.init();
         await _waitFor(() => sessionBodies.isNotEmpty);
-        await sdk.tracking.recordEvent(
+        sdk.tracking.recordEvent(
           'purchase',
           eventData: const <String, Object?>{'value': 42},
         );
@@ -1115,7 +1115,7 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.tracking.recordEvent('purchase');
+        sdk.tracking.recordEvent('purchase');
         await _waitFor(() => eventBodies.isNotEmpty);
         await _waitFor(() => sdk.synchronization.isSynchronized);
 
@@ -1201,7 +1201,7 @@ void main() {
         );
 
         await sdk.init();
-        await sdk.tracking.recordEvent('purchase');
+        sdk.tracking.recordEvent('purchase');
         await _waitFor(() => eventBodies.isNotEmpty);
         await _waitFor(() => sdk.synchronization.isSynchronized);
 

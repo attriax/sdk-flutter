@@ -73,17 +73,14 @@ class AttriaxNavigationObserver extends NavigatorObserver {
 
     _lastTrackedPageName = currentPageName;
 
-    unawaited(
-      _attriax
-          .tracking
-          .recordPageView(
-            currentPageName,
-            pageClass: route.runtimeType.toString(),
-            previousPageName: resolveRouteName(previousRoute),
-            parameters: _metadataBuilder?.call(route),
-            source: source,
-          )
-          .catchError((Object _, StackTrace _) {}),
-    );
+    try {
+      _attriax.tracking.recordPageView(
+        currentPageName,
+        pageClass: route.runtimeType.toString(),
+        previousPageName: resolveRouteName(previousRoute),
+        parameters: _metadataBuilder?.call(route),
+        source: source,
+      );
+    } catch (_) {}
   }
 }
