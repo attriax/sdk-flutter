@@ -2,7 +2,7 @@ part of 'attriax.dart';
 
 /// Deep-link state and subscriptions exposed by [Attriax].
 ///
-/// This facade covers both regular incoming links and deferred deep links that
+/// These helpers cover both regular incoming links and deferred deep links that
 /// resolve later from app-open tracking.
 class AttriaxDeepLinks {
   AttriaxDeepLinks._(this._runtime);
@@ -52,6 +52,13 @@ class AttriaxDeepLinks {
   /// Attriax generates the final short code server-side, applies app-level
   /// defaults for omitted destination and Open Graph fields, and returns the
   /// shareable short URL together with the persisted link metadata.
+  ///
+  /// Links use the project's Attriax subdomain and optional prefix, for
+  /// example `https://your-subdomain.attriax.com/prefixabc123`.
+  ///
+  /// [redirects] controls whether the generated link should use project
+  /// redirect behavior for iOS and Android. Leave a platform value `null` to
+  /// use the server default for that platform.
   Future<AttriaxCreateDynamicLinkResult> createDynamicLink({
     String? name,
     String? destinationUrl,
@@ -74,19 +81,15 @@ class AttriaxDeepLinks {
 
   /// Records a deep link manually without emitting it through the deep-link stream.
   ///
-  /// Provide either [uri] or [linkPath]. [metadata] accepts regular
-  /// JSON-compatible Dart values and is sent with the resolution request.
+  /// Use this when your app router receives a URI before the SDK can capture it
+  /// automatically. [metadata] accepts regular JSON-compatible Dart values and
+  /// is sent with the resolution request.
+  ///
   /// Returns the completed backend deep-link event. When Attriax does not
   /// recognize the link, the returned event still completes with `found == false`.
   Future<AttriaxDeepLinkEvent?> recordDeepLink({
-    Uri? uri,
-    String? linkPath,
+    required Uri uri,
     Map<String, Object?>? metadata,
     String source = 'manual',
-  }) => _runtime.recordDeepLink(
-    uri: uri,
-    linkPath: linkPath,
-    metadata: metadata,
-    source: source,
-  );
+  }) => _runtime.recordDeepLink(uri: uri, metadata: metadata, source: source);
 }

@@ -93,7 +93,7 @@ class _ExampleControlsPageState extends State<ExampleControlsPage> {
                           widget.controller.toggleEvents(value),
                       title: const Text('Custom events enabled'),
                       subtitle: const Text(
-                        'This only affects tracking facade helpers such as recordEvent(), recordPageView(), and revenue methods, not the whole SDK.',
+                        'This only affects tracking helpers such as recordEvent(), recordPageView(), and revenue methods, not the whole SDK.',
                       ),
                     ),
                   ],

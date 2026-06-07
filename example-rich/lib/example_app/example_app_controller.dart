@@ -650,9 +650,11 @@ class ExampleAppController extends ChangeNotifier {
     }
 
     final parsedUri = Uri.tryParse(trimmed);
+    final uri = parsedUri != null && parsedUri.hasScheme
+        ? parsedUri
+        : Uri(path: trimmed.startsWith('/') ? trimmed : '/$trimmed');
     final resolution = await sdk.deepLinks.recordDeepLink(
-      uri: parsedUri != null && parsedUri.hasScheme ? parsedUri : null,
-      linkPath: parsedUri == null || !parsedUri.hasScheme ? trimmed : null,
+      uri: uri,
       metadata: const <String, Object?>{'source': 'manual_deeplink_page'},
       source: 'manual_example_page',
     );

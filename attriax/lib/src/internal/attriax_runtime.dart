@@ -300,7 +300,9 @@ class AttriaxRuntime {
     },
     scheduleFlush: () => _synchronizer?.scheduleFlush(),
     flushPendingSync: () {
-      unawaited(_consentManager.flushPendingSync(appToken: config.projectToken));
+      unawaited(
+        _consentManager.flushPendingSync(appToken: config.projectToken),
+      );
     },
     scheduleAppOpenIfNeeded: () {
       unawaited(_scheduleAppOpenIfNeeded());
@@ -447,7 +449,7 @@ class AttriaxRuntime {
 
   // ---------- init ---------------------------------------------------------- //
 
-  Future<void> init({bool? enabled, bool? eventsEnabled}) {
+  Future<void> init() {
     if (_initialized) {
       return Future<void>.value();
     }
@@ -457,10 +459,7 @@ class AttriaxRuntime {
       return inFlight;
     }
 
-    final initialization = _runInit(
-      enabled: enabled,
-      eventsEnabled: eventsEnabled,
-    );
+    final initialization = _runInit();
     _initializationFuture = initialization;
 
     return initialization.whenComplete(() {
@@ -521,15 +520,14 @@ class AttriaxRuntime {
     await reset();
   }
 
-  Future<void> _runInit({bool? enabled, bool? eventsEnabled}) async {
+  Future<void> _runInit() async {
     _logger.verbose('Initializing Attriax SDK.');
     _validateConfig();
 
     _synchronizer = await _runtimeBootstrapCoordinator.bootstrap(
       transport: _ensureTransport(),
-      enabledOverride: enabled ?? _settingsState.requestedEnabledOverride,
-      eventsEnabledOverride:
-          eventsEnabled ?? _settingsState.requestedEventsEnabledOverride,
+      enabledOverride: _settingsState.requestedEnabledOverride,
+      eventsEnabledOverride: _settingsState.requestedEventsEnabledOverride,
       sessionTrackingEnabled: _sessionTrackingEnabled,
       seedRecoveredSessionEnd: _shouldActivateSessionTracking,
       existingSynchronizer: _synchronizer,
@@ -717,37 +715,32 @@ class AttriaxRuntime {
   }
 
   Future<AttriaxRevenueReceiptValidationResult> validateReceipt({
+    required String receipt,
+    bool test = false,
     String? provider,
     String? environment,
-    String? transactionId,
-    String? originalTransactionId,
     String? productId,
-    String? store,
-    String? packageName,
-    String? purchaseToken,
-    String? receiptData,
-    String? signedPayload,
-    String? receiptSignature,
-    bool? test,
+    String? transactionId,
   }) async {
     _assertInitialized();
+    final normalizedReceipt = _trimOrNull(receipt);
+    if (normalizedReceipt == null) {
+      throw ArgumentError.value(
+        receipt,
+        'receipt',
+        'receipt must not be empty.',
+      );
+    }
 
     final request = attriaxBuildValidateRevenueReceiptRequest(
-      appToken: config.projectToken,
+      projectToken: config.projectToken,
       deviceId: deviceId,
       clientOccurredAt: _clock.now(),
+      receipt: normalizedReceipt,
       provider: _trimOrNull(provider),
       environment: _trimOrNull(environment),
       transactionId: _trimOrNull(transactionId),
-      originalTransactionId: _trimOrNull(originalTransactionId),
       productId: _trimOrNull(productId),
-      store: _trimOrNull(store),
-      packageName:
-          _trimOrNull(packageName) ?? _trimOrNull(config.appPackageName),
-      purchaseToken: _trimOrNull(purchaseToken),
-      receiptData: _trimOrNull(receiptData),
-      signedPayload: _trimOrNull(signedPayload),
-      receiptSignature: _trimOrNull(receiptSignature),
       test: test,
     );
 
@@ -811,8 +804,7 @@ class AttriaxRuntime {
   }
 
   Future<AttriaxDeepLinkEvent?> recordDeepLink({
-    Uri? uri,
-    String? linkPath,
+    required Uri uri,
     Map<String, Object?>? metadata,
     String source = 'manual',
   }) async {
@@ -828,7 +820,6 @@ class AttriaxRuntime {
 
     return _deepLinkManager.recordManualConversion(
       uri: uri,
-      linkPath: linkPath,
       metadata: metadata,
       source: source,
     );
@@ -1067,7 +1058,9 @@ class AttriaxRuntime {
     }
 
     if (!_shouldDeferNetworkDispatch) {
-      unawaited(_consentManager.flushPendingSync(appToken: config.projectToken));
+      unawaited(
+        _consentManager.flushPendingSync(appToken: config.projectToken),
+      );
     }
 
     await _runtimeActivationCoordinator.apply(

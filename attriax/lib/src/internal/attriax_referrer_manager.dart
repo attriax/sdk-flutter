@@ -242,9 +242,7 @@ class AttriaxReferrerManager {
       return Future<AttriaxDeepLinkReferrerDetails?>.value(value);
     }
 
-    return (_latestDeepLinkCompleter ??=
-            Completer<AttriaxDeepLinkReferrerDetails?>())
-        .future;
+    return Future<AttriaxDeepLinkReferrerDetails?>.value();
   }
 
   Future<void> reset() async {

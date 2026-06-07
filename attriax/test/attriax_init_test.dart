@@ -835,7 +835,7 @@ void main() {
     );
 
     test(
-      'tracking facade queues a normalized purchase revenue payload',
+      'tracking helpers queue a normalized purchase revenue payload',
       () async {
         connectivityPlatform = FakeConnectivityPlatform(
           currentResults: const <ConnectivityResult>[ConnectivityResult.none],
@@ -965,95 +965,91 @@ void main() {
       expect(eventData['reason'], 'chargeback');
     });
 
-    test(
-      'validateReceipt posts directly and returns the public result',
-      () async {
-        client = _mockClientWithRuntimeConfig((request) async {
-          if (request.url.path == '/api/sdk/v1/open') {
-            return http.Response(
-              _sdkEnvelope(<String, Object?>{
-                'userId': 'user_1',
-                'isNewUser': true,
-                'isFirstLaunch': true,
-                'requestVersion': 'v1',
-                'acceptedAt': '2026-05-06T10:00:00.000Z',
-              }),
-              200,
-              headers: const <String, String>{
-                'content-type': 'application/json',
-              },
-            );
-          }
-
-          expect(request.url.path, '/api/sdk/v1/revenue/receipts/validate');
-
-          final body = jsonDecode(request.body) as Map<String, Object?>;
-          expect(body['appToken'], 'ax_test_token');
-          expect(body['provider'], 'unity');
-          expect(body['productId'], 'coins_500');
-          expect(body['purchaseToken'], 'purchase-token-123');
-
+    test('validateReceipt posts directly and returns the public result', () async {
+      client = _mockClientWithRuntimeConfig((request) async {
+        if (request.url.path == '/api/sdk/v1/open') {
           return http.Response(
-            jsonEncode(<String, Object?>{
-              'success': true,
-              'timestamp': '2026-05-06T10:00:00.000Z',
-              'data': <String, Object?>{
-                'requestVersion': 'v1',
-                'acceptedAt': '2026-05-06T10:00:00.000Z',
-                'validationId': 'validation_1',
-                'status': 'passthrough',
-                'provider': 'unity',
-                'productId': 'coins_500',
-                'providerResult': <String, Object?>{
-                  'provider': 'unity',
-                  'unityReceipt': <String, Object?>{
-                    'store': 'google_play',
-                    'transactionId': 'unity_txn_1',
-                  },
-                },
-                'publicReceipt': <String, Object?>{
-                  'provider': 'unity',
-                  'unityReceipt': <String, Object?>{
-                    'store': 'google_play',
-                    'transactionId': 'unity_txn_1',
-                  },
-                },
-              },
+            _sdkEnvelope(<String, Object?>{
+              'userId': 'user_1',
+              'isNewUser': true,
+              'isFirstLaunch': true,
+              'requestVersion': 'v1',
+              'acceptedAt': '2026-05-06T10:00:00.000Z',
             }),
             200,
-            headers: <String, String>{'content-type': 'application/json'},
+            headers: const <String, String>{'content-type': 'application/json'},
           );
-        });
+        }
 
-        sdk = Attriax.test(
-          config: const AttriaxConfig(projectToken: 'ax_test_token'),
-          client: client,
-          deepLinkSource: deepLinkSource,
-          connectivity: connectivity,
-          contextCollector: contextCollector,
-          prefs: prefs,
-          enableDebugLogs: false,
-        );
+        expect(request.url.path, '/api/sdk/v1/revenue/receipts/validate');
 
-        await sdk.init();
-        final result = await sdk.validateReceipt(
-          provider: 'unity',
-          productId: 'coins_500',
-          purchaseToken: 'purchase-token-123',
-          receiptData:
-              '{"Store":"GooglePlay","TransactionID":"unity_txn_1","Payload":"{}"}',
-        );
-
+        final body = jsonDecode(request.body) as Map<String, Object?>;
+        expect(body['projectToken'], 'ax_test_token');
+        expect(body['provider'], 'unity');
+        expect(body['productId'], 'coins_500');
         expect(
-          result.status,
-          AttriaxRevenueReceiptValidationStatus.passthrough,
+          body['receipt'],
+          '{"Store":"GooglePlay","TransactionID":"unity_txn_1","Payload":"{}"}',
         );
-        expect(result.validationId, 'validation_1');
-        expect(result.provider, 'unity');
-        expect(result.productId, 'coins_500');
-        expect(result.publicReceipt['provider'], 'unity');
-      },
-    );
+        expect(body.containsKey('purchaseToken'), isFalse);
+        expect(body.containsKey('receiptData'), isFalse);
+
+        return http.Response(
+          jsonEncode(<String, Object?>{
+            'success': true,
+            'timestamp': '2026-05-06T10:00:00.000Z',
+            'data': <String, Object?>{
+              'requestVersion': 'v1',
+              'acceptedAt': '2026-05-06T10:00:00.000Z',
+              'validationId': 'validation_1',
+              'status': 'passthrough',
+              'provider': 'unity',
+              'productId': 'coins_500',
+              'providerResult': <String, Object?>{
+                'provider': 'unity',
+                'unityReceipt': <String, Object?>{
+                  'store': 'google_play',
+                  'transactionId': 'unity_txn_1',
+                },
+              },
+              'publicReceipt': <String, Object?>{
+                'provider': 'unity',
+                'unityReceipt': <String, Object?>{
+                  'store': 'google_play',
+                  'transactionId': 'unity_txn_1',
+                },
+              },
+            },
+          }),
+          200,
+          headers: <String, String>{'content-type': 'application/json'},
+        );
+      });
+
+      sdk = Attriax.test(
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
+        client: client,
+        deepLinkSource: deepLinkSource,
+        connectivity: connectivity,
+        contextCollector: contextCollector,
+        prefs: prefs,
+        enableDebugLogs: false,
+      );
+
+      await sdk.init();
+      final result = await sdk.validateReceipt(
+        receipt:
+            '{"Store":"GooglePlay","TransactionID":"unity_txn_1","Payload":"{}"}',
+        provider: 'unity',
+        productId: 'coins_500',
+      );
+
+      expect(result.status, AttriaxRevenueReceiptValidationStatus.passthrough);
+      expect(result.validationId, 'validation_1');
+      expect(result.provider, 'unity');
+      expect(result.productId, 'coins_500');
+      expect(result.publicReceipt['provider'], 'unity');
+    });
 
     test(
       'validateReceipt stays available when tracking is disabled and consent is pending',
@@ -1087,9 +1083,10 @@ void main() {
 
           expect(request.url.path, '/api/sdk/v1/revenue/receipts/validate');
           final body = jsonDecode(request.body) as Map<String, Object?>;
-          expect(body['appToken'], 'ax_test_token');
+          expect(body['projectToken'], 'ax_test_token');
           expect(body['deviceId'], isNull);
           expect(body['provider'], 'unity');
+          expect(body['receipt'], 'purchase-token-123');
 
           return http.Response(
             jsonEncode(<String, Object?>{
@@ -1133,9 +1130,9 @@ void main() {
         await _flushRuntimeTransitions();
 
         final result = await sdk.validateReceipt(
+          receipt: 'purchase-token-123',
           provider: 'unity',
           productId: 'coins_500',
-          purchaseToken: 'purchase-token-123',
         );
 
         expect(result.validationId, 'validation_disabled_tracking');

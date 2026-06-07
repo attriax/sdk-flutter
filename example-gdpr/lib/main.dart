@@ -182,9 +182,10 @@ class _ExampleGdprHomePageState extends State<ExampleGdprHomePage> {
       await previousSdk?.dispose();
 
       final nextSdk = Attriax(config: _buildConfig());
-      await nextSdk.init(enabled: _sdkEnabled);
+      nextSdk.enabled = _sdkEnabled;
       nextSdk.tracking.enabled = _trackingEnabled;
       nextSdk.tracking.anonymousTrackingEnabled = _anonymousTrackingEnabled;
+      await nextSdk.init();
 
       final currentState = _formatConsentState(nextSdk.consent.gdpr.state);
       final message =

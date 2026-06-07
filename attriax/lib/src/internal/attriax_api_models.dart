@@ -337,8 +337,7 @@ String _attriaxResolveCompatibleToken({
   final normalizedProjectToken = attriaxStringValue(projectToken)?.trim();
   final normalizedAppToken = attriaxStringValue(appToken)?.trim();
 
-  if (
-      normalizedProjectToken != null &&
+  if (normalizedProjectToken != null &&
       normalizedAppToken != null &&
       normalizedProjectToken != normalizedAppToken) {
     throw ArgumentError(
@@ -1035,58 +1034,26 @@ AttriaxCreateDynamicLinkRequest attriaxBuildCreateDynamicLinkRequest({
 }
 
 Map<String, Object?> attriaxBuildValidateRevenueReceiptRequest({
-  String? projectToken,
-  @Deprecated('Use projectToken instead.') String? appToken,
+  required String projectToken,
   required String? deviceId,
   required DateTime clientOccurredAt,
+  required String receipt,
   String? provider,
   String? environment,
   String? transactionId,
-  String? originalTransactionId,
   String? productId,
-  String? store,
-  String? packageName,
-  String? purchaseToken,
-  String? receiptData,
-  String? signedPayload,
-  String? receiptSignature,
   bool? test,
-}) {
-  final resolvedToken = _attriaxResolveCompatibleToken(
-    context: 'Attriax validate-revenue-receipt request',
-    projectToken: projectToken,
-    appToken: appToken,
-  );
-
-  return <String, Object?>{
-  'appToken': resolvedToken,
-  if (deviceId != null) 'deviceId': deviceId,
+}) => <String, Object?>{
+  'projectToken': projectToken,
+  'deviceId': ?deviceId,
   'clientOccurredAt': clientOccurredAt.toUtc().toIso8601String(),
-  if (attriaxStringValue(provider) != null)
-    'provider': attriaxStringValue(provider),
-  if (attriaxStringValue(environment) != null)
-    'environment': attriaxStringValue(environment),
-  if (attriaxStringValue(transactionId) != null)
-    'transactionId': attriaxStringValue(transactionId),
-  if (attriaxStringValue(originalTransactionId) != null)
-    'originalTransactionId': attriaxStringValue(originalTransactionId),
-  if (attriaxStringValue(productId) != null)
-    'productId': attriaxStringValue(productId),
-  if (attriaxStringValue(store) != null)
-    'store': attriaxStringValue(store),
-  if (attriaxStringValue(packageName) != null)
-    'packageName': attriaxStringValue(packageName),
-  if (attriaxStringValue(purchaseToken) != null)
-    'purchaseToken': attriaxStringValue(purchaseToken),
-  if (attriaxStringValue(receiptData) != null)
-    'receiptData': attriaxStringValue(receiptData),
-  if (attriaxStringValue(signedPayload) != null)
-    'signedPayload': attriaxStringValue(signedPayload),
-  if (attriaxStringValue(receiptSignature) != null)
-    'receiptSignature': attriaxStringValue(receiptSignature),
-  if (test != null) 'test': test,
+  'receipt': receipt,
+  'provider': ?attriaxStringValue(provider),
+  'environment': ?attriaxStringValue(environment),
+  'transactionId': ?attriaxStringValue(transactionId),
+  'productId': ?attriaxStringValue(productId),
+  'test': ?test,
 };
-}
 
 Map<String, Object?> attriaxBuildRegisterUninstallTokenRequest({
   String? projectToken,
@@ -1105,14 +1072,14 @@ Map<String, Object?> attriaxBuildRegisterUninstallTokenRequest({
   );
 
   return <String, Object?>{
-  'appToken': resolvedToken,
-  'deviceId': deviceId,
-  'deviceIdSource': deviceIdSource,
-  'platform': _uninstallTrackingPlatformName(platform),
-  'provider': provider,
-  if (attriaxStringValue(token) != null) 'token': attriaxStringValue(token),
-  if (metadata != null) 'metadata': metadata,
-};
+    'appToken': resolvedToken,
+    'deviceId': deviceId,
+    'deviceIdSource': deviceIdSource,
+    'platform': _uninstallTrackingPlatformName(platform),
+    'provider': provider,
+    if (attriaxStringValue(token) != null) 'token': attriaxStringValue(token),
+    if (metadata != null) 'metadata': metadata,
+  };
 }
 
 AttriaxRegisterUninstallTokenRequest

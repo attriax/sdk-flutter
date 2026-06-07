@@ -6,7 +6,7 @@ Attriax mobile attribution SDK for Flutter.
 
 This is the main Flutter package for Attriax. The public `Attriax` class is a thin wrapper over an internal runtime that owns orchestration, logging, request queuing, synchronization state, and deep-link handling.
 
-Public SDK surfaces are grouped behind focused facades such as `attriax.consent`, `attriax.tracking`, `attriax.synchronization`, `attriax.deepLinks`, `attriax.referrer`, and `attriax.skan`. The root `Attriax` entrypoint now stays focused on lifecycle, reset, receipt validation, and those top-level facades.
+Public SDK helpers are grouped under `attriax.consent`, `attriax.tracking`, `attriax.synchronization`, `attriax.deepLinks`, `attriax.referrer`, and `attriax.skan`. The root `Attriax` entrypoint stays focused on lifecycle, reset, receipt validation, and those top-level helpers.
 
 ## Installation
 

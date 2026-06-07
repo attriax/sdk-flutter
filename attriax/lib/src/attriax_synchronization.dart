@@ -2,7 +2,7 @@ import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
 
 import 'internal/attriax_runtime.dart';
 
-/// Focused synchronization facade exposed from the public Attriax SDK.
+/// Synchronization state exposed from the public Attriax SDK.
 class AttriaxSynchronization {
   const AttriaxSynchronization(this._runtime);
 

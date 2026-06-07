@@ -135,7 +135,9 @@ void main() {
           enableDebugLogs: false,
         );
 
-        await sdk.init(enabled: false);
+        sdk.enabled = false;
+        await pumpEventQueue();
+        await sdk.init();
 
         expect(await sdk.referrer.getOriginalInstallReferrer(), isNull);
         expect(appOpenRequests, 0);

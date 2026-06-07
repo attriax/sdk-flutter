@@ -89,26 +89,18 @@ class AttriaxDeepLinkManager {
       _eventHub.completeInitialDeepLinkIfAbsent();
 
   Future<AttriaxDeepLinkEvent?> recordManualConversion({
-    Uri? uri,
-    String? linkPath,
+    required Uri uri,
     Map<String, Object?>? metadata,
     String source = 'manual',
   }) async {
-    if (uri == null && (linkPath == null || linkPath.trim().isEmpty)) {
-      throw ArgumentError('Either uri or linkPath must be provided.');
-    }
-
-    final normalizedLinkPath = _resolver.normalizeLinkPath(linkPath);
-    final effectiveUri =
-        uri ??
-        Uri(path: normalizedLinkPath == null ? '/' : '/$normalizedLinkPath');
+    final normalizedLinkPath = _resolver.extractLinkPathFromUri(uri);
     final clickedAt = _clock.now();
     final completer = Completer<AttriaxDeepLinkEvent>();
 
     await _dispatchResolveRequest(
       _buildResolveRequest(
         source: source,
-        rawUrl: effectiveUri.toString(),
+        rawUrl: uri.toString(),
         linkPath: normalizedLinkPath,
         metadata: metadata,
       ),
@@ -117,7 +109,7 @@ class AttriaxDeepLinkManager {
           _completeManualConversionSuccess(
             response: response,
             clickedAt: clickedAt,
-            fallbackUri: effectiveUri,
+            fallbackUri: uri,
             completer: completer,
           ),
         );

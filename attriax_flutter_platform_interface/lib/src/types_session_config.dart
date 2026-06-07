@@ -92,10 +92,15 @@ class AttriaxSessionSnapshot {
   };
 }
 
+/// Configuration for an Attriax SDK instance.
+///
+/// Create one config for the project token and runtime behavior you want this
+/// app process to use. Values are read during SDK construction and
+/// initialization; runtime toggles such as `tracking.enabled` can be changed
+/// through the SDK instance.
 class AttriaxConfig {
   const AttriaxConfig({
-    String? projectToken,
-    @Deprecated('Use projectToken instead.') String? appToken,
+    required this.projectToken,
     this.apiBaseUrl = 'https://api.attriax.com',
     this.appVersion,
     this.appBuildNumber,
@@ -118,36 +123,67 @@ class AttriaxConfig {
     this.sessionHeartbeatInterval = const Duration(minutes: 5),
     this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 30),
     this.skan,
-  }) : assert(
-         projectToken != null || appToken != null,
-         'AttriaxConfig requires projectToken or the deprecated appToken alias.',
-       ),
-       assert(
-         projectToken == null || appToken == null || projectToken == appToken,
-         'projectToken and appToken must match when both are provided.',
-       ),
-       projectToken = projectToken ?? appToken ?? '';
+  });
 
+  /// Project token from the Attriax dashboard.
   final String projectToken;
 
-  @Deprecated('Use projectToken instead.')
-  String get appToken => projectToken;
+  /// Base URL for the Attriax API.
+  ///
+  /// Leave this as the default in production. Tests and self-hosted
+  /// environments can point it at another compatible API origin.
   final String apiBaseUrl;
+
+  /// Application version to attach to SDK context and session payloads.
   final String? appVersion;
+
+  /// Application build number to attach to SDK context and session payloads.
   final String? appBuildNumber;
+
+  /// Platform package or bundle identifier for this app.
   final String? appPackageName;
+
+  /// Extra SDK metadata attached to runtime context payloads.
   final Map<String, Object?> sdkMetadata;
+
+  /// Optional clock override for deterministic tests.
   final AttriaxClock? clock;
+
+  /// Overrides SDK log verbosity.
+  ///
+  /// When `null`, debug Flutter builds log verbosely and release builds use a
+  /// quieter warning/error level.
   final bool? enableDebugLogs;
+
+  /// Timeout used by direct SDK network calls.
   final Duration requestTimeout;
+
+  /// Maximum number of queued SDK requests kept locally.
   final int maxQueueSize;
+
+  /// Interval used for automatic event queue flushing while online.
   final Duration eventFlushInterval;
+
+  /// Whether first-launch events should flush immediately.
   final bool flushEventsImmediatelyOnFirstLaunch;
+
+  /// Whether the SDK should collect the advertising identifier when available.
   final bool collectAdvertisingId;
+
+  /// Whether the SDK should install automatic Flutter crash handlers.
   final bool automaticCrashReportingEnabled;
+
+  /// Whether the SDK should request App Tracking Transparency authorization
+  /// during initialization on supported Apple platforms.
   final bool requestTrackingAuthorizationOnInit;
+
+  /// Maximum time to wait for App Tracking Transparency status during startup.
   final Duration trackingAuthorizationStatusTimeout;
+
+  /// Whether resolved deep links may open browser fallback URLs automatically.
   final bool automaticBrowserHandling;
+
+  /// Enables GDPR-aware consent gating for analytics and attribution traffic.
   final bool gdprEnabled;
 
   /// Enables GDPR-safe anonymous tracking while consent is unresolved.
@@ -158,8 +194,16 @@ class AttriaxConfig {
   /// allows identified delivery, or drops it if the resolved consent denies
   /// the relevant categories.
   final bool anonymousTracking;
+
+  /// Whether the SDK should create and update tracked app sessions.
   final bool sessionTrackingEnabled;
+
+  /// Heartbeat interval for regular app sessions.
   final Duration sessionHeartbeatInterval;
+
+  /// Heartbeat interval used during the first launch session.
   final Duration firstLaunchSessionHeartbeatInterval;
+
+  /// Optional local SKAN defaults used until dashboard runtime config loads.
   final AttriaxSkanConfig? skan;
 }

@@ -462,7 +462,7 @@ class FakeAttriax extends Fake implements Attriax {
       const AttriaxSdkSnapshot(apiVersion: 'v1', packageVersion: '0.4.0');
 
   @override
-  Future<void> init({bool? enabled}) async {}
+  Future<void> init() async {}
 
   @override
   Future<void> reset() async {}
@@ -604,18 +604,12 @@ class FakeAttriax extends Fake implements Attriax {
 
   @override
   Future<AttriaxRevenueReceiptValidationResult> validateReceipt({
+    required String receipt,
+    bool test = false,
     String? provider,
     String? environment,
-    String? transactionId,
-    String? originalTransactionId,
     String? productId,
-    String? store,
-    String? packageName,
-    String? purchaseToken,
-    String? receiptData,
-    String? signedPayload,
-    String? receiptSignature,
-    bool? test,
+    String? transactionId,
   }) async {
     return const AttriaxRevenueReceiptValidationResult(
       validationId: 'validation_demo',
@@ -670,15 +664,12 @@ class FakeAttriax extends Fake implements Attriax {
   }
 
   Future<AttriaxDeepLinkEvent?> recordDeepLink({
-    Uri? uri,
-    String? linkPath,
+    required Uri uri,
     Map<String, Object?>? metadata,
     String source = 'manual',
   }) async {
     return AttriaxDeepLinkEvent(
-      uri:
-          uri ??
-          Uri.parse('https://example-test.attriax.com/${linkPath ?? ''}'),
+      uri: uri,
       clickedAt: DateTime.utc(2026, 5, 14, 10),
       consumedAt: DateTime.utc(2026, 5, 14, 10, 0, 1),
       found: true,
@@ -773,16 +764,10 @@ class _FakeAttriaxDeepLinks implements AttriaxDeepLinks {
 
   @override
   Future<AttriaxDeepLinkEvent?> recordDeepLink({
-    Uri? uri,
-    String? linkPath,
+    required Uri uri,
     Map<String, Object?>? metadata,
     String source = 'manual',
-  }) => _sdk.recordDeepLink(
-    uri: uri,
-    linkPath: linkPath,
-    metadata: metadata,
-    source: source,
-  );
+  }) => _sdk.recordDeepLink(uri: uri, metadata: metadata, source: source);
 
   @override
   AttriaxRawDeepLinkEvent? get rawInitialDeepLink =>

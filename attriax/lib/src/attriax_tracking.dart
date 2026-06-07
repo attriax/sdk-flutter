@@ -9,7 +9,7 @@ class AttriaxTracking {
   /// Whether event-style tracking is currently enabled.
   ///
   /// This affects event, revenue, ad, crash, and user-association helpers in
-  /// this facade, but it does not disable the whole SDK runtime.
+  /// `attriax.tracking`, but it does not disable the whole SDK runtime.
   bool get enabled => _runtime.areEventsEnabled;
 
   /// Updates whether event-style tracking is enabled.

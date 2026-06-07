@@ -24,25 +24,13 @@ class SdkV1RevenueReceiptValidateDto {
 
     this.environment,
 
-    this.originalTransactionId,
-
-    this.packageName,
-
     this.productId,
 
     this.projectToken,
 
     this.provider,
 
-    this.purchaseToken,
-
-    this.receiptData,
-
-    this.receiptSignature,
-
-    this.signedPayload,
-
-    this.store,
+    this.receipt,
 
     this.test,
 
@@ -63,16 +51,6 @@ class SdkV1RevenueReceiptValidateDto {
   @JsonKey(name: r'environment', required: false, includeIfNull: false)
   final String? environment;
 
-  @JsonKey(
-    name: r'originalTransactionId',
-    required: false,
-    includeIfNull: false,
-  )
-  final String? originalTransactionId;
-
-  @JsonKey(name: r'packageName', required: false, includeIfNull: false)
-  final String? packageName;
-
   @JsonKey(name: r'productId', required: false, includeIfNull: false)
   final String? productId;
 
@@ -83,20 +61,8 @@ class SdkV1RevenueReceiptValidateDto {
   @JsonKey(name: r'provider', required: false, includeIfNull: false)
   final String? provider;
 
-  @JsonKey(name: r'purchaseToken', required: false, includeIfNull: false)
-  final String? purchaseToken;
-
-  @JsonKey(name: r'receiptData', required: false, includeIfNull: false)
-  final String? receiptData;
-
-  @JsonKey(name: r'receiptSignature', required: false, includeIfNull: false)
-  final String? receiptSignature;
-
-  @JsonKey(name: r'signedPayload', required: false, includeIfNull: false)
-  final String? signedPayload;
-
-  @JsonKey(name: r'store', required: false, includeIfNull: false)
-  final String? store;
+  @JsonKey(name: r'receipt', required: false, includeIfNull: false)
+  final String? receipt;
 
   @JsonKey(name: r'test', required: false, includeIfNull: false)
   final bool? test;
@@ -112,16 +78,10 @@ class SdkV1RevenueReceiptValidateDto {
           other.clientOccurredAt == clientOccurredAt &&
           other.deviceId == deviceId &&
           other.environment == environment &&
-          other.originalTransactionId == originalTransactionId &&
-          other.packageName == packageName &&
           other.productId == productId &&
           other.projectToken == projectToken &&
           other.provider == provider &&
-          other.purchaseToken == purchaseToken &&
-          other.receiptData == receiptData &&
-          other.receiptSignature == receiptSignature &&
-          other.signedPayload == signedPayload &&
-          other.store == store &&
+          other.receipt == receipt &&
           other.test == test &&
           other.transactionId == transactionId;
 
@@ -131,16 +91,10 @@ class SdkV1RevenueReceiptValidateDto {
       clientOccurredAt.hashCode +
       deviceId.hashCode +
       environment.hashCode +
-      originalTransactionId.hashCode +
-      packageName.hashCode +
       productId.hashCode +
       projectToken.hashCode +
       provider.hashCode +
-      purchaseToken.hashCode +
-      receiptData.hashCode +
-      receiptSignature.hashCode +
-      signedPayload.hashCode +
-      store.hashCode +
+      receipt.hashCode +
       test.hashCode +
       transactionId.hashCode;
 

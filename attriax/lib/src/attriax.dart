@@ -104,29 +104,6 @@ class Attriax {
 
   final AttriaxRuntime _runtime;
 
-  /// Synchronization state and events exposed through a focused facade.
-  late final AttriaxSynchronization synchronization = AttriaxSynchronization(
-    _runtime,
-  );
-
-  /// Regulation-scoped consent helpers exposed through a focused facade.
-  late final AttriaxConsent consent = AttriaxConsent(_runtime);
-
-  /// Tracking, revenue, and user-association helpers exposed through a facade.
-  late final AttriaxTracking tracking = AttriaxTracking._(_runtime);
-
-  /// Startup and deep-link referrer lookups exposed through a focused facade.
-  late final AttriaxReferrer referrer = AttriaxReferrer._(_runtime);
-
-  /// Deep-link state and stream access for immediate, initial, and deferred links.
-  ///
-  /// Deferred deep links resolved from the app-open flow are surfaced through
-  /// this facade alongside regular incoming links.
-  late final AttriaxDeepLinks deepLinks = AttriaxDeepLinks._(_runtime);
-
-  /// SKAdNetwork state and update helpers exposed through a focused facade.
-  late final AttriaxSkan skan = AttriaxSkan._(_runtime);
-
   /// Whether [init] has completed successfully.
   ///
   /// Until this becomes `true`, tracking and identification calls throw because
@@ -162,16 +139,38 @@ class Attriax {
   /// This becomes available after [init] captures the initial runtime state.
   AttriaxSdkSnapshot? get sdkSnapshot => _runtime.sdkSnapshot;
 
+  /// Tracking, revenue, and user-association helpers.
+  late final AttriaxTracking tracking = AttriaxTracking._(_runtime);
+
+  /// Startup and deep-link referrer lookups.
+  late final AttriaxReferrer referrer = AttriaxReferrer._(_runtime);
+
+  /// Deep-link state and stream access for immediate, initial, and deferred links.
+  ///
+  /// Deferred deep links resolved from the app-open flow are surfaced through
+  /// these helpers alongside regular incoming links.
+  late final AttriaxDeepLinks deepLinks = AttriaxDeepLinks._(_runtime);
+
+  /// Regulation-scoped consent helpers.
+  late final AttriaxConsent consent = AttriaxConsent(_runtime);
+
+  /// SKAdNetwork state and update helpers.
+  late final AttriaxSkan skan = AttriaxSkan._(_runtime);
+
+  /// Synchronization state and events.
+  late final AttriaxSynchronization synchronization = AttriaxSynchronization(
+    _runtime,
+  );
+
   /// Initializes the SDK runtime.
   ///
   /// This restores persisted flags, generates or loads the SDK device ID,
   /// captures the immediate context snapshot, and starts listeners.
   ///
   /// App-open tracking is always scheduled automatically in the background.
-  /// Set [enabled] before [init] when you need to override the persisted SDK
-  /// enabled state for the current startup. Use `tracking.enabled` before or
-  /// after [init] to control event-style tracking independently.
-  Future<void> init({bool? enabled}) => _runtime.init(enabled: enabled);
+  /// Use `tracking.enabled` before or after [init] to control event-style
+  /// tracking independently.
+  Future<void> init() => _runtime.init();
 
   /// Clears SDK-owned persisted state and returns this instance to pre-init state.
   ///
@@ -186,31 +185,19 @@ class Attriax {
   /// is treated as a direct functional request rather than event tracking.
   /// The current SDK device id is attached automatically.
   Future<AttriaxRevenueReceiptValidationResult> validateReceipt({
+    required String receipt,
+    bool test = false,
     String? provider,
     String? environment,
-    String? transactionId,
-    String? originalTransactionId,
     String? productId,
-    String? store,
-    String? packageName,
-    String? purchaseToken,
-    String? receiptData,
-    String? signedPayload,
-    String? receiptSignature,
-    bool? test,
+    String? transactionId,
   }) => _runtime.validateReceipt(
+    receipt: receipt,
+    test: test,
     provider: provider,
     environment: environment,
-    transactionId: transactionId,
-    originalTransactionId: originalTransactionId,
     productId: productId,
-    store: store,
-    packageName: packageName,
-    purchaseToken: purchaseToken,
-    receiptData: receiptData,
-    signedPayload: signedPayload,
-    receiptSignature: receiptSignature,
-    test: test,
+    transactionId: transactionId,
   );
 
   /// Releases listeners, closes streams, and disposes runtime resources.
