@@ -380,7 +380,7 @@ void main() {
     );
 
     test(
-      'init stays fast while queued work waits for delayed app-open scheduling',
+      'init delivers queued events without waiting for delayed app-open scheduling',
       () async {
         final delayedPlatform = DelayedInstallReferrerPlatform();
         AttriaxPlatform.instance = delayedPlatform;
@@ -455,14 +455,26 @@ void main() {
         await _flushRuntimeTransitions();
         for (
           var attempt = 0;
-          attempt < 10 && !requestPaths.contains('/api/sdk/v1/config');
+          attempt < 10 && !requestPaths.contains('/api/sdk/v1/batch');
           attempt += 1
         ) {
           await Future<void>.delayed(Duration.zero);
         }
 
-        expect(requestPaths, <String>['/api/sdk/v1/config']);
+        // The event batch is delivered immediately, without waiting for the
+        // (still-delayed) app-open/attribution request to be scheduled.
+        expect(requestPaths, contains('/api/sdk/v1/batch'));
+        expect(requestPaths, isNot(contains('/api/sdk/v1/open')));
+        final eventItems = batchBodies
+            .expand((body) => (body['items']! as List<Object?>).cast<Map<String, Object?>>())
+            .where((item) => item['kind'] == 'event')
+            .toList(growable: false);
+        expect(eventItems, hasLength(1));
+        final eventBody = eventItems.single['body']! as Map<String, Object?>;
+        expect(eventBody['eventName'], 'purchase');
 
+        // Once the delayed platform context resolves, the best-effort app-open
+        // is scheduled and sent.
         delayedPlatform.complete(
           const AttriaxInstallReferrerContext(
             installReferrer: 'utm_source=attriax&utm_campaign=delayed',
@@ -470,21 +482,7 @@ void main() {
         );
         await _flushRuntimeTransitions();
 
-        expect(requestPaths, <String>[
-          '/api/sdk/v1/config',
-          '/api/sdk/v1/open',
-          '/api/sdk/v1/batch',
-        ]);
-        expect(batchBodies, hasLength(1));
-
-        final items = batchBodies.single['items']! as List<Object?>;
-        final eventItems = items
-            .cast<Map<String, Object?>>()
-            .where((item) => item['kind'] == 'event')
-            .toList(growable: false);
-        expect(eventItems, hasLength(1));
-        final eventBody = eventItems.single['body']! as Map<String, Object?>;
-        expect(eventBody['eventName'], 'purchase');
+        expect(requestPaths, contains('/api/sdk/v1/open'));
       },
     );
 

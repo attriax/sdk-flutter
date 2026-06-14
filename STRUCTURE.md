@@ -32,8 +32,8 @@ dart analyze
 cd attriax && flutter test
 cd ..\example-gdpr && flutter test
 cd ..\attriax\example && flutter test
-cd ..\example-rich && flutter test
-cd ..\..\attriax_flutter_platform_interface && flutter test
+cd ..\..\example-rich && flutter test
+cd ..\attriax_flutter_platform_interface && flutter test
 cd ..\attriax_flutter_android && flutter test
 cd ..\attriax_flutter_ios && flutter test
 cd ..\attriax_flutter_windows && flutter test

@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
-import 'package:attriax_flutter/src/internal/attriax_app_open_monitor.dart';
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
 import 'package:attriax_flutter/src/internal/attriax_synchronizer.dart';
@@ -21,7 +20,6 @@ void main() {
     late Connectivity connectivity;
     late AttriaxPreferencesStore preferencesStore;
     late FakeGeneratedTransport transport;
-    late FakeAppOpenMonitor appOpenMonitor;
     late AttriaxSynchronizer synchronizer;
 
     setUp(() async {
@@ -32,11 +30,9 @@ void main() {
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
       transport = FakeGeneratedTransport();
-      appOpenMonitor = FakeAppOpenMonitor();
       synchronizer = AttriaxSynchronizer(
         transport: transport,
         connectivity: connectivity,
-        appOpenMonitor: appOpenMonitor,
         preferencesStore: preferencesStore,
         maxQueueSize: 10,
         eventFlushInterval: const Duration(milliseconds: 40),
@@ -109,6 +105,24 @@ void main() {
         expect(transport.sentBatches, hasLength(1));
       },
     );
+
+    test(
+      'dispose completes pending request callbacks instead of hanging',
+      () async {
+        Object? failedError;
+        await synchronizer.enqueue(
+          _eventRequest('signup_started'),
+          onError: (error, _) => failedError = error,
+          flushImmediately: false,
+        );
+
+        await synchronizer.dispose();
+
+        // A still-pending callback (e.g. an awaited manual deep-link
+        // resolution) must be released on dispose, not left hanging forever.
+        expect(failedError, isNotNull);
+      },
+    );
   });
 }
 
@@ -131,15 +145,4 @@ class FakeConnectivityPlatform extends ConnectivityPlatform {
       const Stream<List<ConnectivityResult>>.empty();
 
   Future<void> dispose() async {}
-}
-
-class FakeAppOpenMonitor implements AttriaxAppOpenMonitor {
-  @override
-  bool get hasSuccessfulResult => true;
-
-  @override
-  bool get shouldGateRequestsOnSuccessfulAppOpen => true;
-
-  @override
-  Future<AttriaxAppOpenResult?> waitForTrackedResult() async => null;
 }

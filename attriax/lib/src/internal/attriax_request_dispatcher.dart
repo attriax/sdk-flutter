@@ -5,18 +5,16 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 
 import 'attriax_api_models.dart';
-import 'attriax_app_open_monitor.dart';
 import 'attriax_generated_transport.dart';
 import 'attriax_json_utils.dart';
 import 'attriax_logger.dart';
 import 'attriax_queue.dart';
+import 'dispatch/batch_limits.dart';
+import 'dispatch/request_retry_policy.dart';
 
 typedef AttriaxSuccessHandler = void Function(AttriaxApiResponse response);
 typedef AttriaxErrorHandler =
     void Function(Object error, StackTrace? stackTrace);
-
-const int _attriaxMaxRetryAttempts = 8;
-const Duration _attriaxMaxRetryAge = Duration(days: 7);
 
 enum _DispatchFailureAction { retry, drop }
 
@@ -26,7 +24,11 @@ class _BatchDispatchResult {
     required this.shouldStop,
   });
 
-  const _BatchDispatchResult.success()
+  /// The batch needs no further work this flush: every item was either
+  /// delivered or permanently dropped (handlers already notified). The name is
+  /// intentionally not "success" — a dropped non-retryable request also settles
+  /// here.
+  const _BatchDispatchResult.settled()
     : remaining = const <AttriaxQueuedRequest>[],
       shouldStop = false;
 
@@ -70,7 +72,6 @@ class AttriaxRequestDispatcher {
   AttriaxRequestDispatcher({
     required AttriaxGeneratedTransport transport,
     required Connectivity connectivity,
-    required AttriaxAppOpenMonitor appOpenMonitor,
     required AttriaxQueueManager queueManager,
     required AttriaxLogger logger,
     this.buildSessionKeepAliveBatchRequest,
@@ -79,13 +80,11 @@ class AttriaxRequestDispatcher {
     this.onFailed,
   }) : _transport = transport,
        _connectivity = connectivity,
-       _appOpenMonitor = appOpenMonitor,
        _queueManager = queueManager,
        _logger = logger;
 
   final AttriaxGeneratedTransport _transport;
   final Connectivity _connectivity;
-  final AttriaxAppOpenMonitor _appOpenMonitor;
   final AttriaxQueueManager _queueManager;
   final AttriaxLogger _logger;
 
@@ -160,7 +159,7 @@ class AttriaxRequestDispatcher {
         final queuedRequest = queue[i];
         final request = queuedRequest.request;
 
-        final dropReason = _terminalDropReason(queuedRequest);
+        final dropReason = attriaxTerminalDropReason(queuedRequest);
         if (dropReason != null) {
           _logger.warning(
             'Dropping queued ${attriaxApiRequestLabel(request)} request because it exceeded the retry policy: $dropReason.',
@@ -180,15 +179,6 @@ class AttriaxRequestDispatcher {
         if (_isWaitingForRetryWindow(queuedRequest)) {
           _logger.verbose(
             'Deferring queued ${attriaxApiRequestLabel(request)} request until retry backoff expires.',
-          );
-          remaining.add(queuedRequest);
-          i += 1;
-          continue;
-        }
-
-        if (!_canDispatchRequest(request)) {
-          _logger.verbose(
-            'Deferring queued ${attriaxApiRequestLabel(request)} request until app-open succeeds.',
           );
           remaining.add(queuedRequest);
           i += 1;
@@ -224,27 +214,6 @@ class AttriaxRequestDispatcher {
           i += 1;
           continue;
         } catch (error, stackTrace) {
-          if (_isAppOpenRequest(request)) {
-            final attemptedAt = DateTime.now().toUtc();
-            final action = _handleAppOpenFailure(
-              requestId: queuedRequest.id,
-              error: error,
-              stackTrace: stackTrace,
-              hasPendingAppOpenAfter: _hasPendingAppOpen(
-                queue,
-                startIndex: i + 1,
-              ),
-            );
-            if (action == _DispatchFailureAction.retry) {
-              remaining.add(_markForRetry(queuedRequest, error, attemptedAt));
-              i += 1;
-              continue;
-            }
-
-            i += 1;
-            continue;
-          }
-
           final action = _handleFailure(
             request: request,
             requestId: queuedRequest.id,
@@ -254,7 +223,9 @@ class AttriaxRequestDispatcher {
           );
           if (action == _DispatchFailureAction.retry) {
             final attemptedAt = DateTime.now().toUtc();
-            remaining.add(_markForRetry(queuedRequest, error, attemptedAt));
+            remaining.add(
+              attriaxMarkRequestForRetry(queuedRequest, error, attemptedAt),
+            );
             i += 1;
             continue;
           }
@@ -269,31 +240,6 @@ class AttriaxRequestDispatcher {
     }
   }
 
-  _DispatchFailureAction _handleAppOpenFailure({
-    required String requestId,
-    required Object error,
-    required StackTrace stackTrace,
-    required bool hasPendingAppOpenAfter,
-  }) {
-    final retryable = _isRetryableRequestError(error);
-    if (!retryable && hasPendingAppOpenAfter) {
-      _logger.warning(
-        'App-open request failed permanently and will be dropped because another queued app-open request can still unblock delivery.',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      _clearHandlers(requestId, error: error, stackTrace: stackTrace);
-      return _DispatchFailureAction.drop;
-    }
-
-    _logger.warning(
-      'App-open request failed and queued requests will remain blocked until an app-open request succeeds.',
-      error: error,
-      stackTrace: stackTrace,
-    );
-    return _DispatchFailureAction.retry;
-  }
-
   _DispatchFailureAction _handleFailure({
     required AttriaxApiRequest request,
     required String requestId,
@@ -305,7 +251,7 @@ class AttriaxRequestDispatcher {
 
     switch (error) {
       case AttriaxTransportHttpException(statusCode: final statusCode):
-        if (statusCode == 429 || statusCode >= 500) {
+        if (attriaxIsRetryableHttpStatus(statusCode)) {
           _logger.warning(
             '$label request failed with HTTP $statusCode and will be retried.',
             error: error,
@@ -386,9 +332,9 @@ class AttriaxRequestDispatcher {
         );
       }
 
-      return const _BatchDispatchResult.success();
+      return const _BatchDispatchResult.settled();
     } catch (error, stackTrace) {
-      if (_isRetryableBatchError(error)) {
+      if (attriaxIsRetryableRequestError(error)) {
         final attemptedAt = DateTime.now().toUtc();
         _logger.warning(
           'Batch request failed and will be retried.',
@@ -398,8 +344,11 @@ class AttriaxRequestDispatcher {
         return _BatchDispatchResult.retry(
           requests
               .map(
-                (queuedRequest) =>
-                    _markForRetry(queuedRequest, error, attemptedAt),
+                (queuedRequest) => attriaxMarkRequestForRetry(
+                  queuedRequest,
+                  error,
+                  attemptedAt,
+                ),
               )
               .toList(growable: false),
         );
@@ -440,11 +389,11 @@ class AttriaxRequestDispatcher {
       );
       if (action == _DispatchFailureAction.retry) {
         return _BatchDispatchResult.retry(<AttriaxQueuedRequest>[
-          _markForRetry(singleRequest, error, attemptedAt),
+          attriaxMarkRequestForRetry(singleRequest, error, attemptedAt),
         ]);
       }
 
-      return const _BatchDispatchResult.success();
+      return const _BatchDispatchResult.settled();
     }
   }
 
@@ -489,7 +438,7 @@ class AttriaxRequestDispatcher {
       return false;
     }
 
-    if (preparedBatch.transportRequests.length > 100) {
+    if (preparedBatch.transportRequests.length > attriaxMaxBatchRequestItems) {
       return false;
     }
 
@@ -500,7 +449,7 @@ class AttriaxRequestDispatcher {
         ),
       ),
     );
-    return encodedBody.length <= 48 * 1024;
+    return encodedBody.length <= attriaxMaxBatchRequestBodyBytes;
   }
 
   _PreparedBatchRequest _prepareBatchRequest(
@@ -558,26 +507,6 @@ class AttriaxRequestDispatcher {
     };
   }
 
-  bool _isRetryableBatchError(Object error) => switch (error) {
-    AttriaxTransportHttpException(statusCode: final statusCode) =>
-      statusCode == 429 || statusCode >= 500,
-    TimeoutException() => true,
-    DioException() => true,
-    _ => false,
-  };
-
-  bool _canDispatchRequest(AttriaxApiRequest request) {
-    if (_isAppOpenRequest(request) || _isDeepLinkResolveRequest(request)) {
-      return true;
-    }
-
-    if (!_appOpenMonitor.shouldGateRequestsOnSuccessfulAppOpen) {
-      return true;
-    }
-
-    return _appOpenMonitor.hasSuccessfulResult;
-  }
-
   bool _isWaitingForRetryWindow(AttriaxQueuedRequest queuedRequest) {
     final retryAt = queuedRequest.nextRetryAt;
     return retryAt != null && retryAt.isAfter(DateTime.now().toUtc());
@@ -600,137 +529,8 @@ class AttriaxRequestDispatcher {
     return <AttriaxQueuedRequest>[...appOpenRequests, ...otherRequests];
   }
 
-  bool _hasPendingAppOpen(
-    List<AttriaxQueuedRequest> queue, {
-    required int startIndex,
-  }) {
-    for (var i = startIndex; i < queue.length; i += 1) {
-      if (_isAppOpenRequest(queue[i].request)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  bool _isRetryableRequestError(Object error) => switch (error) {
-    AttriaxTransportHttpException(statusCode: final statusCode) =>
-      statusCode == 429 || statusCode >= 500,
-    TimeoutException() => true,
-    DioException() => true,
-    _ => false,
-  };
-
-  AttriaxQueuedRequest _markForRetry(
-    AttriaxQueuedRequest queuedRequest,
-    Object error,
-    DateTime attemptedAt,
-  ) => queuedRequest.copyWith(
-    attemptCount: queuedRequest.attemptCount + 1,
-    lastAttemptAt: attemptedAt,
-    lastErrorClass: _retryErrorClass(error),
-    lastHttpStatusCode: _httpStatusCode(error),
-    nextRetryAt: _retryAfterAt(error, attemptedAt),
-  );
-
-  String _retryErrorClass(Object error) => switch (error) {
-    AttriaxTransportHttpException(statusCode: final statusCode) =>
-      'http_$statusCode',
-    TimeoutException() => 'timeout',
-    DioException() => 'transport',
-    _ => error.runtimeType.toString(),
-  };
-
-  int? _httpStatusCode(Object error) => switch (error) {
-    AttriaxTransportHttpException(statusCode: final statusCode) => statusCode,
-    _ => null,
-  };
-
-  String? _terminalDropReason(AttriaxQueuedRequest queuedRequest) {
-    if (!_shouldApplyTerminalRetryPolicy(queuedRequest.request)) {
-      return null;
-    }
-
-    if (queuedRequest.attemptCount >= _attriaxMaxRetryAttempts) {
-      return 'max_attempts_exceeded';
-    }
-
-    final age = DateTime.now().toUtc().difference(queuedRequest.createdAt);
-    if (age > _attriaxMaxRetryAge) {
-      return 'max_age_exceeded';
-    }
-
-    return null;
-  }
-
-  bool _shouldApplyTerminalRetryPolicy(AttriaxApiRequest request) =>
-      request is! AttriaxResolveDeepLinkRequest;
-
-  DateTime? _retryAfterAt(Object error, DateTime attemptedAt) {
-    switch (error) {
-      case AttriaxTransportHttpException():
-        final retryAfterValue = error.headerValue('retry-after');
-        if (retryAfterValue == null) {
-          return null;
-        }
-
-        final trimmed = retryAfterValue.trim();
-        if (trimmed.isEmpty) {
-          return null;
-        }
-
-        final retryAfterSeconds = int.tryParse(trimmed);
-        if (retryAfterSeconds != null) {
-          if (retryAfterSeconds < 0) {
-            return null;
-          }
-          return attemptedAt.add(Duration(seconds: retryAfterSeconds));
-        }
-
-        final retryAfterDate = DateTime.tryParse(trimmed)?.toUtc();
-        final httpRetryAfterDate = _parseHttpRetryAfterDate(trimmed);
-        final parsedRetryAfterDate = httpRetryAfterDate ?? retryAfterDate;
-        if (parsedRetryAfterDate == null ||
-            !parsedRetryAfterDate.isAfter(attemptedAt)) {
-          return null;
-        }
-
-        return parsedRetryAfterDate;
-      default:
-        return null;
-    }
-  }
-
-  DateTime? _parseHttpRetryAfterDate(String value) {
-    final match = _httpRetryAfterPattern.firstMatch(value);
-    if (match == null) {
-      return null;
-    }
-
-    final month = _httpRetryAfterMonths[match.group(2)!];
-    if (month == null) {
-      return null;
-    }
-
-    try {
-      return DateTime.utc(
-        int.parse(match.group(3)!),
-        month,
-        int.parse(match.group(1)!),
-        int.parse(match.group(4)!),
-        int.parse(match.group(5)!),
-        int.parse(match.group(6)!),
-      );
-    } on FormatException {
-      return null;
-    }
-  }
-
   bool _isAppOpenRequest(AttriaxApiRequest request) =>
       request is AttriaxOpenRequest;
-
-  bool _isDeepLinkResolveRequest(AttriaxApiRequest request) =>
-      request is AttriaxResolveDeepLinkRequest;
 
   void _clearHandlers(
     String requestId, {
@@ -741,22 +541,3 @@ class AttriaxRequestDispatcher {
     _errorHandlers.remove(requestId)?.call(error, stackTrace);
   }
 }
-
-final RegExp _httpRetryAfterPattern = RegExp(
-  r'^[A-Za-z]{3}, (\d{2}) ([A-Za-z]{3}) (\d{4}) (\d{2}):(\d{2}):(\d{2}) GMT$',
-);
-
-const Map<String, int> _httpRetryAfterMonths = <String, int>{
-  'Jan': 1,
-  'Feb': 2,
-  'Mar': 3,
-  'Apr': 4,
-  'May': 5,
-  'Jun': 6,
-  'Jul': 7,
-  'Aug': 8,
-  'Sep': 9,
-  'Oct': 10,
-  'Nov': 11,
-  'Dec': 12,
-};

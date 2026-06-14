@@ -27,21 +27,22 @@ owning layer instead of accumulating more work in the top-level runtime.
   If logic mostly belongs to one workflow, move it into that workflow's owner
   or coordinator instead of growing the runtime class again.
 
-### Policy coordinators
+### Runtime startup and helper managers
 
-- `attriax_runtime_bootstrap_coordinator.dart` restores local state, listeners,
-  and startup-owned manager state.
-- `attriax_runtime_activation_coordinator.dart` owns enabled, deferred, and
-  consent-driven activation transitions.
-- `attriax_sdk_runtime_config_coordinator.dart` owns launch-time runtime-config
-  loading and caching.
-- `attriax_app_open_launch_coordinator.dart` owns app-open scheduling plus the
-  extra iOS enrichment glue needed before startup attribution runs.
-- `attriax_crash_reporting_coordinator.dart` owns crash listener registration,
+- `attriax_runtime.dart` owns startup restore/bootstrap order and enabled,
+  deferred, and consent-driven activation transitions as private runtime
+  workflows.
+- `attriax_runtime_config_manager.dart` owns launch-time runtime-config loading
+  and caching.
+- `attriax_app_open_launcher.dart` owns app-open scheduling plus the extra iOS
+  enrichment glue needed before startup attribution runs.
+- `attriax_crash_reporting_manager.dart` owns crash listener registration,
   routing, and queue behavior.
 
 If you are about to add branching startup policy to `AttriaxRuntime`, check
-whether it belongs in one of these extracted coordinators first.
+whether it should stay in the explicit runtime startup flow or move into a
+focused manager with real state of its own. Avoid adding callback-only
+coordinator classes.
 
 ### Workflow managers
 
@@ -55,7 +56,11 @@ whether it belongs in one of these extracted coordinators first.
   `attriax_referrer_manager.dart`
 - Event and revenue tracking helpers: `attriax_tracking_manager.dart`
 - Platform install referrer capture: `attriax_platform_install_referrer_manager.dart`
-- SKAN ownership: `attriax_skan_manager.dart`
+- SKAN ownership: `attriax_skan_manager.dart`; pure schema/window helpers:
+  `skan/attriax_skan_rules.dart`; event resolution and local augmentation:
+  `skan/attriax_skan_event_resolution.dart` and
+  `skan/attriax_skan_event_augmenter.dart`; native conversion update decision
+  logic: `skan/attriax_skan_conversion_updater.dart`
 
 Managers should own one workflow end to end. They can depend on low-level
 services, but they should not quietly coordinate unrelated startup behavior.
@@ -90,6 +95,8 @@ requires runtime-wide startup policy.
 
 - Platform calls: `attriax_platform_*.dart`
 - Generated/network transport: `attriax_generated_transport.dart`
+- Request models/builders/codecs: `attriax_api_models.dart` with parts under
+  `transport/requests/`
 - Queue models: `attriax_queue.dart`
 
 These files should stay narrow and reusable. Avoid putting policy branches here
@@ -100,11 +107,11 @@ unless they are unavoidable transport or storage rules.
 The intended startup split is:
 
 1. `Attriax.init()` completes local startup.
-2. The bootstrap coordinator restores runtime settings, queue/session state,
-   listeners, and startup-owned manager state.
+2. Runtime bootstrap restores runtime settings, queue/session state, listeners,
+   and startup-owned manager state.
 3. Context capture restores device identity and builds the runtime snapshot.
-4. The activation coordinator decides whether startup should become disabled,
-   deferred, or fully active.
+4. Runtime activation decides whether startup should become disabled, deferred,
+   or fully active.
 5. If attribution startup is allowed, runtime config and app-open scheduling run
    before later queued work can synchronize.
 
@@ -153,8 +160,8 @@ shared fake instead of re-copying local fake implementations.
 ## Maintenance Guardrails
 
 - Prefer extracting a focused manager before growing `AttriaxRuntime` further.
-- Prefer extracting or extending a coordinator before adding more startup-policy
-  branches to the runtime root.
+- Do not add callback-only coordinator classes; extract a manager only when it
+  owns meaningful state, policy, or a reusable workflow.
 - Keep public API additions thin and route them into an existing owner.
 - Keep the package example focused on integration basics, use `example-rich/`
   for broader public demo flows, and keep internal-only QA flows in

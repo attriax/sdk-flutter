@@ -88,6 +88,40 @@ void main() {
     });
 
     test(
+      'resolves session referrer to null when the app-open request fails',
+      () async {
+        // A failed app-open (attribution) request must not turn the public
+        // getSessionReferrer() read into a thrown future; it should resolve to
+        // "no referrer".
+        sdk = Attriax.test(
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
+          client: MockClient((request) async {
+            if (request.url.path.endsWith('/api/sdk/v1/open')) {
+              return http.Response('{"error":"bad request"}', 400);
+            }
+            return http.Response(
+              _sdkEnvelope(<String, Object?>{}),
+              200,
+              headers: const <String, String>{
+                'content-type': 'application/json',
+              },
+            );
+          }),
+          deepLinkSource: FakeDeepLinkSource(),
+          connectivity: connectivity,
+          contextCollector: StaticPreparedContextCollector(),
+          prefs: prefs,
+          enableDebugLogs: false,
+        );
+
+        await sdk.init();
+
+        final sessionReferrer = await sdk.referrer.getSessionReferrer();
+        expect(sessionReferrer, isNull);
+      },
+    );
+
+    test(
       'schedules app-open and referrer resolution after re-enable',
       () async {
         var appOpenRequests = 0;

@@ -35,10 +35,18 @@ class AttriaxLogger {
     StackTrace? stackTrace,
   }) {
     _emitLine('[Attriax][$level] $message');
+
+    // Detail (error objects, HTTP response bodies, stack traces) can carry
+    // sensitive payloads, so it is only emitted when debug logging is enabled.
+    // Release builds keep the concise level/message line only.
+    if (!_enableDebugLogs) {
+      return;
+    }
+
     if (error != null) {
       _emitLine('[Attriax][$level] $error');
     }
-    if (stackTrace != null && (_enableDebugLogs || level == 'ERROR')) {
+    if (stackTrace != null) {
       if (kDebugMode) {
         debugPrintStack(
           label: '[Attriax][$level] stackTrace',

@@ -2,6 +2,9 @@ import 'dart:ui';
 
 import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
+import 'attriax_bot_environment_stub.dart'
+    if (dart.library.js_interop) 'attriax_bot_environment_web.dart'
+    as bot;
 import 'attriax_native_context_metadata.dart';
 
 class AttriaxContextSnapshotBuilder {
@@ -255,6 +258,13 @@ class AttriaxContextSnapshotBuilder {
             metadata: metadata,
           );
         case AttriaxPlatformType.web:
+          final botEnv = bot.currentAttriaxBotEnvironment();
+          final webMetadata = <String, Object?>{
+            ...metadata,
+            if (botEnv.isBot) 'isBot': true,
+            if (botEnv.detectedVia != null)
+              'botDetectedVia': botEnv.detectedVia,
+          };
           return AttriaxDeviceSnapshot(
             model:
                 _metadata.readString(rawData, 'browserName') ??
@@ -271,7 +281,7 @@ class AttriaxContextSnapshotBuilder {
             screenHeight: screenHeight,
             devicePixelRatio: devicePixelRatio,
             colorDepth: colorDepth,
-            metadata: metadata,
+            metadata: webMetadata,
           );
         case AttriaxPlatformType.unknown:
           return AttriaxDeviceSnapshot(

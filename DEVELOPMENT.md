@@ -16,7 +16,8 @@
 
 ### Runtime Ownership
 - **attriax/lib/src/internal/attriax_runtime.dart** — Composition root only; avoid re-centralizing workflow logic here
-- **Policy coordinators** — `attriax_runtime_bootstrap_coordinator.dart`, `attriax_runtime_activation_coordinator.dart`, `attriax_sdk_runtime_config_coordinator.dart`, `attriax_app_open_launch_coordinator.dart`, `attriax_crash_reporting_coordinator.dart`
+- **Runtime startup/activation** — private workflows in `attriax_runtime.dart`; keep them explicit and avoid reintroducing callback-only coordinator classes
+- **Runtime helper managers** — `attriax_runtime_config_manager.dart`, `attriax_app_open_launcher.dart`, `attriax_crash_reporting_manager.dart`
 - **Runtime settings boundary** — `attriax_runtime_settings_state.dart`, `attriax_runtime_settings_store.dart`, plus the narrow store interfaces implemented by `attriax_preferences_store.dart`
 - **Context boundary** — `attriax_context_collector.dart` composed from `attriax_context_platform_services.dart`, `attriax_native_context_capture.dart`, `attriax_context_snapshot_builder.dart`, and `attriax_device_identity_resolver.dart`
 
@@ -34,20 +35,20 @@ dart analyze
 # Format code
 dart format .
 
-# Run tests
+# Run tests (paths are relative; each cd continues from the previous one)
 cd attriax && flutter test
-cd ..\attriax\example && flutter test
-cd ..\example-rich && flutter test
-cd ..\..\attriax_flutter_platform_interface && flutter test
+cd example && flutter test
+cd ..\..\example-rich && flutter test
+cd ..\attriax_flutter_platform_interface && flutter test
 cd ..\attriax_flutter_android && flutter test
 cd ..\attriax_flutter_ios && flutter test
 cd ..\attriax_flutter_windows && flutter test
 
-# Run public example
+# Run public example (from the sdk-flutter workspace root)
 cd attriax\example && flutter run
 
-# Run rich public demo
-cd ..\example-rich && flutter run
+# Run rich public demo (from the sdk-flutter workspace root)
+cd example-rich && flutter run
 
 # Regenerate the public Windows example wrapper if desktop builds go stale
 cd .. && npm run sdk:flutter:example:windows:repair

@@ -1,7 +1,5 @@
 import 'attriax_preferences_store.dart';
 
-typedef AttriaxStoredRuntimeSettings = AttriaxStoredRuntimePreferences;
-
 abstract interface class AttriaxRuntimeSettingsWriteStore {
   Future<void> setEnabled({required bool enabled});
 
@@ -10,7 +8,7 @@ abstract interface class AttriaxRuntimeSettingsWriteStore {
 
 abstract interface class AttriaxRuntimeSettingsStore
     implements AttriaxRuntimeSettingsWriteStore {
-  Future<AttriaxStoredRuntimeSettings> restore({
+  Future<AttriaxStoredRuntimePreferences> restore({
     bool? enabledOverride,
     bool? eventsEnabledOverride,
   });
@@ -25,7 +23,7 @@ class AttriaxPreferencesRuntimeSettingsStore
   final AttriaxPreferencesStore _preferencesStore;
 
   @override
-  Future<AttriaxStoredRuntimeSettings> restore({
+  Future<AttriaxStoredRuntimePreferences> restore({
     bool? enabledOverride,
     bool? eventsEnabledOverride,
   }) => _preferencesStore.restoreRuntimePreferences(

@@ -1,60 +1,61 @@
 import 'dart:async';
 
-import 'package:attriax_flutter/src/internal/attriax_app_open_launch_coordinator.dart';
+import 'package:attriax_flutter/src/internal/attriax_app_open_launcher.dart';
 import 'package:attriax_flutter/src/internal/attriax_sdk_runtime_config.dart';
 import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('AttriaxAppOpenLaunchCoordinator', () {
+  group('AttriaxAppOpenLauncher', () {
     test('skips scheduling when launch gating is not satisfied', () async {
       var runtimeConfigLoads = 0;
       var scheduleCalls = 0;
       var allowsAttributionTracking = false;
       var didSchedule = false;
 
-      final coordinator = _createCoordinator(
+      final launcher = _createLauncher(
         didSchedule: () => didSchedule,
         allowsAttributionTracking: () => allowsAttributionTracking,
         ensureRuntimeConfigLoaded: () async {
           runtimeConfigLoads += 1;
           return const AttriaxSdkRuntimeConfig();
         },
-        scheduleAppOpen: ({
-          String? installReferrerOverride,
-          Map<String, Object?> deviceMetadataOverrides =
-              const <String, Object?>{},
-          Future<void> Function(AttriaxAppOpenResult? result)? onCompleted,
-        }) async {
-          scheduleCalls += 1;
-        },
+        scheduleAppOpen:
+            ({
+              String? installReferrerOverride,
+              Map<String, Object?> deviceMetadataOverrides =
+                  const <String, Object?>{},
+              Future<void> Function(AttriaxAppOpenResult? result)? onCompleted,
+            }) async {
+              scheduleCalls += 1;
+            },
       );
 
-      await coordinator.scheduleIfNeeded(
+      await launcher.scheduleIfNeeded(
         isInitialized: true,
         isEnabled: true,
         hasSynchronizer: true,
       );
 
       allowsAttributionTracking = true;
-      await coordinator.scheduleIfNeeded(
+      await launcher.scheduleIfNeeded(
         isInitialized: false,
         isEnabled: true,
         hasSynchronizer: true,
       );
-      await coordinator.scheduleIfNeeded(
+      await launcher.scheduleIfNeeded(
         isInitialized: true,
         isEnabled: false,
         hasSynchronizer: true,
       );
-      await coordinator.scheduleIfNeeded(
+      await launcher.scheduleIfNeeded(
         isInitialized: true,
         isEnabled: true,
         hasSynchronizer: false,
       );
 
       didSchedule = true;
-      await coordinator.scheduleIfNeeded(
+      await launcher.scheduleIfNeeded(
         isInitialized: true,
         isEnabled: true,
         hasSynchronizer: true,
@@ -78,7 +79,7 @@ void main() {
         final completedResults = <AttriaxAppOpenResult?>[];
         final completedOriginSessionIds = <String?>[];
 
-        final coordinator = _createCoordinator(
+        final launcher = _createLauncher(
           didSchedule: () => false,
           allowsAttributionTracking: () => true,
           currentSessionId: () => 'session_123',
@@ -88,47 +89,49 @@ void main() {
               clipboardAttributionEnabled: true,
             );
           },
-          buildDeviceMetadataOverrides: ({
-            required bool allowsAttributionTracking,
-          }) async {
-            metadataCalls.add(allowsAttributionTracking);
-            return <String, Object?>{'wkWebViewUserAgent': 'ua'};
-          },
-          installReferrerOverrideForAppOpen: ({
-            required bool clipboardAttributionEnabled,
-            required bool allowsAttributionTracking,
-          }) {
-            overrideSawClipboardAttributionEnabled =
-                clipboardAttributionEnabled;
-            overrideSawTrackingEnabled = allowsAttributionTracking;
-            return 'attriax_click_id=click-123';
-          },
-          scheduleAppOpen: ({
-            String? installReferrerOverride,
-            Map<String, Object?> deviceMetadataOverrides =
-                const <String, Object?>{},
-            Future<void> Function(AttriaxAppOpenResult? result)? onCompleted,
-          }) async {
-            scheduleCalls += 1;
-            capturedInstallReferrerOverride = installReferrerOverride;
-            capturedDeviceMetadataOverrides = Map<String, Object?>.from(
-              deviceMetadataOverrides,
-            );
-            await onCompleted?.call(_appOpenResult);
-            await scheduleCompleter.future;
-          },
+          buildDeviceMetadataOverrides:
+              ({required bool allowsAttributionTracking}) async {
+                metadataCalls.add(allowsAttributionTracking);
+                return <String, Object?>{'wkWebViewUserAgent': 'ua'};
+              },
+          installReferrerOverrideForAppOpen:
+              ({
+                required bool clipboardAttributionEnabled,
+                required bool allowsAttributionTracking,
+              }) {
+                overrideSawClipboardAttributionEnabled =
+                    clipboardAttributionEnabled;
+                overrideSawTrackingEnabled = allowsAttributionTracking;
+                return 'attriax_click_id=click-123';
+              },
+          scheduleAppOpen:
+              ({
+                String? installReferrerOverride,
+                Map<String, Object?> deviceMetadataOverrides =
+                    const <String, Object?>{},
+                Future<void> Function(AttriaxAppOpenResult? result)?
+                onCompleted,
+              }) async {
+                scheduleCalls += 1;
+                capturedInstallReferrerOverride = installReferrerOverride;
+                capturedDeviceMetadataOverrides = Map<String, Object?>.from(
+                  deviceMetadataOverrides,
+                );
+                await onCompleted?.call(_appOpenResult);
+                await scheduleCompleter.future;
+              },
           onCompleted: (result, {originSessionId}) async {
             completedResults.add(result);
             completedOriginSessionIds.add(originSessionId);
           },
         );
 
-        final first = coordinator.scheduleIfNeeded(
+        final first = launcher.scheduleIfNeeded(
           isInitialized: true,
           isEnabled: true,
           hasSynchronizer: true,
         );
-        final second = coordinator.scheduleIfNeeded(
+        final second = launcher.scheduleIfNeeded(
           isInitialized: true,
           isEnabled: true,
           hasSynchronizer: true,
@@ -156,7 +159,7 @@ void main() {
   });
 }
 
-AttriaxAppOpenLaunchCoordinator _createCoordinator({
+AttriaxAppOpenLauncher _createLauncher({
   AttriaxAppOpenLaunchDidScheduleProvider? didSchedule,
   AttriaxAppOpenLaunchAllowsAttributionTrackingProvider?
   allowsAttributionTracking,
@@ -167,7 +170,7 @@ AttriaxAppOpenLaunchCoordinator _createCoordinator({
   installReferrerOverrideForAppOpen,
   AttriaxAppOpenLaunchScheduleCallback? scheduleAppOpen,
   AttriaxAppOpenLaunchCompletedCallback? onCompleted,
-}) => AttriaxAppOpenLaunchCoordinator(
+}) => AttriaxAppOpenLauncher(
   didSchedule: didSchedule ?? () => false,
   allowsAttributionTracking: allowsAttributionTracking ?? () => true,
   currentSessionId: currentSessionId ?? () => null,

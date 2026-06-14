@@ -13,4 +13,33 @@ void main() {
       AttriaxGdprConsentState.notRequired,
     );
   });
+
+  test('treats EU outermost regions outside Europe/ as GDPR-required', () {
+    for (final zone in const <String>[
+      'America/Cayenne',
+      'America/Guadeloupe',
+      'America/Martinique',
+      'America/Marigot',
+      'America/St_Barthelemy',
+      'Indian/Mayotte',
+      'Indian/Reunion',
+    ]) {
+      expect(
+        attriaxResolveGdprStateForTimezone(zone),
+        AttriaxGdprConsentState.pending,
+        reason: '$zone is an EU outermost region and requires consent',
+      );
+    }
+  });
+
+  test('still defaults non-EU zones to notRequired', () {
+    expect(
+      attriaxResolveGdprStateForTimezone('America/New_York'),
+      AttriaxGdprConsentState.notRequired,
+    );
+    expect(
+      attriaxResolveGdprStateForTimezone('Asia/Tokyo'),
+      AttriaxGdprConsentState.notRequired,
+    );
+  });
 }

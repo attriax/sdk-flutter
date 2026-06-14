@@ -17,8 +17,8 @@ typedef AttriaxCrashReportingRuntimeActiveProvider = bool Function();
 typedef AttriaxCrashReportingDecisionProvider =
     AttriaxTrackingDecision Function();
 
-class AttriaxCrashReportingCoordinator {
-  AttriaxCrashReportingCoordinator({
+class AttriaxCrashReportingManager {
+  AttriaxCrashReportingManager({
     required AttriaxConfig config,
     required AttriaxClock clock,
     required AttriaxPlatform platform,

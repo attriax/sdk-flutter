@@ -38,20 +38,9 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
   final AttriaxAppOpenTracker _tracker;
   Completer<void>? _scheduledCompleter;
   bool _isResultObservationScheduled = false;
-  bool _shouldGateRequestsOnSuccessfulAppOpen = true;
 
   bool get didSchedule => _tracker.didSchedule;
-  @override
-  bool get hasSuccessfulResult => _tracker.lastResult != null;
-  @override
-  bool get shouldGateRequestsOnSuccessfulAppOpen =>
-      _shouldGateRequestsOnSuccessfulAppOpen;
   AttriaxAppOpenResult? get lastResult => _tracker.lastResult;
-
-  // ignore: use_setters_to_change_properties
-  void setDispatchGateEnabled({required bool enabled}) {
-    _shouldGateRequestsOnSuccessfulAppOpen = enabled;
-  }
 
   Future<void> schedule({
     String? installReferrerOverride,
@@ -129,7 +118,18 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
   Future<void> _observeResult({
     Future<void> Function(AttriaxAppOpenResult? result)? onCompleted,
   }) async {
-    final result = await _tracker.waitForResult();
+    AttriaxAppOpenResult? result;
+    try {
+      result = await _tracker.waitForResult();
+    } catch (_) {
+      // A failed app-open (already logged by the tracker) is best-effort: report
+      // it to observers as "no result" rather than letting the error surface as
+      // an unhandled async exception.
+      _logger.verbose(
+        'App-open observation completed without a result after a failure.',
+      );
+      result = null;
+    }
     if (onCompleted != null) {
       await onCompleted(result);
     }

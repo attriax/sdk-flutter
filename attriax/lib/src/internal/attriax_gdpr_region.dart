@@ -9,6 +9,16 @@ const Set<String> _attriaxExplicitGdprTimezones = <String>{
   'Atlantic/Faroe',
   'Atlantic/Madeira',
   'Atlantic/Reykjavik',
+  // EU outermost regions / overseas territories where GDPR applies but the
+  // timezone is not under `Europe/`. Without these they would fall through to
+  // the `notRequired` default below — the under-protective direction.
+  'America/Cayenne', // French Guiana
+  'America/Guadeloupe', // Guadeloupe
+  'America/Marigot', // Saint-Martin
+  'America/Martinique', // Martinique
+  'America/St_Barthelemy', // Saint-Barthélemy
+  'Indian/Mayotte', // Mayotte
+  'Indian/Reunion', // Réunion
 };
 
 const Set<String> _attriaxExcludedEuropeTimezones = <String>{

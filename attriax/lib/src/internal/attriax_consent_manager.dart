@@ -10,6 +10,7 @@ import 'attriax_generated_transport.dart';
 import 'attriax_id_generator.dart';
 import 'attriax_logger.dart';
 import 'attriax_preferences_store.dart';
+import 'consent/attriax_consent_policy.dart';
 
 typedef AttriaxConsentStateListener = void Function();
 
@@ -91,6 +92,13 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
   Future<bool>? _needsConsentFuture;
   Future<void>? _pendingSyncFuture;
 
+  AttriaxConsentPolicy get _policy => AttriaxConsentPolicy(
+    gdprEnabled: _config.gdprEnabled,
+    state: _state,
+    values: _values,
+    anonymousTrackingEnabled: _anonymousTrackingEnabled,
+  );
+
   @override
   AttriaxGdprConsentState get gdprConsentState => _state;
 
@@ -101,116 +109,66 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
   bool get anonymousTrackingEnabled => _anonymousTrackingEnabled;
 
   @override
-  bool get isWaitingForGdprConsent =>
-      _state == AttriaxGdprConsentState.pending ||
-      _state == AttriaxGdprConsentState.unknown;
+  bool get isWaitingForGdprConsent => _policy.isWaitingForGdprConsent;
 
   @override
-  bool get shouldDeferNetworkDispatch =>
-      _config.gdprEnabled &&
-      isWaitingForGdprConsent &&
-      !_anonymousTrackingEnabled;
+  bool get shouldDeferNetworkDispatch => _policy.shouldDeferNetworkDispatch;
 
+  /// Whether runtime-scoped data may be persisted to disk under current consent.
+  bool get allowsRuntimePersistence => _policy.allowsRuntimePersistence;
+
+  // Two predicate families intentionally answer different questions over the
+  // same consent state; do not treat them as synonyms:
+  //
+  // * `allows*Tracking` (strict): may we tracked this category with the
+  //   device IDENTITY and persist full runtime data? Anonymous tracking does
+  //   NOT relax a category the user explicitly declined under granted consent.
+  //   These drive identity materialization and persistence mode.
+  // * `canCapture*` / `trackingDecisionFor` (permissive): may we CAPTURE this
+  //   signal at all, possibly anonymously? With anonymous tracking enabled, a
+  //   declined-but-anonymous-capable category is still captured (anonymized).
+  //   These drive event capture gating and queue retention.
   @override
   bool get allowsAnalyticsTracking =>
-      _allowsCategory((values) => values.analytics);
+      _policy.allowsCategory((values) => values.analytics);
 
   @override
   bool get allowsAttributionTracking =>
-      _allowsCategory((values) => values.attribution);
+      _policy.allowsCategory((values) => values.attribution);
 
   @override
   bool get allowsAdEventsTracking =>
-      _allowsCategory((values) => values.adEvents);
+      _policy.allowsCategory((values) => values.adEvents);
 
   @override
   bool get canCaptureAnalytics =>
-      _canCaptureSignal(AttriaxTrackingSignal.analytics);
+      _policy.canCaptureSignal(AttriaxTrackingSignal.analytics);
 
   @override
-  bool get canCaptureAttribution => _canCaptureCategory(
+  bool get canCaptureAttribution => _policy.canCaptureCategory(
     (values) => values.attribution,
     allowWhileWaiting: false,
   );
 
   @override
   bool get canCaptureAdEvents =>
-      _canCaptureSignal(AttriaxTrackingSignal.adEvents);
+      _policy.canCaptureSignal(AttriaxTrackingSignal.adEvents);
 
+  // Uninstall tokens are identity-linked attribution data: they must not be
+  // captured while consent is still pending/unknown. This matches both
+  // `trackingDecisionFor(uninstallTracking)` (withheld while waiting) and the
+  // queue policy, which only retains the request once attribution is allowed.
+  // Keeping `allowWhileWaiting: false` here avoids advertising a "capture while
+  // waiting" path that the dispatcher would then drop on resolution.
   @override
-  bool get canCaptureUninstallTracking => _canCaptureCategory(
+  bool get canCaptureUninstallTracking => _policy.canCaptureCategory(
     (values) => values.attribution,
-    allowWhileWaiting: true,
+    allowWhileWaiting: false,
   );
 
   @override
-  AttriaxTrackingDecision trackingDecisionFor(AttriaxTrackingSignal signal) {
-    if (!_config.gdprEnabled) {
-      return const AttriaxTrackingDecision(
-        capture: true,
-        identityMode: AttriaxTrackingIdentityMode.identified,
-        deferNetwork: false,
-      );
-    }
-
-    if (_state == AttriaxGdprConsentState.unknown ||
-        _state == AttriaxGdprConsentState.pending) {
-      final capture = _canCaptureWhileWaiting(signal);
-      if (!capture) {
-        return const AttriaxTrackingDecision(
-          capture: false,
-          identityMode: AttriaxTrackingIdentityMode.withheld,
-          deferNetwork: false,
-        );
-      }
-
-      return AttriaxTrackingDecision(
-        capture: true,
-        identityMode: AttriaxTrackingIdentityMode.anonymous,
-        deferNetwork: !_anonymousTrackingEnabled,
-      );
-    }
-
-    if (_state == AttriaxGdprConsentState.notRequired) {
-      return const AttriaxTrackingDecision(
-        capture: true,
-        identityMode: AttriaxTrackingIdentityMode.identified,
-        deferNetwork: false,
-      );
-    }
-
-    final values = _values;
-    if (_state != AttriaxGdprConsentState.granted || values == null) {
-      return const AttriaxTrackingDecision(
-        capture: false,
-        identityMode: AttriaxTrackingIdentityMode.withheld,
-        deferNetwork: false,
-      );
-    }
-
-    final granted = _isSignalGranted(signal, values);
-    if (granted) {
-      return const AttriaxTrackingDecision(
-        capture: true,
-        identityMode: AttriaxTrackingIdentityMode.identified,
-        deferNetwork: false,
-      );
-    }
-
-    if (_anonymousTrackingEnabled && _isAnonymousCapableSignal(signal)) {
-      return const AttriaxTrackingDecision(
-        capture: true,
-        identityMode: AttriaxTrackingIdentityMode.anonymous,
-        deferNetwork: false,
-      );
-    }
-
-    return const AttriaxTrackingDecision(
-      capture: false,
-      identityMode: AttriaxTrackingIdentityMode.withheld,
-      deferNetwork: false,
-    );
-  }
+  AttriaxTrackingDecision trackingDecisionFor(AttriaxTrackingSignal signal) =>
+      _policy.trackingDecisionFor(signal);
 
   // ignore: use_setters_to_change_properties
   void bindTransport(AttriaxGeneratedTransport? transport) {
@@ -323,99 +281,6 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     _pendingSync = false;
     _didRestore = false;
   }
-
-  bool _allowsCategory(
-    bool Function(AttriaxGdprConsentValues values) selector,
-  ) {
-    if (!_config.gdprEnabled) {
-      return true;
-    }
-
-    switch (_state) {
-      case AttriaxGdprConsentState.notRequired:
-        return true;
-      case AttriaxGdprConsentState.granted:
-        final values = _values;
-        return values != null && selector(values);
-      case AttriaxGdprConsentState.pending:
-      case AttriaxGdprConsentState.unknown:
-        return false;
-    }
-  }
-
-  bool _canCaptureCategory(
-    bool Function(AttriaxGdprConsentValues values) selector, {
-    required bool allowWhileWaiting,
-  }) {
-    if (!_config.gdprEnabled) {
-      return true;
-    }
-
-    switch (_state) {
-      case AttriaxGdprConsentState.notRequired:
-        return true;
-      case AttriaxGdprConsentState.granted:
-        final values = _values;
-        return values != null && selector(values);
-      case AttriaxGdprConsentState.pending:
-      case AttriaxGdprConsentState.unknown:
-        return allowWhileWaiting;
-    }
-  }
-
-  bool _canCaptureSignal(AttriaxTrackingSignal signal) {
-    if (!_config.gdprEnabled) {
-      return true;
-    }
-
-    switch (_state) {
-      case AttriaxGdprConsentState.notRequired:
-        return true;
-      case AttriaxGdprConsentState.granted:
-        final values = _values;
-        if (values == null) {
-          return false;
-        }
-
-        return _isSignalGranted(signal, values) ||
-            (_anonymousTrackingEnabled && _isAnonymousCapableSignal(signal));
-      case AttriaxGdprConsentState.pending:
-      case AttriaxGdprConsentState.unknown:
-        return _canCaptureWhileWaiting(signal);
-    }
-  }
-
-  bool _canCaptureWhileWaiting(AttriaxTrackingSignal signal) =>
-      switch (signal) {
-        AttriaxTrackingSignal.analytics ||
-        AttriaxTrackingSignal.adEvents ||
-        AttriaxTrackingSignal.session ||
-        AttriaxTrackingSignal.deepLink => true,
-        AttriaxTrackingSignal.attribution ||
-        AttriaxTrackingSignal.uninstallTracking => false,
-      };
-
-  bool _isAnonymousCapableSignal(AttriaxTrackingSignal signal) =>
-      switch (signal) {
-        AttriaxTrackingSignal.analytics ||
-        AttriaxTrackingSignal.adEvents ||
-        AttriaxTrackingSignal.session ||
-        AttriaxTrackingSignal.deepLink => true,
-        AttriaxTrackingSignal.attribution ||
-        AttriaxTrackingSignal.uninstallTracking => false,
-      };
-
-  bool _isSignalGranted(
-    AttriaxTrackingSignal signal,
-    AttriaxGdprConsentValues values,
-  ) => switch (signal) {
-    AttriaxTrackingSignal.analytics => values.analytics,
-    AttriaxTrackingSignal.adEvents => values.adEvents,
-    AttriaxTrackingSignal.attribution => values.attribution,
-    AttriaxTrackingSignal.session => values.analytics || values.adEvents,
-    AttriaxTrackingSignal.deepLink => values.attribution,
-    AttriaxTrackingSignal.uninstallTracking => values.attribution,
-  };
 
   bool get _shouldRefreshRemoteDecision =>
       _regionSource == 'local_only_timezone' ||
@@ -633,13 +498,12 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     required String? regionSource,
     required bool pendingSync,
   }) {
-    final changed =
-        state != _state ||
-        values != _values ||
-        _normalizeString(countryCode) != _countryCode ||
-        _normalizeString(regionSource) != _regionSource ||
-        checkedAt != _checkedAt ||
-        pendingSync != _pendingSync;
+    // Only a change to the consent DECISION itself (state or category values)
+    // should notify listeners and re-run the runtime reconciliation. Region
+    // metadata and the checked-at timestamp are stored but must not trigger a
+    // reconfiguration, otherwise every no-op server sync (which refreshes
+    // `checkedAt`) would re-run the full queue rewrite + runtime state apply.
+    final decisionChanged = state != _state || values != _values;
 
     _state = state;
     _values = values;
@@ -649,7 +513,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     _pendingSync = pendingSync;
     _didRestore = true;
 
-    if (changed) {
+    if (decisionChanged) {
       onStateChanged?.call();
     }
   }

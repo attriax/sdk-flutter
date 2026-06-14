@@ -2,19 +2,19 @@ import 'dart:async';
 
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
 import 'package:attriax_flutter/src/internal/attriax_sdk_runtime_config.dart';
-import 'package:attriax_flutter/src/internal/attriax_sdk_runtime_config_coordinator.dart';
+import 'package:attriax_flutter/src/internal/attriax_runtime_config_manager.dart';
 import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  group('AttriaxSdkRuntimeConfigCoordinator', () {
+  group('AttriaxRuntimeConfigManager', () {
     test(
       'returns defaults without a remote request when context is missing',
       () async {
         var fetchCalls = 0;
         var onLoadedCalls = 0;
 
-        final coordinator = _createCoordinator(
+        final manager = _createManager(
           context: null,
           fetchRuntimeConfig: (_) async {
             fetchCalls += 1;
@@ -27,14 +27,14 @@ void main() {
           },
         );
 
-        final result = await coordinator.ensureLoaded();
+        final result = await manager.ensureLoaded();
 
         expect(fetchCalls, 0);
         expect(onLoadedCalls, 0);
         expect(result.requestVersion, 'v1');
         expect(result.acceptedAt, isNull);
         expect(result.clipboardAttributionEnabled, isFalse);
-        expect(coordinator.current.clipboardAttributionEnabled, isFalse);
+        expect(manager.current.clipboardAttributionEnabled, isFalse);
       },
     );
 
@@ -45,7 +45,7 @@ void main() {
         var fetchCalls = 0;
         final loaded = <AttriaxSdkRuntimeConfig>[];
 
-        final coordinator = _createCoordinator(
+        final manager = _createManager(
           context: _androidContext,
           fetchRuntimeConfig: (_) {
             fetchCalls += 1;
@@ -54,8 +54,8 @@ void main() {
           onLoaded: loaded.add,
         );
 
-        final firstLoad = coordinator.ensureLoaded();
-        final secondLoad = coordinator.ensureLoaded();
+        final firstLoad = manager.ensureLoaded();
+        final secondLoad = manager.ensureLoaded();
 
         expect(fetchCalls, 1);
 
@@ -68,7 +68,7 @@ void main() {
 
         final firstResult = await firstLoad;
         final secondResult = await secondLoad;
-        final thirdResult = await coordinator.ensureLoaded();
+        final thirdResult = await manager.ensureLoaded();
 
         expect(firstResult.requestVersion, 'v2');
         expect(secondResult.clipboardAttributionEnabled, isTrue);
@@ -76,7 +76,7 @@ void main() {
         expect(fetchCalls, 1);
         expect(loaded, hasLength(1));
         expect(loaded.single.requestVersion, 'v2');
-        expect(coordinator.current.requestVersion, 'v2');
+        expect(manager.current.requestVersion, 'v2');
       },
     );
 
@@ -84,7 +84,7 @@ void main() {
       var fetchCalls = 0;
       final loaded = <AttriaxSdkRuntimeConfig>[];
 
-      final coordinator = _createCoordinator(
+      final manager = _createManager(
         context: _androidContext,
         fetchRuntimeConfig: (_) async {
           fetchCalls += 1;
@@ -93,7 +93,7 @@ void main() {
         onLoaded: loaded.add,
       );
 
-      final result = await coordinator.ensureLoaded();
+      final result = await manager.ensureLoaded();
 
       expect(fetchCalls, 1);
       expect(result.requestVersion, 'v1');
@@ -104,11 +104,11 @@ void main() {
   });
 }
 
-AttriaxSdkRuntimeConfigCoordinator _createCoordinator({
+AttriaxRuntimeConfigManager _createManager({
   required AttriaxContextSnapshot? context,
   required AttriaxSdkRuntimeConfigFetcher fetchRuntimeConfig,
   AttriaxSdkRuntimeConfigLoadedCallback? onLoaded,
-}) => AttriaxSdkRuntimeConfigCoordinator(
+}) => AttriaxRuntimeConfigManager(
   config: const AttriaxConfig(projectToken: 'ax_test_token'),
   contextSnapshot: () => context,
   fetchRuntimeConfig: fetchRuntimeConfig,

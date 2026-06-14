@@ -10,6 +10,7 @@ import 'attriax_preferences_store.dart';
 import 'attriax_request_manager.dart';
 import 'attriax_runtime_settings_state.dart';
 import 'attriax_session_lifecycle_manager.dart';
+import 'session/attriax_session_continuation_policy.dart';
 
 final class AttriaxSessionRestoreResult {
   const AttriaxSessionRestoreResult({
@@ -90,7 +91,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
     final deviceId = _contextManager.deviceId;
     final now = _clock.now();
     final storedSession = await _preferencesStore.readSessionSnapshot();
-    final continuedSession = _shouldContinueSession(
+    final continuedSession = shouldContinueAttriaxSession(
       storedSession,
       deviceId: deviceId,
       context: context,
@@ -122,7 +123,7 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
     final deviceId = _contextManager.deviceId;
     final now = (at ?? _clock.now()).toUtc();
     final existingSession = _currentSession;
-    final continuedSession = _shouldContinueSession(
+    final continuedSession = shouldContinueAttriaxSession(
       existingSession,
       deviceId: deviceId,
       context: context,
@@ -226,8 +227,17 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
     await _preferencesStore.setSessionSnapshot(session: updatedSession);
   }
 
-  DateTime inferredEndAt(AttriaxSessionSnapshot session) =>
-      session.lastActivityAt.add(_continuationWindowFor(session));
+  DateTime inferredEndAt(AttriaxSessionSnapshot session) {
+    final projectedEnd = session.lastActivityAt.add(
+      attriaxSessionContinuationWindow(session),
+    );
+    // A recovered session ended while the app was not running, so its inferred
+    // end can never be in the future. Clamp to now so the end event cannot
+    // postdate the replacing session's start (which is <= now) and produce
+    // out-of-order session lifecycle events.
+    final now = _clock.now().toUtc();
+    return projectedEnd.isAfter(now) ? now : projectedEnd;
+  }
 
   String requireDeviceIdSource() => _contextManager.requireDeviceIdSource();
 
@@ -292,41 +302,6 @@ class AttriaxSessionManager implements AttriaxTrackedSessionPreparer {
     appPackageName: context.app.packageName,
     sdkPackageVersion: context.sdk.packageVersion,
   );
-
-  bool _shouldContinueSession(
-    AttriaxSessionSnapshot? session, {
-    required String? deviceId,
-    required AttriaxContextSnapshot context,
-    required DateTime now,
-  }) {
-    if (session == null) {
-      return false;
-    }
-    if (session.deviceId != deviceId) {
-      return false;
-    }
-    if (session.platform != context.platform) {
-      return false;
-    }
-    if (session.appPackageName != context.app.packageName) {
-      return false;
-    }
-    if (session.appVersion != context.app.version) {
-      return false;
-    }
-    if (session.appBuildNumber != context.app.buildNumber) {
-      return false;
-    }
-    if (session.startedAt.isAfter(now)) {
-      return false;
-    }
-
-    return now.difference(session.lastActivityAt) <=
-        _continuationWindowFor(session);
-  }
-
-  Duration _continuationWindowFor(AttriaxSessionSnapshot session) =>
-      Duration(milliseconds: session.heartbeatInterval.inMilliseconds * 2);
 
   Duration _heartbeatIntervalFor(bool isFirstLaunch) => isFirstLaunch
       ? _config.firstLaunchSessionHeartbeatInterval

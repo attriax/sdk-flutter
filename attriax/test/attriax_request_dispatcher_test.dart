@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
-import 'package:attriax_flutter/src/internal/attriax_app_open_monitor.dart';
 import 'package:attriax_flutter/src/internal/attriax_generated_transport.dart';
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
 import 'package:attriax_flutter/src/internal/attriax_preferences_store.dart';
@@ -25,7 +24,6 @@ void main() {
     late FakeConnectivityPlatform connectivityPlatform;
     late Connectivity connectivity;
     late FakeGeneratedTransport transport;
-    late FakeAppOpenMonitor appOpenMonitor;
     late AttriaxRequestDispatcher dispatcher;
     late AttriaxQueuedRequest queuedRequest;
     late DateTime now;
@@ -42,11 +40,9 @@ void main() {
       ConnectivityPlatform.instance = connectivityPlatform;
       connectivity = Connectivity();
       transport = FakeGeneratedTransport();
-      appOpenMonitor = FakeAppOpenMonitor();
       dispatcher = AttriaxRequestDispatcher(
         transport: transport,
         connectivity: connectivity,
-        appOpenMonitor: appOpenMonitor,
         queueManager: queueManager,
         logger: AttriaxLogger(enableDebugLogs: false),
       );
@@ -126,6 +122,47 @@ void main() {
         expect(persisted.single.lastErrorClass, 'http_503');
         expect(persisted.single.lastHttpStatusCode, 503);
         expect(persisted.single.lastAttemptAt, isNotNull);
+      },
+    );
+
+    test(
+      'applies an increasing backoff window when no retry-after is sent',
+      () async {
+        // A header-less 503 must still produce a future retry window so the
+        // synchronizer can self-schedule a re-flush instead of spinning.
+        transport.batchErrors.add(
+          const AttriaxTransportHttpException(statusCode: 503),
+        );
+        final beforeFirst = DateTime.now().toUtc();
+
+        await dispatcher.flush();
+
+        final afterFirst = await queueManager.readAll();
+        final firstRetryAt = afterFirst.single.nextRetryAt;
+        expect(firstRetryAt, isNotNull);
+        expect(afterFirst.single.attemptCount, 1);
+        expect(firstRetryAt!.isAfter(beforeFirst), isTrue);
+
+        // Move the queued request past its first backoff window and fail again;
+        // the second backoff must be strictly longer (exponential).
+        await queueManager.writeAll(<AttriaxQueuedRequest>[
+          afterFirst.single.copyWith(nextRetryAt: null),
+        ]);
+        transport.batchErrors.add(
+          const AttriaxTransportHttpException(statusCode: 503),
+        );
+        final beforeSecond = DateTime.now().toUtc();
+
+        await dispatcher.flush();
+
+        final afterSecond = await queueManager.readAll();
+        expect(afterSecond.single.attemptCount, 2);
+        final secondRetryAt = afterSecond.single.nextRetryAt;
+        expect(secondRetryAt, isNotNull);
+        expect(
+          secondRetryAt!.difference(beforeSecond),
+          greaterThan(firstRetryAt.difference(beforeFirst)),
+        );
       },
     );
 
@@ -249,7 +286,6 @@ void main() {
         dispatcher = AttriaxRequestDispatcher(
           transport: transport,
           connectivity: connectivity,
-          appOpenMonitor: appOpenMonitor,
           queueManager: queueManager,
           logger: AttriaxLogger(enableDebugLogs: false),
           buildSessionKeepAliveBatchRequest: (_) =>
@@ -374,7 +410,6 @@ void main() {
         dispatcher = AttriaxRequestDispatcher(
           transport: transport,
           connectivity: connectivity,
-          appOpenMonitor: appOpenMonitor,
           queueManager: queueManager,
           logger: AttriaxLogger(enableDebugLogs: false),
           buildSessionKeepAliveBatchRequest: (_) =>
@@ -425,18 +460,8 @@ void main() {
       },
     );
 
-    test(
-      'waits for a successful app-open before cached batchable requests',
-      () async {
-        appOpenMonitor.hasSuccessfulResult = false;
-        dispatcher = AttriaxRequestDispatcher(
-          transport: transport,
-          connectivity: connectivity,
-          appOpenMonitor: appOpenMonitor,
-          queueManager: queueManager,
-          logger: AttriaxLogger(enableDebugLogs: false),
-        );
-        final openRequest = AttriaxQueuedRequest(
+    AttriaxQueuedRequest buildOpenRequest({required DateTime createdAt}) =>
+        AttriaxQueuedRequest(
           id: 'req_open',
           request: attriaxBuildOpenRequest(
             config: const AttriaxConfig(projectToken: 'ax_test_token'),
@@ -457,39 +482,20 @@ void main() {
             ),
             deviceIdSource: 'android_ssaid',
           ),
-          createdAt: now.subtract(const Duration(seconds: 31)),
+          createdAt: createdAt,
+        );
+
+    test(
+      'delivers events without waiting for an app-open to succeed',
+      () async {
+        // No app-open is queued at all; events must still flow.
+        transport.sendBatchResult = const AttriaxTransportSuccess(
+          statusCode: 202,
+          response: AttriaxAckResponse(success: true),
         );
 
         await dispatcher.flush();
 
-        expect(transport.sentRequests, isEmpty);
-        expect(transport.sentBatches, isEmpty);
-        expect(await queueManager.readAll(), hasLength(1));
-
-        await queueManager.enqueue(openRequest);
-        transport
-          ..sendResult = AttriaxTransportSuccess(
-            statusCode: 200,
-            response: AttriaxOpenApiResponse(
-              result: AttriaxAppOpenResult(
-                userId: 'user_1',
-                isNewUser: true,
-                isFirstLaunch: true,
-                requestVersion: 'v1',
-                acceptedAt: now,
-              ),
-            ),
-          )
-          ..sendBatchResult = const AttriaxTransportSuccess(
-            statusCode: 202,
-            response: AttriaxAckResponse(success: true),
-          );
-
-        appOpenMonitor.hasSuccessfulResult = true;
-        await dispatcher.flush();
-
-        expect(transport.sentRequests, hasLength(1));
-        expect(transport.sentRequests.single, isA<AttriaxOpenRequest>());
         expect(transport.sentBatches, hasLength(1));
         expect(
           transport.sentBatches.single.map((request) => request.id).toList(),
@@ -500,38 +506,9 @@ void main() {
     );
 
     test(
-      'keeps later requests queued until an app-open succeeds after a retryable failure',
+      'delivers events in the same flush even when the app-open fails',
       () async {
-        appOpenMonitor.hasSuccessfulResult = false;
-        dispatcher = AttriaxRequestDispatcher(
-          transport: transport,
-          connectivity: connectivity,
-          appOpenMonitor: appOpenMonitor,
-          queueManager: queueManager,
-          logger: AttriaxLogger(enableDebugLogs: false),
-        );
-
-        final openRequest = AttriaxQueuedRequest(
-          id: 'req_open',
-          request: attriaxBuildOpenRequest(
-            config: const AttriaxConfig(projectToken: 'ax_test_token'),
-            context: const AttriaxContextSnapshot(
-              platform: AttriaxPlatformType.android,
-              deviceId: 'device_1',
-              isFirstLaunch: true,
-              sdk: AttriaxSdkSnapshot(
-                apiVersion: attriaxSdkApiVersion,
-                packageVersion: attriaxSdkPackageVersion,
-              ),
-              app: AttriaxAppSnapshot(
-                version: '1.0.0',
-                buildNumber: '1',
-                packageName: 'com.attriax.test',
-              ),
-              device: AttriaxDeviceSnapshot(model: 'Pixel', osVersion: '14'),
-            ),
-            deviceIdSource: 'android_ssaid',
-          ),
+        final openRequest = buildOpenRequest(
           createdAt: now.subtract(const Duration(seconds: 31)),
         );
 
@@ -540,61 +517,36 @@ void main() {
           queuedRequest,
         ]);
 
-        transport.sendError = const AttriaxTransportHttpException(
-          statusCode: 500,
-        );
-
-        await dispatcher.flush();
-
-        expect(transport.sentRequests, hasLength(1));
-        expect(transport.sentBatches, isEmpty);
-
-        final queuedAfterFailure = await queueManager.readAll();
-        expect(queuedAfterFailure, hasLength(2));
-        expect(queuedAfterFailure.first.request, isA<AttriaxOpenRequest>());
-        expect(queuedAfterFailure.first.attemptCount, 1);
-        expect(queuedAfterFailure.last.id, queuedRequest.id);
-
+        // App-open fails with a retryable error; the event must not be blocked.
         transport
-          ..sendError = null
-          ..sendResult = AttriaxTransportSuccess(
-            statusCode: 200,
-            response: AttriaxOpenApiResponse(
-              result: AttriaxAppOpenResult(
-                userId: 'user_1',
-                isNewUser: true,
-                isFirstLaunch: true,
-                requestVersion: 'v1',
-                acceptedAt: now,
-              ),
-            ),
-          )
+          ..sendError = const AttriaxTransportHttpException(statusCode: 500)
           ..sendBatchResult = const AttriaxTransportSuccess(
             statusCode: 202,
             response: AttriaxAckResponse(success: true),
           );
 
-        appOpenMonitor.hasSuccessfulResult = true;
         await dispatcher.flush();
 
-        expect(transport.sentRequests, hasLength(2));
+        // The event was delivered despite the failed app-open.
         expect(transport.sentBatches, hasLength(1));
-        expect(await queueManager.readAll(), isEmpty);
+        expect(
+          transport.sentBatches.single.map((request) => request.id).toList(),
+          <String>['req_1'],
+        );
+
+        // Only the failed app-open remains queued, marked for retry with a
+        // backoff window.
+        final queuedAfterFlush = await queueManager.readAll();
+        expect(queuedAfterFlush, hasLength(1));
+        expect(queuedAfterFlush.single.request, isA<AttriaxOpenRequest>());
+        expect(queuedAfterFlush.single.attemptCount, 1);
+        expect(queuedAfterFlush.single.nextRetryAt, isNotNull);
       },
     );
 
     test(
-      'sends deep-link resolution requests before app-open succeeds',
+      'sends deep-link resolution requests regardless of app-open state',
       () async {
-        appOpenMonitor.hasSuccessfulResult = false;
-        dispatcher = AttriaxRequestDispatcher(
-          transport: transport,
-          connectivity: connectivity,
-          appOpenMonitor: appOpenMonitor,
-          queueManager: queueManager,
-          logger: AttriaxLogger(enableDebugLogs: false),
-        );
-
         final resolveRequest = AttriaxQueuedRequest(
           id: 'req_resolve',
           request: attriaxBuildResolveDeepLinkRequest(
@@ -647,20 +599,4 @@ class FakeConnectivityPlatform extends ConnectivityPlatform {
       const Stream<List<ConnectivityResult>>.empty();
 
   Future<void> dispose() async {}
-}
-
-class FakeAppOpenMonitor implements AttriaxAppOpenMonitor {
-  FakeAppOpenMonitor({
-    this.hasSuccessfulResult = true,
-    this.shouldGateRequestsOnSuccessfulAppOpen = true,
-  });
-
-  @override
-  bool hasSuccessfulResult;
-
-  @override
-  bool shouldGateRequestsOnSuccessfulAppOpen;
-
-  @override
-  Future<AttriaxAppOpenResult?> waitForTrackedResult() async => null;
 }

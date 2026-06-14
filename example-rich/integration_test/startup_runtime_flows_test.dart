@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:attriax_api_client/attriax_api_client.dart' as sdk;
 import 'package:attriax_flutter/attriax_flutter.dart';
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
-import 'package:attriax_flutter/src/internal/attriax_app_open_monitor.dart';
 import 'package:attriax_flutter/src/internal/attriax_context_collector.dart';
 import 'package:attriax_flutter/src/internal/attriax_generated_transport.dart';
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
@@ -123,7 +122,8 @@ void main() {
     );
   });
 
-  testWidgets('holds queued work until startup install referrer finishes', (
+  testWidgets('delivers events immediately while app-open waits for the '
+      'install referrer', (
     tester,
   ) async {
     final platform = _DelayedInstallReferrerPlatform();
@@ -177,7 +177,18 @@ void main() {
     );
     await pumpEventQueue();
 
-    expect(requestPaths, isEmpty);
+    // B3: queued events are no longer gated behind the app-open / attribution
+    // handshake, so the purchase event is delivered immediately. The app-open
+    // (/open) request still waits for the install referrer, so it is not sent
+    // yet.
+    expect(requestPaths, contains('/api/sdk/v1/batch'));
+    expect(requestPaths, isNot(contains('/api/sdk/v1/open')));
+    expect(batchRequests, hasLength(1));
+
+    final items = batchRequests.single.body['items']! as List<Object?>;
+    expect(items, hasLength(1));
+    final item = items.single! as Map<String, Object?>;
+    expect(item['kind'], 'event');
 
     platform.complete(
       const AttriaxInstallReferrerContext(
@@ -186,13 +197,8 @@ void main() {
     );
     await pumpEventQueue();
 
-    expect(requestPaths, <String>['/api/sdk/v1/open', '/api/sdk/v1/batch']);
-    expect(batchRequests, hasLength(1));
-
-    final items = batchRequests.single.body['items']! as List<Object?>;
-    expect(items, hasLength(1));
-    final item = items.single! as Map<String, Object?>;
-    expect(item['kind'], 'event');
+    // Once the install referrer resolves, the app-open request is sent.
+    expect(requestPaths, contains('/api/sdk/v1/open'));
   });
 
   testWidgets('persists retry-after windows for queued event retries', (
@@ -235,7 +241,6 @@ void main() {
     final dispatcher = AttriaxRequestDispatcher(
       transport: transport,
       connectivity: Connectivity(),
-      appOpenMonitor: _FakeAppOpenMonitor(),
       queueManager: queueManager,
       logger: AttriaxLogger(enableDebugLogs: false),
     );
@@ -500,13 +505,3 @@ class _DelayedInstallReferrerPlatform extends AttriaxPlatform {
       _completer.future;
 }
 
-class _FakeAppOpenMonitor implements AttriaxAppOpenMonitor {
-  @override
-  bool get hasSuccessfulResult => true;
-
-  @override
-  bool get shouldGateRequestsOnSuccessfulAppOpen => true;
-
-  @override
-  Future<AttriaxAppOpenResult?> waitForTrackedResult() async => null;
-}

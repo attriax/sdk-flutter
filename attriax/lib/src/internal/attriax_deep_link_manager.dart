@@ -13,6 +13,11 @@ import 'attriax_generated_transport.dart';
 import 'attriax_logger.dart';
 import 'attriax_preferences_store.dart';
 import 'attriax_request_manager.dart';
+import 'deep_links/attriax_deep_link_browser_handler.dart';
+
+/// Default upper bound for how long [AttriaxDeepLinkManager.recordManualConversion]
+/// waits for a resolution before failing with a [TimeoutException].
+const Duration _defaultManualConversionTimeout = Duration(seconds: 30);
 
 /// Owns deep-link listener lifecycle, stream state, and manual/deferred link
 /// emission for the runtime.
@@ -34,7 +39,9 @@ class AttriaxDeepLinkManager {
     AttriaxDeepLinkResolver resolver = const AttriaxDeepLinkResolver(),
     AttriaxPlatform? platform,
     AttriaxClock? clock,
+    Duration manualConversionTimeout = _defaultManualConversionTimeout,
   }) : _config = config,
+       _manualConversionTimeout = manualConversionTimeout,
        _contextManager = contextManager,
        _listener = listener,
        _eventHub = eventHub,
@@ -46,7 +53,13 @@ class AttriaxDeepLinkManager {
        _logger = logger,
        _resolver = resolver,
        _platform = platform ?? AttriaxPlatform.instance,
-       _clock = clock ?? const AttriaxSystemClock();
+       _clock = clock ?? const AttriaxSystemClock() {
+    _browserHandler = AttriaxDeepLinkBrowserHandler(
+      config: _config,
+      platform: _platform,
+      logger: _logger,
+    );
+  }
 
   final AttriaxConfig _config;
   final AttriaxContextManager _contextManager;
@@ -64,6 +77,8 @@ class AttriaxDeepLinkManager {
   final AttriaxDeepLinkResolver _resolver;
   final AttriaxPlatform _platform;
   final AttriaxClock _clock;
+  final Duration _manualConversionTimeout;
+  late final AttriaxDeepLinkBrowserHandler _browserHandler;
 
   Stream<AttriaxRawDeepLinkEvent> get rawStream => _eventHub.rawDeepLinks;
   AttriaxRawDeepLinkEvent? get rawInitialDeepLink =>
@@ -126,7 +141,22 @@ class AttriaxDeepLinkManager {
       },
     );
 
-    return completer.future;
+    // Bound the wait so an awaited manual resolution cannot hang forever when
+    // the resolve request stays unsent (e.g. offline for a long time). The
+    // underlying request still follows the normal queue/retry policy; only the
+    // public future returned to the caller is time-bounded.
+    return completer.future.timeout(
+      _manualConversionTimeout,
+      onTimeout: () {
+        _logger.warning(
+          'Manual deep-link resolution timed out before completing.',
+        );
+        throw TimeoutException(
+          'Manual deep-link resolution did not complete in time.',
+          _manualConversionTimeout,
+        );
+      },
+    );
   }
 
   Future<void> handleDeferredAppOpen(
@@ -300,12 +330,16 @@ class AttriaxDeepLinkManager {
   }
 
   bool _isCurrentSession(String? originSessionId) {
-    final currentSessionId = _currentSessionIdProvider();
-    if (originSessionId == null || currentSessionId == null) {
+    // A link captured before any session existed (cold start) has no origin
+    // session, so it should attach to whatever session is current.
+    if (originSessionId == null) {
       return true;
     }
 
-    return originSessionId == currentSessionId;
+    // The link belongs to a known origin session. If the current session has
+    // ended (null) or has been replaced by a different one, the link is stale
+    // and must not leak into it.
+    return originSessionId == _currentSessionIdProvider();
   }
 
   Future<void> _completeManualConversionSuccess({
@@ -407,7 +441,7 @@ class AttriaxDeepLinkManager {
     Uri? fallbackUri,
     AttriaxRawDeepLinkEvent? rawEvent,
   }) async {
-    final handledBySdk = await _handleBrowserAction(result.browserAction);
+    final handledBySdk = await _browserHandler.handle(result.browserAction);
     return _resolver.buildResolution(
       result,
       clickedAt: clickedAt,
@@ -417,25 +451,6 @@ class AttriaxDeepLinkManager {
       rawEvent: rawEvent,
       handledBySdk: handledBySdk,
     );
-  }
-
-  Future<bool> _handleBrowserAction(
-    AttriaxResolvedUrlAction? browserAction,
-  ) async {
-    if (browserAction == null || !_config.automaticBrowserHandling) {
-      return false;
-    }
-
-    final opened = await _platform.openBrowserUrl(
-      uri: browserAction.uri,
-      openMode: browserAction.openMode,
-    );
-    if (!opened) {
-      _logger.warning(
-        'SDK could not open the resolved browser URL ${browserAction.uri}.',
-      );
-    }
-    return opened;
   }
 }
 

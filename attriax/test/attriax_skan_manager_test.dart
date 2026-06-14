@@ -376,6 +376,45 @@ void main() {
       expect(manager.state?.purchaseCount, 1);
     });
 
+    test('counts a failed FX conversion as one USD, not one micro', () async {
+      final manager = AttriaxSkanManager(
+        config: const AttriaxConfig(
+          projectToken: 'ax_test_token',
+          skan: AttriaxSkanConfig(registerFirstLaunchValue: false),
+        ),
+        preferencesStore: store,
+        platform: platform,
+        platformType: AttriaxPlatformType.ios,
+        clock: clock,
+        logger: AttriaxLogger(enableDebugLogs: false),
+        usdRevenueConverter:
+            ({
+              required amountMicros,
+              required currency,
+              required clientOccurredAt,
+            }) async => throw StateError('FX lookup failed'),
+      );
+      await manager.init(isFirstLaunch: false);
+      await manager.applyAppOpenResult(
+        AttriaxAppOpenResult(
+          userId: 'user_1',
+          isNewUser: false,
+          isFirstLaunch: false,
+          acceptedAt: clock.now(),
+          skan: _runtimeConfiguration(version: 8),
+        ),
+      );
+
+      await manager.handleTrackedEvent(
+        'purchase',
+        eventData: const <String, Object?>{'revenue': 5.0, 'currency': 'eur'},
+      );
+
+      // The optimistic fallback is $1 == 1_000_000 micros, not a single micro.
+      expect(manager.state?.purchaseRevenueUsdMicros, 1000000);
+      expect(manager.state?.purchaseCount, 1);
+    });
+
     test('tracks purchase count without inventing revenue', () async {
       final manager = AttriaxSkanManager(
         config: const AttriaxConfig(
@@ -491,6 +530,68 @@ void main() {
       expect(platform.calls.single.fineValue, 1);
       expect(platform.calls.single.coarseValue, AttriaxSkanCoarseValue.medium);
       expect(manager.state?.adShowCount, 2);
+    });
+
+    test('serializes concurrent tracked events without losing counts', () async {
+      final manager = AttriaxSkanManager(
+        config: const AttriaxConfig(
+          projectToken: 'ax_test_token',
+          skan: AttriaxSkanConfig(registerFirstLaunchValue: false),
+        ),
+        preferencesStore: store,
+        platform: platform,
+        platformType: AttriaxPlatformType.ios,
+        clock: clock,
+        logger: AttriaxLogger(enableDebugLogs: false),
+      );
+      await manager.init(isFirstLaunch: false);
+      await manager.applyAppOpenResult(
+        AttriaxAppOpenResult(
+          userId: 'user_1',
+          isNewUser: false,
+          isFirstLaunch: false,
+          acceptedAt: clock.now(),
+          skan: _runtimeConfiguration(
+            version: 11,
+            window1: const AttriaxSkanWindow1(
+              groups: <AttriaxSkanWindow1Group>[
+                AttriaxSkanWindow1Group(
+                  id: 'group_ads',
+                  startBit: 0,
+                  bitCount: 2,
+                  events: <AttriaxSkanEvent>[
+                    AttriaxSkanEvent(
+                      id: 'event_ads',
+                      eventName: 'ad_show',
+                      coarseValue: AttriaxSkanCoarseValue.medium,
+                      conditions: <AttriaxSkanCondition>[
+                        AttriaxSkanCondition(
+                          id: 'condition_shown',
+                          paramKey: 'shown',
+                          operator: AttriaxSkanRuleOperator.gte,
+                          value: 3,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Fire three events without awaiting each individually. Without the
+      // operation lock these would interleave their read-modify-persist cycle
+      // and the final count would under-report (lost updates).
+      await Future.wait(<Future<void>>[
+        manager.handleTrackedEvent('ad_show'),
+        manager.handleTrackedEvent('ad_show'),
+        manager.handleTrackedEvent('ad_show'),
+      ]);
+
+      expect(manager.state?.adShowCount, 3);
+      expect((await store.readSkanState())?.adShowCount, 3);
     });
 
     test(

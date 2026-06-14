@@ -368,13 +368,7 @@ void main() {
 
       await Future<void>.delayed(const Duration(milliseconds: 20));
 
-      var requestCompleted = false;
-      final requestFuture = collector.requestTrackingAuthorization().then((
-        status,
-      ) {
-        requestCompleted = true;
-        return status;
-      });
+      final requestFuture = collector.requestTrackingAuthorization();
 
       await Future<void>.delayed(const Duration(milliseconds: 180));
 

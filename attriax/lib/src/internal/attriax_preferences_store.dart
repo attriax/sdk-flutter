@@ -391,10 +391,6 @@ class AttriaxPreferencesStore
     await _writeBool(eventsEnabledStorageKey, enabled);
   }
 
-  Future<void> setDeviceId({required String deviceId}) async {
-    await _writeString(deviceIdStorageKey, deviceId);
-  }
-
   Future<void> setResolvedDeviceIdentity({
     required String deviceId,
     required String? deviceIdSource,
@@ -433,9 +429,6 @@ class AttriaxPreferencesStore
     await _writeString(gdprConsentIdStorageKey, generated);
     return generated;
   }
-
-  Future<String?> readStoredGdprConsentId() async =>
-      _sanitizeString(await _readString(gdprConsentIdStorageKey));
 
   Future<void> setRuntimeFlags({
     required bool enabled,
@@ -905,6 +898,19 @@ class AttriaxPreferencesStore
           await prefs.setString(entry.key, value);
           continue;
         }
+        if (value == null) {
+          continue;
+        }
+        // Only bool/String are written today. If a future key stores another
+        // type, surface it as a persistence failure rather than silently
+        // dropping the value on the consent-upgrade migration.
+        _markPersistenceFailure(
+          operation: 'syncMemory(${entry.key})',
+          error: StateError(
+            'Unsupported persisted value type ${value.runtimeType} for '
+            'memory key ${entry.key}.',
+          ),
+        );
       } catch (error) {
         _markPersistenceFailure(
           operation: 'syncMemory(${entry.key})',

@@ -12,8 +12,8 @@ typedef AttriaxSdkRuntimeConfigFetcher =
 typedef AttriaxSdkRuntimeConfigLoadedCallback =
     FutureOr<void> Function(AttriaxSdkRuntimeConfig runtimeConfig);
 
-class AttriaxSdkRuntimeConfigCoordinator {
-  AttriaxSdkRuntimeConfigCoordinator({
+class AttriaxRuntimeConfigManager {
+  AttriaxRuntimeConfigManager({
     required AttriaxConfig config,
     required AttriaxSdkRuntimeConfigContextSnapshotProvider contextSnapshot,
     required AttriaxSdkRuntimeConfigFetcher fetchRuntimeConfig,

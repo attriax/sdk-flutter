@@ -4,7 +4,6 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
 import 'attriax_api_models.dart';
-import 'attriax_app_open_monitor.dart';
 import 'attriax_generated_transport.dart';
 import 'attriax_id_generator.dart';
 import 'attriax_logger.dart';
@@ -18,7 +17,6 @@ class AttriaxSynchronizer {
   AttriaxSynchronizer({
     required AttriaxGeneratedTransport transport,
     required Connectivity connectivity,
-    required AttriaxAppOpenMonitor appOpenMonitor,
     required AttriaxPreferencesStore preferencesStore,
     required int maxQueueSize,
     required Duration eventFlushInterval,
@@ -40,7 +38,6 @@ class AttriaxSynchronizer {
     _dispatcher = AttriaxRequestDispatcher(
       transport: transport,
       connectivity: connectivity,
-      appOpenMonitor: appOpenMonitor,
       queueManager: _queueManager,
       logger: logger,
       buildSessionKeepAliveBatchRequest: buildSessionKeepAliveBatchRequest,
@@ -190,6 +187,12 @@ class AttriaxSynchronizer {
     if (inFlightRefresh != null) {
       await inFlightRefresh;
     }
+    // Release any in-memory request callbacks (e.g. a pending manual deep-link
+    // resolution) so awaiting callers complete instead of hanging forever once
+    // the runtime is disposed. The persisted queue is left untouched.
+    _dispatcher.clearPending(
+      error: StateError('Attriax SDK was disposed before delivery completed.'),
+    );
   }
 
   Future<void> flush() {

@@ -177,7 +177,11 @@ class AttriaxPlatformInstallReferrerManager {
     await Future<void>.delayed(_installReferrerRetryDelay);
     final second = await _fetchOnce(attempt: 2);
     if (_hasReferrer(second)) {
-      return _finishLoad(second);
+      return _finishLoad(
+        second,
+        persistResult: persistResult,
+        updateCachedState: updateCachedState,
+      );
     }
 
     final mergedMetadata = <String, dynamic>{

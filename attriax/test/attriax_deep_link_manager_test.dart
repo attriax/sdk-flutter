@@ -99,6 +99,32 @@ void main() {
     );
 
     test(
+      'recordManualConversion fails with a timeout when never resolved',
+      () async {
+        final manager = AttriaxDeepLinkManager(
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
+          contextManager: contextManager,
+          listener: AttriaxDeepLinkListener(
+            deepLinkSource: _FakeDeepLinkSource(),
+          ),
+          eventHub: eventHub,
+          preferencesStore: AttriaxPreferencesStore(prefsOverride: prefs),
+          requestManager: requestManager,
+          logger: AttriaxLogger(enableDebugLogs: false),
+          manualConversionTimeout: const Duration(milliseconds: 50),
+        );
+
+        // Never complete the request, simulating a resolution that stays unsent.
+        await expectLater(
+          manager.recordManualConversion(
+            uri: Uri.parse('https://example.com/promo/manual'),
+          ),
+          throwsA(isA<TimeoutException>()),
+        );
+      },
+    );
+
+    test(
       'opens browser actions before resolving manual deep-link conversions',
       () async {
         final manager = AttriaxDeepLinkManager(
@@ -462,6 +488,45 @@ void main() {
 
         expect(emittedEvents, isEmpty);
         expect(manager.initialDeepLink, isNull);
+        expect(manager.latestDeepLink, isNull);
+      },
+    );
+
+    test(
+      'suppresses stale deferred deep links after the origin session ended',
+      () async {
+        String? currentSessionId; // session has ended
+        final manager = AttriaxDeepLinkManager(
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
+          contextManager: contextManager,
+          listener: AttriaxDeepLinkListener(
+            deepLinkSource: _FakeDeepLinkSource(),
+          ),
+          eventHub: eventHub,
+          preferencesStore: AttriaxPreferencesStore(prefsOverride: prefs),
+          currentSessionIdProvider: () => currentSessionId,
+          requestManager: requestManager,
+          logger: AttriaxLogger(enableDebugLogs: false),
+        );
+
+        final emittedEvents = <Object?>[];
+        final subscription = manager.stream.listen(emittedEvents.add);
+        addTearDown(subscription.cancel);
+
+        await manager.handleDeferredAppOpen(
+          const AttriaxAppOpenResult(
+            userId: 'user_1',
+            isNewUser: true,
+            isFirstLaunch: true,
+            deepLink: AttriaxDeepLink(path: 'promo/deferred'),
+          ),
+          originSessionId: 'session_1',
+        );
+        await pumpEventQueue();
+
+        // The link belongs to session_1, which has ended (current is null), so
+        // it must not leak into a later session.
+        expect(emittedEvents, isEmpty);
         expect(manager.latestDeepLink, isNull);
       },
     );

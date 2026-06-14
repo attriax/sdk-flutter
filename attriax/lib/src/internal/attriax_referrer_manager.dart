@@ -6,6 +6,8 @@ import 'attriax_app_open_monitor.dart';
 import 'attriax_deep_link_manager.dart';
 import 'attriax_platform_install_referrer_manager.dart';
 import 'attriax_preferences_store.dart';
+import 'referrers/attriax_deep_link_referrer_mapper.dart';
+import 'referrers/attriax_raw_install_referrer_normalizer.dart';
 
 class AttriaxReferrerManager {
   AttriaxReferrerManager({
@@ -50,7 +52,6 @@ class AttriaxReferrerManager {
   Object? _sessionReferrerError;
   StackTrace? _sessionReferrerStackTrace;
 
-  Completer<AttriaxDeepLinkReferrerDetails?>? _latestDeepLinkCompleter;
   AttriaxDeepLinkReferrerDetails? _latestDeepLinkValue;
   Object? _latestDeepLinkError;
   StackTrace? _latestDeepLinkStackTrace;
@@ -136,8 +137,7 @@ class AttriaxReferrerManager {
 
     final value = await _platformInstallReferrerManager
         .loadRawInstallReferrer();
-    final trimmed = value?.trim();
-    return trimmed == null || trimmed.isEmpty ? null : trimmed;
+    return attriaxNormalizeRawInstallReferrer(value);
   }
 
   Future<AttriaxInstallReferrerDetails?> waitForOriginalInstallReferrer() {
@@ -359,13 +359,18 @@ class AttriaxReferrerManager {
       }
 
       _setSessionReferrerValue(null);
-    } catch (error, stackTrace) {
+    } catch (_) {
       if (!_isSessionObservationCurrent(generation, sessionId) ||
           _sessionReferrerResolved) {
         return;
       }
 
-      _setSessionReferrerError(error, stackTrace);
+      // A failure while observing startup (e.g. a transient app-open delivery
+      // error or an initial deep-link resolution error) means we could not
+      // determine a session referrer, not that the public read should throw.
+      // Resolve to "no referrer" so getSessionReferrer() returns null rather
+      // than surfacing a delivery error to the app.
+      _setSessionReferrerValue(null);
     }
   }
 
@@ -379,21 +384,10 @@ class AttriaxReferrerManager {
         return;
       }
 
-      final details = AttriaxDeepLinkReferrerDetails(
-        uri: event.uri,
-        receivedAt: event.rawEvent?.receivedAt ?? event.clickedAt,
-        clickedAt: event.clickedAt,
-        consumedAt: event.consumedAt,
-        trigger: event.trigger,
-        isAttriaxDomain: event.isAttriaxSubDomain,
-        found: event.found,
-        data: event.data,
-        utm: event.utm,
-        browserAction: event.browserAction,
-        handledBySdk: event.handledBySdk,
-      );
+      final details = attriaxDeepLinkReferrerDetailsFromEvent(event);
       _setLatestDeepLinkValue(details);
-      if (!_sessionReferrerResolved && _isSessionOpeningEvent(event)) {
+      if (!_sessionReferrerResolved &&
+          attriaxIsSessionOpeningDeepLinkEvent(event)) {
         _setSessionReferrerValue(details);
       }
     } catch (error, stackTrace) {
@@ -402,7 +396,8 @@ class AttriaxReferrerManager {
       }
 
       _setLatestDeepLinkError(error, stackTrace);
-      if (!_sessionReferrerResolved && _isSessionOpeningEvent(event)) {
+      if (!_sessionReferrerResolved &&
+          attriaxIsSessionOpeningDeepLinkEvent(event)) {
         _setSessionReferrerError(error, stackTrace);
       }
     }
@@ -473,9 +468,6 @@ class AttriaxReferrerManager {
       generation == _sessionObservationGeneration &&
       sessionId == _observedSessionId;
 
-  bool _isSessionOpeningEvent(AttriaxDeepLinkEvent event) =>
-      event.isColdStart || event.isDeferred;
-
   void _syncSessionScope({bool forceReset = false}) {
     final currentSessionId = _currentSessionIdProvider();
     if (!forceReset && currentSessionId == _observedSessionId) {
@@ -499,7 +491,6 @@ class AttriaxReferrerManager {
     _sessionReferrerResolved = false;
     _sessionReferrerError = null;
     _sessionReferrerStackTrace = null;
-    _latestDeepLinkCompleter = null;
     _latestDeepLinkValue = null;
     _latestDeepLinkError = null;
     _latestDeepLinkStackTrace = null;
@@ -523,12 +514,6 @@ class AttriaxReferrerManager {
     if (sessionReferrerCompleter != null &&
         !sessionReferrerCompleter.isCompleted) {
       sessionReferrerCompleter.complete(null);
-    }
-
-    final latestDeepLinkCompleter = _latestDeepLinkCompleter;
-    if (latestDeepLinkCompleter != null &&
-        !latestDeepLinkCompleter.isCompleted) {
-      latestDeepLinkCompleter.complete(null);
     }
   }
 
@@ -602,20 +587,12 @@ class AttriaxReferrerManager {
     _latestDeepLinkValue = value;
     _latestDeepLinkError = null;
     _latestDeepLinkStackTrace = null;
-    final completer = _latestDeepLinkCompleter;
-    if (completer != null && !completer.isCompleted) {
-      completer.complete(value);
-    }
   }
 
   void _setLatestDeepLinkError(Object error, StackTrace stackTrace) {
     _latestDeepLinkValue = null;
     _latestDeepLinkError = error;
     _latestDeepLinkStackTrace = stackTrace;
-    final completer = _latestDeepLinkCompleter;
-    if (completer != null && !completer.isCompleted) {
-      completer.completeError(error, stackTrace);
-    }
   }
 }
 

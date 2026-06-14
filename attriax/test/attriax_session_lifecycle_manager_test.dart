@@ -53,9 +53,14 @@ void main() {
         final body = requests.single.toQueueBody();
         expect(body['kind'], 'end');
         expect(body['sessionId'], 'session_old');
+        // The recovered session ended while the app was not running, so its
+        // inferred end is clamped to "now" (the moment the replacing session is
+        // prepared) rather than being projected past it (lastActivityAt + the
+        // continuation window). This keeps the end from postdating the new
+        // session's start and producing out-of-order lifecycle events.
         expect(
           body['clientOccurredAt'],
-          DateTime.utc(2026, 5, 3, 12, 0, 5).toIso8601String(),
+          DateTime.utc(2026, 5, 3, 12, 0, 3).toIso8601String(),
         );
 
         final metadata = body['metadata']! as Map<String, Object?>;

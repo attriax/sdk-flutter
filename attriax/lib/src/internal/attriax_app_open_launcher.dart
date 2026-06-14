@@ -5,8 +5,7 @@ import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 import 'attriax_sdk_runtime_config.dart';
 
 typedef AttriaxAppOpenLaunchDidScheduleProvider = bool Function();
-typedef AttriaxAppOpenLaunchAllowsAttributionTrackingProvider =
-    bool Function();
+typedef AttriaxAppOpenLaunchAllowsAttributionTrackingProvider = bool Function();
 typedef AttriaxAppOpenLaunchCurrentSessionIdProvider = String? Function();
 typedef AttriaxAppOpenLaunchRuntimeConfigLoader =
     Future<AttriaxSdkRuntimeConfig> Function();
@@ -19,18 +18,20 @@ typedef AttriaxAppOpenLaunchInstallReferrerOverrideBuilder =
       required bool clipboardAttributionEnabled,
       required bool allowsAttributionTracking,
     });
-typedef AttriaxAppOpenLaunchScheduleCallback = Future<void> Function({
-  String? installReferrerOverride,
-  Map<String, Object?> deviceMetadataOverrides,
-  Future<void> Function(AttriaxAppOpenResult? result)? onCompleted,
-});
-typedef AttriaxAppOpenLaunchCompletedCallback = Future<void> Function(
-  AttriaxAppOpenResult? result, {
-  String? originSessionId,
-});
+typedef AttriaxAppOpenLaunchScheduleCallback =
+    Future<void> Function({
+      String? installReferrerOverride,
+      Map<String, Object?> deviceMetadataOverrides,
+      Future<void> Function(AttriaxAppOpenResult? result)? onCompleted,
+    });
+typedef AttriaxAppOpenLaunchCompletedCallback =
+    Future<void> Function(
+      AttriaxAppOpenResult? result, {
+      String? originSessionId,
+    });
 
-class AttriaxAppOpenLaunchCoordinator {
-  AttriaxAppOpenLaunchCoordinator({
+class AttriaxAppOpenLauncher {
+  AttriaxAppOpenLauncher({
     required AttriaxAppOpenLaunchDidScheduleProvider didSchedule,
     required AttriaxAppOpenLaunchAllowsAttributionTrackingProvider
     allowsAttributionTracking,
@@ -56,8 +57,7 @@ class AttriaxAppOpenLaunchCoordinator {
   _allowsAttributionTracking;
   final AttriaxAppOpenLaunchCurrentSessionIdProvider _currentSessionId;
   final AttriaxAppOpenLaunchRuntimeConfigLoader _ensureRuntimeConfigLoaded;
-  final AttriaxAppOpenLaunchDeviceMetadataBuilder
-  _buildDeviceMetadataOverrides;
+  final AttriaxAppOpenLaunchDeviceMetadataBuilder _buildDeviceMetadataOverrides;
   final AttriaxAppOpenLaunchInstallReferrerOverrideBuilder
   _installReferrerOverrideForAppOpen;
   final AttriaxAppOpenLaunchScheduleCallback _scheduleAppOpen;
