@@ -447,7 +447,7 @@ class AttriaxRuntime {
     }
 
     await _ensureTransport().eraseGdprData(
-      appToken: config.projectToken,
+      projectToken: config.projectToken,
       deviceId: deviceId,
     );
 
@@ -584,7 +584,7 @@ class AttriaxRuntime {
   Future<bool> needsGdprConsent({bool localOnly = false}) {
     _consentManager.bindTransport(_ensureTransport());
     return _consentManager.needsConsent(
-      appToken: config.projectToken,
+      projectToken: config.projectToken,
       localOnly: localOnly,
     );
   }
@@ -597,7 +597,7 @@ class AttriaxRuntime {
     _consentManager
       ..bindTransport(_ensureTransport())
       ..setConsent(
-        appToken: config.projectToken,
+        projectToken: config.projectToken,
         analytics: analytics,
         attribution: attribution,
         adEvents: adEvents,
@@ -607,13 +607,13 @@ class AttriaxRuntime {
   void setGdprConsentNotRequired() {
     _consentManager
       ..bindTransport(_ensureTransport())
-      ..setNotRequired(appToken: config.projectToken);
+      ..setNotRequired(projectToken: config.projectToken);
   }
 
   void resetGdprConsent() {
     _consentManager
       ..bindTransport(_ensureTransport())
-      ..reset(appToken: config.projectToken);
+      ..reset(projectToken: config.projectToken);
   }
 
   Future<AttriaxCreateDynamicLinkResult> createDynamicLink({
@@ -952,7 +952,7 @@ class AttriaxRuntime {
     } else {
       _sessionManager.deactivate();
     }
-    unawaited(_consentManager.flushPendingSync(appToken: config.projectToken));
+    unawaited(_consentManager.flushPendingSync(projectToken: config.projectToken));
     _synchronizer?.scheduleFlush();
   }
 
@@ -1088,7 +1088,7 @@ class AttriaxRuntime {
 
     if (!_shouldDeferNetworkDispatch) {
       unawaited(
-        _consentManager.flushPendingSync(appToken: config.projectToken),
+        _consentManager.flushPendingSync(projectToken: config.projectToken),
       );
     }
 
@@ -1195,7 +1195,7 @@ class AttriaxRuntime {
     }
 
     final result = await transport.convertRevenueToUsd(<String, Object?>{
-      'appToken': config.projectToken,
+      'projectToken': config.projectToken,
       'currency': currency,
       'amountMicros': amountMicros.toString(),
       'clientOccurredAt': clientOccurredAt.toUtc().toIso8601String(),

@@ -49,7 +49,7 @@ void main() {
       queuedRequest = AttriaxQueuedRequest(
         id: 'req_1',
         request: attriaxBuildTrackEventRequest(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           deviceId: 'device_1',
           deviceIdSource: 'android_ssaid',
           eventName: 'purchase',
@@ -240,7 +240,7 @@ void main() {
         final deliverableRequest = AttriaxQueuedRequest(
           id: 'req_2',
           request: attriaxBuildTrackSessionRequest(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             deviceIdSource: 'android_ssaid',
             session: AttriaxSessionSnapshot(
               id: 'session_1',
@@ -290,7 +290,7 @@ void main() {
           logger: AttriaxLogger(enableDebugLogs: false),
           buildSessionKeepAliveBatchRequest: (_) =>
               attriaxBuildTrackSessionRequest(
-                appToken: 'ax_test_token',
+                projectToken: 'ax_test_token',
                 deviceIdSource: 'android_ssaid',
                 session: AttriaxSessionSnapshot(
                   id: 'session_1',
@@ -347,7 +347,7 @@ void main() {
       final secondRequest = AttriaxQueuedRequest(
         id: 'req_2',
         request: attriaxBuildUserRequest(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           deviceId: 'device_2',
           deviceIdSource: 'android_ssaid',
           externalUserId: 'user_2',
@@ -378,7 +378,7 @@ void main() {
       final secondRequest = AttriaxQueuedRequest(
         id: 'req_2',
         request: attriaxBuildUserRequest(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           deviceId: 'device_1',
           deviceIdSource: 'android_ssaid',
           externalUserId: 'user_1',
@@ -414,7 +414,7 @@ void main() {
           logger: AttriaxLogger(enableDebugLogs: false),
           buildSessionKeepAliveBatchRequest: (_) =>
               attriaxBuildTrackSessionRequest(
-                appToken: 'ax_test_token',
+                projectToken: 'ax_test_token',
                 deviceIdSource: 'android_ssaid',
                 session: AttriaxSessionSnapshot(
                   id: 'session_1',
@@ -440,7 +440,7 @@ void main() {
           (index) => AttriaxQueuedRequest(
             id: 'req_${index + 1}',
             request: attriaxBuildTrackEventRequest(
-              appToken: 'ax_test_token',
+              projectToken: 'ax_test_token',
               deviceId: 'device_1',
               deviceIdSource: 'android_ssaid',
               eventName: 'purchase_${index + 1}',

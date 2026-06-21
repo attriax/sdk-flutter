@@ -56,7 +56,7 @@ final class AttriaxTrackNotificationRequest extends AttriaxApiRequest {
 
 final class AttriaxCrashReportPayload {
   const AttriaxCrashReportPayload({
-    required this.appToken,
+    required this.projectToken,
     required this.source,
     required this.clientOccurredAt,
     required this.platform,
@@ -81,7 +81,7 @@ final class AttriaxCrashReportPayload {
 
   factory AttriaxCrashReportPayload.fromJson(Map<String, Object?> json) =>
       AttriaxCrashReportPayload(
-        appToken: attriaxRequireString(json, 'appToken'),
+        projectToken: attriaxRequireString(json, 'projectToken'),
         deviceId: attriaxStringValue(json['deviceId']),
         deviceIdSource: attriaxStringValue(json['deviceIdSource']),
         source: attriaxRequireString(json, 'source'),
@@ -108,7 +108,7 @@ final class AttriaxCrashReportPayload {
         metadata: attriaxObjectMap(json['metadata']),
       );
 
-  final String appToken;
+  final String projectToken;
   final String? deviceId;
   final String? deviceIdSource;
   final String source;
@@ -131,7 +131,7 @@ final class AttriaxCrashReportPayload {
   final Map<String, Object?>? metadata;
 
   Map<String, Object?> toJson() => <String, Object?>{
-    'appToken': appToken,
+    'projectToken': projectToken,
     if (deviceId != null) 'deviceId': deviceId,
     if (deviceIdSource != null) 'deviceIdSource': deviceIdSource,
     'source': source,
@@ -176,7 +176,7 @@ enum AttriaxSessionLifecycleKind { start, heartbeat, pause, resume, end }
 
 final class AttriaxSessionLifecyclePayload {
   const AttriaxSessionLifecyclePayload({
-    required this.appToken,
+    required this.projectToken,
     required this.kind,
     required this.sessionId,
     required this.clientOccurredAt,
@@ -196,7 +196,7 @@ final class AttriaxSessionLifecyclePayload {
 
   factory AttriaxSessionLifecyclePayload.fromJson(Map<String, Object?> json) =>
       AttriaxSessionLifecyclePayload(
-        appToken: attriaxRequireString(json, 'appToken'),
+        projectToken: attriaxRequireString(json, 'projectToken'),
         deviceId: attriaxStringValue(json['deviceId']),
         deviceIdSource: attriaxStringValue(json['deviceIdSource']),
         kind: _parseSessionLifecycleKind(attriaxRequireString(json, 'kind')),
@@ -218,7 +218,7 @@ final class AttriaxSessionLifecyclePayload {
         metadata: attriaxObjectMap(json['metadata']),
       );
 
-  final String appToken;
+  final String projectToken;
   final String? deviceId;
   final String? deviceIdSource;
   final AttriaxSessionLifecycleKind kind;
@@ -236,7 +236,7 @@ final class AttriaxSessionLifecyclePayload {
   final Map<String, Object?>? metadata;
 
   Map<String, Object?> toJson() => <String, Object?>{
-    'appToken': appToken,
+    'projectToken': projectToken,
     if (deviceId != null) 'deviceId': deviceId,
     if (deviceIdSource != null) 'deviceIdSource': deviceIdSource,
     'kind': kind.name,

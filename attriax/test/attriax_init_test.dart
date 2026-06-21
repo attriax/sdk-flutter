@@ -1338,7 +1338,7 @@ void main() {
           expect(request.url.path, '/api/sdk/v1/uninstall-tokens');
 
           final body = jsonDecode(request.body) as Map<String, Object?>;
-          expect(body['appToken'], 'ax_test_token');
+          expect(body['projectToken'], 'ax_test_token');
           expect(body['deviceId'], isNotEmpty);
           expect(body['deviceIdSource'], isNotEmpty);
           expect(body['platform'], 'android');
@@ -1398,7 +1398,7 @@ void main() {
           expect(request.url.path, '/api/sdk/v1/uninstall-tokens');
 
           final body = jsonDecode(request.body) as Map<String, Object?>;
-          expect(body['appToken'], 'ax_test_token');
+          expect(body['projectToken'], 'ax_test_token');
           expect(body['deviceId'], isNotEmpty);
           expect(body['deviceIdSource'], isNotEmpty);
           expect(body['platform'], 'android');
@@ -1458,7 +1458,7 @@ void main() {
           expect(request.url.path, '/api/sdk/v1/uninstall-tokens');
 
           final body = jsonDecode(request.body) as Map<String, Object?>;
-          expect(body['appToken'], 'ax_test_token');
+          expect(body['projectToken'], 'ax_test_token');
           expect(body['deviceId'], isNotEmpty);
           expect(body['deviceIdSource'], isNotEmpty);
           expect(body['platform'], 'ios');

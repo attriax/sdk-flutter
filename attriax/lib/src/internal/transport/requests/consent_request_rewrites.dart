@@ -1,5 +1,3 @@
-// ignore_for_file: deprecated_member_use
-
 part of '../../attriax_api_models.dart';
 
 AttriaxApiRequest attriaxAnonymizeRequestForConsent(
@@ -7,11 +5,7 @@ AttriaxApiRequest attriaxAnonymizeRequestForConsent(
 ) => switch (request) {
   AttriaxTrackEventRequest(:final payload) => AttriaxTrackEventRequest(
     sdk.SdkEventDto(
-      appToken: _attriaxResolveCompatibleToken(
-        context: 'Attriax anonymized event request',
-        projectToken: payload.projectToken,
-        appToken: payload.appToken,
-      ),
+      projectToken: payload.projectToken,
       clientOccurredAt: payload.clientOccurredAt,
       eventData: payload.eventData,
       eventName: payload.eventName,
@@ -21,7 +15,7 @@ AttriaxApiRequest attriaxAnonymizeRequestForConsent(
   ),
   AttriaxTrackCrashRequest(:final payload) => AttriaxTrackCrashRequest(
     AttriaxCrashReportPayload(
-      appToken: payload.appToken,
+      projectToken: payload.projectToken,
       source: payload.source,
       clientOccurredAt: payload.clientOccurredAt,
       platform: payload.platform,
@@ -44,7 +38,7 @@ AttriaxApiRequest attriaxAnonymizeRequestForConsent(
   ),
   AttriaxTrackSessionRequest(:final payload) => AttriaxTrackSessionRequest(
     AttriaxSessionLifecyclePayload(
-      appToken: payload.appToken,
+      projectToken: payload.projectToken,
       kind: payload.kind,
       sessionId: payload.sessionId,
       sessionRelativeTimeMs: payload.sessionRelativeTimeMs,
@@ -63,11 +57,7 @@ AttriaxApiRequest attriaxAnonymizeRequestForConsent(
   AttriaxResolveDeepLinkRequest(:final payload) =>
     AttriaxResolveDeepLinkRequest(
       sdk.SdkV1DeepLinkResolveDto(
-        appToken: _attriaxResolveCompatibleToken(
-          context: 'Attriax anonymized deep-link request',
-          projectToken: payload.projectToken,
-          appToken: payload.appToken,
-        ),
+        projectToken: payload.projectToken,
         isFirstLaunch: payload.isFirstLaunch,
         linkPath: payload.linkPath,
         metadata: payload.metadata,
@@ -79,11 +69,7 @@ AttriaxApiRequest attriaxAnonymizeRequestForConsent(
   AttriaxTrackNotificationRequest(:final payload) =>
     AttriaxTrackNotificationRequest(
       sdk.SdkNotificationDto(
-        appToken: _attriaxResolveCompatibleToken(
-          context: 'Attriax anonymized notification request',
-          projectToken: payload.projectToken,
-          appToken: payload.appToken,
-        ),
+        projectToken: payload.projectToken,
         campaignId: payload.campaignId,
         linkId: payload.linkId,
         metadata: payload.metadata,
@@ -107,11 +93,7 @@ AttriaxApiRequest? attriaxIdentifyRequestForConsentNotRequired(
   AttriaxTrackEventRequest(:final payload) when payload.deviceId == null =>
     AttriaxTrackEventRequest(
       sdk.SdkEventDto(
-        appToken: _attriaxResolveCompatibleToken(
-          context: 'Attriax identified event request',
-          projectToken: payload.projectToken,
-          appToken: payload.appToken,
-        ),
+        projectToken: payload.projectToken,
         clientOccurredAt: payload.clientOccurredAt,
         deviceId: deviceId,
         deviceIdSource: deviceIdSource,
@@ -124,7 +106,7 @@ AttriaxApiRequest? attriaxIdentifyRequestForConsentNotRequired(
   AttriaxTrackCrashRequest(:final payload) when payload.deviceId == null =>
     AttriaxTrackCrashRequest(
       AttriaxCrashReportPayload(
-        appToken: payload.appToken,
+        projectToken: payload.projectToken,
         deviceId: deviceId,
         deviceIdSource: deviceIdSource,
         source: payload.source,
@@ -150,7 +132,7 @@ AttriaxApiRequest? attriaxIdentifyRequestForConsentNotRequired(
   AttriaxTrackSessionRequest(:final payload) when payload.deviceId == null =>
     AttriaxTrackSessionRequest(
       AttriaxSessionLifecyclePayload(
-        appToken: payload.appToken,
+        projectToken: payload.projectToken,
         deviceId: deviceId,
         deviceIdSource: deviceIdSource,
         kind: payload.kind,
@@ -171,11 +153,7 @@ AttriaxApiRequest? attriaxIdentifyRequestForConsentNotRequired(
   AttriaxResolveDeepLinkRequest(:final payload) when payload.deviceId == null =>
     AttriaxResolveDeepLinkRequest(
       sdk.SdkV1DeepLinkResolveDto(
-        appToken: _attriaxResolveCompatibleToken(
-          context: 'Attriax identified deep-link request',
-          projectToken: payload.projectToken,
-          appToken: payload.appToken,
-        ),
+        projectToken: payload.projectToken,
         deviceId: deviceId,
         deviceIdSource: deviceIdSource,
         isFirstLaunch: payload.isFirstLaunch,
@@ -190,11 +168,7 @@ AttriaxApiRequest? attriaxIdentifyRequestForConsentNotRequired(
       when payload.deviceId == null =>
     AttriaxTrackNotificationRequest(
       sdk.SdkNotificationDto(
-        appToken: _attriaxResolveCompatibleToken(
-          context: 'Attriax identified notification request',
-          projectToken: payload.projectToken,
-          appToken: payload.appToken,
-        ),
+        projectToken: payload.projectToken,
         campaignId: payload.campaignId,
         deviceId: deviceId,
         deviceIdSource: deviceIdSource,

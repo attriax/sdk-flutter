@@ -188,13 +188,13 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     await _restore();
   }
 
-  Future<void> flushPendingSync({required String appToken}) async {
+  Future<void> flushPendingSync({required String projectToken}) async {
     await _restore();
-    await _flushPendingSync(appToken: appToken);
+    await _flushPendingSync(projectToken: projectToken);
   }
 
   Future<bool> needsConsent({
-    required String appToken,
+    required String projectToken,
     bool localOnly = false,
   }) async {
     await _restore();
@@ -205,7 +205,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
         (localOnly || !_shouldRefreshRemoteDecision);
     if (canUseCachedState) {
       if (!localOnly) {
-        unawaited(_flushPendingSync(appToken: appToken));
+        unawaited(_flushPendingSync(projectToken: projectToken));
       }
       return isWaitingForGdprConsent;
     }
@@ -216,7 +216,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     }
 
     final resolution = _resolveNeedsConsent(
-      appToken: appToken,
+      projectToken: projectToken,
       localOnly: localOnly,
     );
     _needsConsentFuture = resolution;
@@ -228,7 +228,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
   }
 
   void setConsent({
-    required String appToken,
+    required String projectToken,
     required bool analytics,
     required bool attribution,
     required bool adEvents,
@@ -245,10 +245,10 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       regionSource: 'manual',
       pendingSync: true,
     );
-    unawaited(_persistAndFlush(appToken));
+    unawaited(_persistAndFlush(projectToken));
   }
 
-  void setNotRequired({required String appToken}) {
+  void setNotRequired({required String projectToken}) {
     _applyState(
       state: AttriaxGdprConsentState.notRequired,
       values: null,
@@ -257,10 +257,10 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       regionSource: 'manual',
       pendingSync: true,
     );
-    unawaited(_persistAndFlush(appToken));
+    unawaited(_persistAndFlush(projectToken));
   }
 
-  void reset({required String appToken}) {
+  void reset({required String projectToken}) {
     _applyState(
       state: AttriaxGdprConsentState.unknown,
       values: null,
@@ -269,7 +269,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       regionSource: null,
       pendingSync: true,
     );
-    unawaited(_persistAndFlush(appToken));
+    unawaited(_persistAndFlush(projectToken));
   }
 
   void clearMemory() {
@@ -289,11 +289,11 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       _regionSource == 'local_timezone_fallback';
 
   Future<bool> _resolveNeedsConsent({
-    required String appToken,
+    required String projectToken,
     required bool localOnly,
   }) async {
     if (_pendingSync && _state == AttriaxGdprConsentState.unknown) {
-      await _flushPendingSync(appToken: appToken);
+      await _flushPendingSync(projectToken: projectToken);
       if (_pendingSync && _state == AttriaxGdprConsentState.unknown) {
         return true;
       }
@@ -305,7 +305,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
         try {
           final consentId = await _ensureConsentId();
           final status = await transport.checkGdprConsent(
-            appToken: appToken,
+            projectToken: projectToken,
             consentId: consentId,
           );
           await _applyRemoteStatus(status, pendingSync: false);
@@ -377,9 +377,9 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     _didRestore = true;
   }
 
-  Future<void> _persistAndFlush(String appToken) async {
+  Future<void> _persistAndFlush(String projectToken) async {
     await _persistCurrentState();
-    await _flushPendingSync(appToken: appToken);
+    await _flushPendingSync(projectToken: projectToken);
   }
 
   Future<void> _persistCurrentState() {
@@ -405,7 +405,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     );
   }
 
-  Future<void> _flushPendingSync({required String appToken}) async {
+  Future<void> _flushPendingSync({required String projectToken}) async {
     if (!_pendingSync) {
       return;
     }
@@ -420,7 +420,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       return inFlight;
     }
 
-    final sync = _syncPendingState(appToken: appToken, transport: transport);
+    final sync = _syncPendingState(projectToken: projectToken, transport: transport);
     _pendingSyncFuture = sync;
     return sync.whenComplete(() {
       if (identical(_pendingSyncFuture, sync)) {
@@ -430,13 +430,13 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
   }
 
   Future<void> _syncPendingState({
-    required String appToken,
+    required String projectToken,
     required AttriaxGeneratedTransport transport,
   }) async {
     try {
       final consentId = await _ensureConsentId();
       final status = await transport.upsertGdprConsent(
-        appToken: appToken,
+        projectToken: projectToken,
         consentId: consentId,
         state: _sdkStateFromPublic(_state),
         values: _values == null

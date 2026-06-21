@@ -492,7 +492,7 @@ class AttriaxRequestDispatcher {
 
     return <String, Object?>{
       'requestId': attriaxBatchRequestId(firstQueuedRequest.id),
-      'appToken': sharedIdentity.appToken,
+      'projectToken': sharedIdentity.projectToken,
       'deviceId': sharedIdentity.deviceId,
       if (sharedIdentity.deviceIdSource != null)
         'deviceIdSource': sharedIdentity.deviceIdSource,

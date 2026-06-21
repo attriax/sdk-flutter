@@ -17,28 +17,14 @@ const int _attriaxBatchMaxBodyBytes = 48 * 1024;
 
 String _resolveTransportProjectToken({
   required String context,
-  String? projectToken,
-  String? appToken,
+  required String projectToken,
 }) {
-  final normalizedProjectToken = projectToken?.trim();
-  final normalizedAppToken = appToken?.trim();
-
-  if (normalizedProjectToken != null &&
-      normalizedAppToken != null &&
-      normalizedProjectToken != normalizedAppToken) {
-    throw ArgumentError(
-      '$context received mismatched projectToken and deprecated appToken values.',
-    );
+  final normalizedProjectToken = projectToken.trim();
+  if (normalizedProjectToken.isEmpty) {
+    throw ArgumentError('$context requires projectToken.');
   }
 
-  final resolvedToken = normalizedProjectToken ?? normalizedAppToken;
-  if (resolvedToken == null || resolvedToken.isEmpty) {
-    throw ArgumentError(
-      '$context requires projectToken or the deprecated appToken alias.',
-    );
-  }
-
-  return resolvedToken;
+  return normalizedProjectToken;
 }
 
 class AttriaxTransportSuccess {
@@ -220,7 +206,7 @@ class AttriaxGeneratedTransport {
 
     final body = <String, Object?>{
       'requestId': batchRequestId,
-      'appToken': sharedIdentity.appToken,
+      'projectToken': sharedIdentity.projectToken,
       'deviceId': sharedIdentity.deviceId,
       if (sharedIdentity.deviceIdSource != null)
         'deviceIdSource': sharedIdentity.deviceIdSource,
@@ -241,7 +227,7 @@ class AttriaxGeneratedTransport {
     }
 
     final batchDto = sdk.SdkV1BatchDto(
-      appToken: sharedIdentity.appToken,
+      projectToken: sharedIdentity.projectToken,
       deviceId: sharedIdentity.deviceId,
       deviceIdSource: attriaxStringValue(sharedIdentity.deviceIdSource),
       items: requests
@@ -285,20 +271,18 @@ class AttriaxGeneratedTransport {
   }
 
   Future<sdk.SdkGdprConsentStatusDto> checkGdprConsent({
-    String? projectToken,
-    @Deprecated('Use projectToken instead.') String? appToken,
+    required String projectToken,
     required String consentId,
   }) async {
     final resolvedToken = _resolveTransportProjectToken(
       context: 'Attriax GDPR consent check',
       projectToken: projectToken,
-      appToken: appToken,
     );
 
     try {
       final response = await _sdkApi.sdkControllerCheckGdprConsentV1(
         sdkV1GdprConsentCheckDto: sdk.SdkV1GdprConsentCheckDto(
-          appToken: resolvedToken,
+          projectToken: resolvedToken,
           consentId: consentId,
         ),
         validateStatus: _allowAnyStatus,
@@ -314,8 +298,7 @@ class AttriaxGeneratedTransport {
   }
 
   Future<sdk.SdkGdprConsentStatusDto> upsertGdprConsent({
-    String? projectToken,
-    @Deprecated('Use projectToken instead.') String? appToken,
+    required String projectToken,
     required String consentId,
     required sdk.AppUserGdprConsentState state,
     sdk.SdkV1GdprConsentValuesDto? values,
@@ -326,13 +309,12 @@ class AttriaxGeneratedTransport {
     final resolvedToken = _resolveTransportProjectToken(
       context: 'Attriax GDPR consent upsert',
       projectToken: projectToken,
-      appToken: appToken,
     );
 
     try {
       final response = await _sdkApi.sdkControllerUpsertGdprConsentV1(
         sdkV1GdprConsentWriteDto: sdk.SdkV1GdprConsentWriteDto(
-          appToken: resolvedToken,
+          projectToken: resolvedToken,
           consentId: consentId,
           state: state,
           values: values,
@@ -427,20 +409,18 @@ class AttriaxGeneratedTransport {
   }
 
   Future<void> eraseGdprData({
-    String? projectToken,
-    @Deprecated('Use projectToken instead.') String? appToken,
+    required String projectToken,
     required String deviceId,
   }) async {
     final resolvedToken = _resolveTransportProjectToken(
       context: 'Attriax GDPR data erasure',
       projectToken: projectToken,
-      appToken: appToken,
     );
 
     final response = await _dio.post<Object?>(
       '/api/sdk/v1/privacy/gdpr/erase',
       data: attriaxNormalizeJsonMap(<String, Object?>{
-        'appToken': resolvedToken,
+        'projectToken': resolvedToken,
         'deviceId': deviceId,
       }),
       options: Options(validateStatus: _allowAnyStatus),

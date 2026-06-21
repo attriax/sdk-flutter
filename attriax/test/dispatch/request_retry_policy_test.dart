@@ -12,7 +12,7 @@ void main() {
     return AttriaxQueuedRequest(
       id: 'req_1',
       request: attriaxBuildTrackEventRequest(
-        appToken: 'ax_test_token',
+        projectToken: 'ax_test_token',
         deviceId: 'device_1',
         deviceIdSource: 'android_ssaid',
         eventName: 'purchase',

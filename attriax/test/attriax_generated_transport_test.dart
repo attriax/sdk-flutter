@@ -171,7 +171,7 @@ void main() {
         final body =
             jsonDecode(_readRequestBody(requestMessage))
                 as Map<String, Object?>;
-        expect(body['appToken'], 'ax_test_token');
+        expect(body['projectToken'], 'ax_test_token');
         expect(body['platform'], 'android');
         expect(body['packageName'], 'com.attriax.test');
         expect(body['signatureHashes'], <Object?>['AA:BB', 'CC:DD']);
@@ -267,7 +267,7 @@ void main() {
           final body =
               jsonDecode(_readRequestBody(request)) as Map<String, Object?>;
           expect(body['requestId'], 'batch_req_1');
-          expect(body['appToken'], 'ax_test_token');
+          expect(body['projectToken'], 'ax_test_token');
           expect(body['deviceId'], 'device_123');
 
           final items = body['items']! as List<Object?>;
@@ -291,7 +291,7 @@ void main() {
               (item) =>
                   !((item! as Map<String, Object?>)['body']!
                           as Map<String, Object?>)
-                      .containsKey('appToken'),
+                      .containsKey('projectToken'),
             ),
             isTrue,
           );
@@ -401,7 +401,7 @@ void main() {
 
         final body =
             jsonDecode(_readRequestBody(request)) as Map<String, Object?>;
-        expect(body['appToken'], 'ax_test_token');
+        expect(body['projectToken'], 'ax_test_token');
         expect(body['deviceId'], 'device_123');
         expect(body.containsKey('consentId'), isFalse);
 
@@ -483,7 +483,7 @@ AttriaxGeneratedTransport _createTransport(http.Client client) =>
 AttriaxOpenRequest _openRequest() => AttriaxOpenRequest(
   sdk.SdkV1OpenDto(
     app: sdk.AppVersionContextDto(version: '1.0.0'),
-    appToken: 'ax_test_token',
+    projectToken: 'ax_test_token',
     device: sdk.DeviceContextDto(),
     deviceId: 'device_123',
     deviceIdSource: 'android_ssaid',
@@ -498,7 +498,7 @@ AttriaxOpenRequest _openRequest() => AttriaxOpenRequest(
 
 AttriaxTrackEventRequest _eventRequest() => AttriaxTrackEventRequest(
   sdk.SdkEventDto(
-    appToken: 'ax_test_token',
+    projectToken: 'ax_test_token',
     deviceId: 'device_123',
     deviceIdSource: 'android_ssaid',
     eventName: 'purchase',
@@ -507,7 +507,7 @@ AttriaxTrackEventRequest _eventRequest() => AttriaxTrackEventRequest(
 
 AttriaxTrackCrashRequest _crashRequest() => AttriaxTrackCrashRequest(
   AttriaxCrashReportPayload(
-    appToken: 'ax_test_token',
+    projectToken: 'ax_test_token',
     deviceId: 'device_123',
     deviceIdSource: 'android_ssaid',
     source: 'flutter_error',
@@ -529,7 +529,7 @@ AttriaxTrackCrashRequest _crashRequest() => AttriaxTrackCrashRequest(
 
 AttriaxTrackSessionRequest _sessionRequest() => AttriaxTrackSessionRequest(
   AttriaxSessionLifecyclePayload(
-    appToken: 'ax_test_token',
+    projectToken: 'ax_test_token',
     deviceId: 'device_123',
     deviceIdSource: 'android_ssaid',
     kind: AttriaxSessionLifecycleKind.pause,

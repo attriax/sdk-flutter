@@ -453,7 +453,7 @@ void main() {
       sdk.consent.gdpr.setNotRequired();
       await _waitFor(() => syncedBody != null);
 
-      expect(syncedBody?['appToken'], 'ax_test_token');
+      expect(syncedBody?['projectToken'], 'ax_test_token');
       expect(syncedBody?['state'], 'not_required');
       expect(syncedBody?['consentId'], isA<String>());
       expect(syncedBody?['values'], isNull);
@@ -638,7 +638,7 @@ void main() {
         await sdk.consent.gdpr.requestDataErasure();
 
         expect(syncedConsentBody?['consentId'], isA<String>());
-        expect(erasureBody?['appToken'], 'ax_test_token');
+        expect(erasureBody?['projectToken'], 'ax_test_token');
         expect(erasureBody?['deviceId'], storedDeviceId);
         expect(erasureBody?.containsKey('consentId'), isFalse);
         expect(storedConsentId, isNotNull);

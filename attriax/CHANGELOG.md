@@ -12,6 +12,7 @@
 - Breaking: `validateReceipt(...)` now takes a single `required String receipt` plus `test`, `provider`, `environment`, `productId`, and `transactionId`; the previous per-store fields (`originalTransactionId`, `store`, `packageName`, `purchaseToken`, `receiptData`, `signedPayload`, `receiptSignature`) were removed, and `receipt` must be non-empty.
 - Breaking: `deepLinks.recordDeepLink(...)` now requires `uri`; the optional `linkPath` parameter was removed.
 - Breaking: `AttriaxConfig` now requires `projectToken`; the deprecated `appToken` constructor alias and getter were removed.
+- The SDK now sends `projectToken` on the wire (and uses it throughout its internal transport) instead of the deprecated `appToken` alias; the backend still accepts `appToken` from already-released SDKs.
 - Breaking: `Attriax.init({bool? enabled})` no longer accepts an `enabled` argument; use `tracking.enabled` before or after `init()` to control event delivery.
 - Breaking: tracking helpers (`recordEvent`, `recordPurchase`, `recordRefund`, `recordAdRevenue`, `recordAdEvent`, `recordPageView`, `recordError`, `setUser`, `setUserProperty`, `setUserProperties`, `clearUserProperties`) now return `void` (fire-and-forget) instead of `Future<void>`.
 - Failed network requests now retry with a capped, jittered exponential backoff (2s base, 5min cap) when the server sends no usable `Retry-After`, instead of being re-flushed with no spacing; a `Retry-After` of `0` or negative also falls back to backoff rather than an immediate retry.

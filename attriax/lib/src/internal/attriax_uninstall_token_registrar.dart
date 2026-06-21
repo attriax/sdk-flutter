@@ -53,7 +53,7 @@ class AttriaxUninstallTokenRegistrar {
 
     final normalizedToken = token?.trim();
     final request = attriaxBuildRegisterUninstallTokenQueueRequest(
-      appToken: _config.projectToken,
+      projectToken: _config.projectToken,
       deviceId: deviceId,
       deviceIdSource: _contextManager.requireDeviceIdSource(),
       platform: _contextManager.requiredSnapshot.platform,

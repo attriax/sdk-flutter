@@ -17,7 +17,7 @@ void main() {
         createdAt: DateTime.utc(2026, 5, 4, 10),
         request: AttriaxTrackCrashRequest(
           AttriaxCrashReportPayload(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             deviceId: 'device_123',
             deviceIdSource: 'android_ssaid',
             source: 'flutter_error',
@@ -89,7 +89,7 @@ void main() {
           id: 'req_valid',
           createdAt: DateTime.utc(2026, 5, 4, 10),
           request: attriaxBuildTrackEventRequest(
-            appToken: 'ax_test_token',
+            projectToken: 'ax_test_token',
             deviceId: 'device_123',
             deviceIdSource: 'android_ssaid',
             eventName: 'purchase',
@@ -177,7 +177,7 @@ void main() {
             id: 'req_1',
             createdAt: DateTime.utc(2026, 5, 4, 10),
             request: attriaxBuildTrackEventRequest(
-              appToken: 'ax_test_token',
+              projectToken: 'ax_test_token',
               deviceId: 'device_123',
               deviceIdSource: 'android_ssaid',
               eventName: 'signup',
@@ -189,7 +189,7 @@ void main() {
             id: 'req_2',
             createdAt: DateTime.utc(2026, 5, 4, 10, 1),
             request: attriaxBuildTrackEventRequest(
-              appToken: 'ax_test_token',
+              projectToken: 'ax_test_token',
               deviceId: 'device_123',
               deviceIdSource: 'android_ssaid',
               eventName: 'purchase',
@@ -202,7 +202,7 @@ void main() {
             createdAt: DateTime.utc(2026, 5, 4, 10, 2),
             nextRetryAt: retryAt,
             request: attriaxBuildTrackEventRequest(
-              appToken: 'ax_test_token',
+              projectToken: 'ax_test_token',
               deviceId: 'device_123',
               deviceIdSource: 'android_ssaid',
               eventName: 'checkout',
@@ -238,7 +238,7 @@ void main() {
         id: 'req_drop',
         createdAt: DateTime.utc(2026, 5, 4, 10),
         request: attriaxBuildTrackEventRequest(
-          appToken: 'ax_test_token',
+          projectToken: 'ax_test_token',
           deviceId: 'device_123',
           deviceIdSource: 'android_ssaid',
           eventName: 'purchase',

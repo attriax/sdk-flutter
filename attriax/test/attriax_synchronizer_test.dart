@@ -128,7 +128,7 @@ void main() {
 
 AttriaxTrackEventRequest _eventRequest(String eventName) =>
     attriaxBuildTrackEventRequest(
-      appToken: 'ax_test_token',
+      projectToken: 'ax_test_token',
       deviceId: 'device_1',
       deviceIdSource: 'android_ssaid',
       eventName: eventName,

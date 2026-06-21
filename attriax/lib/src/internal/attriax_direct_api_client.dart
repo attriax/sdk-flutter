@@ -30,7 +30,7 @@ class AttriaxDirectApiClient {
     Map<String, Object?>? data,
   }) {
     final request = attriaxBuildCreateDynamicLinkRequest(
-      appToken: _config.projectToken,
+      projectToken: _config.projectToken,
       name: _trimOrNull(name),
       destinationUrl: _trimOrNull(destinationUrl),
       group: _trimOrNull(group),
