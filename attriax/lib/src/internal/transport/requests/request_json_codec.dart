@@ -2,8 +2,9 @@ part of '../../attriax_api_models.dart';
 
 AttriaxApiRequest attriaxApiRequestFromJson(
   String kindName,
-  Map<String, Object?> body,
+  Map<String, Object?> rawBody,
 ) {
+  final body = _attriaxMigrateLegacyProjectToken(rawBody);
   switch (kindName) {
     case 'open':
       return AttriaxOpenRequest(
@@ -46,4 +47,25 @@ AttriaxApiRequest attriaxApiRequestFromJson(
   }
 
   throw FormatException('Unsupported Attriax request kind: $kindName');
+}
+
+/// Queues persisted by SDK builds that predate the `projectToken` rename stored
+/// the project token under the deprecated `appToken` key. Normalize those
+/// legacy on-disk entries to `projectToken` so restored requests carry the
+/// field the current transport, batching, and consent-rewrite paths expect. New
+/// queues already use `projectToken`, so this is a no-op for them.
+Map<String, Object?> _attriaxMigrateLegacyProjectToken(
+  Map<String, Object?> body,
+) {
+  if (attriaxStringValue(body['projectToken']) != null) {
+    return body;
+  }
+
+  final legacyAppToken = attriaxStringValue(body['appToken']);
+  if (legacyAppToken == null) {
+    return body;
+  }
+
+  return <String, Object?>{...body, 'projectToken': legacyAppToken}
+    ..remove('appToken');
 }

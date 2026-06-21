@@ -53,6 +53,62 @@ void main() {
       expect(body['metadata'], <String, Object?>{'route': '/checkout'});
     });
 
+    test('restores a legacy appToken event queue entry as projectToken', () {
+      // A queue persisted by a pre-rename SDK build stored the token under
+      // the deprecated `appToken` key. Restoring it must yield a usable
+      // projectToken request rather than crash batching with a null token.
+      final restored = AttriaxQueuedRequest.fromJson(<String, Object?>{
+        'id': 'legacy_req',
+        'kind': 'trackEvent',
+        'body': <String, Object?>{
+          'appToken': 'ax_legacy_token',
+          'deviceId': 'device_legacy',
+          'deviceIdSource': 'android_ssaid',
+          'eventName': 'legacy_purchase',
+        },
+        'createdAt': '2026-05-04T10:00:00.000Z',
+      });
+
+      expect(restored.request, isA<AttriaxTrackEventRequest>());
+
+      // This call previously threw "Unexpected null value" on the
+      // payload.projectToken! null-assertion for legacy entries.
+      final identity = attriaxBatchRequestIdentity(restored.request);
+      expect(identity.projectToken, 'ax_legacy_token');
+      expect(identity.deviceId, 'device_legacy');
+
+      final body = restored.request.toQueueBody();
+      expect(body['projectToken'], 'ax_legacy_token');
+      expect(body.containsKey('appToken'), isFalse);
+    });
+
+    test('restores a legacy appToken session queue entry as projectToken', () {
+      final restored = AttriaxQueuedRequest.fromJson(<String, Object?>{
+        'id': 'legacy_session',
+        'kind': 'trackSession',
+        'body': <String, Object?>{
+          'appToken': 'ax_legacy_token',
+          'deviceId': 'device_legacy',
+          'kind': 'start',
+          'sessionId': 'sess_legacy',
+          'clientOccurredAt': '2026-05-04T10:00:00.000Z',
+          'platform': 'android',
+          'isFirstLaunch': false,
+        },
+        'createdAt': '2026-05-04T10:00:00.000Z',
+      });
+
+      expect(restored.request, isA<AttriaxTrackSessionRequest>());
+      expect(
+        attriaxBatchRequestIdentity(restored.request).projectToken,
+        'ax_legacy_token',
+      );
+
+      final body = restored.request.toQueueBody();
+      expect(body['projectToken'], 'ax_legacy_token');
+      expect(body.containsKey('appToken'), isFalse);
+    });
+
     test(
       'records invalid queue payload corruption and clears the payload',
       () async {
