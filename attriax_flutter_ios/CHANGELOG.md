@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.5.0
+
+### Changed
+- Package version alignment for the federated 0.5.0 release (best-effort app-open, retry backoff, session/consent refinements, and the slimmed receipt-validation and required-`projectToken`/`uri` API changes). No Apple-only public API changes are required.
+
 ## 0.4.1
 
 ### Changed

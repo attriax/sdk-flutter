@@ -61,6 +61,7 @@ class SdkV1RevenueReceiptValidateDto {
   @JsonKey(name: r'provider', required: false, includeIfNull: false)
   final String? provider;
 
+  /// Receipt payload submitted by the app for validation.
   @JsonKey(name: r'receipt', required: false, includeIfNull: false)
   final String? receipt;
 

@@ -223,7 +223,8 @@ class AttriaxSkanManager {
   }) => !_supportsSkan
       ? Future<AttriaxSkanUpdateResult?>.value()
       : _withLock(
-          () => _applyEventCandidates(eventName: eventName, eventData: eventData),
+          () =>
+              _applyEventCandidates(eventName: eventName, eventData: eventData),
         );
 
   AttriaxSkanState _ensureState() {

@@ -35,16 +35,12 @@ void main() {
   });
 
   test('attaches error detail when debug logs are enabled', () {
-    AttriaxLogger(enableDebugLogs: true).error(
-      'request failed',
-      error: StateError('boom'),
-    );
+    AttriaxLogger(
+      enableDebugLogs: true,
+    ).error('request failed', error: StateError('boom'));
 
     expect(lines, contains('[Attriax][ERROR] request failed'));
-    expect(
-      lines.any((line) => line.contains('boom')),
-      isTrue,
-    );
+    expect(lines.any((line) => line.contains('boom')), isTrue);
   });
 
   test('verbose is silent when debug logs are off', () {

@@ -5,6 +5,36 @@ All notable changes to the Attriax Flutter SDK will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-06-15
+
+### Added
+- New canonical entrypoint `package:attriax_flutter/attriax.dart` that re-exports everything from `attriax_flutter.dart` (the old import remains a supported alias).
+- Bot / automated-traffic detection on web: the SDK flags `isBot` and `botDetectedVia` in the device context (WebDriver, headless/zero-size screen, and known bot user agents).
+- GDPR region detection now covers EU outermost territories whose timezones are outside `Europe/` (French Guiana, Guadeloupe, Saint-Martin, Martinique, Saint-Barthélemy, Mayotte, Réunion).
+- Startup config validation: `init()` now rejects an empty `projectToken`, a non-positive `maxQueueSize`, and negative flush/ATT-timeout durations with an `ArgumentError`.
+
+### Changed
+- Breaking: `validateReceipt(...)` now takes a single `required String receipt` plus `test`, `provider`, `environment`, `productId`, and `transactionId`; the previous per-store fields (`originalTransactionId`, `store`, `packageName`, `purchaseToken`, `receiptData`, `signedPayload`, `receiptSignature`) were removed, and `receipt` must be non-empty.
+- Breaking: `deepLinks.recordDeepLink(...)` now requires `uri`; the optional `linkPath` parameter was removed.
+- Breaking: `AttriaxConfig` now requires `projectToken`; the deprecated `appToken` constructor alias and getter were removed.
+- Breaking: `Attriax.init({bool? enabled})` no longer accepts an `enabled` argument; use `tracking.enabled` before or after `init()` to control event delivery.
+- Breaking: tracking helpers (`recordEvent`, `recordPurchase`, `recordRefund`, `recordAdRevenue`, `recordAdEvent`, `recordPageView`, `recordError`, `setUser`, `setUserProperty`, `setUserProperties`, `clearUserProperties`) now return `void` (fire-and-forget) instead of `Future<void>`.
+- Failed network requests now retry with a capped, jittered exponential backoff (2s base, 5min cap) when the server sends no usable `Retry-After`, instead of being re-flushed with no spacing; a `Retry-After` of `0` or negative also falls back to backoff rather than an immediate retry.
+- Retryable HTTP statuses now include `408` (Request Timeout) and `425` (Too Early) in addition to `429` and all `5xx`.
+- App-open (attribution) delivery is now best-effort and no longer gates other queued requests; events, sessions, and deep-link resolutions are dispatched without waiting for a successful app-open.
+- Awaited manual deep-link resolution (`recordDeepLink`) is now time-bounded (30s) and throws `TimeoutException` if it does not complete, instead of hanging indefinitely while offline; the underlying request still follows the normal queue/retry policy.
+- `referrer.getLatestDeepLinkReferrer()` now returns `null` immediately when no deep link has been handled yet, instead of waiting for the next deep-link event.
+- Session continuation window is now clamped to a minimum of 60s and a maximum of 30min (previously twice the heartbeat interval, unbounded), so tiny first-launch heartbeats and oversized intervals no longer over- or under-continue sessions.
+- Uninstall (push) token registration is now withheld while GDPR consent is still pending/unknown instead of being captured eagerly.
+- In release builds the logger now emits only the level/message line and suppresses error objects, HTTP response bodies, and stack traces to avoid leaking sensitive payloads.
+
+### Fixed
+- A recovered session's inferred end time is now clamped to "now" so a continued session's end event can no longer postdate the replacing session's start, eliminating out-of-order session lifecycle events.
+- A deep link tied to a known origin session no longer leaks into a different (or already-ended) current session; cold-start links with no origin session still attach to the current session.
+- A no-op consent server sync that only refreshes region metadata or the checked-at timestamp no longer triggers a full queue rewrite and runtime reconfiguration; only an actual consent decision change does.
+- Failures while observing startup referrers now resolve to "no referrer" (returning `null`) instead of surfacing a delivery error from the referrer getters.
+- A failed app-open observation is now reported to observers as "no result" rather than escaping as an unhandled async exception.
+
 ## [0.4.1] - 2026-05-31
 
 ### Changed

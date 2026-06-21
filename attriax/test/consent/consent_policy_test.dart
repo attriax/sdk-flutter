@@ -21,15 +21,22 @@ void main() {
 
     test('allows when consent is not required', () {
       expect(
-        policy(state: AttriaxGdprConsentState.notRequired)
-            .allowsRuntimePersistence,
+        policy(
+          state: AttriaxGdprConsentState.notRequired,
+        ).allowsRuntimePersistence,
         isTrue,
       );
     });
 
     test('defers (consent-only) while waiting for consent', () {
-      expect(policy(state: AttriaxGdprConsentState.unknown).allowsRuntimePersistence, isFalse);
-      expect(policy(state: AttriaxGdprConsentState.pending).allowsRuntimePersistence, isFalse);
+      expect(
+        policy(state: AttriaxGdprConsentState.unknown).allowsRuntimePersistence,
+        isFalse,
+      );
+      expect(
+        policy(state: AttriaxGdprConsentState.pending).allowsRuntimePersistence,
+        isFalse,
+      );
     });
 
     test('allows once any category is granted', () {

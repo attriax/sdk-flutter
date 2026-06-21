@@ -1,15 +1,15 @@
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
 import '../attriax_platform_types.dart'
-  show
-    AttriaxInstallReferrerContext,
-    AttriaxNativeContext,
-    AttriaxPendingCrashReport,
-    AttriaxResolvedUrlOpenMode,
-    AttriaxSkanCoarseValue,
-    AttriaxSkanUpdateResult,
-    AttriaxSkanUpdateStatus,
-    AttriaxTrackingAuthorizationStatus;
+    show
+        AttriaxInstallReferrerContext,
+        AttriaxNativeContext,
+        AttriaxPendingCrashReport,
+        AttriaxResolvedUrlOpenMode,
+        AttriaxSkanCoarseValue,
+        AttriaxSkanUpdateResult,
+        AttriaxSkanUpdateStatus,
+        AttriaxTrackingAuthorizationStatus;
 
 import 'method_channel_attriax.dart';
 

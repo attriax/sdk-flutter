@@ -32,8 +32,7 @@ class _MyAppState extends State<MyApp> {
     }
 
     setState(() {
-      _nativeContextSource =
-          '${nativeContext.metadata['source'] ?? 'unknown'}';
+      _nativeContextSource = '${nativeContext.metadata['source'] ?? 'unknown'}';
       _installReferrerStatus =
           '${installReferrer.metadata['installReferrerStatus'] ?? 'unknown'}';
     });

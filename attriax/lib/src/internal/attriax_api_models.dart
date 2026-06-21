@@ -3,6 +3,7 @@
 import 'package:attriax_api_client/attriax_api_client.dart' as sdk;
 import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
+import '../attriax_notification_event.dart';
 import 'attriax_json_utils.dart';
 
 part 'transport/requests/request_models.dart';

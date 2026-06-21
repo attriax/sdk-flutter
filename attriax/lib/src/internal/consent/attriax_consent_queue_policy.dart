@@ -32,6 +32,9 @@ class AttriaxConsentQueuePolicy {
     AttriaxTrackCrashRequest() => _trackingDecisionFor(
       AttriaxTrackingSignal.analytics,
     ),
+    AttriaxTrackNotificationRequest() => _trackingDecisionFor(
+      AttriaxTrackingSignal.analytics,
+    ),
     AttriaxTrackSessionRequest() => _trackingDecisionFor(
       AttriaxTrackingSignal.session,
     ),
@@ -58,6 +61,7 @@ class AttriaxConsentQueuePolicy {
       switch (request) {
         AttriaxTrackEventRequest() ||
         AttriaxTrackCrashRequest() ||
+        AttriaxTrackNotificationRequest() ||
         AttriaxTrackSessionRequest() ||
         AttriaxResolveDeepLinkRequest() =>
           trackingDecisionForQueuedRequest(request)?.capture ?? false,

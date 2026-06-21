@@ -466,7 +466,10 @@ void main() {
         expect(requestPaths, contains('/api/sdk/v1/batch'));
         expect(requestPaths, isNot(contains('/api/sdk/v1/open')));
         final eventItems = batchBodies
-            .expand((body) => (body['items']! as List<Object?>).cast<Map<String, Object?>>())
+            .expand(
+              (body) => (body['items']! as List<Object?>)
+                  .cast<Map<String, Object?>>(),
+            )
             .where((item) => item['kind'] == 'event')
             .toList(growable: false);
         expect(eventItems, hasLength(1));

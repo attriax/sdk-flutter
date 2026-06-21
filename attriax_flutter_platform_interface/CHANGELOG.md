@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0
+
+### Changed
+- Breaking: `AttriaxConfig` now requires `projectToken`; the deprecated `appToken` constructor alias and getter were removed from the shared config.
+- Bumped the shared `attriaxSdkPackageVersion` metadata to `0.5.0`.
+
 ## 0.4.1
 
 ### Changed

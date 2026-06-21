@@ -323,6 +323,131 @@ send them through `attriax.tracking.recordAdEvent(...)` with the matching
 `AttriaxAdEventType`, `failureReason`, and `metadata` so the ad-events
 analytics page can group the callbacks cleanly.
 
+## Push Notification Attribution
+
+Attriax never sends pushes itself. Your app keeps its own push stack (Firebase
+Messaging, native APNs, etc.) and forwards notification lifecycle events to
+Attriax from your existing handlers. This manual-forwarding model is intentional:
+it lets Attriax attribution coexist with whatever push tooling you already ship,
+and it means you decide exactly which payload fields (including any Attriax
+`linkId`/`campaignId`) get threaded through.
+
+Use `attriax.tracking.recordNotification(...)` with an explicit
+`AttriaxNotificationEventType`, or one of the three convenience wrappers:
+
+- `recordNotificationReceived(...)` — the push was **delivered/displayed**.
+  Measures deliverability and reach.
+- `recordNotificationOpened(...)` — the user **tapped** the push. This is the
+  **high-value signal**: it powers re-engagement attribution and ties any
+  downstream conversions or revenue back to the campaign.
+- `recordNotificationDismissed(...)` — the user **swiped the push away** without
+  opening it. A best-effort negative signal (see the caveat below).
+
+`type` is one of `received | opened | dismissed`. `source` is one of
+`fcm | apns | other`; if you omit it, the SDK infers it from the payload
+(an `aps` key → `apns`; `google.*` / `gcm.*` keys → `fcm`). Pass the raw FCM/APNs
+data map as `payload` and it is preserved in the notification metadata. Thread
+through any Attriax `linkId`/`campaignId` embedded in the payload so opens and
+their downstream events attribute back to the originating link/campaign.
+
+These calls route through the same offline-persisted, batched, retried queue as
+`recordEvent`, and honor the same app-open-first and consent semantics.
+
+### On tap — the opened signal (FCM/APNs tap handler)
+
+Call `recordNotificationOpened` from wherever your app already handles a
+notification tap. With Firebase Messaging that is
+`FirebaseMessaging.onMessageOpenedApp` (background → foreground) plus
+`getInitialMessage()` (cold start from a tap):
+
+```dart
+import 'package:attriax_flutter/attriax.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+void recordPushOpen(Attriax attriax, RemoteMessage message) {
+  attriax.tracking.recordNotificationOpened(
+    notificationId: message.messageId ?? 'unknown',
+    // Thread the Attriax references your campaign embedded in the data payload.
+    linkId: message.data['ax_link_id'] as String?,
+    campaignId: message.data['ax_campaign_id'] as String?,
+    title: message.notification?.title,
+    // `source` is omitted on purpose — the SDK infers fcm/apns from the payload.
+    payload: message.data,
+  );
+}
+
+Future<void> wirePushOpenHandlers(Attriax attriax) async {
+  // App resumed from background by tapping the notification.
+  FirebaseMessaging.onMessageOpenedApp.listen(
+    (message) => recordPushOpen(attriax, message),
+  );
+
+  // App launched cold from a notification tap.
+  final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMessage != null) {
+    recordPushOpen(attriax, initialMessage);
+  }
+}
+```
+
+### On receipt — the received signal
+
+Record receipt when the push arrives while your app can observe it — for
+foreground messages via `FirebaseMessaging.onMessage`, or from your
+data-message handler:
+
+```dart
+FirebaseMessaging.onMessage.listen((message) {
+  attriax.tracking.recordNotificationReceived(
+    notificationId: message.messageId ?? 'unknown',
+    linkId: message.data['ax_link_id'] as String?,
+    campaignId: message.data['ax_campaign_id'] as String?,
+    title: message.notification?.title,
+    payload: message.data,
+  );
+
+  // ...then render your own foreground notification UI if desired.
+});
+```
+
+### On dismissal — best-effort, with caveats
+
+Dismissal is only reliably observable when **your app builds the notification
+itself** so it can attach a dismiss callback. It is **not** available for
+OS-displayed notification messages (where the system draws the alert), and it is
+**not** delivered while the app is terminated.
+
+- **Android:** show the notification yourself from a **data** message (e.g. via
+  `flutter_local_notifications`) and attach a `deleteIntent` / delete callback;
+  call `recordNotificationDismissed` from that callback.
+- **iOS:** register a notification **category with a custom dismiss action** and
+  forward that action to `recordNotificationDismissed`.
+
+```dart
+// Called from your own deleteIntent / dismiss-action callback.
+void recordPushDismiss(
+  Attriax attriax, {
+  required String notificationId,
+  String? linkId,
+  String? campaignId,
+  String? title,
+  Map<String, Object?>? payload,
+}) {
+  attriax.tracking.recordNotificationDismissed(
+    notificationId: notificationId,
+    linkId: linkId,
+    campaignId: campaignId,
+    title: title,
+    source: AttriaxNotificationEventSource.fcm, // pass explicitly if no payload
+    payload: payload,
+  );
+}
+```
+
+Treat dismissals as a best-effort negative signal rather than a complete count.
+Prioritize wiring `opened` first — it is the signal that drives re-engagement
+attribution and downstream conversion/revenue ties.
+
 ## Host Deep Link Setup
 
 `attriax_flutter` uses an internal Attriax deep-link bridge on Android and iOS, but the

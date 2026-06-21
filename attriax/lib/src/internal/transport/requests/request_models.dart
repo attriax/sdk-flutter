@@ -39,6 +39,21 @@ final class AttriaxTrackEventRequest extends AttriaxApiRequest {
   Map<String, Object?> toQueueBody() => _generatedQueueBody(payload);
 }
 
+final class AttriaxTrackNotificationRequest extends AttriaxApiRequest {
+  const AttriaxTrackNotificationRequest(this.payload);
+
+  final sdk.SdkNotificationDto payload;
+
+  @override
+  String get kindName => 'trackNotification';
+
+  @override
+  String get label => 'notification';
+
+  @override
+  Map<String, Object?> toQueueBody() => _generatedQueueBody(payload);
+}
+
 final class AttriaxCrashReportPayload {
   const AttriaxCrashReportPayload({
     required this.appToken,

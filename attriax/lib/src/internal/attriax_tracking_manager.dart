@@ -2,13 +2,14 @@ import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
 import '../attriax_ad_event_type.dart';
 import '../attriax_analytics_keys.dart';
+import '../attriax_notification_event.dart';
 import 'attriax_api_models.dart';
 import 'attriax_consent_manager.dart';
 import 'attriax_context_manager.dart';
 import 'attriax_logger.dart';
 import 'attriax_page_title_stub.dart'
-  if (dart.library.js_interop) 'attriax_page_title_web.dart'
-  as page_title;
+    if (dart.library.js_interop) 'attriax_page_title_web.dart'
+    as page_title;
 import 'attriax_request_manager.dart';
 import 'attriax_runtime_settings_state.dart';
 import 'attriax_skan_manager.dart';
@@ -88,6 +89,71 @@ class AttriaxTrackingManager {
     await _skanManager?.handleTrackedEvent(eventName, eventData: eventData);
   }
 
+  Future<void> recordNotification({
+    required AttriaxNotificationEventType type,
+    required String notificationId,
+    String? linkId,
+    String? campaignId,
+    String? title,
+    AttriaxNotificationEventSource? source,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = false,
+  }) async {
+    if (!_settingsState.isEnabled || !_settingsState.areEventsEnabled) {
+      _logger.verbose(
+        'Ignoring recordNotification(${type.value}) because SDK or events are disabled.',
+      );
+      return;
+    }
+
+    final decision = _trackingDecisionFor(AttriaxTrackingSignal.analytics);
+    if (!decision.capture) {
+      _logger.verbose(
+        'Ignoring recordNotification(${type.value}) because GDPR analytics consent is not granted.',
+      );
+      return;
+    }
+
+    final normalizedNotificationId = notificationId.trim();
+    if (normalizedNotificationId.isEmpty) {
+      throw ArgumentError.value(
+        notificationId,
+        'notificationId',
+        'notificationId must not be empty.',
+      );
+    }
+
+    final occurredAt = _clock.now();
+    final currentSession = await _sessionManager.prepareTrackedSessionAt(
+      occurredAt,
+    );
+
+    await _requestManager.enqueue(
+      attriaxBuildTrackNotificationRequest(
+        projectToken: _config.projectToken,
+        type: type,
+        notificationId: normalizedNotificationId,
+        platform: _contextManager.requiredSnapshot.platform,
+        deviceId: decision.attachDeviceIdentity
+            ? _contextManager.requiredDeviceId
+            : null,
+        deviceIdSource: decision.attachDeviceIdentity
+            ? _contextManager.requireDeviceIdSource()
+            : null,
+        linkId: _trimOrNull(linkId),
+        campaignId: _trimOrNull(campaignId),
+        title: _trimOrNull(title),
+        source: source,
+        sessionId: currentSession?.id,
+        clientOccurredAt: occurredAt,
+        metadata: metadata,
+      ),
+      flushImmediately: _shouldFlushEventImmediately(
+        flushImmediately: flushImmediately,
+      ),
+    );
+  }
+
   Future<void> recordPageView(
     String pageName, {
     String? pageClass,
@@ -115,7 +181,7 @@ class AttriaxTrackingManager {
 
     final normalizedPageClass = _trimOrNull(pageClass);
     final normalizedPageTitle =
-      _trimOrNull(pageTitle) ?? _trimOrNull(_documentTitleProvider());
+        _trimOrNull(pageTitle) ?? _trimOrNull(_documentTitleProvider());
     final normalizedPreviousPageName = _trimOrNull(previousPageName);
 
     final pageViewEventData = <String, Object?>{

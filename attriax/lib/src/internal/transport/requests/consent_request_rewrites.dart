@@ -76,6 +76,26 @@ AttriaxApiRequest attriaxAnonymizeRequestForConsent(
         source_: payload.source_,
       ),
     ),
+  AttriaxTrackNotificationRequest(:final payload) =>
+    AttriaxTrackNotificationRequest(
+      sdk.SdkNotificationDto(
+        appToken: _attriaxResolveCompatibleToken(
+          context: 'Attriax anonymized notification request',
+          projectToken: payload.projectToken,
+          appToken: payload.appToken,
+        ),
+        campaignId: payload.campaignId,
+        linkId: payload.linkId,
+        metadata: payload.metadata,
+        notificationId: payload.notificationId,
+        occurredAt: payload.occurredAt,
+        platform: payload.platform,
+        sessionId: payload.sessionId,
+        source_: payload.source_,
+        title: payload.title,
+        type: payload.type,
+      ),
+    ),
   _ => request,
 };
 
@@ -164,6 +184,29 @@ AttriaxApiRequest? attriaxIdentifyRequestForConsentNotRequired(
         platform: payload.platform,
         rawUrl: payload.rawUrl,
         source_: payload.source_,
+      ),
+    ),
+  AttriaxTrackNotificationRequest(:final payload)
+      when payload.deviceId == null =>
+    AttriaxTrackNotificationRequest(
+      sdk.SdkNotificationDto(
+        appToken: _attriaxResolveCompatibleToken(
+          context: 'Attriax identified notification request',
+          projectToken: payload.projectToken,
+          appToken: payload.appToken,
+        ),
+        campaignId: payload.campaignId,
+        deviceId: deviceId,
+        deviceIdSource: deviceIdSource,
+        linkId: payload.linkId,
+        metadata: payload.metadata,
+        notificationId: payload.notificationId,
+        occurredAt: payload.occurredAt,
+        platform: payload.platform,
+        sessionId: payload.sessionId,
+        source_: payload.source_,
+        title: payload.title,
+        type: payload.type,
       ),
     ),
   _ => null,

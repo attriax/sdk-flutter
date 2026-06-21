@@ -1,5 +1,6 @@
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
 import 'package:attriax_flutter/src/attriax_consent.dart';
+import 'package:attriax_flutter/src/attriax_notification_event.dart';
 import 'package:attriax_flutter/src/internal/attriax_consent_manager.dart';
 import 'package:attriax_flutter/src/internal/attriax_context_manager.dart';
 import 'package:attriax_flutter/src/internal/attriax_logger.dart';
@@ -360,6 +361,178 @@ void main() {
         expect(requestManager.lastRequest, isNull);
       },
     );
+
+    test(
+      'recordNotification enqueues a session-aware notification request',
+      () async {
+        final occurredAt = DateTime.utc(2026, 5, 3, 12, 0, 7);
+        final requestManager = _RecordingRequestManager();
+        final session = AttriaxSessionSnapshot(
+          id: 'session_1',
+          deviceId: 'device_1',
+          platform: AttriaxPlatformType.android,
+          locale: 'en-US',
+          isFirstLaunch: false,
+          startedAt: DateTime.utc(2026, 5, 3, 12),
+          lastActivityAt: occurredAt,
+          heartbeatInterval: const Duration(seconds: 5),
+          appVersion: '1.0.0',
+          appBuildNumber: '1',
+          appPackageName: 'com.attriax.test',
+          sdkPackageVersion: '1.0.0',
+        );
+        final manager = AttriaxTrackingManager(
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
+          logger: AttriaxLogger(enableDebugLogs: false),
+          clock: AttriaxMutableClock(occurredAt),
+          contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+          consentState: const _FakeConsentReadView(),
+          settingsState: const _FakeRuntimeSettingsView(),
+          requestManager: requestManager,
+          sessionManager: _FakeTrackedSessionPreparer((_) async => session),
+        );
+
+        await manager.recordNotification(
+          type: AttriaxNotificationEventType.opened,
+          notificationId: ' notif_1 ',
+          linkId: 'lnk_123',
+          campaignId: 'cmp_456',
+          title: 'Welcome back',
+          source: AttriaxNotificationEventSource.fcm,
+          metadata: const <String, Object?>{'screen': '/offers'},
+        );
+
+        expect(
+          requestManager.lastRequest,
+          isA<AttriaxTrackNotificationRequest>(),
+        );
+        final body = requestManager.lastRequest!.toQueueBody();
+        expect(body['type'], 'opened');
+        expect(body['notificationId'], 'notif_1');
+        expect(body['linkId'], 'lnk_123');
+        expect(body['campaignId'], 'cmp_456');
+        expect(body['title'], 'Welcome back');
+        expect(body['source'], 'fcm');
+        expect(body['platform'], 'android');
+        expect(body['deviceId'], 'device_1');
+        expect(body['deviceIdSource'], 'android_ssaid');
+        expect(body['sessionId'], 'session_1');
+        expect(body['occurredAt'], occurredAt.toIso8601String());
+        expect(body['metadata'], <String, Object?>{'screen': '/offers'});
+        expect(requestManager.lastFlushImmediately, isFalse);
+      },
+    );
+
+    test('recordNotification threads each lifecycle type', () async {
+      for (final type in AttriaxNotificationEventType.values) {
+        final requestManager = _RecordingRequestManager();
+        final manager = AttriaxTrackingManager(
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
+          logger: AttriaxLogger(enableDebugLogs: false),
+          clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
+          contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+          consentState: const _FakeConsentReadView(),
+          settingsState: const _FakeRuntimeSettingsView(),
+          requestManager: requestManager,
+          sessionManager: _FakeTrackedSessionPreparer((_) async => null),
+        );
+
+        await manager.recordNotification(
+          type: type,
+          notificationId: 'notif_${type.value}',
+        );
+
+        final body = requestManager.lastRequest!.toQueueBody();
+        expect(body['type'], type.value);
+        expect(body['notificationId'], 'notif_${type.value}');
+      }
+    });
+
+    test(
+      'recordNotification enqueues anonymously when analytics consent is denied',
+      () async {
+        final requestManager = _RecordingRequestManager();
+        final manager = AttriaxTrackingManager(
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
+          logger: AttriaxLogger(enableDebugLogs: false),
+          clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
+          contextManager: const _StaticTrackingContext(isFirstLaunch: false),
+          consentState: const _FakeConsentReadView(
+            allowsAnalyticsTracking: false,
+            gdprConsentValues: AttriaxGdprConsentValues(
+              analytics: false,
+              attribution: true,
+              adEvents: true,
+            ),
+          ),
+          settingsState: const _FakeRuntimeSettingsView(),
+          requestManager: requestManager,
+          sessionManager: _FakeTrackedSessionPreparer((_) async => null),
+        );
+
+        await manager.recordNotification(
+          type: AttriaxNotificationEventType.received,
+          notificationId: 'notif_anon',
+          linkId: 'lnk_1',
+        );
+
+        expect(requestManager.enqueueCalls, 1);
+        final body = requestManager.lastRequest!.toQueueBody();
+        expect(body['notificationId'], 'notif_anon');
+        expect(body['linkId'], 'lnk_1');
+        expect(body['deviceId'], isNull);
+        expect(body['deviceIdSource'], isNull);
+      },
+    );
+
+    test('recordNotification skips enqueueing while disabled', () async {
+      var prepareSessionCalls = 0;
+      final requestManager = _RecordingRequestManager();
+      final manager = AttriaxTrackingManager(
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
+        logger: AttriaxLogger(enableDebugLogs: false),
+        clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
+        contextManager: const _StaticTrackingContext(),
+        consentState: const _FakeConsentReadView(),
+        settingsState: const _FakeRuntimeSettingsView(isEnabled: false),
+        requestManager: requestManager,
+        sessionManager: _FakeTrackedSessionPreparer((_) async {
+          prepareSessionCalls += 1;
+          return null;
+        }),
+      );
+
+      await manager.recordNotification(
+        type: AttriaxNotificationEventType.received,
+        notificationId: 'notif_disabled',
+      );
+
+      expect(requestManager.enqueueCalls, 0);
+      expect(prepareSessionCalls, 0);
+    });
+
+    test('recordNotification rejects an empty notificationId', () async {
+      final requestManager = _RecordingRequestManager();
+      final manager = AttriaxTrackingManager(
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
+        logger: AttriaxLogger(enableDebugLogs: false),
+        clock: AttriaxMutableClock(DateTime.utc(2026, 5, 3, 12, 0, 7)),
+        contextManager: const _StaticTrackingContext(),
+        consentState: const _FakeConsentReadView(),
+        settingsState: const _FakeRuntimeSettingsView(),
+        requestManager: requestManager,
+        sessionManager: _FakeTrackedSessionPreparer((_) async => null),
+      );
+
+      await expectLater(
+        manager.recordNotification(
+          type: AttriaxNotificationEventType.received,
+          notificationId: '   ',
+        ),
+        throwsArgumentError,
+      );
+      expect(requestManager.enqueueCalls, 0);
+    });
 
     test(
       'setUserProperties enforces flat primitive values within the configured caps',

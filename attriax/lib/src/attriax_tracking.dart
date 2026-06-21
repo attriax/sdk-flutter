@@ -41,6 +41,108 @@ class AttriaxTracking {
     ),
   );
 
+  /// Records a push-notification lifecycle event for attribution.
+  ///
+  /// Attriax never sends pushes itself: call this from the host app's own
+  /// FCM/APNs handler, threading through any Attriax [linkId]/[campaignId]
+  /// reference embedded in the notification payload. Pass the raw FCM/APNs
+  /// data map as [payload] and it is preserved under a `payload` key in the
+  /// notification metadata.
+  ///
+  /// Routes through the same offline-persisted, batched, retried queue as
+  /// [recordEvent], and honors the same app-open-first / consent semantics.
+  void recordNotification({
+    required AttriaxNotificationEventType type,
+    required String notificationId,
+    String? linkId,
+    String? campaignId,
+    String? title,
+    AttriaxNotificationEventSource? source,
+    Map<String, Object?>? payload,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = false,
+  }) => unawaited(
+    _runtime.recordNotification(
+      type: type,
+      notificationId: notificationId,
+      linkId: linkId,
+      campaignId: campaignId,
+      title: title,
+      source: source ?? _inferNotificationSource(payload),
+      metadata: _mergeNotificationMetadata(
+        metadata: metadata,
+        payload: payload,
+      ),
+      flushImmediately: flushImmediately,
+    ),
+  );
+
+  /// Records that a push notification was received / displayed.
+  void recordNotificationReceived({
+    required String notificationId,
+    String? linkId,
+    String? campaignId,
+    String? title,
+    AttriaxNotificationEventSource? source,
+    Map<String, Object?>? payload,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = false,
+  }) => recordNotification(
+    type: AttriaxNotificationEventType.received,
+    notificationId: notificationId,
+    linkId: linkId,
+    campaignId: campaignId,
+    title: title,
+    source: source,
+    payload: payload,
+    metadata: metadata,
+    flushImmediately: flushImmediately,
+  );
+
+  /// Records that a push notification was opened (tapped).
+  void recordNotificationOpened({
+    required String notificationId,
+    String? linkId,
+    String? campaignId,
+    String? title,
+    AttriaxNotificationEventSource? source,
+    Map<String, Object?>? payload,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = false,
+  }) => recordNotification(
+    type: AttriaxNotificationEventType.opened,
+    notificationId: notificationId,
+    linkId: linkId,
+    campaignId: campaignId,
+    title: title,
+    source: source,
+    payload: payload,
+    metadata: metadata,
+    flushImmediately: flushImmediately,
+  );
+
+  /// Records that a push notification was dismissed without opening.
+  void recordNotificationDismissed({
+    required String notificationId,
+    String? linkId,
+    String? campaignId,
+    String? title,
+    AttriaxNotificationEventSource? source,
+    Map<String, Object?>? payload,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = false,
+  }) => recordNotification(
+    type: AttriaxNotificationEventType.dismissed,
+    notificationId: notificationId,
+    linkId: linkId,
+    campaignId: campaignId,
+    title: title,
+    source: source,
+    payload: payload,
+    metadata: metadata,
+    flushImmediately: flushImmediately,
+  );
+
   void recordPurchase({
     required num revenue,
     String currency = 'USD',
@@ -371,6 +473,50 @@ class AttriaxTracking {
   String? _trimOrNull(String? value) {
     final trimmed = value?.trim();
     return trimmed == null || trimmed.isEmpty ? null : trimmed;
+  }
+
+  /// Preserves the raw FCM/APNs [payload] under a `payload` key inside the
+  /// notification metadata so attribution context survives the trip to the
+  /// server. Explicit [metadata] entries take precedence.
+  Map<String, Object?>? _mergeNotificationMetadata({
+    Map<String, Object?>? metadata,
+    Map<String, Object?>? payload,
+  }) {
+    final hasPayload = payload != null && payload.isNotEmpty;
+    final hasMetadata = metadata != null && metadata.isNotEmpty;
+    if (!hasPayload && !hasMetadata) {
+      return metadata;
+    }
+
+    return <String, Object?>{
+      if (hasPayload) 'payload': Map<String, Object?>.from(payload),
+      ...?metadata,
+    };
+  }
+
+  /// Best-effort inference of the delivery channel from a raw FCM/APNs
+  /// [payload]. APNs payloads carry an `aps` envelope; FCM payloads carry a
+  /// `google.message_id` / `gcm.message_id`. Returns `null` when undecidable so
+  /// the server can fall back to `other`.
+  AttriaxNotificationEventSource? _inferNotificationSource(
+    Map<String, Object?>? payload,
+  ) {
+    if (payload == null || payload.isEmpty) {
+      return null;
+    }
+    if (payload.containsKey('aps')) {
+      return AttriaxNotificationEventSource.apns;
+    }
+    if (payload.keys.any(
+      (key) =>
+          key == 'google.message_id' ||
+          key == 'gcm.message_id' ||
+          key.startsWith('google.') ||
+          key.startsWith('gcm.'),
+    )) {
+      return AttriaxNotificationEventSource.fcm;
+    }
+    return null;
   }
 }
 

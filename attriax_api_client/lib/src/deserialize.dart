@@ -14,6 +14,7 @@ import 'package:attriax_api_client/src/model/sdk_gdpr_consent_status_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_gdpr_consent_values_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_install_referrer_result_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_json_deep_link_dto.dart';
+import 'package:attriax_api_client/src/model/sdk_notification_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_register_uninstall_token_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_revenue_receipt_validate_response_dto.dart';
 import 'package:attriax_api_client/src/model/sdk_revenue_receipt_validate_response_envelope_dto.dart';
@@ -83,6 +84,8 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'DeviceContextDto':
       return DeviceContextDto.fromJson(value as Map<String, dynamic>)
           as ReturnType;
+    case 'NotificationEventSource':
+    case 'NotificationEventType':
     case 'Platform':
     case 'RouteUrlOpenMode':
     case 'SdkAcknowledgeResponseDto':
@@ -134,6 +137,9 @@ ReturnType deserialize<ReturnType, BaseType>(
     case 'SdkInstallState':
     case 'SdkJsonDeepLinkDto':
       return SdkJsonDeepLinkDto.fromJson(value as Map<String, dynamic>)
+          as ReturnType;
+    case 'SdkNotificationDto':
+      return SdkNotificationDto.fromJson(value as Map<String, dynamic>)
           as ReturnType;
     case 'SdkRegisterUninstallTokenDto':
       return SdkRegisterUninstallTokenDto.fromJson(

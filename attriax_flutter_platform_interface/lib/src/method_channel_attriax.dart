@@ -4,15 +4,15 @@ import 'dart:developer' as developer;
 import 'package:flutter/services.dart';
 
 import '../attriax_platform_types.dart'
-  show
-    AttriaxInstallReferrerContext,
-    AttriaxNativeContext,
-    AttriaxPendingCrashReport,
-    AttriaxResolvedUrlOpenMode,
-    AttriaxSkanCoarseValue,
-    AttriaxSkanUpdateResult,
-    AttriaxSkanUpdateStatus,
-    AttriaxTrackingAuthorizationStatus;
+    show
+        AttriaxInstallReferrerContext,
+        AttriaxNativeContext,
+        AttriaxPendingCrashReport,
+        AttriaxResolvedUrlOpenMode,
+        AttriaxSkanCoarseValue,
+        AttriaxSkanUpdateResult,
+        AttriaxSkanUpdateStatus,
+        AttriaxTrackingAuthorizationStatus;
 
 import 'attriax_platform_interface.dart';
 
@@ -68,7 +68,9 @@ class MethodChannelAttriax extends AttriaxPlatform {
       final result = await _channel.invokeMethod<Object?>(
         'readAttributionClipboard',
       );
-      return result is String && result.trim().isNotEmpty ? result.trim() : null;
+      return result is String && result.trim().isNotEmpty
+          ? result.trim()
+          : null;
     } on MissingPluginException catch (error, stackTrace) {
       _logException('readAttributionClipboard', error, stackTrace);
       return null;
@@ -84,7 +86,9 @@ class MethodChannelAttriax extends AttriaxPlatform {
       final result = await _channel.invokeMethod<Object?>(
         'collectWebViewUserAgent',
       );
-      return result is String && result.trim().isNotEmpty ? result.trim() : null;
+      return result is String && result.trim().isNotEmpty
+          ? result.trim()
+          : null;
     } on MissingPluginException catch (error, stackTrace) {
       _logException('collectWebViewUserAgent', error, stackTrace);
       return null;

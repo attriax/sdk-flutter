@@ -15,6 +15,10 @@ AttriaxApiRequest attriaxApiRequestFromJson(
       );
     case 'trackCrash':
       return AttriaxTrackCrashRequest(AttriaxCrashReportPayload.fromJson(body));
+    case 'trackNotification':
+      return AttriaxTrackNotificationRequest(
+        _parseGeneratedPayload(body, sdk.SdkNotificationDto.fromJson),
+      );
     case 'trackSession':
       return AttriaxTrackSessionRequest(
         AttriaxSessionLifecyclePayload.fromJson(body),

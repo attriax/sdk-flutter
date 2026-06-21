@@ -42,10 +42,7 @@ void main() {
 
   group('attriaxIsRetryableRequestError', () {
     test('classifies transport and timeout errors as retryable', () {
-      expect(
-        attriaxIsRetryableRequestError(TimeoutException('slow')),
-        isTrue,
-      );
+      expect(attriaxIsRetryableRequestError(TimeoutException('slow')), isTrue);
       expect(
         attriaxIsRetryableRequestError(
           DioException(requestOptions: RequestOptions(path: '/')),
@@ -96,7 +93,10 @@ void main() {
     });
 
     test('falls back (null) for an empty or non-HTTP error', () {
-      expect(attriaxRetryAfterAt(httpWithRetryAfter('   '), attemptedAt), isNull);
+      expect(
+        attriaxRetryAfterAt(httpWithRetryAfter('   '), attemptedAt),
+        isNull,
+      );
       expect(attriaxRetryAfterAt(TimeoutException('x'), attemptedAt), isNull);
     });
 
@@ -169,10 +169,7 @@ void main() {
           Duration(
             milliseconds: (attriaxRetryMaxBackoff.inMilliseconds * 0.2).ceil(),
           );
-      expect(
-        far.difference(attemptedAt),
-        lessThanOrEqualTo(maxWithJitter),
-      );
+      expect(far.difference(attemptedAt), lessThanOrEqualTo(maxWithJitter));
     });
   });
 }

@@ -18,6 +18,8 @@ lib/src/model/app_version_context_dto.dart
 lib/src/model/attribution_type.dart
 lib/src/model/deep_link_resolution_status.dart
 lib/src/model/device_context_dto.dart
+lib/src/model/notification_event_source.dart
+lib/src/model/notification_event_type.dart
 lib/src/model/platform.dart
 lib/src/model/route_url_open_mode.dart
 lib/src/model/sdk_acknowledge_response_dto.dart
@@ -36,6 +38,7 @@ lib/src/model/sdk_gdpr_consent_values_dto.dart
 lib/src/model/sdk_install_referrer_result_dto.dart
 lib/src/model/sdk_install_state.dart
 lib/src/model/sdk_json_deep_link_dto.dart
+lib/src/model/sdk_notification_dto.dart
 lib/src/model/sdk_register_uninstall_token_dto.dart
 lib/src/model/sdk_revenue_receipt_validate_response_dto.dart
 lib/src/model/sdk_revenue_receipt_validate_response_envelope_dto.dart

@@ -10,6 +10,7 @@ import 'attriax_ad_event_type.dart';
 import 'attriax_analytics_keys.dart';
 import 'attriax_consent.dart';
 import 'attriax_deep_link_source.dart';
+import 'attriax_notification_event.dart';
 import 'internal/attriax_context_collector.dart';
 import 'internal/attriax_deep_link_listener.dart';
 import 'internal/attriax_logger.dart';

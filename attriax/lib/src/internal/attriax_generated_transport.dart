@@ -23,8 +23,7 @@ String _resolveTransportProjectToken({
   final normalizedProjectToken = projectToken?.trim();
   final normalizedAppToken = appToken?.trim();
 
-  if (
-      normalizedProjectToken != null &&
+  if (normalizedProjectToken != null &&
       normalizedAppToken != null &&
       normalizedProjectToken != normalizedAppToken) {
     throw ArgumentError(
@@ -142,6 +141,15 @@ class AttriaxGeneratedTransport {
         ),
         AttriaxTrackCrashRequest(:final payload) =>
           await _sendCrashReportRequest(payload),
+        AttriaxTrackNotificationRequest(:final payload) =>
+          await _sendGeneratedRequest(
+            label: label,
+            invoke: () => _sdkApi.sdkControllerRecordNotificationV1(
+              sdkNotificationDto: payload,
+              validateStatus: _allowAnyStatus,
+            ),
+            mapper: attriaxAckResponseFromGenerated,
+          ),
         AttriaxTrackSessionRequest(:final payload) =>
           await _sendGeneratedRequest(
             label: label,

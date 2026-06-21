@@ -44,7 +44,8 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: AttriaxIntegrationExampleSetupPage(
-          errorMessage: 'Set a real Attriax project token before running this app.',
+          errorMessage:
+              'Set a real Attriax project token before running this app.',
           currentTokenLabel: 'ax_you...oken',
           configurationHelpText:
               'Edit lib/example_app_configuration.dart to set the project token or deep-link demo defaults.',
@@ -54,7 +55,10 @@ void main() {
 
     expect(find.text('Finish example setup'), findsOneWidget);
     expect(find.textContaining('real Attriax project token'), findsWidgets);
-    expect(find.textContaining('Current project token: ax_you...oken'), findsOneWidget);
+    expect(
+      find.textContaining('Current project token: ax_you...oken'),
+      findsOneWidget,
+    );
   });
 }
 

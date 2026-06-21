@@ -190,6 +190,71 @@ AttriaxTrackCrashRequest attriaxBuildTrackCrashRequest({
   );
 }
 
+AttriaxTrackNotificationRequest attriaxBuildTrackNotificationRequest({
+  required AttriaxNotificationEventType type,
+  required String notificationId,
+  required AttriaxPlatformType platform,
+  String? projectToken,
+  @Deprecated('Use projectToken instead.') String? appToken,
+  String? deviceId,
+  String? deviceIdSource,
+  String? linkId,
+  String? campaignId,
+  String? title,
+  AttriaxNotificationEventSource? source,
+  String? sessionId,
+  DateTime? clientOccurredAt,
+  Map<String, Object?>? metadata,
+}) {
+  final resolvedToken = _attriaxResolveCompatibleToken(
+    context: 'Attriax track-notification request',
+    projectToken: projectToken,
+    appToken: appToken,
+  );
+  final normalizedNotificationId = notificationId.trim();
+  if (normalizedNotificationId.isEmpty) {
+    throw ArgumentError.value(
+      notificationId,
+      'notificationId',
+      'notificationId must not be empty.',
+    );
+  }
+
+  final requestDto = sdk.SdkNotificationDto(
+    appToken: resolvedToken,
+    campaignId: attriaxStringValue(campaignId),
+    deviceId: attriaxStringValue(deviceId),
+    deviceIdSource: attriaxStringValue(deviceIdSource),
+    linkId: attriaxStringValue(linkId),
+    metadata: _generatedOptionalJsonObjectMap(metadata),
+    notificationId: normalizedNotificationId,
+    occurredAt: clientOccurredAt?.toUtc(),
+    platform: _generatedPlatform(platform),
+    sessionId: attriaxStringValue(sessionId),
+    source_: source == null ? null : _generatedNotificationEventSource(source),
+    title: attriaxStringValue(title),
+    type: _generatedNotificationEventType(type),
+  );
+
+  return AttriaxTrackNotificationRequest(requestDto);
+}
+
+sdk.NotificationEventType _generatedNotificationEventType(
+  AttriaxNotificationEventType type,
+) => switch (type) {
+  AttriaxNotificationEventType.received => sdk.NotificationEventType.received,
+  AttriaxNotificationEventType.opened => sdk.NotificationEventType.opened,
+  AttriaxNotificationEventType.dismissed => sdk.NotificationEventType.dismissed,
+};
+
+sdk.NotificationEventSource _generatedNotificationEventSource(
+  AttriaxNotificationEventSource source,
+) => switch (source) {
+  AttriaxNotificationEventSource.fcm => sdk.NotificationEventSource.fcm,
+  AttriaxNotificationEventSource.apns => sdk.NotificationEventSource.apns,
+  AttriaxNotificationEventSource.other => sdk.NotificationEventSource.other,
+};
+
 AttriaxTrackSessionRequest attriaxBuildTrackSessionRequest({
   required AttriaxSessionSnapshot session,
   required AttriaxSessionLifecycleKind kind,

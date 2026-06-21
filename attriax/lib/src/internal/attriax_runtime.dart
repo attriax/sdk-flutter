@@ -8,6 +8,7 @@ import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../attriax_consent.dart';
+import '../attriax_notification_event.dart';
 import 'attriax_api_models.dart';
 import 'attriax_api_base_url.dart';
 import 'attriax_app_open_launcher.dart';
@@ -480,6 +481,29 @@ class AttriaxRuntime {
     await _trackingManager.recordEvent(
       eventName,
       eventData: eventData,
+      flushImmediately: flushImmediately,
+    );
+  }
+
+  Future<void> recordNotification({
+    required AttriaxNotificationEventType type,
+    required String notificationId,
+    String? linkId,
+    String? campaignId,
+    String? title,
+    AttriaxNotificationEventSource? source,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = false,
+  }) async {
+    _assertInitialized();
+    await _trackingManager.recordNotification(
+      type: type,
+      notificationId: notificationId,
+      linkId: linkId,
+      campaignId: campaignId,
+      title: title,
+      source: source,
+      metadata: metadata,
       flushImmediately: flushImmediately,
     );
   }
