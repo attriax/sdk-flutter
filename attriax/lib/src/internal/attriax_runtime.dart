@@ -952,7 +952,9 @@ class AttriaxRuntime {
     } else {
       _sessionManager.deactivate();
     }
-    unawaited(_consentManager.flushPendingSync(projectToken: config.projectToken));
+    unawaited(
+      _consentManager.flushPendingSync(projectToken: config.projectToken),
+    );
     _synchronizer?.scheduleFlush();
   }
 

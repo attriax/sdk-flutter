@@ -420,7 +420,10 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       return inFlight;
     }
 
-    final sync = _syncPendingState(projectToken: projectToken, transport: transport);
+    final sync = _syncPendingState(
+      projectToken: projectToken,
+      transport: transport,
+    );
     _pendingSyncFuture = sync;
     return sync.whenComplete(() {
       if (identical(_pendingSyncFuture, sync)) {
