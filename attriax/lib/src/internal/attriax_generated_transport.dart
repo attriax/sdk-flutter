@@ -13,7 +13,7 @@ import 'attriax_queue.dart';
 import 'attriax_sdk_runtime_config.dart';
 
 const int _attriaxBatchMaxItemCount = 100;
-const int _attriaxBatchMaxBodyBytes = 48 * 1024;
+const int _attriaxBatchMaxBodyBytes = 256 * 1024;
 
 String _resolveTransportProjectToken({
   required String context,
