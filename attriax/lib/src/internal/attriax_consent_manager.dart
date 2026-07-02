@@ -89,6 +89,12 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
   DateTime? _checkedAt;
   bool _pendingSync = false;
   bool _didRestore = false;
+
+  /// Monotonic counter bumped on every local consent decision. Network echoes
+  /// capture the generation before their await; a mismatch on return means a
+  /// newer local decision landed mid-flight and the (stale) echo must be
+  /// discarded instead of downgrading the newer values.
+  int _consentGeneration = 0;
   Future<bool>? _needsConsentFuture;
   Future<void>? _pendingSyncFuture;
 
@@ -245,6 +251,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       regionSource: 'manual',
       pendingSync: true,
     );
+    _consentGeneration++;
     unawaited(_persistAndFlush(projectToken));
   }
 
@@ -257,6 +264,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       regionSource: 'manual',
       pendingSync: true,
     );
+    _consentGeneration++;
     unawaited(_persistAndFlush(projectToken));
   }
 
@@ -269,6 +277,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       regionSource: null,
       pendingSync: true,
     );
+    _consentGeneration++;
     unawaited(_persistAndFlush(projectToken));
   }
 
@@ -280,6 +289,7 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     _checkedAt = null;
     _pendingSync = false;
     _didRestore = false;
+    _consentGeneration++;
   }
 
   bool get _shouldRefreshRemoteDecision =>
@@ -304,11 +314,22 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
       if (transport != null) {
         try {
           final consentId = await _ensureConsentId();
+          // Capture the generation before the network await: a setConsent that
+          // lands during the check must not be downgraded by the (now stale)
+          // check echo.
+          final generation = _consentGeneration;
           final status = await transport.checkGdprConsent(
             projectToken: projectToken,
             consentId: consentId,
           );
-          await _applyRemoteStatus(status, pendingSync: false);
+          if (_consentGeneration == generation) {
+            await _applyRemoteStatus(status, pendingSync: false);
+          } else {
+            // A newer local consent decision landed during the check; ensure
+            // its intent is upserted rather than dropped (its now-stale echo
+            // is discarded).
+            unawaited(_flushPendingSync(projectToken: projectToken));
+          }
           return isWaitingForGdprConsent;
         } catch (error, stackTrace) {
           _logger.warning(
@@ -436,32 +457,52 @@ class AttriaxConsentManager implements AttriaxConsentReadView {
     required String projectToken,
     required AttriaxGeneratedTransport transport,
   }) async {
-    try {
-      final consentId = await _ensureConsentId();
-      final status = await transport.upsertGdprConsent(
-        projectToken: projectToken,
-        consentId: consentId,
-        state: _sdkStateFromPublic(_state),
-        values: _values == null
-            ? null
-            : sdk.SdkV1GdprConsentValuesDto(
-                analytics: _values!.analytics,
-                attribution: _values!.attribution,
-                adEvents: _values!.adEvents,
-              ),
-        countryCode: _countryCode,
-        regionSource: _regionSource,
-        clientOccurredAt: _checkedAt,
-      );
-      await _applyRemoteStatus(status, pendingSync: false);
-    } catch (error, stackTrace) {
-      _logger.warning(
-        'Failed to sync GDPR consent state to Attriax. The SDK will retry later.',
-        error: error,
-        stackTrace: stackTrace,
-      );
-      _pendingSync = true;
-      await _persistCurrentState();
+    // Convergence loop. A second setConsent can coalesce into the in-flight
+    // future created by the first one (see _flushPendingSync). The generation
+    // guard ensures that when an upsert returns we never let its (now stale)
+    // echo downgrade values set by a newer local consent decision that landed
+    // during the await: we capture the generation BEFORE the await, and if it
+    // advanced we discard the echo and re-sync the current intent.
+    while (true) {
+      final generation = _consentGeneration;
+      try {
+        final consentId = await _ensureConsentId();
+        final status = await transport.upsertGdprConsent(
+          projectToken: projectToken,
+          consentId: consentId,
+          state: _sdkStateFromPublic(_state),
+          values: _values == null
+              ? null
+              : sdk.SdkV1GdprConsentValuesDto(
+                  analytics: _values!.analytics,
+                  attribution: _values!.attribution,
+                  adEvents: _values!.adEvents,
+                ),
+          countryCode: _countryCode,
+          regionSource: _regionSource,
+          clientOccurredAt: _checkedAt,
+        );
+
+        if (_consentGeneration != generation) {
+          // A newer local consent decision landed while we were syncing. The
+          // echo we just received reflects the OLD intent — applying it would
+          // clobber the newer values. Discard it and re-sync the now-current
+          // state until the generation is stable.
+          continue;
+        }
+
+        await _applyRemoteStatus(status, pendingSync: false);
+        return;
+      } catch (error, stackTrace) {
+        _logger.warning(
+          'Failed to sync GDPR consent state to Attriax. The SDK will retry later.',
+          error: error,
+          stackTrace: stackTrace,
+        );
+        _pendingSync = true;
+        await _persistCurrentState();
+        return;
+      }
     }
   }
 

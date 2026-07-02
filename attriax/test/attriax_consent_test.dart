@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:attriax_flutter/attriax_flutter.dart';
@@ -1337,6 +1338,112 @@ void main() {
         expect(requestPaths, contains('/api/sdk/v1/open'));
         expect(requestPaths, isNot(contains('/api/sdk/v1/uninstall-tokens')));
         expect(uninstallBody, isNull);
+      },
+    );
+
+    test(
+      'a consent change during an in-flight upsert wins over the stale echo',
+      () async {
+        final upsertBodies = <Map<String, Object?>>[];
+        final firstEchoGate = Completer<void>();
+        client = MockClient((request) async {
+          if (request.url.path != '/api/sdk/v1/consent/gdpr') {
+            throw StateError(
+              'Unexpected request: ${request.method} ${request.url.path}',
+            );
+          }
+
+          final body = jsonDecode(request.body) as Map<String, Object?>;
+          upsertBodies.add(body);
+          if (upsertBodies.length == 1) {
+            // Hold consent A's echo until consent B has been issued locally.
+            await firstEchoGate.future;
+          }
+
+          final values = body['values'] as Map<String, Object?>?;
+          return http.Response(
+            _gdprEnvelope(<String, Object?>{
+              'checkedAt': '2026-05-20T12:00:0${upsertBodies.length}.000Z',
+              'countryCode': 'DE',
+              'needsConsent': false,
+              'regionSource': 'manual',
+              'state': body['state'],
+              if (values != null) 'values': values,
+            }),
+            200,
+            headers: const <String, String>{'content-type': 'application/json'},
+          );
+        });
+        await sdk.dispose();
+        sdk = _createSdk(
+          config: const AttriaxConfig(
+            projectToken: 'ax_test_token',
+            gdprEnabled: true,
+          ),
+          client: client,
+          deepLinkSource: deepLinkSource,
+          connectivity: connectivity,
+          contextCollector: contextCollector,
+          prefs: prefs,
+        );
+
+        // Consent A: its upsert goes in flight and stays blocked.
+        sdk.consent.gdpr.setConsent(
+          analytics: true,
+          attribution: true,
+          adEvents: true,
+        );
+        await _waitFor(() => upsertBodies.length == 1);
+
+        // Consent B lands while A's upsert is still in flight (revoke).
+        sdk.consent.gdpr.setConsent(
+          analytics: false,
+          attribution: false,
+          adEvents: false,
+        );
+        await _drainMicrotasks();
+
+        // Release A's echo: it is now stale and must not clobber B.
+        firstEchoGate.complete();
+        await _waitFor(() => upsertBodies.length == 2);
+        await _waitFor(() {
+          final raw = prefs.getString(
+            AttriaxPreferencesStore.gdprConsentStorageKey,
+          );
+          if (raw == null) {
+            return false;
+          }
+          final stored = jsonDecode(raw) as Map<String, Object?>;
+          return stored['pendingSync'] == false;
+        });
+
+        // B was re-synced after the stale echo was discarded.
+        expect(upsertBodies, hasLength(2));
+        expect(upsertBodies[1]['values'], <String, Object?>{
+          'analytics': false,
+          'attribution': false,
+          'adEvents': false,
+        });
+        expect(sdk.consent.gdpr.state, AttriaxGdprConsentState.granted);
+        expect(
+          sdk.consent.gdpr.values,
+          const AttriaxGdprConsentValues(
+            analytics: false,
+            attribution: false,
+            adEvents: false,
+          ),
+        );
+
+        final storedRaw = prefs.getString(
+          AttriaxPreferencesStore.gdprConsentStorageKey,
+        );
+        final stored = jsonDecode(storedRaw!) as Map<String, Object?>;
+        expect(stored['pendingSync'], isFalse);
+        expect(stored['values'], <String, Object?>{
+          'analytics': false,
+          'attribution': false,
+          'adEvents': false,
+        });
       },
     );
 
