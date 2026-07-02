@@ -44,4 +44,18 @@ export 'src/types.dart'
         AttriaxAppOpen,
         AttriaxInitResult,
         AttriaxSessionSnapshot,
+        AttriaxAttestationEnvelope,
+        AttriaxAttestationProvider,
+        AttriaxNoopAttestationProvider,
+        AttriaxAttestationProviderSlug,
+        attriaxAttestationProviderSlugForPlatform,
         AttriaxConfig;
+
+// The channel-backed provider lives in its own library so the pure-model type
+// surface above stays free of a `flutter/services` dependency. Integrations and
+// the runtime import it explicitly when opting into platform attestation.
+export 'src/attriax_platform_attestation.dart'
+    show
+        AttriaxPlatformAttestationProvider,
+        attriaxAttestationMethodChannelName,
+        attriaxAcquireAttestationTokenMethod;

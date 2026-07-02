@@ -7,8 +7,14 @@ AttriaxApiRequest attriaxApiRequestFromJson(
   final body = _attriaxMigrateLegacyProjectToken(rawBody);
   switch (kindName) {
     case 'open':
+      // The attestation envelope (Epic 7.3b) is attached as an extra field the
+      // generated SdkV1OpenDto does not model, so it must be carried across the
+      // queue-restore boundary explicitly or a restored open request would drop
+      // it. The server tolerates a stale nonce (it degrades to
+      // `attestation_missing`), so preserving it is safe.
       return AttriaxOpenRequest(
         _parseGeneratedPayload(body, sdk.SdkV1OpenDto.fromJson),
+        attestation: attriaxObjectMap(body['attestation']),
       );
     case 'trackEvent':
       return AttriaxTrackEventRequest(

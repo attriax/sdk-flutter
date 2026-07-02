@@ -1,4 +1,5 @@
 import 'package:attriax_flutter/src/internal/attriax_api_models.dart';
+import 'package:attriax_flutter/src/internal/attriax_attestation_manager.dart';
 import 'package:attriax_flutter/src/internal/attriax_generated_transport.dart';
 import 'package:attriax_flutter/src/internal/attriax_queue.dart';
 import 'package:attriax_flutter/src/internal/attriax_sdk_runtime_config.dart';
@@ -114,6 +115,12 @@ class FakeGeneratedTransport implements AttriaxGeneratedTransport {
             adEvents: values.adEvents,
           ),
   );
+
+  AttriaxAttestationChallenge? attestationChallengeResult;
+
+  @override
+  Future<AttriaxAttestationChallenge?> fetchAttestationChallenge() async =>
+      attestationChallengeResult;
 
   @override
   Future<AttriaxSdkRuntimeConfig> fetchSdkRuntimeConfig(

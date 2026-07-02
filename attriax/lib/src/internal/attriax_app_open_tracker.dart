@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
 import 'attriax_api_models.dart';
+import 'attriax_attestation_manager.dart';
 import 'attriax_logger.dart';
 import 'attriax_request_manager.dart';
 
@@ -29,12 +30,19 @@ class AttriaxAppOpenTracker {
     required AttriaxSessionSnapshot? session,
     required AttriaxRequestManager requestManager,
     required AttriaxLogger logger,
+    AttriaxAttestationManager? attestationManager,
   }) async {
     if (_didSchedule) {
       return;
     }
     _didSchedule = true;
     _completer = Completer<AttriaxAppOpenResult?>();
+
+    // Resolve the optional device-attestation envelope (Epic 7.3b) before the
+    // app-open/init request is enqueued. This is inert (returns null) unless the
+    // integration opted into attestation, and it never throws — a failed
+    // challenge or a null provider result simply attaches no envelope.
+    final attestation = await attestationManager?.resolveEnvelope();
 
     await requestManager.enqueue(
       attriaxBuildOpenRequest(
@@ -46,6 +54,7 @@ class AttriaxAppOpenTracker {
         deviceMetadataOverrides: deviceMetadataOverrides,
         sessionId: session?.id,
         sessionStartedAt: session?.startedAt,
+        attestation: attestation,
       ),
       onSuccess: (response) {
         if (response is! AttriaxOpenApiResponse) {

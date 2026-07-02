@@ -470,6 +470,53 @@ void main() {
         );
       },
     );
+
+    test(
+      'fetchAttestationChallenge posts to the challenge endpoint and returns '
+      'the nonce',
+      () async {
+        final client = FakeHttpClient((request) async {
+          expect(request.method, 'POST');
+          expect(request.url.path, '/api/sdk/attestation/challenge');
+          return _jsonResponse(200, <String, Object?>{
+            'nonce': 'server_nonce',
+            'expiresInSeconds': 120,
+          });
+        });
+
+        final transport = _createTransport(client);
+        final challenge = await transport.fetchAttestationChallenge();
+
+        expect(challenge, isNotNull);
+        expect(challenge!.nonce, 'server_nonce');
+        expect(challenge.expiresInSeconds, 120);
+      },
+    );
+
+    test(
+      'fetchAttestationChallenge returns null on a non-success status',
+      () async {
+        final client = FakeHttpClient(
+          (_) async => _jsonResponse(503, <String, Object?>{'message': 'down'}),
+        );
+
+        final transport = _createTransport(client);
+        expect(await transport.fetchAttestationChallenge(), isNull);
+      },
+    );
+
+    test(
+      'fetchAttestationChallenge returns null when the nonce is missing',
+      () async {
+        final client = FakeHttpClient(
+          (_) async =>
+              _jsonResponse(200, <String, Object?>{'expiresInSeconds': 120}),
+        );
+
+        final transport = _createTransport(client);
+        expect(await transport.fetchAttestationChallenge(), isNull);
+      },
+    );
   });
 }
 

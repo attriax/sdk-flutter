@@ -8,6 +8,7 @@ import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
 
 import 'attriax_api_models.dart';
+import 'attriax_attestation_manager.dart';
 import 'attriax_json_utils.dart';
 import 'attriax_queue.dart';
 import 'attriax_sdk_runtime_config.dart';
@@ -90,6 +91,7 @@ class AttriaxGeneratedTransport {
     required String apiBaseUrl,
     required Duration requestTimeout,
     required http.Client httpClient,
+    List<String> pinnedCertificateSha256Fingerprints = const <String>[],
   }) {
     final dio = Dio(
       BaseOptions(
@@ -98,7 +100,11 @@ class AttriaxGeneratedTransport {
         receiveTimeout: requestTimeout,
         sendTimeout: requestTimeout,
       ),
-    )..httpClientAdapter = AttriaxDioHttpClientAdapter(httpClient);
+    )..httpClientAdapter = AttriaxDioHttpClientAdapter(
+      httpClient,
+      pinnedCertificateSha256Fingerprints:
+          pinnedCertificateSha256Fingerprints,
+    );
 
     return AttriaxGeneratedTransport._(
       sdk.AttriaxApiClient(dio: dio).getSdkApi(),
@@ -359,6 +365,42 @@ class AttriaxGeneratedTransport {
     }
 
     return AttriaxSdkRuntimeConfig.fromJsonEnvelope(body);
+  }
+
+  /// Requests a single-use attestation nonce (Epic 7.3b).
+  ///
+  /// Calls the public challenge endpoint and returns the issued nonce, or `null`
+  /// when the response is missing/invalid. This never throws for a non-success
+  /// status: the attestation flow treats any failure as "no nonce" and sends
+  /// init with no envelope, so a challenge outage must not surface here as an
+  /// error that could break init. Network-level exceptions still propagate and
+  /// are caught by the attestation manager.
+  Future<AttriaxAttestationChallenge?> fetchAttestationChallenge() async {
+    final response = await _dio.post<Object?>(
+      '/api/sdk/attestation/challenge',
+      options: Options(validateStatus: _allowAnyStatus),
+    );
+
+    final statusCode = response.statusCode ?? 0;
+    if (!_isSuccessful(statusCode)) {
+      return null;
+    }
+
+    final body = attriaxObjectMap(response.data);
+    if (body == null) {
+      return null;
+    }
+
+    final nonce = body['nonce'];
+    if (nonce is! String || nonce.trim().isEmpty) {
+      return null;
+    }
+
+    final expiresInSeconds = body['expiresInSeconds'];
+    return AttriaxAttestationChallenge(
+      nonce: nonce.trim(),
+      expiresInSeconds: expiresInSeconds is num ? expiresInSeconds.toInt() : null,
+    );
   }
 
   Future<AttriaxRevenueReceiptValidationResult> validateRevenueReceipt(
@@ -639,9 +681,27 @@ String _attriaxSummarizeErrorBody(Object body) {
 }
 
 class AttriaxDioHttpClientAdapter implements HttpClientAdapter {
-  AttriaxDioHttpClientAdapter(this._client);
+  AttriaxDioHttpClientAdapter(
+    this._client, {
+    List<String> pinnedCertificateSha256Fingerprints = const <String>[],
+  }) : _pinnedCertificateSha256Fingerprints = List<String>.unmodifiable(
+         pinnedCertificateSha256Fingerprints
+             .map((fingerprint) => fingerprint.trim().toLowerCase())
+             .where((fingerprint) => fingerprint.isNotEmpty),
+       );
 
   final http.Client _client;
+
+  /// Normalized SHA-256 certificate fingerprints to pin against (Epic 7.3b).
+  ///
+  /// Empty → certificate pinning is DISABLED (default). When non-empty, the
+  /// transport is expected to reject any TLS connection whose leaf/intermediate
+  /// certificate chain does not match one of these fingerprints.
+  final List<String> _pinnedCertificateSha256Fingerprints;
+
+  /// Whether certificate pinning has been configured for this transport.
+  bool get isCertificatePinningEnabled =>
+      _pinnedCertificateSha256Fingerprints.isNotEmpty;
 
   @override
   Future<ResponseBody> fetch(
@@ -649,6 +709,16 @@ class AttriaxDioHttpClientAdapter implements HttpClientAdapter {
     Stream<Uint8List>? requestStream,
     Future<void>? cancelFuture,
   ) async {
+    // TODO(live): enforce certificate pinning here.
+    //
+    // The Dart `http.Client` this adapter wraps does not expose the negotiated
+    // TLS certificate chain, so real SHA-256 leaf/intermediate pinning requires
+    // either a `dart:io` `SecurityContext` / `HttpClient.badCertificateCallback`
+    // seam (mobile/desktop) or is simply not enforceable on web. Pinning certs
+    // are also CA-rotation-sensitive and cannot be verified in this repo, so no
+    // fake fingerprints are shipped and enforcement is a no-op until the live
+    // certs and a chain-aware client are wired in. `isCertificatePinningEnabled`
+    // exposes the configured state so a live implementation can gate on it.
     try {
       final request = http.Request(options.method, options.uri);
       options.headers.forEach((key, value) {

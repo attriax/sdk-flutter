@@ -9,6 +9,7 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
   Map<String, Object?> deviceMetadataOverrides = const <String, Object?>{},
   String? sessionId,
   DateTime? sessionStartedAt,
+  Map<String, Object?>? attestation,
 }) {
   final deviceId = context.deviceId;
   if (deviceId == null || deviceId.isEmpty) {
@@ -45,7 +46,7 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
     sessionStartedAt: sessionStartedAt?.toUtc(),
   );
 
-  return AttriaxOpenRequest(requestDto);
+  return AttriaxOpenRequest(requestDto, attestation: attestation);
 }
 
 AttriaxInstallReferrerDetails? attriaxBuildLocalInstallReferrerDetails(

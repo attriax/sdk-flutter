@@ -123,6 +123,9 @@ class AttriaxConfig {
     this.sessionHeartbeatInterval = const Duration(minutes: 5),
     this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 30),
     this.skan,
+    this.attestationEnabled = false,
+    this.attestationProvider,
+    this.pinnedCertificateSha256Fingerprints = const <String>[],
   });
 
   /// Project token from the Attriax dashboard.
@@ -206,4 +209,40 @@ class AttriaxConfig {
 
   /// Optional local SKAN defaults used until dashboard runtime config loads.
   final AttriaxSkanConfig? skan;
+
+  /// Opts this SDK instance into device attestation (Epic 7.3b).
+  ///
+  /// Default `false`. When `false`, the SDK never requests an attestation nonce
+  /// and never attaches an attestation envelope to the init request — behavior
+  /// is identical to earlier SDK versions.
+  ///
+  /// When `true`, before the app-open/init request the SDK fetches a single-use
+  /// nonce from the challenge endpoint, asks [attestationProvider] to produce a
+  /// token, and attaches the resulting envelope. Server-side verification is
+  /// itself inert unless the project opts into `requireAttestation`, so enabling
+  /// this is safe and never blocks or fails init: a failed challenge fetch or a
+  /// `null` provider result simply sends init with no envelope.
+  final bool attestationEnabled;
+
+  /// The provider that acquires the platform attestation token.
+  ///
+  /// Ignored unless [attestationEnabled] is `true`. When attestation is enabled
+  /// and this is `null`, the SDK uses [AttriaxNoopAttestationProvider] (always
+  /// `null`), so no envelope is attached. Supply an
+  /// `AttriaxPlatformAttestationProvider` (or a custom implementation) to attach
+  /// a real Play Integrity / App Attest envelope.
+  final AttriaxAttestationProvider? attestationProvider;
+
+  /// SHA-256 certificate fingerprints to pin the SDK transport against.
+  ///
+  /// Empty by default → certificate pinning is DISABLED and the default system
+  /// trust store is used (no behavior change). Provide the hex-encoded SHA-256
+  /// fingerprints of the leaf/intermediate certificates you trust to enable
+  /// pinning.
+  ///
+  /// NOTE (Epic 7.3b): the enforcement seam is present but the real per-request
+  /// SHA-256 validation is a `TODO(live)` in the transport layer — pinning is
+  /// device/OS/CA-rotation-sensitive and cannot be verified here, so no fake
+  /// certificates are shipped. See the SDK transport setup for the seam.
+  final List<String> pinnedCertificateSha256Fingerprints;
 }

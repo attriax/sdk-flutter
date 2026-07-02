@@ -52,11 +52,13 @@ public class AttriaxAndroidPlugin implements
     ActivityAware,
     NewIntentListener {
     private static final String CHANNEL_NAME = "attriax";
+    private static final String ATTESTATION_CHANNEL_NAME = "attriax/attestation";
     private static final String DEEP_LINK_EVENTS_CHANNEL = "attriax/deep_links/events";
     private static final String CRASH_PREFERENCES_NAME = "attriax.crashes";
     private static final String PENDING_CRASH_KEY = "attriax.pending_crash";
 
     private MethodChannel channel;
+    private MethodChannel attestationChannel;
     private EventChannel deepLinkEventChannel;
     private EventChannel.EventSink deepLinkEventSink;
     private final Object deepLinkStateLock = new Object();
@@ -73,6 +75,8 @@ public class AttriaxAndroidPlugin implements
     public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
         channel = new MethodChannel(binding.getBinaryMessenger(), CHANNEL_NAME);
         channel.setMethodCallHandler(this);
+        attestationChannel = new MethodChannel(binding.getBinaryMessenger(), ATTESTATION_CHANNEL_NAME);
+        attestationChannel.setMethodCallHandler(this::onAttestationMethodCall);
         deepLinkEventChannel = new EventChannel(
             binding.getBinaryMessenger(),
             DEEP_LINK_EVENTS_CHANNEL
@@ -85,6 +89,9 @@ public class AttriaxAndroidPlugin implements
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
         if (channel != null) {
             channel.setMethodCallHandler(null);
+        }
+        if (attestationChannel != null) {
+            attestationChannel.setMethodCallHandler(null);
         }
         if (deepLinkEventChannel != null) {
             deepLinkEventChannel.setStreamHandler(null);
@@ -132,6 +139,33 @@ public class AttriaxAndroidPlugin implements
             default:
                 result.notImplemented();
         }
+    }
+
+    /**
+     * Epic 7.3b — device attestation (Play Integrity) acquisition seam.
+     *
+     * Answers on the dedicated {@code attriax/attestation} channel so it can be
+     * implemented (or stay stubbed) independently of the main plugin surface.
+     *
+     * TODO(live): acquire a Play Integrity token that embeds the provided
+     * {@code nonce} (via the Play Integrity API / StandardIntegrityManager),
+     * then return a map:
+     *   {@code {"provider": "play_integrity", "token": <integrityToken>,
+     *           "nonce": <nonce>}}.
+     * Real acquisition depends on a Google Cloud project number, Play Integrity
+     * setup, and a device with Play services, none of which can be verified in
+     * this repo. Until then this returns {@code null} so the Dart
+     * {@code AttriaxPlatformAttestationProvider} degrades to "unattested" and the
+     * SDK sends init with no envelope. Returning {@code null} (rather than
+     * {@code notImplemented()}) keeps the degrade path a clean no-token result.
+     */
+    private void onAttestationMethodCall(@NonNull MethodCall call, @NonNull Result result) {
+        if ("acquireAttestationToken".equals(call.method)) {
+            // TODO(live): replace with real Play Integrity token acquisition.
+            result.success(null);
+            return;
+        }
+        result.notImplemented();
     }
 
     private void openBrowserUrl(@NonNull MethodCall call, @NonNull Result result) {

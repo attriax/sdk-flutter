@@ -10,9 +10,18 @@ sealed class AttriaxApiRequest {
 }
 
 final class AttriaxOpenRequest extends AttriaxApiRequest {
-  const AttriaxOpenRequest(this.payload);
+  const AttriaxOpenRequest(this.payload, {this.attestation});
 
   final sdk.SdkV1OpenDto payload;
+
+  /// Optional device-attestation envelope (Epic 7.3b).
+  ///
+  /// Merged into the serialized open body under the `attestation` key. The
+  /// generated [sdk.SdkV1OpenDto] does not (yet) carry this field, so it is
+  /// attached here as an extra JSON field on the raw open request — the open
+  /// request is sent as a plain JSON map, and the server DTO already accepts an
+  /// optional `attestation` envelope. `null` → the field is omitted entirely.
+  final Map<String, Object?>? attestation;
 
   @override
   String get kindName => 'open';
@@ -21,7 +30,14 @@ final class AttriaxOpenRequest extends AttriaxApiRequest {
   String get label => 'app-open';
 
   @override
-  Map<String, Object?> toQueueBody() => _generatedQueueBody(payload);
+  Map<String, Object?> toQueueBody() {
+    final body = _generatedQueueBody(payload);
+    final envelope = attestation;
+    if (envelope != null && envelope.isNotEmpty) {
+      body['attestation'] = envelope;
+    }
+    return body;
+  }
 }
 
 final class AttriaxTrackEventRequest extends AttriaxApiRequest {

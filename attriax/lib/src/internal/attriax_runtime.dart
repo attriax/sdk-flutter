@@ -13,6 +13,7 @@ import 'attriax_api_models.dart';
 import 'attriax_api_base_url.dart';
 import 'attriax_app_open_launcher.dart';
 import 'attriax_app_open_manager.dart';
+import 'attriax_attestation_manager.dart';
 import 'attriax_consent_manager.dart';
 import 'attriax_context_collector.dart';
 import 'attriax_context_manager.dart';
@@ -111,6 +112,11 @@ class AttriaxRuntime {
       logger: _logger,
       clock: _clock,
     );
+    _attestationManager = AttriaxAttestationManager(
+      config: config,
+      fetchChallenge: () => _ensureTransport().fetchAttestationChallenge(),
+      logger: _logger,
+    );
     _appOpenManager = AttriaxAppOpenManager(
       config: config,
       contextManager: _contextManager,
@@ -118,6 +124,7 @@ class AttriaxRuntime {
       sessionManager: _sessionManager,
       requestManager: _requestManager,
       logger: _logger,
+      attestationManager: _attestationManager,
     );
     _referrerManager = AttriaxReferrerManager(
       preferencesStore: _preferencesStore,
@@ -182,6 +189,7 @@ class AttriaxRuntime {
         logger: _logger,
       );
   late final AttriaxDeepLinkManager _deepLinkManager;
+  late final AttriaxAttestationManager _attestationManager;
   late final AttriaxAppOpenManager _appOpenManager;
   late final AttriaxReferrerManager _referrerManager;
   late final AttriaxTrackingManager _trackingManager;
@@ -1007,6 +1015,8 @@ class AttriaxRuntime {
       apiBaseUrl: _apiBaseUrlConfig.apiBaseUrl,
       requestTimeout: config.requestTimeout,
       httpClient: _client,
+      pinnedCertificateSha256Fingerprints:
+          config.pinnedCertificateSha256Fingerprints,
     );
     _transport = created;
     return created;

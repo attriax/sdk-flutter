@@ -4,6 +4,7 @@ import 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';
 
 import 'attriax_app_open_monitor.dart';
 import 'attriax_app_open_tracker.dart';
+import 'attriax_attestation_manager.dart';
 import 'attriax_context_manager.dart';
 import 'attriax_logger.dart';
 import 'attriax_platform_install_referrer_manager.dart';
@@ -20,6 +21,7 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
     required AttriaxSessionManager sessionManager,
     required AttriaxRequestManager requestManager,
     required AttriaxLogger logger,
+    AttriaxAttestationManager? attestationManager,
     AttriaxAppOpenTracker? tracker,
   }) : _config = config,
        _contextManager = contextManager,
@@ -27,6 +29,7 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
        _sessionManager = sessionManager,
        _requestManager = requestManager,
        _logger = logger,
+       _attestationManager = attestationManager,
        _tracker = tracker ?? AttriaxAppOpenTracker();
 
   final AttriaxConfig _config;
@@ -35,6 +38,7 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
   final AttriaxSessionManager _sessionManager;
   final AttriaxRequestManager _requestManager;
   final AttriaxLogger _logger;
+  final AttriaxAttestationManager? _attestationManager;
   final AttriaxAppOpenTracker _tracker;
   Completer<void>? _scheduledCompleter;
   bool _isResultObservationScheduled = false;
@@ -75,6 +79,7 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
       session: _sessionManager.currentSession,
       requestManager: _requestManager,
       logger: _logger,
+      attestationManager: _attestationManager,
     );
     _completeScheduled();
 

@@ -101,6 +101,10 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
     private var cachedWebViewUserAgent: String?
     private var webViewUserAgentProbe: WKWebView?
 
+    // Epic 7.3b — retained so the dedicated attestation channel delegate is not
+    // deallocated after `register`.
+    private static var attestationDelegate: AttriaxAttestationChannelDelegate?
+
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "attriax", binaryMessenger: registrar.messenger())
         let eventChannel = FlutterEventChannel(
@@ -112,6 +116,16 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         eventChannel.setStreamHandler(instance)
         registrar.addApplicationDelegate(instance)
         registrar.addSceneDelegate(instance)
+
+        // Epic 7.3b — device attestation (App Attest) acquisition seam on the
+        // dedicated `attriax/attestation` channel.
+        let attestationChannel = FlutterMethodChannel(
+            name: "attriax/attestation",
+            binaryMessenger: registrar.messenger()
+        )
+        let attestationDelegate = AttriaxAttestationChannelDelegate()
+        registrar.addMethodCallDelegate(attestationDelegate, channel: attestationChannel)
+        Self.attestationDelegate = attestationDelegate
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -741,5 +755,35 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
             ],
         ]
         UserDefaults.standard.set(payload, forKey: attriaxPendingCrashKey)
+    }
+}
+
+/// Epic 7.3b — device attestation (App Attest) acquisition seam.
+///
+/// Handles the `attriax/attestation` channel independently of the main plugin.
+///
+/// TODO(live): acquire an App Attest assertion/attestation for the provided
+/// `nonce` (via `DCAppAttestService`: `generateKey` → `attestKey` /
+/// `generateAssertion` over the nonce), then return a map:
+///   `["provider": "app_attest", "token": <base64Attestation>,
+///     "nonce": <nonce>, "keyId": <keyId>]`.
+/// Real acquisition requires a real device (App Attest is unavailable in the
+/// simulator), an Apple Developer Team, and server-side key registration, none
+/// of which can be verified in this repo. Until then this returns `nil` so the
+/// Dart `AttriaxPlatformAttestationProvider` degrades to "unattested" and the
+/// SDK sends init with no envelope.
+final class AttriaxAttestationChannelDelegate: NSObject, FlutterPlugin {
+    // FlutterPlugin conformance is only used so this can be a method-call
+    // delegate; registration is driven by AttriaxIosPlugin.register.
+    static func register(with registrar: FlutterPluginRegistrar) {}
+
+    func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        switch call.method {
+        case "acquireAttestationToken":
+            // TODO(live): replace with real App Attest acquisition.
+            result(nil)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
     }
 }
