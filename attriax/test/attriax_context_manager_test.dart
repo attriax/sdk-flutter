@@ -197,6 +197,10 @@ class _FakeContextRuntimeServices implements AttriaxContextRuntimeServices {
   }
 
   @override
+  Future<AttriaxTrackingAuthorizationStatus>
+  waitForTrackingAuthorizationIfNeeded() async => trackingAuthorizationStatus;
+
+  @override
   Future<AttriaxTrackingAuthorizationStatus> requestTrackingAuthorization({
     Duration? timeout,
   }) async {

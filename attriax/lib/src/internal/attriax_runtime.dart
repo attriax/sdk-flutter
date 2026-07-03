@@ -13,6 +13,7 @@ import 'attriax_api_models.dart';
 import 'attriax_api_base_url.dart';
 import 'attriax_app_open_launcher.dart';
 import 'attriax_app_open_manager.dart';
+import 'attriax_asa_token_manager.dart';
 import 'attriax_attestation_manager.dart';
 import 'attriax_consent_manager.dart';
 import 'attriax_context_collector.dart';
@@ -117,6 +118,19 @@ class AttriaxRuntime {
       fetchChallenge: () => _ensureTransport().fetchAttestationChallenge(),
       logger: _logger,
     );
+    _asaTokenManager = AttriaxAsaTokenManager(
+      config: config,
+      platformType: _platformType,
+      acquireToken: AttriaxAdServicesTokenProvider(
+        currentPlatform: () => _platformType,
+      ).acquireToken,
+      sendToken: ({required projectToken, required token}) =>
+          _ensureTransport().sendAsaToken(
+            projectToken: projectToken,
+            token: token,
+          ),
+      logger: _logger,
+    );
     _appOpenManager = AttriaxAppOpenManager(
       config: config,
       contextManager: _contextManager,
@@ -125,6 +139,7 @@ class AttriaxRuntime {
       requestManager: _requestManager,
       logger: _logger,
       attestationManager: _attestationManager,
+      attStatusResolver: _contextManager.waitForTrackingAuthorizationIfNeeded,
     );
     _referrerManager = AttriaxReferrerManager(
       preferencesStore: _preferencesStore,
@@ -190,6 +205,7 @@ class AttriaxRuntime {
       );
   late final AttriaxDeepLinkManager _deepLinkManager;
   late final AttriaxAttestationManager _attestationManager;
+  late final AttriaxAsaTokenManager _asaTokenManager;
   late final AttriaxAppOpenManager _appOpenManager;
   late final AttriaxReferrerManager _referrerManager;
   late final AttriaxTrackingManager _trackingManager;
@@ -952,6 +968,10 @@ class AttriaxRuntime {
     if (_allowsAttributionTracking) {
       await _referrerManager.prepareForEnabledState();
       unawaited(_scheduleAppOpenIfNeeded());
+      // Apple Search Ads (AdServices) token capture is iOS-only, best-effort,
+      // and fully fault-isolated: any failure (non-iOS, stub native, network)
+      // is a silent no-op that never affects init or session (Epic 8.5).
+      unawaited(_asaTokenManager.captureAndReportIfNeeded());
     } else {
       await _referrerManager.prepareForDeniedAttributionState();
     }

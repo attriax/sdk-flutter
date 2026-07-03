@@ -22,6 +22,7 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
     required AttriaxRequestManager requestManager,
     required AttriaxLogger logger,
     AttriaxAttestationManager? attestationManager,
+    AttriaxAppOpenAttStatusResolver? attStatusResolver,
     AttriaxAppOpenTracker? tracker,
   }) : _config = config,
        _contextManager = contextManager,
@@ -30,6 +31,7 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
        _requestManager = requestManager,
        _logger = logger,
        _attestationManager = attestationManager,
+       _attStatusResolver = attStatusResolver,
        _tracker = tracker ?? AttriaxAppOpenTracker();
 
   final AttriaxConfig _config;
@@ -39,6 +41,7 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
   final AttriaxRequestManager _requestManager;
   final AttriaxLogger _logger;
   final AttriaxAttestationManager? _attestationManager;
+  final AttriaxAppOpenAttStatusResolver? _attStatusResolver;
   final AttriaxAppOpenTracker _tracker;
   Completer<void>? _scheduledCompleter;
   bool _isResultObservationScheduled = false;
@@ -80,6 +83,7 @@ class AttriaxAppOpenManager implements AttriaxAppOpenMonitor {
       requestManager: _requestManager,
       logger: _logger,
       attestationManager: _attestationManager,
+      attStatusResolver: _attStatusResolver,
     );
     _completeScheduled();
 

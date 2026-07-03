@@ -95,6 +95,12 @@ class AttriaxContextManager implements AttriaxTrackingContext {
   Future<AttriaxTrackingAuthorizationStatus> getTrackingAuthorizationStatus() =>
       _contextCollector.getTrackingAuthorizationStatus();
 
+  /// Resolves the App Tracking Transparency status settled during startup, used
+  /// to stamp `attStatus` on the app-open request (Epic 8.5).
+  Future<AttriaxTrackingAuthorizationStatus>
+  waitForTrackingAuthorizationIfNeeded() =>
+      _contextCollector.waitForTrackingAuthorizationIfNeeded();
+
   Future<String?> resolveTimezone() =>
       _contextCollector.resolveDeviceTimezone();
 

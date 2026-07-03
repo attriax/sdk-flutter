@@ -234,6 +234,67 @@ void main() {
       },
     );
 
+    test(
+      'stamps the mapped attStatus on the open request when resolved',
+      () async {
+        await tracker.schedule(
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
+          context: context,
+          platformInstallReferrerContext: const AttriaxInstallReferrerContext(),
+          deviceIdSource: 'android_ssaid',
+          session: null,
+          requestManager: requestManager,
+          logger: AttriaxLogger(enableDebugLogs: false),
+          attStatusResolver: () async =>
+              AttriaxTrackingAuthorizationStatus.denied,
+        );
+
+        expect(requestManager.lastRequest!.toQueueBody()['attStatus'], 'denied');
+      },
+    );
+
+    test(
+      'omits attStatus when the resolver reports a non-ATT status',
+      () async {
+        await tracker.schedule(
+          config: const AttriaxConfig(projectToken: 'ax_test_token'),
+          context: context,
+          platformInstallReferrerContext: const AttriaxInstallReferrerContext(),
+          deviceIdSource: 'android_ssaid',
+          session: null,
+          requestManager: requestManager,
+          logger: AttriaxLogger(enableDebugLogs: false),
+          attStatusResolver: () async =>
+              AttriaxTrackingAuthorizationStatus.notSupported,
+        );
+
+        expect(
+          requestManager.lastRequest!.toQueueBody().containsKey('attStatus'),
+          isFalse,
+        );
+      },
+    );
+
+    test('omits attStatus and never throws when the resolver fails', () async {
+      await tracker.schedule(
+        config: const AttriaxConfig(projectToken: 'ax_test_token'),
+        context: context,
+        platformInstallReferrerContext: const AttriaxInstallReferrerContext(),
+        deviceIdSource: 'android_ssaid',
+        session: null,
+        requestManager: requestManager,
+        logger: AttriaxLogger(enableDebugLogs: false),
+        attStatusResolver: () async =>
+            throw StateError('att resolution failed'),
+      );
+
+      expect(requestManager.enqueueCalls, 1);
+      expect(
+        requestManager.lastRequest!.toQueueBody().containsKey('attStatus'),
+        isFalse,
+      );
+    });
+
     test('propagates request manager errors', () async {
       await tracker.schedule(
         config: const AttriaxConfig(projectToken: 'ax_test_token'),

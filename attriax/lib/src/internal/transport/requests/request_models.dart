@@ -10,7 +10,7 @@ sealed class AttriaxApiRequest {
 }
 
 final class AttriaxOpenRequest extends AttriaxApiRequest {
-  const AttriaxOpenRequest(this.payload, {this.attestation});
+  const AttriaxOpenRequest(this.payload, {this.attestation, this.attStatus});
 
   final sdk.SdkV1OpenDto payload;
 
@@ -22,6 +22,15 @@ final class AttriaxOpenRequest extends AttriaxApiRequest {
   /// request is sent as a plain JSON map, and the server DTO already accepts an
   /// optional `attestation` envelope. `null` → the field is omitted entirely.
   final Map<String, Object?>? attestation;
+
+  /// Optional App Tracking Transparency status (Epic 8.5).
+  ///
+  /// One of `authorized|denied|restricted|notDetermined|unknown`, attached to
+  /// the open body under the `attStatus` key. The generated [sdk.SdkV1OpenDto]
+  /// does not (yet) carry this field, so it is attached here as an extra JSON
+  /// field, mirroring [attestation]. `null` → the field is omitted entirely, so
+  /// there is no behavior change for platforms where ATT does not apply.
+  final String? attStatus;
 
   @override
   String get kindName => 'open';
@@ -35,6 +44,10 @@ final class AttriaxOpenRequest extends AttriaxApiRequest {
     final envelope = attestation;
     if (envelope != null && envelope.isNotEmpty) {
       body['attestation'] = envelope;
+    }
+    final resolvedAttStatus = attStatus;
+    if (resolvedAttStatus != null && resolvedAttStatus.isNotEmpty) {
+      body['attStatus'] = resolvedAttStatus;
     }
     return body;
   }

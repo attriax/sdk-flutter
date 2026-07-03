@@ -403,6 +403,34 @@ class AttriaxGeneratedTransport {
     );
   }
 
+  /// Posts an Apple Search Ads (AdServices) attribution token (Epic 8.5).
+  ///
+  /// Calls `POST /api/sdk/v1/asa/token` with `{ projectToken, token }` and
+  /// unwraps the standard SDK ack envelope. This is best-effort: the caller (the
+  /// ASA token manager) is fully fault-isolated, so a non-success status here
+  /// surfaces as an [AttriaxTransportHttpException] that the manager swallows —
+  /// it must never affect init or session.
+  Future<void> sendAsaToken({
+    required String projectToken,
+    required String token,
+  }) async {
+    final resolvedToken = _resolveTransportProjectToken(
+      context: 'Attriax Apple Search Ads token',
+      projectToken: projectToken,
+    );
+
+    final response = await _dio.post<Object?>(
+      '/api/sdk/v1/asa/token',
+      data: attriaxNormalizeJsonMap(<String, Object?>{
+        'projectToken': resolvedToken,
+        'token': token,
+      }),
+      options: Options(validateStatus: _allowAnyStatus),
+    );
+
+    _unwrapAckLikeResponse(label: 'apple search ads token', response: response);
+  }
+
   Future<AttriaxRevenueReceiptValidationResult> validateRevenueReceipt(
     Map<String, Object?> payload,
   ) async {

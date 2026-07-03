@@ -43,6 +43,11 @@ abstract interface class AttriaxTrackingAuthorizationController {
   });
 
   Future<AttriaxTrackingAuthorizationStatus> getTrackingAuthorizationStatus();
+
+  /// Resolves the ATT status the SDK settled on during startup, used to stamp
+  /// `attStatus` on the app-open request (Epic 8.5).
+  Future<AttriaxTrackingAuthorizationStatus>
+  waitForTrackingAuthorizationIfNeeded();
 }
 
 abstract interface class AttriaxCrashReportingSettingsController {

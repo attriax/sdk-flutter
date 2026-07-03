@@ -7,6 +7,11 @@ import 'attriax_attestation_manager.dart';
 import 'attriax_logger.dart';
 import 'attriax_request_manager.dart';
 
+/// Resolves the current App Tracking Transparency status for the open request
+/// (Epic 8.5). Best-effort: returning `null` omits the `attStatus` field.
+typedef AttriaxAppOpenAttStatusResolver =
+    Future<AttriaxTrackingAuthorizationStatus?> Function();
+
 /// Schedules and tracks the one-time app-open request for the current session.
 ///
 /// A second call to [schedule] is a no-op, ensuring the request is sent at
@@ -31,6 +36,7 @@ class AttriaxAppOpenTracker {
     required AttriaxRequestManager requestManager,
     required AttriaxLogger logger,
     AttriaxAttestationManager? attestationManager,
+    AttriaxAppOpenAttStatusResolver? attStatusResolver,
   }) async {
     if (_didSchedule) {
       return;
@@ -44,6 +50,24 @@ class AttriaxAppOpenTracker {
     // challenge or a null provider result simply attaches no envelope.
     final attestation = await attestationManager?.resolveEnvelope();
 
+    // Resolve the App Tracking Transparency status (Epic 8.5) to attach to the
+    // open request as `attStatus`. Best-effort: any failure or a null result
+    // simply omits the field — no behavior change beyond adding the field.
+    AttriaxTrackingAuthorizationStatus? attStatus;
+    if (attStatusResolver != null) {
+      try {
+        attStatus = await attStatusResolver();
+      } catch (_) {
+        // Best-effort — a failed ATT resolution simply omits the field and
+        // never blocks init.
+        logger.verbose(
+          'App-open ATT status resolution failed; sending open without an '
+          'attStatus field.',
+        );
+        attStatus = null;
+      }
+    }
+
     await requestManager.enqueue(
       attriaxBuildOpenRequest(
         config: config,
@@ -55,6 +79,7 @@ class AttriaxAppOpenTracker {
         sessionId: session?.id,
         sessionStartedAt: session?.startedAt,
         attestation: attestation,
+        attStatus: attStatus,
       ),
       onSuccess: (response) {
         if (response is! AttriaxOpenApiResponse) {

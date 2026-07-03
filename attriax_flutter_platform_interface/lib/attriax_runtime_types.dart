@@ -9,3 +9,8 @@ export 'src/attriax_platform_attestation.dart'
         AttriaxPlatformAttestationProvider,
         attriaxAttestationMethodChannelName,
         attriaxAcquireAttestationTokenMethod;
+export 'src/attriax_platform_asa.dart'
+    show
+        AttriaxAdServicesTokenProvider,
+        attriaxAsaMethodChannelName,
+        attriaxAcquireAdServicesTokenMethod;

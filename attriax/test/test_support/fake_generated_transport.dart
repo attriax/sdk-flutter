@@ -122,6 +122,19 @@ class FakeGeneratedTransport implements AttriaxGeneratedTransport {
   Future<AttriaxAttestationChallenge?> fetchAttestationChallenge() async =>
       attestationChallengeResult;
 
+  final List<Map<String, String>> asaTokenRequests = <Map<String, String>>[];
+
+  @override
+  Future<void> sendAsaToken({
+    required String projectToken,
+    required String token,
+  }) async {
+    asaTokenRequests.add(<String, String>{
+      'projectToken': projectToken,
+      'token': token,
+    });
+  }
+
   @override
   Future<AttriaxSdkRuntimeConfig> fetchSdkRuntimeConfig(
     Map<String, Object?> payload,

@@ -10,6 +10,7 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
   String? sessionId,
   DateTime? sessionStartedAt,
   Map<String, Object?>? attestation,
+  AttriaxTrackingAuthorizationStatus? attStatus,
 }) {
   final deviceId = context.deviceId;
   if (deviceId == null || deviceId.isEmpty) {
@@ -46,7 +47,41 @@ AttriaxOpenRequest attriaxBuildOpenRequest({
     sessionStartedAt: sessionStartedAt?.toUtc(),
   );
 
-  return AttriaxOpenRequest(requestDto, attestation: attestation);
+  return AttriaxOpenRequest(
+    requestDto,
+    attestation: attestation,
+    attStatus: attriaxAttStatusValue(attStatus),
+  );
+}
+
+/// Maps an [AttriaxTrackingAuthorizationStatus] to the wire `attStatus` string
+/// value on the open request (Epic 8.5).
+///
+/// The API contract accepts exactly `authorized|denied|restricted|
+/// notDetermined|unknown`. The four ATT-relevant statuses map 1:1; every other
+/// SDK status (`notSupported`, `disabled`, `timedOut`) and a `null` input
+/// collapse to `unknown`/omitted respectively so a non-Apple platform or an
+/// unresolved status attaches nothing rather than an out-of-contract value.
+String? attriaxAttStatusValue(AttriaxTrackingAuthorizationStatus? status) {
+  switch (status) {
+    case null:
+    case AttriaxTrackingAuthorizationStatus.notSupported:
+    case AttriaxTrackingAuthorizationStatus.disabled:
+      // ATT does not apply here (non-Apple platform or ad-id collection off) —
+      // omit the field entirely rather than reporting a misleading value.
+      return null;
+    case AttriaxTrackingAuthorizationStatus.authorized:
+      return 'authorized';
+    case AttriaxTrackingAuthorizationStatus.denied:
+      return 'denied';
+    case AttriaxTrackingAuthorizationStatus.restricted:
+      return 'restricted';
+    case AttriaxTrackingAuthorizationStatus.notDetermined:
+      return 'notDetermined';
+    case AttriaxTrackingAuthorizationStatus.timedOut:
+    case AttriaxTrackingAuthorizationStatus.unknown:
+      return 'unknown';
+  }
 }
 
 AttriaxInstallReferrerDetails? attriaxBuildLocalInstallReferrerDetails(

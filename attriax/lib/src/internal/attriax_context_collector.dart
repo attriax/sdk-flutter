@@ -131,6 +131,15 @@ class AttriaxContextCollector implements AttriaxContextRuntimeServices {
     timeout: timeout,
   );
 
+  /// Resolves the App Tracking Transparency status the SDK settled on during
+  /// startup (Epic 8.5). By app-open time this is already resolved, so this is a
+  /// cheap cached read used to stamp `attStatus` on the open request. On non-iOS
+  /// platforms it returns `notSupported`.
+  @override
+  Future<AttriaxTrackingAuthorizationStatus>
+  waitForTrackingAuthorizationIfNeeded() =>
+      _trackingAuthorizationManager.waitForTrackingAuthorizationIfNeeded();
+
   @override
   Future<AttriaxContextSnapshot> collectContextSnapshot({
     required String deviceId,

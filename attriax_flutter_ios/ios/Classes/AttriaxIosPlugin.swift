@@ -105,6 +105,10 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
     // deallocated after `register`.
     private static var attestationDelegate: AttriaxAttestationChannelDelegate?
 
+    // Epic 8.5 — retained so the dedicated Apple Search Ads (AdServices) channel
+    // delegate is not deallocated after `register`.
+    private static var asaDelegate: AttriaxAsaChannelDelegate?
+
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "attriax", binaryMessenger: registrar.messenger())
         let eventChannel = FlutterEventChannel(
@@ -126,6 +130,16 @@ public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandl
         let attestationDelegate = AttriaxAttestationChannelDelegate()
         registrar.addMethodCallDelegate(attestationDelegate, channel: attestationChannel)
         Self.attestationDelegate = attestationDelegate
+
+        // Epic 8.5 — Apple Search Ads (AdServices) attribution-token acquisition
+        // seam on the dedicated `attriax/asa` channel.
+        let asaChannel = FlutterMethodChannel(
+            name: "attriax/asa",
+            binaryMessenger: registrar.messenger()
+        )
+        let asaDelegate = AttriaxAsaChannelDelegate()
+        registrar.addMethodCallDelegate(asaDelegate, channel: asaChannel)
+        Self.asaDelegate = asaDelegate
     }
 
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -781,6 +795,34 @@ final class AttriaxAttestationChannelDelegate: NSObject, FlutterPlugin {
         switch call.method {
         case "acquireAttestationToken":
             // TODO(live): replace with real App Attest acquisition.
+            result(nil)
+        default:
+            result(FlutterMethodNotImplemented)
+        }
+    }
+}
+
+/// Epic 8.5 — Apple Search Ads (AdServices) attribution-token acquisition seam.
+///
+/// Handles the `attriax/asa` channel independently of the main plugin.
+///
+/// TODO(live): acquire the AdServices attribution token via
+/// `AAAttribution.attributionToken()` (import `AdServices`, iOS 14.3+), then
+/// return it as a `String`. The Dart runtime POSTs that token to
+/// `POST /api/sdk/v1/asa/token`, and the server exchanges it with Apple's
+/// campaign-attribution endpoint. Real acquisition requires a real device / App
+/// Store or TestFlight build context and cannot be verified in this repo, so
+/// until then this returns `nil` and the Dart `AttriaxAdServicesTokenProvider`
+/// degrades to "no token" — no ASA request is sent and init is unaffected.
+final class AttriaxAsaChannelDelegate: NSObject, FlutterPlugin {
+    // FlutterPlugin conformance is only used so this can be a method-call
+    // delegate; registration is driven by AttriaxIosPlugin.register.
+    static func register(with registrar: FlutterPluginRegistrar) {}
+
+    func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        switch call.method {
+        case "acquireAdServicesToken":
+            // TODO(live): replace with real AAAttribution.attributionToken().
             result(nil)
         default:
             result(FlutterMethodNotImplemented)
