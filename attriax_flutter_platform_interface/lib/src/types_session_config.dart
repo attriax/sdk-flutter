@@ -126,6 +126,8 @@ class AttriaxConfig {
     this.attestationEnabled = false,
     this.attestationProvider,
     this.pinnedCertificateSha256Fingerprints = const <String>[],
+    this.doNotSell,
+    this.usPrivacy,
   });
 
   /// Project token from the Attriax dashboard.
@@ -246,6 +248,22 @@ class AttriaxConfig {
   /// certificates are shipped. See the SDK transport setup for the seam.
   final List<String> pinnedCertificateSha256Fingerprints;
 
+  /// CCPA "do not sell / share" election (Epic 10.1).
+  ///
+  /// Sent TOP-LEVEL on the app-open and identify requests (mirrors `attStatus`),
+  /// NOT nested under device context. `null` (the default) omits the field
+  /// entirely; an explicit `true` durably suppresses this user's outbound and an
+  /// explicit `false` may clear a prior server-side latch. Can also be changed at
+  /// runtime via `setCcpaConsent`.
+  final bool? doNotSell;
+
+  /// Raw IAB US-Privacy (USP) string, e.g. `1YYN` (Epic 10.1).
+  ///
+  /// Sent TOP-LEVEL alongside [doNotSell]; its sale opt-out flag also drives the
+  /// backend do-not-sell latch. `null`/empty omits the field. Capped at 16 chars
+  /// on the wire.
+  final String? usPrivacy;
+
   /// Serializes the JSON-representable config surface for the native engine
   /// `initialize` command.
   ///
@@ -283,5 +301,7 @@ class AttriaxConfig {
     if (pinnedCertificateSha256Fingerprints.isNotEmpty)
       'pinnedCertificateSha256Fingerprints':
           List<String>.from(pinnedCertificateSha256Fingerprints),
+    if (doNotSell != null) 'doNotSell': doNotSell,
+    if (usPrivacy != null && usPrivacy!.isNotEmpty) 'usPrivacy': usPrivacy,
   };
 }

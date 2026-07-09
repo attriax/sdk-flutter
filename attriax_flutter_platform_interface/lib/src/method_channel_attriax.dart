@@ -544,6 +544,13 @@ class MethodChannelAttriax extends AttriaxPlatform {
       _invokeVoid('setAnonymousTracking', <String, Object?>{'enabled': enabled});
 
   @override
+  Future<void> setCcpaConsent({bool? doNotSell, String? usPrivacy}) =>
+      _invokeVoid('setCcpaConsent', <String, Object?>{
+        'doNotSell': ?doNotSell,
+        'usPrivacy': ?usPrivacy,
+      });
+
+  @override
   Future<void> setSdkEnabled({required bool enabled}) =>
       _invokeVoid('setSdkEnabled', <String, Object?>{'enabled': enabled});
 

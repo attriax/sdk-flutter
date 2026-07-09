@@ -136,6 +136,35 @@ void main() {
     expect(capturedCall!.arguments, <String, Object?>{'enabled': false});
   });
 
+  test('setCcpaConsent forwards non-null fields and omits null ones', () async {
+    handle((_) async => null);
+
+    await MethodChannelAttriax().setCcpaConsent(doNotSell: true);
+    expect(capturedCall!.method, 'setCcpaConsent');
+    expect(capturedCall!.arguments, <String, Object?>{'doNotSell': true});
+
+    await MethodChannelAttriax()
+        .setCcpaConsent(doNotSell: false, usPrivacy: '1YYN');
+    expect(capturedCall!.arguments, <String, Object?>{
+      'doNotSell': false,
+      'usPrivacy': '1YYN',
+    });
+  });
+
+  test('config toJson carries CCPA fields, omitting when unset', () async {
+    expect(
+      const AttriaxConfig(projectToken: 't').toJson(),
+      isNot(contains('doNotSell')),
+    );
+    final json = const AttriaxConfig(
+      projectToken: 't',
+      doNotSell: false,
+      usPrivacy: '1YYN',
+    ).toJson();
+    expect(json['doNotSell'], false);
+    expect(json['usPrivacy'], '1YYN');
+  });
+
   test('validateReceipt parses the returned result', () async {
     handle(
       (_) async => <String, Object?>{

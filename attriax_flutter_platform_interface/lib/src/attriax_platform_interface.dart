@@ -403,6 +403,16 @@ abstract class AttriaxPlatform extends PlatformInterface {
     throw UnimplementedError('setAnonymousTracking() has not been implemented.');
   }
 
+  /// Set the CCPA "do not sell / share" election (Epic 10.1; mirrors KMP
+  /// `consent.ccpa`).
+  ///
+  /// A non-null value is forwarded so the next app-open/identify carries it
+  /// TOP-LEVEL as `doNotSell` / `usPrivacy`; an omitted (null) field is left
+  /// unchanged. An explicit `doNotSell: false` may clear a prior server latch.
+  Future<void> setCcpaConsent({bool? doNotSell, String? usPrivacy}) {
+    throw UnimplementedError('setCcpaConsent() has not been implemented.');
+  }
+
   /// Toggle the whole SDK runtime (mirrors KMP `Attriax.enabled`).
   Future<void> setSdkEnabled({required bool enabled}) {
     throw UnimplementedError('setSdkEnabled() has not been implemented.');
