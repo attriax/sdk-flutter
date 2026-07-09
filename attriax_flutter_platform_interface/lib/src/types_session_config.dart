@@ -245,4 +245,43 @@ class AttriaxConfig {
   /// device/OS/CA-rotation-sensitive and cannot be verified here, so no fake
   /// certificates are shipped. See the SDK transport setup for the seam.
   final List<String> pinnedCertificateSha256Fingerprints;
+
+  /// Serializes the JSON-representable config surface for the native engine
+  /// `initialize` command.
+  ///
+  /// Durations are emitted as integer milliseconds to match the KMP
+  /// `AttriaxConfig` `*Ms` fields. The runtime-only [clock] and
+  /// [attestationProvider] are NOT serialized — they are Dart-side objects a
+  /// native engine cannot consume; a native binding sources its own clock and
+  /// attaches its platform attestation provider from [attestationEnabled].
+  Map<String, Object?> toJson() => <String, Object?>{
+    'projectToken': projectToken,
+    'apiBaseUrl': apiBaseUrl,
+    if (appVersion != null) 'appVersion': appVersion,
+    if (appBuildNumber != null) 'appBuildNumber': appBuildNumber,
+    if (appPackageName != null) 'appPackageName': appPackageName,
+    if (sdkMetadata.isNotEmpty) 'sdkMetadata': _normalizeJsonMap(sdkMetadata),
+    if (enableDebugLogs != null) 'enableDebugLogs': enableDebugLogs,
+    'requestTimeoutMs': requestTimeout.inMilliseconds,
+    'maxQueueSize': maxQueueSize,
+    'eventFlushIntervalMs': eventFlushInterval.inMilliseconds,
+    'flushEventsImmediatelyOnFirstLaunch': flushEventsImmediatelyOnFirstLaunch,
+    'collectAdvertisingId': collectAdvertisingId,
+    'automaticCrashReportingEnabled': automaticCrashReportingEnabled,
+    'requestTrackingAuthorizationOnInit': requestTrackingAuthorizationOnInit,
+    'trackingAuthorizationStatusTimeoutMs':
+        trackingAuthorizationStatusTimeout.inMilliseconds,
+    'automaticBrowserHandling': automaticBrowserHandling,
+    'gdprEnabled': gdprEnabled,
+    'anonymousTracking': anonymousTracking,
+    'sessionTrackingEnabled': sessionTrackingEnabled,
+    'sessionHeartbeatIntervalMs': sessionHeartbeatInterval.inMilliseconds,
+    'firstLaunchSessionHeartbeatIntervalMs':
+        firstLaunchSessionHeartbeatInterval.inMilliseconds,
+    if (skan != null) 'skan': skan!.toJson(),
+    'attestationEnabled': attestationEnabled,
+    if (pinnedCertificateSha256Fingerprints.isNotEmpty)
+      'pinnedCertificateSha256Fingerprints':
+          List<String>.from(pinnedCertificateSha256Fingerprints),
+  };
 }

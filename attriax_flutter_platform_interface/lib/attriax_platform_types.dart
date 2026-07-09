@@ -49,7 +49,10 @@ export 'src/types.dart'
         AttriaxNoopAttestationProvider,
         AttriaxAttestationProviderSlug,
         attriaxAttestationProviderSlugForPlatform,
-        AttriaxConfig;
+        AttriaxConfig,
+        AttriaxPushTokenProvider,
+        AttriaxPushTokenProviderWire,
+        AttriaxInitialDeepLinkResolution;
 
 // The channel-backed provider lives in its own library so the pure-model type
 // surface above stays free of a `flutter/services` dependency. Integrations and

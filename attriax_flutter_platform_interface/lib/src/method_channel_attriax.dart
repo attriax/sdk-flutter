@@ -3,29 +3,711 @@ import 'dart:developer' as developer;
 
 import 'package:flutter/services.dart';
 
-import '../attriax_platform_types.dart'
-    show
-        AttriaxInstallReferrerContext,
-        AttriaxNativeContext,
-        AttriaxPendingCrashReport,
-        AttriaxResolvedUrlOpenMode,
-        AttriaxSkanCoarseValue,
-        AttriaxSkanUpdateResult,
-        AttriaxSkanUpdateStatus,
-        AttriaxTrackingAuthorizationStatus;
+import '../attriax_platform_types.dart';
 
 import 'attriax_platform_interface.dart';
 
-/// An implementation of [AttriaxPlatform] that uses method channels.
+/// EventChannel name for synchronization-state transitions.
+const String attriaxSynchronizationEventChannelName =
+    'attriax/events/synchronization';
+
+/// EventChannel name for resolved deep-link events.
+const String attriaxDeepLinkEventChannelName = 'attriax/events/deep_links';
+
+/// EventChannel name for raw (pre-resolution) deep-link inputs.
+const String attriaxRawDeepLinkEventChannelName =
+    'attriax/events/raw_deep_links';
+
+/// EventChannel name for initial-link probe resolutions.
+const String attriaxInitialDeepLinkEventChannelName =
+    'attriax/events/initial_deep_link';
+
+/// An implementation of [AttriaxPlatform] that uses method + event channels.
 class MethodChannelAttriax extends AttriaxPlatform {
   MethodChannelAttriax({
     MethodChannel? channel,
+    EventChannel? synchronizationEventChannel,
+    EventChannel? deepLinkEventChannel,
+    EventChannel? rawDeepLinkEventChannel,
+    EventChannel? initialDeepLinkEventChannel,
     String logName = 'attriax.platform_interface',
   }) : _channel = channel ?? const MethodChannel('attriax'),
+       _synchronizationEventChannel =
+           synchronizationEventChannel ??
+           const EventChannel(attriaxSynchronizationEventChannelName),
+       _deepLinkEventChannel =
+           deepLinkEventChannel ??
+           const EventChannel(attriaxDeepLinkEventChannelName),
+       _rawDeepLinkEventChannel =
+           rawDeepLinkEventChannel ??
+           const EventChannel(attriaxRawDeepLinkEventChannelName),
+       _initialDeepLinkEventChannel =
+           initialDeepLinkEventChannel ??
+           const EventChannel(attriaxInitialDeepLinkEventChannelName),
        _logName = logName;
 
   final MethodChannel _channel;
+  final EventChannel _synchronizationEventChannel;
+  final EventChannel _deepLinkEventChannel;
+  final EventChannel _rawDeepLinkEventChannel;
+  final EventChannel _initialDeepLinkEventChannel;
   final String _logName;
+
+  // ---------------------------------------------------------------------------
+  // Lifecycle.
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<void> initialize(AttriaxConfig config) =>
+      _invokeVoid('initialize', <String, Object?>{'config': config.toJson()});
+
+  @override
+  Future<void> flush() => _invokeVoid('flush');
+
+  @override
+  Future<void> reset() => _invokeVoid('reset');
+
+  @override
+  Future<void> dispose() => _invokeVoid('dispose');
+
+  // ---------------------------------------------------------------------------
+  // Tracking — events / page views.
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<void> recordEvent(
+    String name, {
+    Map<String, Object?>? eventData,
+    bool flushImmediately = false,
+  }) => _invokeVoid('recordEvent', <String, Object?>{
+    'name': name,
+    'eventData': ?eventData,
+    'flushImmediately': flushImmediately,
+  });
+
+  @override
+  Future<void> recordPageView(
+    String pageName, {
+    String? pageClass,
+    String? pageTitle,
+    String? previousPageName,
+    Map<String, Object?>? parameters,
+    String source = 'manual',
+    bool flushImmediately = false,
+  }) => _invokeVoid('recordPageView', <String, Object?>{
+    'pageName': pageName,
+    'pageClass': ?pageClass,
+    'pageTitle': ?pageTitle,
+    'previousPageName': ?previousPageName,
+    'parameters': ?parameters,
+    'source': source,
+    'flushImmediately': flushImmediately,
+  });
+
+  // ---------------------------------------------------------------------------
+  // Tracking — revenue / ad events.
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<void> recordPurchase({
+    required num revenue,
+    String currency = 'USD',
+    bool revenueInMicros = false,
+    String? purchaseType,
+    String? productId,
+    String? transactionId,
+    String? originalTransactionId,
+    String? validationProvider,
+    String? validationEnvironment,
+    String? purchaseToken,
+    String? receiptData,
+    String? signedPayload,
+    String? receiptSignature,
+    bool? isRenewal,
+    int quantity = 1,
+    String? store,
+    String? packageName,
+    bool? voided,
+    bool? test,
+    String? validationId,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
+  }) => _invokeVoid('recordPurchase', <String, Object?>{
+    'revenue': revenue,
+    'currency': currency,
+    'revenueInMicros': revenueInMicros,
+    'purchaseType': ?purchaseType,
+    'productId': ?productId,
+    'transactionId': ?transactionId,
+    'originalTransactionId': ?originalTransactionId,
+    'validationProvider': ?validationProvider,
+    'validationEnvironment': ?validationEnvironment,
+    'purchaseToken': ?purchaseToken,
+    'receiptData': ?receiptData,
+    'signedPayload': ?signedPayload,
+    'receiptSignature': ?receiptSignature,
+    'isRenewal': ?isRenewal,
+    'quantity': quantity,
+    'store': ?store,
+    'packageName': ?packageName,
+    'voided': ?voided,
+    'test': ?test,
+    'validationId': ?validationId,
+    'metadata': ?metadata,
+    'flushImmediately': flushImmediately,
+  });
+
+  @override
+  Future<void> recordRefund({
+    required num revenue,
+    String currency = 'USD',
+    bool revenueInMicros = false,
+    String? purchaseType,
+    String? productId,
+    String? transactionId,
+    String? originalTransactionId,
+    int quantity = 1,
+    String? store,
+    String? packageName,
+    bool? voided,
+    bool? test,
+    String? reason,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
+  }) => _invokeVoid('recordRefund', <String, Object?>{
+    'revenue': revenue,
+    'currency': currency,
+    'revenueInMicros': revenueInMicros,
+    'purchaseType': ?purchaseType,
+    'productId': ?productId,
+    'transactionId': ?transactionId,
+    'originalTransactionId': ?originalTransactionId,
+    'quantity': quantity,
+    'store': ?store,
+    'packageName': ?packageName,
+    'voided': ?voided,
+    'test': ?test,
+    'reason': ?reason,
+    'metadata': ?metadata,
+    'flushImmediately': flushImmediately,
+  });
+
+  @override
+  Future<void> recordAdRevenue({
+    required num revenue,
+    String currency = 'USD',
+    bool revenueInMicros = false,
+    String? adNetwork,
+    String? adFormat,
+    String? adType,
+    String? adPlacement,
+    bool? test,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
+  }) => _invokeVoid('recordAdRevenue', <String, Object?>{
+    'revenue': revenue,
+    'currency': currency,
+    'revenueInMicros': revenueInMicros,
+    'adNetwork': ?adNetwork,
+    'adFormat': ?adFormat,
+    'adType': ?adType,
+    'adPlacement': ?adPlacement,
+    'test': ?test,
+    'metadata': ?metadata,
+    'flushImmediately': flushImmediately,
+  });
+
+  @override
+  Future<void> recordAdEvent({
+    required String eventName,
+    String? adNetwork,
+    String? mediationNetwork,
+    String? adUnitId,
+    String? adPlacement,
+    String? adFormat,
+    String? adType,
+    String? failureReason,
+    num? loadLatencyMs,
+    String? rewardType,
+    num? rewardAmount,
+    bool? test,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = true,
+  }) => _invokeVoid('recordAdEvent', <String, Object?>{
+    'eventName': eventName,
+    'adNetwork': ?adNetwork,
+    'mediationNetwork': ?mediationNetwork,
+    'adUnitId': ?adUnitId,
+    'adPlacement': ?adPlacement,
+    'adFormat': ?adFormat,
+    'adType': ?adType,
+    'failureReason': ?failureReason,
+    'loadLatencyMs': ?loadLatencyMs,
+    'rewardType': ?rewardType,
+    'rewardAmount': ?rewardAmount,
+    'test': ?test,
+    'metadata': ?metadata,
+    'flushImmediately': flushImmediately,
+  });
+
+  // ---------------------------------------------------------------------------
+  // Tracking — notifications / errors.
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<void> recordNotification({
+    required String type,
+    required String notificationId,
+    String? linkId,
+    String? campaignId,
+    String? title,
+    String? source,
+    Map<String, Object?>? payload,
+    Map<String, Object?>? metadata,
+    bool flushImmediately = false,
+  }) => _invokeVoid('recordNotification', <String, Object?>{
+    'type': type,
+    'notificationId': notificationId,
+    'linkId': ?linkId,
+    'campaignId': ?campaignId,
+    'title': ?title,
+    'source': ?source,
+    'payload': ?payload,
+    'metadata': ?metadata,
+    'flushImmediately': flushImmediately,
+  });
+
+  @override
+  Future<void> recordError({
+    required String message,
+    required String exceptionType,
+    String? stackTrace,
+    bool fatal = false,
+    String source = 'manual',
+    String? reason,
+    Map<String, Object?>? metadata,
+  }) => _invokeVoid('recordError', <String, Object?>{
+    'message': message,
+    'exceptionType': exceptionType,
+    'stackTrace': ?stackTrace,
+    'fatal': fatal,
+    'source': source,
+    'reason': ?reason,
+    'metadata': ?metadata,
+  });
+
+  // ---------------------------------------------------------------------------
+  // Tracking — identify / user properties.
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<void> setUser({String? userId, String? userName}) =>
+      _invokeVoid('setUser', <String, Object?>{
+        'userId': userId,
+        'userName': ?userName,
+      });
+
+  @override
+  Future<void> setUserProperty(String name, Object? value) =>
+      _invokeVoid('setUserProperty', <String, Object?>{
+        'name': name,
+        'value': value,
+      });
+
+  @override
+  Future<void> setUserProperties(Map<String, Object?> properties) =>
+      _invokeVoid('setUserProperties', <String, Object?>{
+        'properties': properties,
+      });
+
+  @override
+  Future<void> clearUserProperties({List<String>? propertyNames}) =>
+      _invokeVoid('clearUserProperties', <String, Object?>{
+        'propertyNames': ?propertyNames,
+      });
+
+  @override
+  Future<void> registerPushToken({
+    required AttriaxPushTokenProvider provider,
+    String? token,
+    Map<String, Object?>? metadata,
+  }) => _invokeVoid('registerPushToken', <String, Object?>{
+    'provider': provider.wireValue,
+    'token': token,
+    'metadata': ?metadata,
+  });
+
+  // ---------------------------------------------------------------------------
+  // Deep links.
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<void> handleIncomingLink(String uri, {bool isInitialLink = false}) =>
+      _invokeVoid('handleIncomingLink', <String, Object?>{
+        'uri': uri,
+        'isInitialLink': isInitialLink,
+      });
+
+  @override
+  Future<void> completeInitialDeepLink() =>
+      _invokeVoid('completeInitialDeepLink');
+
+  @override
+  Future<AttriaxDeepLinkEvent?> recordDeepLink({
+    required Uri uri,
+    Map<String, Object?>? metadata,
+    String source = 'manual',
+  }) async {
+    try {
+      final result = await _channel.invokeMapMethod<String, Object?>(
+        'recordDeepLink',
+        <String, Object?>{
+          'uri': uri.toString(),
+          'metadata': ?metadata,
+          'source': source,
+        },
+      );
+      return _deepLinkEventFromMap(result);
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException('recordDeepLink', error, stackTrace);
+      return null;
+    } on PlatformException catch (error, stackTrace) {
+      _logException('recordDeepLink', error, stackTrace);
+      return null;
+    }
+  }
+
+  @override
+  Future<AttriaxDeepLinkEvent?> waitForInitialDeepLink() async {
+    try {
+      final result = await _channel.invokeMapMethod<String, Object?>(
+        'waitForInitialDeepLink',
+      );
+      return _deepLinkEventFromMap(result);
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException('waitForInitialDeepLink', error, stackTrace);
+      return null;
+    } on PlatformException catch (error, stackTrace) {
+      _logException('waitForInitialDeepLink', error, stackTrace);
+      return null;
+    }
+  }
+
+  @override
+  Future<AttriaxDeepLinkEvent?> waitForDeepLinkResolution(
+    AttriaxRawDeepLinkEvent rawEvent,
+  ) async {
+    try {
+      final result = await _channel.invokeMapMethod<String, Object?>(
+        'waitForDeepLinkResolution',
+        <String, Object?>{'rawEvent': rawEvent.toJson()},
+      );
+      return _deepLinkEventFromMap(result);
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException('waitForDeepLinkResolution', error, stackTrace);
+      return null;
+    } on PlatformException catch (error, stackTrace) {
+      _logException('waitForDeepLinkResolution', error, stackTrace);
+      return null;
+    }
+  }
+
+  @override
+  Future<AttriaxCreateDynamicLinkResult> createDynamicLink({
+    String? name,
+    String? destinationUrl,
+    String? group,
+    String? prefix,
+    AttriaxDynamicLinkSocialPreview? socialPreview,
+    AttriaxDynamicLinkUtms? utms,
+    AttriaxDynamicLinkRedirects? redirects,
+    Map<String, Object?>? data,
+  }) async {
+    final result = await _channel.invokeMapMethod<String, Object?>(
+      'createDynamicLink',
+      <String, Object?>{
+        'name': ?name,
+        'destinationUrl': ?destinationUrl,
+        'group': ?group,
+        'prefix': ?prefix,
+        if (socialPreview != null)
+          'socialPreview': <String, Object?>{
+            'title': ?socialPreview.title,
+            if (socialPreview.description != null)
+              'description': socialPreview.description,
+          },
+        if (utms != null)
+          'utms': <String, Object?>{
+            'source': ?utms.source,
+            'medium': ?utms.medium,
+            'campaign': ?utms.campaign,
+            'term': ?utms.term,
+            'content': ?utms.content,
+          },
+        if (redirects != null)
+          'redirects': <String, Object?>{
+            'ios': ?redirects.ios,
+            'android': ?redirects.android,
+          },
+        'data': ?data,
+      },
+    );
+    if (result == null) {
+      throw StateError('Attriax createDynamicLink response was empty.');
+    }
+    return AttriaxCreateDynamicLinkResult.fromJson(result);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Revenue receipt validation.
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<AttriaxRevenueReceiptValidationResult> validateReceipt({
+    required String receipt,
+    bool test = false,
+    String? provider,
+    String? environment,
+    String? productId,
+    String? transactionId,
+  }) async {
+    final result = await _channel.invokeMapMethod<String, Object?>(
+      'validateReceipt',
+      <String, Object?>{
+        'receipt': receipt,
+        'test': test,
+        'provider': ?provider,
+        'environment': ?environment,
+        'productId': ?productId,
+        'transactionId': ?transactionId,
+      },
+    );
+    if (result == null) {
+      throw StateError('Attriax validateReceipt response was empty.');
+    }
+    return AttriaxRevenueReceiptValidationResult.fromJson(result);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Consent — GDPR.
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<void> setGdprConsent({
+    required bool analytics,
+    required bool attribution,
+    required bool adEvents,
+  }) => _invokeVoid('setGdprConsent', <String, Object?>{
+    'analytics': analytics,
+    'attribution': attribution,
+    'adEvents': adEvents,
+  });
+
+  @override
+  Future<void> setGdprConsentNotRequired() =>
+      _invokeVoid('setGdprConsentNotRequired');
+
+  @override
+  Future<void> resetGdprConsent() => _invokeVoid('resetGdprConsent');
+
+  @override
+  Future<void> requestGdprDataErasure() =>
+      _invokeVoid('requestGdprDataErasure');
+
+  @override
+  Future<bool> needsGdprConsent({bool localOnly = false}) async {
+    try {
+      final result = await _channel.invokeMethod<Object?>(
+        'needsGdprConsent',
+        <String, Object?>{'localOnly': localOnly},
+      );
+      return result == true;
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException('needsGdprConsent', error, stackTrace);
+      return false;
+    } on PlatformException catch (error, stackTrace) {
+      _logException('needsGdprConsent', error, stackTrace);
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> getIsWaitingForGdprConsent() =>
+      _invokeBool('getIsWaitingForGdprConsent');
+
+  // ---------------------------------------------------------------------------
+  // Toggles.
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<void> setAnonymousTracking({required bool enabled}) =>
+      _invokeVoid('setAnonymousTracking', <String, Object?>{'enabled': enabled});
+
+  @override
+  Future<void> setSdkEnabled({required bool enabled}) =>
+      _invokeVoid('setSdkEnabled', <String, Object?>{'enabled': enabled});
+
+  @override
+  Future<void> setEventTrackingEnabled({required bool enabled}) => _invokeVoid(
+    'setEventTrackingEnabled',
+    <String, Object?>{'enabled': enabled},
+  );
+
+  // ---------------------------------------------------------------------------
+  // Apple seams.
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<void> submitAsaToken(String token) =>
+      _invokeVoid('submitAsaToken', <String, Object?>{'token': token});
+
+  @override
+  Future<void> setTrackingAuthorizationStatus(
+    AttriaxTrackingAuthorizationStatus status,
+  ) => _invokeVoid('setTrackingAuthorizationStatus', <String, Object?>{
+    'status': _trackingAuthorizationStatusToWire(status),
+  });
+
+  // ---------------------------------------------------------------------------
+  // Engine reads.
+  // ---------------------------------------------------------------------------
+
+  @override
+  Future<String?> getDeviceId() => _invokeNullableString('getDeviceId');
+
+  @override
+  Future<bool> getIsFirstLaunch() => _invokeBool('getIsFirstLaunch');
+
+  @override
+  Future<bool> getIsInitialized() => _invokeBool('getIsInitialized');
+
+  @override
+  Future<AttriaxSdkSnapshot?> getSdkSnapshot() async {
+    final result = await _invokeMap('getSdkSnapshot');
+    return result == null ? null : AttriaxSdkSnapshot.fromPayload(result);
+  }
+
+  @override
+  Future<bool> getSdkEnabled() => _invokeBool('getSdkEnabled');
+
+  @override
+  Future<bool> getEventTrackingEnabled() =>
+      _invokeBool('getEventTrackingEnabled');
+
+  @override
+  Future<bool> getAnonymousTracking() => _invokeBool('getAnonymousTracking');
+
+  @override
+  Future<AttriaxSynchronizationState> getSynchronizationState() async {
+    try {
+      final result = await _channel.invokeMethod<Object?>(
+        'getSynchronizationState',
+      );
+      return _synchronizationStateFromWire(result);
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException('getSynchronizationState', error, stackTrace);
+      return AttriaxSynchronizationState.initializing;
+    } on PlatformException catch (error, stackTrace) {
+      _logException('getSynchronizationState', error, stackTrace);
+      return AttriaxSynchronizationState.initializing;
+    }
+  }
+
+  @override
+  Future<bool> getIsSynchronized() => _invokeBool('getIsSynchronized');
+
+  @override
+  Future<AttriaxInstallReferrerDetails?> getOriginalInstallReferrer({
+    Duration? timeout,
+  }) => _installReferrerDetails('getOriginalInstallReferrer', timeout);
+
+  @override
+  Future<AttriaxInstallReferrerDetails?> getReinstallReferrer({
+    Duration? timeout,
+  }) => _installReferrerDetails('getReinstallReferrer', timeout);
+
+  @override
+  Future<String?> getRawInstallReferrer({Duration? timeout}) =>
+      _invokeNullableString('getRawInstallReferrer', _timeoutArgs(timeout));
+
+  @override
+  Future<AttriaxDeepLinkReferrerDetails?> getSessionReferrer({
+    Duration? timeout,
+  }) => _deepLinkReferrerDetails('getSessionReferrer', timeout);
+
+  @override
+  Future<AttriaxDeepLinkReferrerDetails?> getLatestDeepLinkReferrer({
+    Duration? timeout,
+  }) => _deepLinkReferrerDetails('getLatestDeepLinkReferrer', timeout);
+
+  @override
+  Future<AttriaxSkanState?> getSkanState() async {
+    final result = await _invokeMap('getSkanState');
+    return result == null ? null : AttriaxSkanState.fromPayload(result);
+  }
+
+  @override
+  Future<AttriaxDeepLinkEvent?> getLatestDeepLink() async =>
+      _deepLinkEventFromMap(await _invokeMap('getLatestDeepLink'));
+
+  @override
+  Future<AttriaxDeepLinkEvent?> getInitialDeepLink() async =>
+      _deepLinkEventFromMap(await _invokeMap('getInitialDeepLink'));
+
+  @override
+  Future<AttriaxRawDeepLinkEvent?> getRawInitialDeepLink() async {
+    final result = await _invokeMap('getRawInitialDeepLink');
+    if (result == null) {
+      return null;
+    }
+    try {
+      return AttriaxRawDeepLinkEvent.fromJson(result);
+    } on FormatException catch (error, stackTrace) {
+      _logException('getRawInitialDeepLink', error, stackTrace);
+      return null;
+    }
+  }
+
+  @override
+  Future<bool> getIsInitialDeepLinkResolved() =>
+      _invokeBool('getIsInitialDeepLinkResolved');
+
+  // ---------------------------------------------------------------------------
+  // Event streams.
+  // ---------------------------------------------------------------------------
+
+  @override
+  Stream<AttriaxSynchronizationState> get synchronizationStates =>
+      _synchronizationEventChannel
+          .receiveBroadcastStream()
+          .map(_synchronizationStateFromWire);
+
+  @override
+  Stream<AttriaxDeepLinkEvent> get deepLinkEvents => _deepLinkEventChannel
+      .receiveBroadcastStream()
+      .map(_deepLinkEventFromPayload)
+      .where((event) => event != null)
+      .cast<AttriaxDeepLinkEvent>();
+
+  @override
+  Stream<AttriaxRawDeepLinkEvent> get rawDeepLinkEvents =>
+      _rawDeepLinkEventChannel
+          .receiveBroadcastStream()
+          .map(_rawDeepLinkEventFromPayload)
+          .where((event) => event != null)
+          .cast<AttriaxRawDeepLinkEvent>();
+
+  @override
+  Stream<AttriaxInitialDeepLinkResolution> get initialDeepLinkResolutions =>
+      _initialDeepLinkEventChannel
+          .receiveBroadcastStream()
+          .map(_initialDeepLinkResolutionFromPayload)
+          .where((event) => event != null)
+          .cast<AttriaxInitialDeepLinkResolution>();
+
+  // ---------------------------------------------------------------------------
+  // Retained legacy signal surface.
+  // ---------------------------------------------------------------------------
 
   @override
   Future<AttriaxNativeContext> collectNativeContext({
@@ -237,6 +919,192 @@ class MethodChannelAttriax extends AttriaxPlatform {
   AttriaxInstallReferrerContext platformExceptionInstallReferrerContext(
     PlatformException error,
   ) => const AttriaxInstallReferrerContext();
+
+  // ---------------------------------------------------------------------------
+  // Invocation helpers.
+  // ---------------------------------------------------------------------------
+
+  /// Fire-and-forget invocation: best-effort, swallow + log channel errors.
+  Future<void> _invokeVoid(
+    String method, [
+    Map<String, Object?>? arguments,
+  ]) async {
+    try {
+      await _channel.invokeMethod<Object?>(method, arguments);
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException(method, error, stackTrace);
+    } on PlatformException catch (error, stackTrace) {
+      _logException(method, error, stackTrace);
+    }
+  }
+
+  /// Invoke a method returning a `bool`; benign `false` on a missing plugin.
+  Future<bool> _invokeBool(
+    String method, [
+    Map<String, Object?>? arguments,
+  ]) async {
+    try {
+      final result = await _channel.invokeMethod<Object?>(method, arguments);
+      return result == true;
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException(method, error, stackTrace);
+      return false;
+    } on PlatformException catch (error, stackTrace) {
+      _logException(method, error, stackTrace);
+      return false;
+    }
+  }
+
+  /// Invoke a method returning a nullable `String`; benign `null` on failure.
+  Future<String?> _invokeNullableString(
+    String method, [
+    Map<String, Object?>? arguments,
+  ]) async {
+    try {
+      final result = await _channel.invokeMethod<Object?>(method, arguments);
+      return result is String && result.trim().isNotEmpty
+          ? result.trim()
+          : null;
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException(method, error, stackTrace);
+      return null;
+    } on PlatformException catch (error, stackTrace) {
+      _logException(method, error, stackTrace);
+      return null;
+    }
+  }
+
+  /// Invoke a method returning a nullable map; benign `null` on failure.
+  Future<Map<String, Object?>?> _invokeMap(
+    String method, [
+    Map<String, Object?>? arguments,
+  ]) async {
+    try {
+      return await _channel.invokeMapMethod<String, Object?>(method, arguments);
+    } on MissingPluginException catch (error, stackTrace) {
+      _logException(method, error, stackTrace);
+      return null;
+    } on PlatformException catch (error, stackTrace) {
+      _logException(method, error, stackTrace);
+      return null;
+    }
+  }
+
+  Future<AttriaxInstallReferrerDetails?> _installReferrerDetails(
+    String method,
+    Duration? timeout,
+  ) async {
+    final result = await _invokeMap(method, _timeoutArgs(timeout));
+    if (result == null) {
+      return null;
+    }
+    try {
+      return AttriaxInstallReferrerDetails.fromJson(result);
+    } on FormatException catch (error, stackTrace) {
+      _logException(method, error, stackTrace);
+      return null;
+    }
+  }
+
+  Future<AttriaxDeepLinkReferrerDetails?> _deepLinkReferrerDetails(
+    String method,
+    Duration? timeout,
+  ) async {
+    final result = await _invokeMap(method, _timeoutArgs(timeout));
+    if (result == null) {
+      return null;
+    }
+    try {
+      return AttriaxDeepLinkReferrerDetails.fromJson(result);
+    } on FormatException catch (error, stackTrace) {
+      _logException(method, error, stackTrace);
+      return null;
+    }
+  }
+
+  Map<String, Object?>? _timeoutArgs(Duration? timeout) => timeout == null
+      ? null
+      : <String, Object?>{'timeoutMs': timeout.inMilliseconds};
+
+  AttriaxDeepLinkEvent? _deepLinkEventFromMap(Map<String, Object?>? json) {
+    if (json == null) {
+      return null;
+    }
+    try {
+      return AttriaxDeepLinkEvent.fromJson(json);
+    } on FormatException catch (error, stackTrace) {
+      _logException('deepLinkEvent', error, stackTrace);
+      return null;
+    }
+  }
+
+  AttriaxDeepLinkEvent? _deepLinkEventFromPayload(Object? payload) =>
+      _deepLinkEventFromMap(_asStringKeyedMap(payload));
+
+  AttriaxRawDeepLinkEvent? _rawDeepLinkEventFromPayload(Object? payload) {
+    final json = _asStringKeyedMap(payload);
+    if (json == null) {
+      return null;
+    }
+    try {
+      return AttriaxRawDeepLinkEvent.fromJson(json);
+    } on FormatException catch (error, stackTrace) {
+      _logException('rawDeepLinkEvent', error, stackTrace);
+      return null;
+    }
+  }
+
+  AttriaxInitialDeepLinkResolution? _initialDeepLinkResolutionFromPayload(
+    Object? payload,
+  ) {
+    final json = _asStringKeyedMap(payload);
+    if (json == null) {
+      return null;
+    }
+    try {
+      return AttriaxInitialDeepLinkResolution.fromJson(json);
+    } on FormatException catch (error, stackTrace) {
+      _logException('initialDeepLinkResolution', error, stackTrace);
+      return null;
+    }
+  }
+
+  Map<String, Object?>? _asStringKeyedMap(Object? value) {
+    if (value is Map) {
+      return value.map(
+        (key, nestedValue) => MapEntry(key.toString(), nestedValue),
+      );
+    }
+    return null;
+  }
+
+  AttriaxSynchronizationState _synchronizationStateFromWire(Object? wire) =>
+      switch (wire) {
+        'initializing' || 'INITIALIZING' =>
+          AttriaxSynchronizationState.initializing,
+        'synchronizing' || 'SYNCHRONIZING' =>
+          AttriaxSynchronizationState.synchronizing,
+        'deferred' || 'DEFERRED' => AttriaxSynchronizationState.deferred,
+        'synchronized' || 'SYNCHRONIZED' =>
+          AttriaxSynchronizationState.synchronized,
+        'offline' || 'OFFLINE' => AttriaxSynchronizationState.offline,
+        'failed' || 'FAILED' => AttriaxSynchronizationState.failed,
+        'disabled' || 'DISABLED' => AttriaxSynchronizationState.disabled,
+        _ => AttriaxSynchronizationState.initializing,
+      };
+
+  String _trackingAuthorizationStatusToWire(
+    AttriaxTrackingAuthorizationStatus status,
+  ) => switch (status) {
+    AttriaxTrackingAuthorizationStatus.notSupported => 'not_supported',
+    AttriaxTrackingAuthorizationStatus.disabled => 'disabled',
+    AttriaxTrackingAuthorizationStatus.notDetermined => 'not_determined',
+    AttriaxTrackingAuthorizationStatus.restricted => 'restricted',
+    AttriaxTrackingAuthorizationStatus.denied => 'denied',
+    AttriaxTrackingAuthorizationStatus.authorized => 'authorized',
+    AttriaxTrackingAuthorizationStatus.timedOut => 'timed_out',
+    AttriaxTrackingAuthorizationStatus.unknown => 'unknown',
+  };
 
   void _logException(String method, Object error, StackTrace stackTrace) {
     developer.log(
