@@ -13,12 +13,16 @@ if (attriaxPubspec.exists()) {
 version attriaxPubspecVersion
 
 buildscript {
+    // Match the Kotlin version the KMP core (com.attriax:core) was compiled with so
+    // the consumed AAR's metadata reads cleanly.
+    ext.kotlin_version = '2.0.21'
     repositories {
         google()
         mavenCentral()
     }
     dependencies {
         classpath 'com.android.tools.build:gradle:8.1.0'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
     }
 }
 
@@ -26,10 +30,14 @@ rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
+        // The Attriax KMP engine is consumed from the local Maven repo produced by
+        // `sdk-kmp` (`./gradlew :core:publishToMavenLocal`).
+        mavenLocal()
     }
 }
 
 apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
 
 android {
     namespace 'com.attriax.attriax_flutter_android'
@@ -43,10 +51,22 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    sourceSets {
+        main.java.srcDirs += 'src/main/kotlin'
+    }
 }
 
 dependencies {
+    // The KMP core: hosts the Attriax engine + all Android platform adapters
+    // (transport, store, install-referrer, connectivity, lifecycle). Variant-aware
+    // root module — Gradle resolves the release AAR automatically.
+    implementation 'com.attriax:core:0.5.0'
+    // Backs AttriaxInAppBrowserActivity (ComponentActivity + the back-press dispatcher).
     implementation 'androidx.activity:activity:1.9.0'
-    implementation 'com.android.installreferrer:installreferrer:2.2'
     testImplementation 'junit:junit:4.13.2'
 }
