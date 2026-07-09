@@ -108,13 +108,11 @@ class Attriax {
     required AttriaxLogger logger,
   }) {
     if (_usesNativeEngine) {
-      return AttriaxNativeRuntime(
-        config: config,
-        logger: logger,
-        deepLinkListener: AttriaxDeepLinkListener(
-          deepLinkSource: createDefaultAttriaxDeepLinkSource(),
-        ),
-      );
+      // The native engine owns deep-link capture and resolution, surfacing
+      // events through the platform interface's `attriax/events/*` streams
+      // (bridged by AttriaxNativeRuntime). The Dart-side deep-link source is
+      // not wired on this path, so no Dart listener is constructed.
+      return AttriaxNativeRuntime(config: config, logger: logger);
     }
     return AttriaxRuntime(
       config: config,
