@@ -14,7 +14,9 @@ import 'attriax_notification_event.dart';
 import 'internal/attriax_context_collector.dart';
 import 'internal/attriax_deep_link_listener.dart';
 import 'internal/attriax_logger.dart';
+import 'internal/attriax_native_runtime.dart';
 import 'internal/attriax_runtime.dart';
+import 'internal/attriax_runtime_interface.dart';
 import 'attriax_synchronization.dart';
 
 part 'attriax_deep_links.dart';
@@ -44,6 +46,7 @@ part 'attriax_tracking.dart';
 /// }
 /// ```
 class Attriax {
+
   /// Creates the production SDK instance.
   ///
   /// Construct this once at application level and reuse it for the whole app
@@ -57,24 +60,6 @@ class Attriax {
           enableDebugLogs: config.enableDebugLogs ?? kDebugMode,
         ),
       );
-
-  Attriax._withLogger({
-    required AttriaxConfig config,
-    required AttriaxLogger logger,
-  }) : _runtime = AttriaxRuntime(
-         config: config,
-         deepLinkListener: AttriaxDeepLinkListener(
-           deepLinkSource: createDefaultAttriaxDeepLinkSource(),
-         ),
-         contextCollector: AttriaxContextCollector(
-           config: config,
-           logger: logger,
-         ),
-         connectivity: Connectivity(),
-         client: http.Client(),
-         logger: logger,
-       );
-
   /// Creates a test-friendly SDK instance with injected dependencies.
   ///
   /// Use this constructor in widget, integration, or package tests when you
@@ -103,7 +88,47 @@ class Attriax {
          prefsOverride: prefs,
        );
 
-  final AttriaxRuntime _runtime;
+  Attriax._withLogger({
+    required AttriaxConfig config,
+    required AttriaxLogger logger,
+  }) : _runtime = _buildRuntime(config: config, logger: logger);
+
+  /// Whether this platform runs on a native engine (the KMP core) rather than
+  /// the pure-Dart engine. iOS and macOS drive the `AttriaxCore` XCFramework
+  /// through the Swift plugin; every other platform (web, desktop, and — until
+  /// its native binding lands — Android) keeps the Dart engine.
+  static bool get _usesNativeEngine =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.iOS ||
+          defaultTargetPlatform == TargetPlatform.macOS);
+
+  /// Builds the platform-appropriate engine behind the shared runtime interface.
+  static AttriaxRuntimeInterface _buildRuntime({
+    required AttriaxConfig config,
+    required AttriaxLogger logger,
+  }) {
+    if (_usesNativeEngine) {
+      return AttriaxNativeRuntime(
+        config: config,
+        logger: logger,
+        deepLinkListener: AttriaxDeepLinkListener(
+          deepLinkSource: createDefaultAttriaxDeepLinkSource(),
+        ),
+      );
+    }
+    return AttriaxRuntime(
+      config: config,
+      deepLinkListener: AttriaxDeepLinkListener(
+        deepLinkSource: createDefaultAttriaxDeepLinkSource(),
+      ),
+      contextCollector: AttriaxContextCollector(config: config, logger: logger),
+      connectivity: Connectivity(),
+      client: http.Client(),
+      logger: logger,
+    );
+  }
+
+  final AttriaxRuntimeInterface _runtime;
 
   /// Whether [init] has completed successfully.
   ///

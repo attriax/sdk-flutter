@@ -8,7 +8,7 @@ part of 'attriax.dart';
 class AttriaxReferrer {
   AttriaxReferrer._(this._runtime);
 
-  final AttriaxRuntime _runtime;
+  final AttriaxRuntimeInterface _runtime;
 
   /// Original install referrer persisted for this installation.
   ///

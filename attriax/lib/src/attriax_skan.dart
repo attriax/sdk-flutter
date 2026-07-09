@@ -11,7 +11,7 @@ part of 'attriax.dart';
 class AttriaxSkan {
   AttriaxSkan._(this._runtime);
 
-  final AttriaxRuntime _runtime;
+  final AttriaxRuntimeInterface _runtime;
 
   /// Latest locally persisted SKAdNetwork state tracked by the SDK.
   AttriaxSkanState? get state => _runtime.skanState;

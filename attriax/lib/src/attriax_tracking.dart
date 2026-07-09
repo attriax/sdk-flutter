@@ -4,7 +4,7 @@ part of 'attriax.dart';
 class AttriaxTracking {
   AttriaxTracking._(this._runtime);
 
-  final AttriaxRuntime _runtime;
+  final AttriaxRuntimeInterface _runtime;
 
   /// Whether event-style tracking is currently enabled.
   ///

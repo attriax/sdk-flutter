@@ -1,6 +1,6 @@
 import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
 
-import 'internal/attriax_runtime.dart';
+import 'internal/attriax_runtime_interface.dart';
 
 /// Local GDPR consent state for the current SDK device.
 enum AttriaxGdprConsentState {
@@ -56,7 +56,7 @@ class AttriaxGdprConsentValues {
 class AttriaxConsent {
   AttriaxConsent(this._runtime);
 
-  final AttriaxRuntime _runtime;
+  final AttriaxRuntimeInterface _runtime;
 
   /// GDPR-specific consent state and actions.
   late final AttriaxGdprConsent gdpr = AttriaxGdprConsent(_runtime);
@@ -69,7 +69,7 @@ class AttriaxConsent {
 class AttriaxAttConsent {
   AttriaxAttConsent(this._runtime);
 
-  final AttriaxRuntime _runtime;
+  final AttriaxRuntimeInterface _runtime;
 
   Future<AttriaxTrackingAuthorizationStatus> requestTrackingAuthorization({
     Duration? timeout,
@@ -87,7 +87,7 @@ class AttriaxAttConsent {
 class AttriaxGdprConsent {
   AttriaxGdprConsent(this._runtime);
 
-  final AttriaxRuntime _runtime;
+  final AttriaxRuntimeInterface _runtime;
 
   /// Last stored category values, or `null` before consent is granted.
   AttriaxGdprConsentValues? get values => _runtime.gdprConsentValues;

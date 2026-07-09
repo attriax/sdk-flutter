@@ -31,6 +31,7 @@ import 'attriax_preferences_store.dart';
 import 'attriax_queue.dart';
 import 'attriax_request_manager.dart';
 import 'attriax_referrer_manager.dart';
+import 'attriax_runtime_interface.dart';
 import 'attriax_runtime_settings_state.dart';
 import 'attriax_runtime_settings_store.dart';
 import 'attriax_runtime_config_validator.dart';
@@ -53,7 +54,7 @@ import 'consent/attriax_consent_queue_policy.dart';
 /// - [AttriaxAppOpenManager]    — app-open request lifecycle
 /// - [AttriaxTrackingManager]   — analytics and user association APIs
 /// - [AttriaxSessionManager]    — session state and lifecycle ownership
-class AttriaxRuntime {
+class AttriaxRuntime implements AttriaxRuntimeInterface {
   AttriaxRuntime({
     required this.config,
     required AttriaxDeepLinkListener deepLinkListener,
@@ -294,29 +295,46 @@ class AttriaxRuntime {
 
   // ---------- getters ------------------------------------------------------- //
 
+  @override
   bool get isInitialized => _initialized;
+  @override
   bool get isEnabled => _settingsState.isEnabled;
+  @override
   bool get areEventsEnabled => _settingsState.areEventsEnabled;
+  @override
   bool get anonymousTrackingEnabled => _consentManager.anonymousTrackingEnabled;
+  @override
   bool get isFirstLaunch => _contextManager.isFirstLaunch;
+  @override
   String? get deviceId => _contextManager.deviceId;
+  @override
   AttriaxGdprConsentState get gdprConsentState =>
       _consentManager.gdprConsentState;
+  @override
   AttriaxGdprConsentValues? get gdprConsentValues =>
       _consentManager.gdprConsentValues;
+  @override
   bool get isWaitingForGdprConsent => _consentManager.isWaitingForGdprConsent;
   AttriaxSessionSnapshot? get currentSession => _sessionManager.currentSession;
+  @override
   bool get isSynchronized =>
       _synchronizer?.synchronizationState ==
       AttriaxSynchronizationState.synchronized;
+  @override
   AttriaxSdkSnapshot? get sdkSnapshot => _contextManager.sdkSnapshot;
+  @override
   AttriaxRawDeepLinkEvent? get rawInitialDeepLink =>
       _deepLinkManager.rawInitialDeepLink;
+  @override
   AttriaxSkanState? get skanState => _skanManager.state;
+  @override
   AttriaxDeepLinkEvent? get initialDeepLink => _deepLinkManager.initialDeepLink;
+  @override
   bool get isInitialDeepLinkResolved =>
       _deepLinkManager.isInitialDeepLinkResolved;
+  @override
   AttriaxDeepLinkEvent? get latestDeepLink => _deepLinkManager.latestDeepLink;
+  @override
   AttriaxSynchronizationState get synchronizationState =>
       _synchronizer?.synchronizationState ??
       AttriaxSynchronizationState.initializing;
@@ -399,14 +417,18 @@ class AttriaxRuntime {
 
   // ---------- streams (delegated to hub) ------------------------------------ //
 
+  @override
   Stream<AttriaxRawDeepLinkEvent> get rawDeepLinks =>
       _deepLinkManager.rawStream;
+  @override
   Stream<AttriaxDeepLinkEvent> get deepLinks => _deepLinkManager.stream;
+  @override
   Stream<AttriaxSynchronizationState> get synchronizationStates =>
       _eventHub.synchronizationStates;
 
   // ---------- init ---------------------------------------------------------- //
 
+  @override
   Future<void> init() {
     if (_initialized) {
       return Future<void>.value();
@@ -427,6 +449,7 @@ class AttriaxRuntime {
     });
   }
 
+  @override
   Future<void> reset() async {
     _logger.warning(
       'Resetting Attriax SDK state. Call init() again before reusing this instance.',
@@ -460,6 +483,7 @@ class AttriaxRuntime {
     _initialized = false;
   }
 
+  @override
   Future<void> requestGdprDataErasure() async {
     _assertInitialized();
 
@@ -496,6 +520,7 @@ class AttriaxRuntime {
 
   // ---------- tracking ------------------------------------------------------ //
 
+  @override
   Future<void> recordEvent(
     String eventName, {
     Map<String, Object?>? eventData,
@@ -509,6 +534,7 @@ class AttriaxRuntime {
     );
   }
 
+  @override
   Future<void> recordNotification({
     required AttriaxNotificationEventType type,
     required String notificationId,
@@ -532,6 +558,7 @@ class AttriaxRuntime {
     );
   }
 
+  @override
   Future<AttriaxSkanUpdateResult> updateSkanConversionValue({
     required int fineValue,
     AttriaxSkanCoarseValue? coarseValue,
@@ -545,6 +572,7 @@ class AttriaxRuntime {
     );
   }
 
+  @override
   Future<void> recordPageView(
     String pageName, {
     String? pageClass,
@@ -566,6 +594,7 @@ class AttriaxRuntime {
     );
   }
 
+  @override
   Future<void> recordError(
     Object error,
     StackTrace stackTrace, {
@@ -585,26 +614,31 @@ class AttriaxRuntime {
     );
   }
 
+  @override
   Future<void> setUser(String? userId, {String? userName}) async {
     _assertInitialized();
     await _trackingManager.setUser(userId, userName: userName);
   }
 
+  @override
   Future<void> setUserProperty(String name, Object? value) async {
     _assertInitialized();
     await _trackingManager.setUserProperty(name, value);
   }
 
+  @override
   Future<void> setUserProperties(Map<String, Object?> properties) async {
     _assertInitialized();
     await _trackingManager.setUserProperties(properties);
   }
 
+  @override
   Future<void> clearUserProperties({List<String>? propertyNames}) async {
     _assertInitialized();
     await _trackingManager.clearUserProperties(propertyNames: propertyNames);
   }
 
+  @override
   Future<bool> needsGdprConsent({bool localOnly = false}) {
     _consentManager.bindTransport(_ensureTransport());
     return _consentManager.needsConsent(
@@ -613,6 +647,7 @@ class AttriaxRuntime {
     );
   }
 
+  @override
   void setGdprConsent({
     required bool analytics,
     required bool attribution,
@@ -628,18 +663,21 @@ class AttriaxRuntime {
       );
   }
 
+  @override
   void setGdprConsentNotRequired() {
     _consentManager
       ..bindTransport(_ensureTransport())
       ..setNotRequired(projectToken: config.projectToken);
   }
 
+  @override
   void resetGdprConsent() {
     _consentManager
       ..bindTransport(_ensureTransport())
       ..reset(projectToken: config.projectToken);
   }
 
+  @override
   Future<AttriaxCreateDynamicLinkResult> createDynamicLink({
     String? name,
     String? destinationUrl,
@@ -663,6 +701,7 @@ class AttriaxRuntime {
     );
   }
 
+  @override
   Future<AttriaxRevenueReceiptValidationResult> validateReceipt({
     required String receipt,
     bool test = false,
@@ -682,6 +721,7 @@ class AttriaxRuntime {
     );
   }
 
+  @override
   Future<void> registerFirebaseMessagingToken({
     required String? token,
     Map<String, Object?>? metadata,
@@ -694,6 +734,7 @@ class AttriaxRuntime {
     );
   }
 
+  @override
   Future<void> registerApplePushToken({
     required String? token,
     Map<String, Object?>? metadata,
@@ -706,6 +747,7 @@ class AttriaxRuntime {
     );
   }
 
+  @override
   Future<AttriaxDeepLinkEvent?> recordDeepLink({
     required Uri uri,
     Map<String, Object?>? metadata,
@@ -728,20 +770,25 @@ class AttriaxRuntime {
     );
   }
 
+  @override
   Future<AttriaxDeepLinkEvent?> waitForInitialDeepLink() =>
       _deepLinkManager.waitForInitialDeepLink();
 
+  @override
   Future<AttriaxDeepLinkEvent> waitForDeepLinkResolution(
     AttriaxRawDeepLinkEvent rawEvent,
   ) => _deepLinkManager.waitResolution(rawEvent);
 
+  @override
   Future<AttriaxTrackingAuthorizationStatus> requestTrackingAuthorization({
     Duration? timeout,
   }) => _contextManager.requestTrackingAuthorization(timeout: timeout);
 
+  @override
   Future<AttriaxTrackingAuthorizationStatus> getTrackingAuthorizationStatus() =>
       _contextManager.getTrackingAuthorizationStatus();
 
+  @override
   Future<AttriaxInstallReferrerDetails?> getOriginalInstallReferrer({
     Duration? timeout,
     bool safe = false,
@@ -751,6 +798,7 @@ class AttriaxRuntime {
     reader: _referrerManager.waitForOriginalInstallReferrer,
   );
 
+  @override
   Future<AttriaxInstallReferrerDetails?> getReinstallReferrer({
     Duration? timeout,
     bool safe = false,
@@ -760,6 +808,7 @@ class AttriaxRuntime {
     reader: _referrerManager.waitForReinstallReferrer,
   );
 
+  @override
   Future<String?> getRawInstallReferrer({
     Duration? timeout,
     bool safe = false,
@@ -769,6 +818,7 @@ class AttriaxRuntime {
     reader: _referrerManager.waitForRawInstallReferrer,
   );
 
+  @override
   Future<AttriaxDeepLinkReferrerDetails?> getSessionReferrer({
     Duration? timeout,
     bool safe = false,
@@ -778,6 +828,7 @@ class AttriaxRuntime {
     reader: _referrerManager.waitForSessionReferrer,
   );
 
+  @override
   Future<AttriaxDeepLinkReferrerDetails?> getLatestDeepLinkReferrer({
     Duration? timeout,
     bool safe = false,
@@ -789,6 +840,7 @@ class AttriaxRuntime {
 
   // ---------- enable / disable ---------------------------------------------- //
 
+  @override
   void setEnabled({required bool enabled}) => _settingsState.setEnabled(
     enabled: enabled,
     initialized: _initialized,
@@ -796,9 +848,11 @@ class AttriaxRuntime {
     onPreparingToEnable: enabled ? _referrerManager.prepareForReenable : null,
   );
 
+  @override
   void setEventsEnabled({required bool enabled}) =>
       _settingsState.setEventsEnabled(enabled: enabled);
 
+  @override
   void setAnonymousTrackingEnabled({required bool enabled}) =>
       _consentManager.setAnonymousTrackingEnabled(enabled: enabled);
 
@@ -806,6 +860,7 @@ class AttriaxRuntime {
 
   // ---------- dispose ------------------------------------------------------- //
 
+  @override
   Future<void> dispose() async {
     _logger.verbose('Disposing Attriax SDK runtime.');
     await _crashReportingManager.deactivate();

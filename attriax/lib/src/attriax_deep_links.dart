@@ -7,7 +7,7 @@ part of 'attriax.dart';
 class AttriaxDeepLinks {
   AttriaxDeepLinks._(this._runtime);
 
-  final AttriaxRuntime _runtime;
+  final AttriaxRuntimeInterface _runtime;
 
   /// Launch raw deep-link event captured during startup, when one was present.
   AttriaxRawDeepLinkEvent? get rawInitialDeepLink =>
