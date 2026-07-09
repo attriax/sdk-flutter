@@ -1,831 +1,222 @@
 import Flutter
-import Security
-import SafariServices
-import StoreKit
 import UIKit
-import WebKit
-import Darwin
-#if canImport(AdSupport)
-import AdSupport
-#endif
-#if canImport(AppTrackingTransparency)
-import AppTrackingTransparency
-#endif
+import AttriaxCore
 
-private let attriaxPendingCrashKey = "attriax.pending_crash"
-private var attriaxPreviousExceptionHandler: NSUncaughtExceptionHandler?
-private var attriaxCrashHandlerInstalled = false
+/// iOS implementation of the Attriax Flutter plugin (Phase 5 re-wrap).
+///
+/// The engine now lives in the KMP core (shipped as the `AttriaxCore` XCFramework).
+/// This plugin is a THIN shim: it holds the KMP `Attriax` engine — built via
+/// `AttriaxApple` — and implements the expanded platform-interface command surface by
+/// delegating to it OFF the platform thread, then bridges the engine's
+/// synchronization-state transitions to the `attriax/events/synchronization`
+/// `EventChannel`. The old native signal-provider code is superseded by the KMP Apple
+/// adapters (transport, store, ATT/SKAN/ASA/App-Attest, the real WKWebView UA).
+public class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
 
-private func attriaxHandleUncaughtException(_ exception: NSException) {
-    AttriaxIosPlugin.persistPendingCrash(exception: exception)
-    attriaxPreviousExceptionHandler?(exception)
-}
+    private var engine: Attriax?
+    private var syncSink: FlutterEventSink?
+    private var syncListener: SyncStateListener?
 
-private func attriaxReadEntitlementValue(_ key: String) -> Any? {
-#if os(macOS)
-    guard let task = SecTaskCreateFromSelf(nil) else {
-        return nil
-    }
-
-    var error: Unmanaged<CFError>?
-    let value = SecTaskCopyValueForEntitlement(
-        task,
-        key as CFString,
-        &error
-    )
-    error?.release()
-    return value
-#else
-    let infoDictionary = Bundle.main.infoDictionary ?? [:]
-
-    switch key {
-    case "application-identifier":
-        return infoDictionary["AttriaxApplicationIdentifier"]
-    case "com.apple.developer.team-identifier":
-        return infoDictionary["AttriaxTeamIdentifier"]
-    case "com.apple.developer.associated-domains":
-        return infoDictionary["AttriaxAssociatedDomains"]
-    default:
-        return nil
-    }
-#endif
-}
-
-private func attriaxReadEntitlementString(_ key: String) -> String? {
-    attriaxReadEntitlementValue(key) as? String
-}
-
-private func attriaxReadEntitlementStringArray(_ key: String) -> [String] {
-    guard let values = attriaxReadEntitlementValue(key) as? [Any] else {
-        return []
-    }
-
-    return values.compactMap { $0 as? String }
-}
-
-private func attriaxHardwareModel() -> String? {
-    var systemInfo = utsname()
-    guard uname(&systemInfo) == 0 else {
-        return nil
-    }
-
-    return withUnsafePointer(to: &systemInfo.machine) { pointer in
-        pointer.withMemoryRebound(to: CChar.self, capacity: 1) {
-            String(cString: $0)
-        }
-    }
-}
-
-private func attriaxInterfaceIdiom(_ idiom: UIUserInterfaceIdiom) -> String {
-    switch idiom {
-    case .phone:
-        return "phone"
-    case .pad:
-        return "pad"
-    case .mac:
-        return "mac"
-    case .tv:
-        return "tv"
-    case .carPlay:
-        return "carPlay"
-    default:
-        return "unspecified"
-    }
-}
-
-public final class AttriaxIosPlugin: NSObject, FlutterPlugin, FlutterStreamHandler, FlutterSceneLifeCycleDelegate {
-    private var eventSink: FlutterEventSink?
-    private var initialLink: String?
-    private var initialLinkSent = false
-    private var latestLink: String?
-    private var cachedWebViewUserAgent: String?
-    private var webViewUserAgentProbe: WKWebView?
-
-    // Epic 7.3b — retained so the dedicated attestation channel delegate is not
-    // deallocated after `register`.
-    private static var attestationDelegate: AttriaxAttestationChannelDelegate?
-
-    // Epic 8.5 — retained so the dedicated Apple Search Ads (AdServices) channel
-    // delegate is not deallocated after `register`.
-    private static var asaDelegate: AttriaxAsaChannelDelegate?
+    /// All engine work runs off the platform (main) thread, mirroring the Android
+    /// binding and the KMP engine's own off-main threading model.
+    private let workQueue = DispatchQueue(label: "com.attriax.sdk.plugin", qos: .utility)
 
     public static func register(with registrar: FlutterPluginRegistrar) {
-        let channel = FlutterMethodChannel(name: "attriax", binaryMessenger: registrar.messenger())
-        let eventChannel = FlutterEventChannel(
-            name: "attriax/deep_links/events",
-            binaryMessenger: registrar.messenger()
-        )
-        let instance = AttriaxIosPlugin()
-        registrar.addMethodCallDelegate(instance, channel: channel)
-        eventChannel.setStreamHandler(instance)
-        registrar.addApplicationDelegate(instance)
-        registrar.addSceneDelegate(instance)
+        let messenger = registrar.messenger()
+        let plugin = AttriaxIosPlugin()
 
-        // Epic 7.3b — device attestation (App Attest) acquisition seam on the
-        // dedicated `attriax/attestation` channel.
-        let attestationChannel = FlutterMethodChannel(
-            name: "attriax/attestation",
-            binaryMessenger: registrar.messenger()
-        )
-        let attestationDelegate = AttriaxAttestationChannelDelegate()
-        registrar.addMethodCallDelegate(attestationDelegate, channel: attestationChannel)
-        Self.attestationDelegate = attestationDelegate
+        let methodChannel = FlutterMethodChannel(name: "attriax", binaryMessenger: messenger)
+        registrar.addMethodCallDelegate(plugin, channel: methodChannel)
 
-        // Epic 8.5 — Apple Search Ads (AdServices) attribution-token acquisition
-        // seam on the dedicated `attriax/asa` channel.
-        let asaChannel = FlutterMethodChannel(
-            name: "attriax/asa",
-            binaryMessenger: registrar.messenger()
+        let syncChannel = FlutterEventChannel(
+            name: "attriax/events/synchronization",
+            binaryMessenger: messenger
         )
-        let asaDelegate = AttriaxAsaChannelDelegate()
-        registrar.addMethodCallDelegate(asaDelegate, channel: asaChannel)
-        Self.asaDelegate = asaDelegate
+        syncChannel.setStreamHandler(plugin)
+        // NOTE: the deep-link event channels (deep_links / raw_deep_links /
+        // initial_deep_link) are wired in a follow-up slice with the deep-link bridge.
     }
 
+    // MARK: - method channel
+
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        let args = call.arguments as? [String: Any?] ?? [:]
+
         switch call.method {
-        case "collectNativeContext":
-            result(collectNativeContext(call: call))
-        case "collectInstallReferrer":
-            result(collectInstallReferrer())
-        case "readAttributionClipboard":
-            readAttributionClipboard(result: result)
-        case "collectWebViewUserAgent":
-            collectWebViewUserAgent(result: result)
-        case "setAutomaticCrashReportingEnabled":
-            let arguments = call.arguments as? [String: Any]
-            if arguments?["enabled"] as? Bool == true {
-                Self.installCrashReporter()
-            } else {
-                Self.restoreCrashReporter()
+        case "initialize":
+            initialize(args, result)
+
+        case "recordEvent":
+            let name = args["name"] as? String ?? ""
+            let eventData = args["eventData"] as? [String: Any]
+            let flushImmediately = boolArg(args, "flushImmediately", false)
+            withEngine(result) { engine in
+                engine.recordEvent(name: name, eventData: eventData, flushImmediately: flushImmediately)
+                return nil
             }
-            result(nil)
-        case "getTrackingAuthorizationStatus":
-            result(currentTrackingAuthorizationStatus())
-        case "requestTrackingAuthorization":
-            requestTrackingAuthorization(result: result)
-        case "consumePendingCrashReport":
-            result(consumePendingCrashReport())
-        case "updateSkanConversionValue":
-            updateSkanConversionValue(call: call, result: result)
-        case "getInitialLink":
-            result(initialLink)
-        case "getLatestLink":
-            result(latestLink)
-        case "openBrowserUrl":
-            openBrowserUrl(call: call, result: result)
+
+        case "flush":
+            withEngine(result) { engine in engine.flush(); return nil }
+
+        case "reset":
+            withEngine(result) { engine in engine.reset(); return nil }
+
+        case "dispose":
+            withEngine(result) { engine in
+                engine.dispose()
+                self.detachSyncListener(engine)
+                self.engine = nil
+                return nil
+            }
+
+        case "submitAsaToken":
+            let token = args["token"] as? String ?? ""
+            withEngine(result) { engine in engine.submitAsaToken(token: token); return nil }
+
         default:
+            // The remaining commands (tracking.recordPurchase/recordPageView/recordRefund,
+            // consent.gdpr/att/ccpa, deepLinks.*, skan.updateConversionValue, receipt
+            // validation, dynamic links) delegate to the corresponding engine sub-surface
+            // (`engine.tracking`, `engine.consent`, `engine.skan`, `engine.deepLinks`) and
+            // are wired in follow-up slices. Returning notImplemented keeps the contract
+            // honest rather than silently succeeding.
             result(FlutterMethodNotImplemented)
         }
     }
 
-    public func onListen(
-        withArguments arguments: Any?,
-        eventSink events: @escaping FlutterEventSink
-    ) -> FlutterError? {
-        eventSink = events
+    // MARK: - initialize
 
-        if !initialLinkSent, let initialLink {
-            initialLinkSent = true
-            events(initialLink)
+    private func initialize(_ args: [String: Any?], _ result: @escaping FlutterResult) {
+        guard let configMap = args["config"] as? [String: Any?] else {
+            result(FlutterError(code: "bad_args", message: "initialize requires a config map", details: nil))
+            return
         }
+        workQueue.async {
+            let config = self.buildConfig(configMap)
+            // userAgent = nil → the KMP Apple layer resolves the REAL WKWebView Safari
+            // UA itself (its off-main probe runs safely on this background queue), else
+            // a Safari-shaped fallback — never a synthetic slug.
+            let engine = AttriaxApple.shared.create(config: config, userAgent: nil)
+            engine.doInit()
+            self.engine = engine
+            self.attachSyncListener(engine)
+            DispatchQueue.main.async { result(nil) }
+        }
+    }
 
+    /// Build the 30-field KMP `AttriaxConfig` from the platform-interface config map.
+    /// Defaults mirror `AttriaxConfig`'s own defaults for any absent key.
+    private func buildConfig(_ m: [String: Any?]) -> AttriaxConfig {
+        let attestationEnabled = boolArg(m, "attestationEnabled", false)
+        return AttriaxConfig(
+            projectToken: m["projectToken"] as? String ?? "",
+            apiBaseUrl: m["apiBaseUrl"] as? String ?? "https://api.attriax.com",
+            appVersion: m["appVersion"] as? String,
+            appBuildNumber: m["appBuildNumber"] as? String,
+            appPackageName: m["appPackageName"] as? String,
+            sdkMetadata: m["sdkMetadata"] as? [String: Any],
+            deviceContext: nil, // KMP auto-captures the iOS device context.
+            enableDebugLogs: boolArg(m, "enableDebugLogs", false),
+            requestTimeoutMs: int64Arg(m, "requestTimeoutMs", 12_000),
+            maxQueueSize: int32Arg(m, "maxQueueSize", 500),
+            eventFlushIntervalMs: int64Arg(m, "eventFlushIntervalMs", 60_000),
+            flushEventsImmediatelyOnFirstLaunch: boolArg(m, "flushEventsImmediatelyOnFirstLaunch", true),
+            collectAdvertisingId: boolArg(m, "collectAdvertisingId", true),
+            automaticCrashReportingEnabled: boolArg(m, "automaticCrashReportingEnabled", true),
+            gdprEnabled: boolArg(m, "gdprEnabled", false),
+            anonymousTracking: boolArg(m, "anonymousTracking", true),
+            sessionTrackingEnabled: boolArg(m, "sessionTrackingEnabled", true),
+            sessionHeartbeatIntervalMs: int64Arg(m, "sessionHeartbeatIntervalMs", 300_000),
+            firstLaunchSessionHeartbeatIntervalMs: int64Arg(m, "firstLaunchSessionHeartbeatIntervalMs", 30_000),
+            installReferrerEnabled: boolArg(m, "installReferrerEnabled", true),
+            attestationEnabled: attestationEnabled,
+            // App Attest is opt-in; supply the provider only when attestation is enabled.
+            attestationProvider: attestationEnabled
+                ? AttriaxAppAttestProvider(defaults: UserDefaults(suiteName: "com.attriax.sdk.prefs") ?? .standard)
+                : nil,
+            pinnedCertificateSha256Fingerprints: (m["pinnedCertificateSha256Fingerprints"] as? [String]) ?? [],
+            automaticBrowserHandling: boolArg(m, "automaticBrowserHandling", true),
+            attStatus: nil, // resolved by the KMP ATT seam.
+            requestTrackingAuthorizationOnInit: boolArg(m, "requestTrackingAuthorizationOnInit", false),
+            trackingAuthorizationStatusTimeoutMs: int64Arg(m, "trackingAuthorizationStatusTimeoutMs", 60_000),
+            skan: nil, // default AttriaxSkanConfig (enabled).
+            asaTokenCaptureEnabled: boolArg(m, "asaTokenCaptureEnabled", true),
+            doNotSell: (m["doNotSell"] as? NSNumber).map { KotlinBoolean(bool: $0.boolValue) },
+            usPrivacy: m["usPrivacy"] as? String
+        )
+    }
+
+    // MARK: - synchronization EventChannel
+
+    public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        syncSink = events
+        // Emit the current state immediately so late subscribers are consistent.
+        if let engine = engine {
+            events(syncWire(engine.synchronization.state))
+        }
         return nil
     }
 
     public func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        eventSink = nil
+        syncSink = nil
         return nil
     }
 
-    public func application(
-        _ application: UIApplication,
-        continue userActivity: NSUserActivity,
-        restorationHandler: @escaping ([Any]) -> Void
-    ) -> Bool {
-        if let url = userActivity.webpageURL {
-            handleLink(url: url)
+    private func attachSyncListener(_ engine: Attriax) {
+        let listener = SyncStateListener { [weak self] state in
+            guard let self = self else { return }
+            let wire = self.syncWire(state)
+            DispatchQueue.main.async { self.syncSink?(wire) }
         }
-
-        return false
+        syncListener = listener
+        engine.synchronization.addStateListener(listener: listener)
     }
 
-    public func application(
-        _ application: UIApplication,
-        open url: URL,
-        options: [UIApplication.OpenURLOptionsKey: Any] = [:]
-    ) -> Bool {
-        handleLink(url: url)
-        return false
+    private func detachSyncListener(_ engine: Attriax) {
+        if let listener = syncListener {
+            engine.synchronization.removeStateListener(listener: listener)
+        }
+        syncListener = nil
     }
 
-    public func scene(
-        _ scene: UIScene,
-        willConnectTo session: UISceneSession,
-        options connectionOptions: UIScene.ConnectionOptions?
-    ) -> Bool {
-        guard let connectionOptions else {
-            return false
-        }
-
-        _ = self.scene(scene, openURLContexts: connectionOptions.urlContexts)
-
-        for userActivity in connectionOptions.userActivities {
-            _ = self.scene(scene, continue: userActivity)
-        }
-
-        return false
+    /// Map the KMP sync state to the wire string the Dart platform interface parses
+    /// (it accepts the enum name in either case).
+    private func syncWire(_ state: AttriaxSynchronizationState) -> String {
+        return state.name
     }
 
-    public func scene(
-        _ scene: UIScene,
-        openURLContexts URLContexts: Set<UIOpenURLContext>
-    ) -> Bool {
-        for context in URLContexts {
-            handleLink(url: context.url)
-        }
+    // MARK: - helpers
 
-        return false
-    }
-
-    public func scene(
-        _ scene: UIScene,
-        continue userActivity: NSUserActivity
-    ) -> Bool {
-        if let url = userActivity.webpageURL {
-            handleLink(url: url)
-        }
-
-        return false
-    }
-
-    private func collectInstallReferrer() -> [String: Any] {
-        ["metadata": ["source": "ios_install_referrer"]]
-    }
-
-    private func readAttributionClipboard(result: @escaping FlutterResult) {
-        DispatchQueue.main.async {
-            let text = UIPasteboard.general.string?
-                .trimmingCharacters(in: .whitespacesAndNewlines)
-            result(text?.isEmpty == false ? text : nil)
-        }
-    }
-
-    private func collectWebViewUserAgent(result: @escaping FlutterResult) {
-        if let cachedWebViewUserAgent, !cachedWebViewUserAgent.isEmpty {
-            result(cachedWebViewUserAgent)
-            return
-        }
-
-        DispatchQueue.main.async {
-            let webView = WKWebView(frame: .zero)
-            self.webViewUserAgentProbe = webView
-            webView.evaluateJavaScript("navigator.userAgent") { value, _ in
-                defer {
-                    self.webViewUserAgentProbe = nil
-                }
-
-                let userAgent = (value as? String)?
-                    .trimmingCharacters(in: .whitespacesAndNewlines)
-                if let userAgent, !userAgent.isEmpty {
-                    self.cachedWebViewUserAgent = userAgent
-                    result(userAgent)
-                    return
-                }
-
-                result(nil)
-            }
-        }
-    }
-
-    private func openBrowserUrl(
-        call: FlutterMethodCall,
-        result: @escaping FlutterResult
-    ) {
-        guard let arguments = call.arguments as? [String: Any],
-              let urlString = arguments["url"] as? String,
-              let url = URL(string: urlString)
-        else {
-            result(false)
-            return
-        }
-
-        let openMode = (arguments["openMode"] as? String)?.trimmingCharacters(
-            in: .whitespacesAndNewlines
-        ) ?? "in_app"
-
-        DispatchQueue.main.async {
-            if openMode == "external" {
-                UIApplication.shared.open(url, options: [:]) { opened in
-                    result(opened)
+    /// Run [block] on the engine off the platform thread, replying on the main thread.
+    private func withEngine(_ result: @escaping FlutterResult, _ block: @escaping (Attriax) -> Any?) {
+        workQueue.async {
+            guard let engine = self.engine else {
+                DispatchQueue.main.async {
+                    result(FlutterError(code: "not_initialized", message: "Attriax is not initialized", details: nil))
                 }
                 return
             }
-
-            guard let presenter = Self.topViewController() else {
-                result(false)
-                return
-            }
-
-            let controller = SFSafariViewController(url: url)
-            presenter.present(controller, animated: true) {
-                result(true)
-            }
+            let value = block(engine)
+            DispatchQueue.main.async { result(value) }
         }
     }
 
-    private func consumePendingCrashReport() -> [String: Any]? {
-        let defaults = UserDefaults.standard
-        let payload = defaults.dictionary(forKey: attriaxPendingCrashKey) as? [String: Any]
-        defaults.removeObject(forKey: attriaxPendingCrashKey)
-        return payload
+    private func boolArg(_ m: [String: Any?], _ key: String, _ fallback: Bool) -> Bool {
+        (m[key] as? NSNumber)?.boolValue ?? (m[key] as? Bool) ?? fallback
     }
 
-    private func collectNativeContext(call: FlutterMethodCall) -> [String: Any] {
-        let bundle = Bundle.main
-        let appVersion = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-        let appBuildNumber = bundle.object(forInfoDictionaryKey: kCFBundleVersionKey as String)
-            as? String
-        let flutterDeepLinkingEnabled = bundle.object(
-            forInfoDictionaryKey: "FlutterDeepLinkingEnabled"
-        ) as? Bool
-        let device = UIDevice.current
-        var payload: [String: Any] = [:]
-
-        let arguments = call.arguments as? [String: Any]
-        let collectAdvertisingId = arguments?["collectAdvertisingId"] as? Bool ?? true
-
-        if let idfa = readAdvertisingIdentifier(collectAdvertisingId: collectAdvertisingId) {
-            payload["advertisingId"] = idfa
-        }
-
-        var metadata: [String: Any] = [
-            "source": "ios_native",
-            "timezone": TimeZone.current.identifier,
-            "locale": Locale.current.identifier,
-            "appVersion": appVersion as Any,
-            "appBuildNumber": appBuildNumber as Any,
-            "packageName": bundle.bundleIdentifier as Any,
-            "keychainDeviceId": readOrCreateKeychainDeviceId() as Any,
-            "bundleIdentifier": bundle.bundleIdentifier as Any,
-            "vendorIdentifier": device.identifierForVendor?.uuidString as Any,
-            "deviceModel": device.model,
-            "localizedModel": device.localizedModel,
-            "systemName": device.systemName,
-            "systemVersion": device.systemVersion,
-        ]
-
-#if TARGET_OS_SIMULATOR
-        metadata["isSimulator"] = true
-        metadata["isPhysicalDevice"] = false
-#else
-        metadata["isSimulator"] = false
-        metadata["isPhysicalDevice"] = true
-#endif
-
-        if let flutterDeepLinkingEnabled {
-            metadata["flutterDeepLinkingEnabled"] = flutterDeepLinkingEnabled
-        }
-
-        if let hardwareModel = attriaxHardwareModel(), !hardwareModel.isEmpty {
-            metadata["hardwareModel"] = hardwareModel
-        }
-
-        let applicationIdentifier = attriaxReadEntitlementString(
-            "application-identifier"
-        )?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let applicationIdentifier, !applicationIdentifier.isEmpty {
-            metadata["applicationIdentifier"] = applicationIdentifier
-            if let derivedTeamIdentifier = applicationIdentifier.split(separator: ".").first,
-               !derivedTeamIdentifier.isEmpty {
-                metadata["teamIdentifier"] = String(derivedTeamIdentifier)
-            }
-        }
-
-        let explicitTeamIdentifier = attriaxReadEntitlementString(
-            "com.apple.developer.team-identifier"
-        )?.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let explicitTeamIdentifier, !explicitTeamIdentifier.isEmpty {
-            metadata["teamIdentifier"] = explicitTeamIdentifier
-        }
-
-        let associatedDomains = attriaxReadEntitlementStringArray(
-            "com.apple.developer.associated-domains"
-        )
-        if !associatedDomains.isEmpty {
-            metadata["associatedDomains"] = associatedDomains
-        }
-
-        metadata["interfaceIdiom"] = attriaxInterfaceIdiom(device.userInterfaceIdiom)
-
-        payload["metadata"] = metadata
-        return payload
+    private func int64Arg(_ m: [String: Any?], _ key: String, _ fallback: Int64) -> Int64 {
+        (m[key] as? NSNumber)?.int64Value ?? fallback
     }
 
-    private static func topViewController(
-        from base: UIViewController? = nil
-    ) -> UIViewController? {
-        let root = base ?? activeWindow()?.rootViewController
-        if let navigationController = root as? UINavigationController {
-            return topViewController(from: navigationController.visibleViewController)
-        }
-        if let tabBarController = root as? UITabBarController,
-           let selectedViewController = tabBarController.selectedViewController {
-            return topViewController(from: selectedViewController)
-        }
-        if let presentedViewController = root?.presentedViewController {
-            return topViewController(from: presentedViewController)
-        }
-        return root
-    }
-
-    private static func activeWindow() -> UIWindow? {
-        if #available(iOS 13.0, *) {
-            for scene in UIApplication.shared.connectedScenes {
-                guard let windowScene = scene as? UIWindowScene else {
-                    continue
-                }
-                if let window = windowScene.windows.first(where: { $0.isKeyWindow }) {
-                    return window
-                }
-            }
-            return nil
-        }
-
-        return UIApplication.shared.keyWindow
-    }
-
-    /**
-     * Read the IDFA via `ASIdentifierManager`. AdSupport is a system
-     * framework so no external dependency is needed. ATT is requested only
-     * through the explicit `requestTrackingAuthorization` method or the Dart
-     * startup flag; collection here only reads when already authorized.
-     */
-    private func readAdvertisingIdentifier(collectAdvertisingId: Bool) -> String? {
-        guard collectAdvertisingId else {
-            return nil
-        }
-#if canImport(AdSupport)
-#if canImport(AppTrackingTransparency)
-        if #available(iOS 14, *) {
-            guard ATTrackingManager.trackingAuthorizationStatus == .authorized else {
-                return nil
-            }
-        }
-#endif
-        let value = ASIdentifierManager.shared().advertisingIdentifier.uuidString
-        if value == "00000000-0000-0000-0000-000000000000" {
-            return nil
-        }
-        return value
-#else
-        return nil
-#endif
-    }
-
-    private func requestTrackingAuthorization(result: @escaping FlutterResult) {
-#if canImport(AppTrackingTransparency)
-        guard #available(iOS 14, *) else {
-            result("not_supported")
-            return
-        }
-
-        DispatchQueue.main.async {
-            ATTrackingManager.requestTrackingAuthorization { status in
-                result(Self.trackingAuthorizationStatusString(status))
-            }
-        }
-#else
-        result("not_supported")
-#endif
-    }
-
-    private func updateSkanConversionValue(
-        call: FlutterMethodCall,
-        result: @escaping FlutterResult
-    ) {
-        let arguments = call.arguments as? [String: Any]
-        let fineValue = (arguments?["fineValue"] as? NSNumber)?.intValue
-        let coarseValue = arguments?["coarseValue"] as? String
-        let lockWindow = arguments?["lockWindow"] as? Bool ?? false
-
-        guard let fineValue else {
-            result([
-                "status": "invalid_value",
-                "message": "fineValue is required for SKAdNetwork conversion updates."
-            ])
-            return
-        }
-
-        guard (0...63).contains(fineValue) else {
-            result([
-                "status": "invalid_value",
-                "message": "fineValue must be between 0 and 63."
-            ])
-            return
-        }
-
-        let buildSkanErrorMessage: (Error) -> String = { error in
-            let nsError = error as NSError
-            var message = nsError.localizedDescription
-
-            if message.isEmpty {
-                message = "\(nsError.domain) error \(nsError.code)."
-            } else {
-                message += " [\(nsError.domain) \(nsError.code)]"
-            }
-
-            if nsError.domain == "SKANErrorDomain" && nsError.code == 10 {
-                message += " This commonly means StoreKit does not have an eligible SKAdNetwork attribution context for this install. Simulator and direct-debug installs are not reliable for validating conversion-value updates; verify on a physical iOS device with an eligible attributed install."
-            }
-
-            return message
-        }
-
-        DispatchQueue.main.async {
-            if #available(iOS 16.1, *) {
-                let completion: (Error?) -> Void = { error in
-                    if let error {
-                        result([
-                            "status": "error",
-                            "message": buildSkanErrorMessage(error),
-                            "fineValue": fineValue,
-                            "coarseValue": coarseValue as Any,
-                            "lockWindow": lockWindow,
-                        ])
-                    } else {
-                        result([
-                            "status": "updated",
-                            "fineValue": fineValue,
-                            "coarseValue": coarseValue as Any,
-                            "lockWindow": lockWindow,
-                        ])
-                    }
-                }
-
-                if let resolvedCoarseValue = self.skanCoarseValue(from: coarseValue) {
-                    SKAdNetwork.updatePostbackConversionValue(
-                        fineValue,
-                        coarseValue: resolvedCoarseValue,
-                        lockWindow: lockWindow,
-                        completionHandler: completion
-                    )
-                } else if lockWindow {
-                    result([
-                        "status": "invalid_value",
-                        "message": "lockWindow requires a coarseValue on this iOS SDK.",
-                        "fineValue": fineValue,
-                        "lockWindow": lockWindow,
-                    ])
-                } else {
-                    SKAdNetwork.updatePostbackConversionValue(
-                        fineValue,
-                        completionHandler: completion
-                    )
-                }
-                return
-            }
-
-            if #available(iOS 15.4, *) {
-                SKAdNetwork.updatePostbackConversionValue(fineValue) { error in
-                    if let error {
-                        result([
-                            "status": "error",
-                            "message": buildSkanErrorMessage(error),
-                            "fineValue": fineValue,
-                            "lockWindow": false,
-                        ])
-                    } else {
-                        result([
-                            "status": "updated",
-                            "fineValue": fineValue,
-                            "lockWindow": false,
-                        ])
-                    }
-                }
-                return
-            }
-
-            if #available(iOS 14.0, *) {
-                SKAdNetwork.updateConversionValue(fineValue)
-                result([
-                    "status": "updated",
-                    "fineValue": fineValue,
-                    "lockWindow": false,
-                ])
-                return
-            }
-
-            result([
-                "status": "not_supported",
-                "message": "SKAdNetwork conversion updates require iOS 14.0 or later.",
-                "fineValue": fineValue,
-                "lockWindow": false,
-            ])
-        }
-    }
-
-    @available(iOS 16.1, *)
-    private func skanCoarseValue(from rawValue: String?) -> SKAdNetwork.CoarseConversionValue? {
-        switch rawValue {
-        case "low":
-            return .low
-        case "medium":
-            return .medium
-        case "high":
-            return .high
-        default:
-            return nil
-        }
-    }
-
-    private func currentTrackingAuthorizationStatus() -> String {
-#if canImport(AppTrackingTransparency)
-        guard #available(iOS 14, *) else {
-            return "not_supported"
-        }
-
-        return Self.trackingAuthorizationStatusString(
-            ATTrackingManager.trackingAuthorizationStatus
-        )
-#else
-        return "not_supported"
-#endif
-    }
-
-#if canImport(AppTrackingTransparency)
-    @available(iOS 14, *)
-    private static func trackingAuthorizationStatusString(
-        _ status: ATTrackingManager.AuthorizationStatus
-    ) -> String {
-        switch status {
-        case .notDetermined: return "not_determined"
-        case .restricted: return "restricted"
-        case .denied: return "denied"
-        case .authorized: return "authorized"
-        @unknown default: return "unknown"
-        }
-    }
-#endif
-    private func readOrCreateKeychainDeviceId() -> String? {
-        if let existingValue = readKeychainDeviceId() {
-            return existingValue
-        }
-
-        let newValue = UUID().uuidString
-        let service = Bundle.main.bundleIdentifier ?? "com.attriax.sdk"
-        let account = "attriax.device_id"
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: service,
-            kSecAttrAccount: account,
-            kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
-            kSecValueData: Data(newValue.utf8),
-        ]
-
-        let status = SecItemAdd(query as CFDictionary, nil)
-        if status == errSecSuccess {
-            return newValue
-        }
-
-        if status == errSecDuplicateItem {
-            return readKeychainDeviceId()
-        }
-
-        return nil
-    }
-
-    private func readKeychainDeviceId() -> String? {
-        let service = Bundle.main.bundleIdentifier ?? "com.attriax.sdk"
-        let account = "attriax.device_id"
-        let query: [CFString: Any] = [
-            kSecClass: kSecClassGenericPassword,
-            kSecAttrService: service,
-            kSecAttrAccount: account,
-            kSecReturnData: true,
-            kSecMatchLimit: kSecMatchLimitOne,
-        ]
-
-        var result: CFTypeRef?
-        let status = SecItemCopyMatching(query as CFDictionary, &result)
-        guard status == errSecSuccess, let data = result as? Data else {
-            return nil
-        }
-
-        guard let value = String(data: data, encoding: .utf8) else {
-            return nil
-        }
-
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed.isEmpty ? nil : trimmed
-    }
-
-    private func handleLink(url: URL) {
-        let link = url.absoluteString
-
-        latestLink = link
-
-        if initialLink == nil {
-            initialLink = link
-        }
-
-        guard let eventSink, latestLink != nil else {
-            return
-        }
-
-        initialLinkSent = true
-        eventSink(link)
-    }
-
-    private static func installCrashReporter() {
-        guard !attriaxCrashHandlerInstalled else {
-            return
-        }
-        attriaxCrashHandlerInstalled = true
-        attriaxPreviousExceptionHandler = NSGetUncaughtExceptionHandler()
-        NSSetUncaughtExceptionHandler(attriaxHandleUncaughtException)
-    }
-
-    private static func restoreCrashReporter() {
-        guard attriaxCrashHandlerInstalled else {
-            return
-        }
-        NSSetUncaughtExceptionHandler(nil)
-        attriaxPreviousExceptionHandler = nil
-        attriaxCrashHandlerInstalled = false
-    }
-
-    fileprivate static func persistPendingCrash(exception: NSException) {
-        let payload: [String: Any] = [
-            "source": "ios_uncaught_exception",
-            "isFatal": true,
-            "exceptionType": exception.name.rawValue,
-            "message": exception.reason ?? exception.name.rawValue,
-            "stackTrace": exception.callStackSymbols.joined(separator: "\n"),
-            "occurredAt": ISO8601DateFormatter().string(from: Date()),
-            "reason": exception.reason as Any,
-            "metadata": [
-                "name": exception.name.rawValue,
-            ],
-        ]
-        UserDefaults.standard.set(payload, forKey: attriaxPendingCrashKey)
+    private func int32Arg(_ m: [String: Any?], _ key: String, _ fallback: Int32) -> Int32 {
+        (m[key] as? NSNumber)?.int32Value ?? fallback
     }
 }
 
-/// Epic 7.3b — device attestation (App Attest) acquisition seam.
-///
-/// Handles the `attriax/attestation` channel independently of the main plugin.
-///
-/// TODO(live): acquire an App Attest assertion/attestation for the provided
-/// `nonce` (via `DCAppAttestService`: `generateKey` → `attestKey` /
-/// `generateAssertion` over the nonce), then return a map:
-///   `["provider": "app_attest", "token": <base64Attestation>,
-///     "nonce": <nonce>, "keyId": <keyId>]`.
-/// Real acquisition requires a real device (App Attest is unavailable in the
-/// simulator), an Apple Developer Team, and server-side key registration, none
-/// of which can be verified in this repo. Until then this returns `nil` so the
-/// Dart `AttriaxPlatformAttestationProvider` degrades to "unattested" and the
-/// SDK sends init with no envelope.
-final class AttriaxAttestationChannelDelegate: NSObject, FlutterPlugin {
-    // FlutterPlugin conformance is only used so this can be a method-call
-    // delegate; registration is driven by AttriaxIosPlugin.register.
-    static func register(with registrar: FlutterPluginRegistrar) {}
-
-    func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        switch call.method {
-        case "acquireAttestationToken":
-            // TODO(live): replace with real App Attest acquisition.
-            result(nil)
-        default:
-            result(FlutterMethodNotImplemented)
-        }
-    }
-}
-
-/// Epic 8.5 — Apple Search Ads (AdServices) attribution-token acquisition seam.
-///
-/// Handles the `attriax/asa` channel independently of the main plugin.
-///
-/// TODO(live): acquire the AdServices attribution token via
-/// `AAAttribution.attributionToken()` (import `AdServices`, iOS 14.3+), then
-/// return it as a `String`. The Dart runtime POSTs that token to
-/// `POST /api/sdk/v1/asa/token`, and the server exchanges it with Apple's
-/// campaign-attribution endpoint. Real acquisition requires a real device / App
-/// Store or TestFlight build context and cannot be verified in this repo, so
-/// until then this returns `nil` and the Dart `AttriaxAdServicesTokenProvider`
-/// degrades to "no token" — no ASA request is sent and init is unaffected.
-final class AttriaxAsaChannelDelegate: NSObject, FlutterPlugin {
-    // FlutterPlugin conformance is only used so this can be a method-call
-    // delegate; registration is driven by AttriaxIosPlugin.register.
-    static func register(with registrar: FlutterPluginRegistrar) {}
-
-    func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        switch call.method {
-        case "acquireAdServicesToken":
-            // TODO(live): replace with real AAAttribution.attributionToken().
-            result(nil)
-        default:
-            result(FlutterMethodNotImplemented)
-        }
-    }
+/// Bridges the KMP `AttriaxSynchronizationStateListener` protocol to a Swift closure.
+private final class SyncStateListener: NSObject, AttriaxSynchronizationStateListener {
+    private let onChange: (AttriaxSynchronizationState) -> Void
+    init(_ onChange: @escaping (AttriaxSynchronizationState) -> Void) { self.onChange = onChange }
+    func onSynchronizationStateChanged(state: AttriaxSynchronizationState) { onChange(state) }
 }

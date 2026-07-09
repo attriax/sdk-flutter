@@ -14,10 +14,19 @@ Pod::Spec.new do |s|
     'attriax_flutter_ios_privacy' => ['Resources/PrivacyInfo.xcprivacy']
   }
   s.dependency 'Flutter'
-  # AdSupport ships with the iOS SDK — no third-party dependency is
-  # introduced. It is required for the IDFA lookup in
-  # `AttriaxIosPlugin.collectNativeContext()`.
-  s.frameworks       = 'AdSupport', 'SafariServices'
-  s.platform         = :ios, '13.0'
+  # The Attriax engine now lives in the KMP core, shipped as a static XCFramework
+  # (AttriaxCore) produced by `sdk-kmp` (`./gradlew :core:assembleAttriaxCoreXCFramework`)
+  # and vendored here. The Swift plugin is a thin shim that drives the KMP `Attriax`
+  # engine via `AttriaxApple` (see Classes/AttriaxIosPlugin.swift).
+  s.vendored_frameworks = 'Frameworks/AttriaxCore.xcframework'
+  # System frameworks the static KMP framework references (App Tracking Transparency,
+  # AdServices/ASA, StoreKit/SKAN, DeviceCheck/App Attest, Network/NWPathMonitor,
+  # WebKit for the real WKWebView UA, plus the transport/security deps). These ship
+  # with the OS — no third-party dependency is introduced.
+  s.frameworks       = 'AdSupport', 'SafariServices', 'AppTrackingTransparency',
+                       'AdServices', 'StoreKit', 'DeviceCheck', 'Network', 'WebKit',
+                       'Security', 'SystemConfiguration', 'CoreGraphics'
+  # ATT + App Attest + AdServices require iOS 14+.
+  s.platform         = :ios, '14.0'
   s.swift_version    = '5.0'
 end
