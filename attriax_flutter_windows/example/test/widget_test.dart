@@ -1,27 +1,20 @@
-// This is a basic Flutter widget test.
+// Basic widget smoke test for the Attriax Windows example app.
 //
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// The app's engine bootstrap loads the native `attriax_core.dll`, which is not
+// present under `flutter test` (it is bundled next to the built executable), so
+// initialization degrades to a benign "Init failed" status without throwing.
+// This test only verifies that the UI scaffold renders.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:attriax_flutter_windows_example/main.dart';
 
 void main() {
-  testWidgets('Verify Platform version', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
+  testWidgets('renders the example scaffold', (WidgetTester tester) async {
     await tester.pumpWidget(const MyApp());
+    await tester.pump();
 
-    // Verify that platform version is retrieved.
-    expect(
-      find.byWidgetPredicate(
-        (Widget widget) =>
-            widget is Text && widget.data!.startsWith('Running on:'),
-      ),
-      findsOneWidget,
-    );
+    expect(find.text('Attriax Windows Example'), findsOneWidget);
+    expect(find.text('Send test event'), findsOneWidget);
   });
 }

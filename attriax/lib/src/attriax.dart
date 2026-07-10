@@ -97,14 +97,16 @@ class Attriax {
   /// `attriax_flutter_platform_interface`) rather than the pure-Dart engine.
   ///
   /// iOS and macOS drive the `AttriaxCore` KMP XCFramework through the Swift
-  /// plugin; the web drives the sdk-js engine (`@attriax/js`) through the
-  /// `attriax_flutter_web` plugin. Both route through
-  /// `AttriaxPlatform.instance`. Desktop and — until its facade rewire lands —
-  /// Android keep the Dart engine.
+  /// plugin; Windows drives the same KMP core through its C-ABI DLL over
+  /// `dart:ffi` (the `attriax_flutter_windows` plugin); the web drives the
+  /// sdk-js engine (`@attriax/js`) through the `attriax_flutter_web` plugin.
+  /// All route through `AttriaxPlatform.instance`. The remaining desktop targets
+  /// and — until its facade rewire lands — Android keep the Dart engine.
   static bool get _usesNativeEngine =>
       kIsWeb ||
       defaultTargetPlatform == TargetPlatform.iOS ||
-      defaultTargetPlatform == TargetPlatform.macOS;
+      defaultTargetPlatform == TargetPlatform.macOS ||
+      defaultTargetPlatform == TargetPlatform.windows;
 
   /// Builds the platform-appropriate engine behind the shared runtime interface.
   static AttriaxRuntimeInterface _buildRuntime({

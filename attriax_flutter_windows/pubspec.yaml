@@ -18,9 +18,9 @@ resolution: workspace
 
 dependencies:
   attriax_flutter_platform_interface: ^0.5.0
+  ffi: ^2.1.0
   flutter:
     sdk: flutter
- 
 
 dev_dependencies:
   flutter_lints: ^6.0.0
@@ -36,4 +36,8 @@ flutter:
     implements: attriax_flutter
     platforms:
       windows:
-        pluginClass: AttriaxFlutterWindowsPluginCApi
+        # Dart-only registration (sets AttriaxPlatform.instance) plus a native
+        # build step that bundles the prebuilt KMP C-ABI core DLL next to the
+        # app executable. The binding itself is dart:ffi over that DLL.
+        dartPluginClass: AttriaxWindows
+        ffiPlugin: true
