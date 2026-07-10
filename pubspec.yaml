@@ -14,4 +14,5 @@ workspace:
   - attriax_flutter_android
   - attriax_flutter_ios
   - attriax_flutter_platform_interface
+  - attriax_flutter_web
   - attriax_flutter_windows

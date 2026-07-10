@@ -32,14 +32,14 @@ flutter:
       windows:
         default_package: attriax_flutter_windows
       web:
-        pluginClass: AttriaxWebPlugin
-        fileName: src/internal/attriax_web_platform.dart
+        default_package: attriax_flutter_web
 
 dependencies:
   attriax_api_client: ^0.5.0
   attriax_flutter_android: ^0.5.0
   attriax_flutter_ios: ^0.5.0
   attriax_flutter_platform_interface: ^0.5.0
+  attriax_flutter_web: ^0.5.0
   attriax_flutter_windows: ^0.5.0
   connectivity_plus: ^7.1.1
   dio: ^5.7.0

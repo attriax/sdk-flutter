@@ -93,14 +93,18 @@ class Attriax {
     required AttriaxLogger logger,
   }) : _runtime = _buildRuntime(config: config, logger: logger);
 
-  /// Whether this platform runs on a native engine (the KMP core) rather than
-  /// the pure-Dart engine. iOS and macOS drive the `AttriaxCore` XCFramework
-  /// through the Swift plugin; every other platform (web, desktop, and — until
-  /// its native binding lands — Android) keeps the Dart engine.
+  /// Whether this platform runs on a native engine (via
+  /// `attriax_flutter_platform_interface`) rather than the pure-Dart engine.
+  ///
+  /// iOS and macOS drive the `AttriaxCore` KMP XCFramework through the Swift
+  /// plugin; the web drives the sdk-js engine (`@attriax/js`) through the
+  /// `attriax_flutter_web` plugin. Both route through
+  /// `AttriaxPlatform.instance`. Desktop and — until its facade rewire lands —
+  /// Android keep the Dart engine.
   static bool get _usesNativeEngine =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.iOS ||
-          defaultTargetPlatform == TargetPlatform.macOS);
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.macOS;
 
   /// Builds the platform-appropriate engine behind the shared runtime interface.
   static AttriaxRuntimeInterface _buildRuntime({
