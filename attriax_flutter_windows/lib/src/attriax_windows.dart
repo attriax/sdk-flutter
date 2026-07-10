@@ -737,14 +737,13 @@ class AttriaxWindows extends AttriaxPlatform {
   /// asynchronously through the [NativeCallable.listener] trampoline) with a
   /// NUL-terminated UTF-8 event JSON envelope.
   ///
-  /// Lifetime caveat: the engine frees [eventJson] synchronously after the C
-  /// callback returns, while `.listener` delivery is asynchronous. In practice
-  /// the freed native-heap bytes are not reused before this handler reads them
-  /// (small allocation, sub-millisecond delivery), and any malformed read is
-  /// caught and dropped. The durable fix belongs in the C-ABI (hand string
-  /// ownership to the callback / free via `attriax_free_string`); it is out of
-  /// scope for the wrapper. Streams degrade to silently dropping a garbled event
-  /// rather than crashing.
+  /// Ownership of [eventJson] is transferred to this callback by the C-ABI (the
+  /// same contract as `attriax_dispatch` results): we read the bytes and then
+  /// release them via `attriax_free_string`. Because `.listener` delivery is
+  /// asynchronous the engine deliberately does NOT free it — freeing here is
+  /// mandatory (skipping it leaks) and safe (the bytes outlive the originating
+  /// call). A garbled event is dropped rather than crashing; the string is freed
+  /// either way.
   void _onNativeEvent(Pointer<Utf8> eventJson, Pointer<Void> userData) {
     if (eventJson == nullptr) {
       return;
@@ -771,6 +770,10 @@ class AttriaxWindows extends AttriaxPlatform {
       }
     } on Object catch (error, stackTrace) {
       _log('nativeEvent', error, stackTrace);
+    } finally {
+      // Ownership was transferred to us; release it (null only if the engine was
+      // already disposed, in which case the process is tearing down anyway).
+      _bindings?.freeString(eventJson);
     }
   }
 
