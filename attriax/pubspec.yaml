@@ -31,6 +31,8 @@ flutter:
         default_package: attriax_flutter_ios
       windows:
         default_package: attriax_flutter_windows
+      linux:
+        default_package: attriax_flutter_linux
       web:
         default_package: attriax_flutter_web
 
@@ -38,6 +40,7 @@ dependencies:
   attriax_api_client: ^0.5.0
   attriax_flutter_android: ^0.5.0
   attriax_flutter_ios: ^0.5.0
+  attriax_flutter_linux: ^0.5.0
   attriax_flutter_platform_interface: ^0.5.0
   attriax_flutter_web: ^0.5.0
   attriax_flutter_windows: ^0.5.0

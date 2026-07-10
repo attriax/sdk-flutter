@@ -6,6 +6,7 @@ list(APPEND FLUTTER_PLUGIN_LIST
 )
 
 list(APPEND FLUTTER_FFI_PLUGIN_LIST
+  attriax_flutter_linux
 )
 
 set(PLUGIN_BUNDLED_LIBRARIES)
