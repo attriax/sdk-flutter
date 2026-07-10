@@ -1,21 +1,14 @@
 import 'dart:async';
 
 import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'attriax_ad_event_type.dart';
 import 'attriax_analytics_keys.dart';
 import 'attriax_consent.dart';
-import 'attriax_deep_link_source.dart';
 import 'attriax_notification_event.dart';
-import 'internal/attriax_context_collector.dart';
-import 'internal/attriax_deep_link_listener.dart';
 import 'internal/attriax_logger.dart';
 import 'internal/attriax_native_runtime.dart';
-import 'internal/attriax_runtime.dart';
 import 'internal/attriax_runtime_interface.dart';
 import 'attriax_synchronization.dart';
 
@@ -60,83 +53,30 @@ class Attriax {
           enableDebugLogs: config.enableDebugLogs ?? kDebugMode,
         ),
       );
-  /// Creates a test-friendly SDK instance with injected dependencies.
-  ///
-  /// Use this constructor in widget, integration, or package tests when you
-  /// need full control over HTTP, deep-link, connectivity, or preference state.
-  @visibleForTesting
-  Attriax.test({
-    required AttriaxConfig config,
-    required http.Client client,
-    required AttriaxDeepLinkSource deepLinkSource,
-    required Connectivity connectivity,
-    required AttriaxContextCollector contextCollector,
-    SharedPreferences? prefs,
-    bool? enableDebugLogs,
-  }) : _runtime = AttriaxRuntime(
-         config: config,
-         deepLinkListener: AttriaxDeepLinkListener(
-           deepLinkSource: deepLinkSource,
-         ),
-         contextCollector: contextCollector,
-         connectivity: connectivity,
-         client: client,
-         logger: AttriaxLogger(
-           enableDebugLogs:
-               enableDebugLogs ?? config.enableDebugLogs ?? kDebugMode,
-         ),
-         prefsOverride: prefs,
-       );
 
   Attriax._withLogger({
     required AttriaxConfig config,
     required AttriaxLogger logger,
   }) : _runtime = _buildRuntime(config: config, logger: logger);
 
-  /// Whether this platform runs on a native engine (via
-  /// `attriax_flutter_platform_interface`) rather than the pure-Dart engine.
+  /// Builds the native engine behind the shared runtime interface.
   ///
-  /// iOS and macOS drive the `AttriaxCore` KMP XCFramework through the Swift
-  /// plugin; Windows and Linux drive the same KMP core through its C-ABI shared
-  /// library over `dart:ffi` (the `attriax_flutter_windows` / `attriax_flutter_linux`
-  /// plugins, over `attriax_core.dll` / `libattriax_core.so`); the web drives the
-  /// sdk-js engine (`@attriax/js`) through the `attriax_flutter_web` plugin.
-  /// Android drives the KMP core through its AAR (the `attriax_flutter_android`
-  /// Kotlin plugin). All route through `AttriaxPlatform.instance`. Every
-  /// supported target now runs the native engine, so the pure-Dart engine
-  /// ([AttriaxRuntime]) is no longer reachable at runtime (kept in the tree
-  /// pending a separate removal step).
-  static bool get _usesNativeEngine =>
-      kIsWeb ||
-      defaultTargetPlatform == TargetPlatform.iOS ||
-      defaultTargetPlatform == TargetPlatform.macOS ||
-      defaultTargetPlatform == TargetPlatform.windows ||
-      defaultTargetPlatform == TargetPlatform.linux ||
-      defaultTargetPlatform == TargetPlatform.android;
-
-  /// Builds the platform-appropriate engine behind the shared runtime interface.
+  /// Every supported target runs the native engine via
+  /// `attriax_flutter_platform_interface`. iOS and macOS drive the `AttriaxCore`
+  /// KMP XCFramework through the Swift plugin; Windows and Linux drive the same
+  /// KMP core through its C-ABI shared library over `dart:ffi` (the
+  /// `attriax_flutter_windows` / `attriax_flutter_linux` plugins, over
+  /// `attriax_core.dll` / `libattriax_core.so`); the web drives the sdk-js
+  /// engine (`@attriax/js`) through the `attriax_flutter_web` plugin; Android
+  /// drives the KMP core through its AAR (the `attriax_flutter_android` Kotlin
+  /// plugin). All route through `AttriaxPlatform.instance`. The native engine
+  /// owns deep-link capture and resolution, surfacing events through the
+  /// platform interface's `attriax/events/*` streams (bridged by
+  /// `AttriaxNativeRuntime`).
   static AttriaxRuntimeInterface _buildRuntime({
     required AttriaxConfig config,
     required AttriaxLogger logger,
-  }) {
-    if (_usesNativeEngine) {
-      // The native engine owns deep-link capture and resolution, surfacing
-      // events through the platform interface's `attriax/events/*` streams
-      // (bridged by AttriaxNativeRuntime). The Dart-side deep-link source is
-      // not wired on this path, so no Dart listener is constructed.
-      return AttriaxNativeRuntime(config: config, logger: logger);
-    }
-    return AttriaxRuntime(
-      config: config,
-      deepLinkListener: AttriaxDeepLinkListener(
-        deepLinkSource: createDefaultAttriaxDeepLinkSource(),
-      ),
-      contextCollector: AttriaxContextCollector(config: config, logger: logger),
-      connectivity: Connectivity(),
-      client: http.Client(),
-      logger: logger,
-    );
-  }
+  }) => AttriaxNativeRuntime(config: config, logger: logger);
 
   final AttriaxRuntimeInterface _runtime;
 
