@@ -122,7 +122,7 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
                 metadata: a["metadata"] as? [String: Any], flushImmediately: self.bool(a, "flushImmediately", false)); return nil }
         case "recordAdEvent":
             run(result) { $0.tracking.recordAdEvent(
-                type: self.adEventType(a["type"] as? String),
+                type: self.adEventType(a["eventName"] as? String),
                 adNetwork: a["adNetwork"] as? String, mediationNetwork: a["mediationNetwork"] as? String,
                 adUnitId: a["adUnitId"] as? String, adPlacement: a["adPlacement"] as? String,
                 adFormat: a["adFormat"] as? String, adType: a["adType"] as? String,
@@ -329,11 +329,15 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
     private func coarse(_ w: String?) -> AttriaxSkanCoarseValue? {
         switch w?.lowercased() { case "low": return .low; case "medium": return .medium; case "high": return .high; default: return nil }
     }
-    private func adEventType(_ w: String?) -> AttriaxAdEventType {
-        switch w { case "load_failed", "loadFailed": return .loadFailed; case "show": return .show
-        case "show_failed", "showFailed": return .showFailed; case "impression": return .impression
-        case "click": return .click; case "dismiss": return .dismiss; case "reward": return .reward
-        default: return .request }
+    private func adEventType(_ eventName: String?) -> AttriaxAdEventType {
+        // The platform interface sends the reserved `eventName` wire slug
+        // (e.g. "ad_show_failed"); resolve the enum whose `eventName` matches,
+        // mirroring the Android/web/Windows bindings. Defaults to `.request`.
+        if let eventName = eventName,
+           let match = AttriaxAdEventType.entries.first(where: { $0.eventName == eventName }) {
+            return match
+        }
+        return .request
     }
     private func notificationType(_ w: String?) -> AttriaxNotificationEventType {
         switch w { case "opened": return .opened; case "dismissed": return .dismissed; default: return .received }
