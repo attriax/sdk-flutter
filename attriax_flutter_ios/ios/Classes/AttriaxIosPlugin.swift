@@ -188,13 +188,49 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
         case "handleIncomingLink":
             run(result) { $0.deepLinks.handleUri(rawUri: a["uri"] as? String ?? "",
                                                  isInitialLink: self.bool(a, "isInitialLink", false)); return nil }
+        case "createDynamicLink":
+            run(result) { self.serializeDynamicLinkResult($0.deepLinks.createDynamicLink(
+                name: a["name"] as? String, destinationUrl: a["destinationUrl"] as? String,
+                group: a["group"] as? String, prefix: a["prefix"] as? String,
+                socialPreview: self.socialPreview(a["socialPreview"] as? [String: Any?]),
+                utms: self.utms(a["utms"] as? [String: Any?]),
+                redirects: self.redirects(a["redirects"] as? [String: Any?]),
+                data: a["data"] as? [String: Any])) }
+
+        // ---- receipt validation ----
+        case "validateReceipt":
+            run(result) { self.serializeReceiptResult($0.validateReceipt(
+                receipt: a["receipt"] as? String ?? "", test: self.bool(a, "test", false),
+                provider: a["provider"] as? String, environment: a["environment"] as? String,
+                productId: a["productId"] as? String, transactionId: a["transactionId"] as? String)) }
+
+        // ---- referrers ----
+        case "getOriginalInstallReferrer":
+            run(result) { self.serializeInstallReferrer($0.referrer.getOriginalInstallReferrer()) }
+        case "getReinstallReferrer":
+            run(result) { self.serializeInstallReferrer($0.referrer.getReinstallReferrer()) }
+        case "getRawInstallReferrer":
+            run(result) { $0.referrer.getRawInstallReferrer() }
+        case "getSessionReferrer":
+            run(result) { self.serializeDeepLinkReferrer($0.referrer.getSessionReferrer()) }
+        case "getLatestDeepLinkReferrer":
+            run(result) { self.serializeDeepLinkReferrer($0.referrer.getLatestDeepLinkReferrer()) }
+
+        // ---- App Tracking Transparency ----
+        case "requestTrackingAuthorization":
+            run(result) { self.attStatusWire($0.consent.att.requestAuthorization(timeoutMs: nil)) }
+        case "getTrackingAuthorizationStatus":
+            run(result) { self.attStatusWire($0.consent.att.status) }
+
+        // ---- synchronization ----
+        case "getSynchronizationState":
+            run(result) { $0.synchronization.state.name }
 
         default:
-            // Rich deep-link getters (getInitialDeepLink / getLatestDeepLink /
-            // getRawInitialDeepLink / getIsInitialDeepLinkResolved / completeInitialDeepLink /
-            // getRawInstallReferrer) and receipt validation return complex objects whose
-            // exact wire shape is validated when the Dart facade rewire (Phase 4) activates
-            // the native runtime path. Reported honestly rather than returning malformed data.
+            // The remaining deep-link snapshot getters (getInitialDeepLink /
+            // getLatestDeepLink / getRawInitialDeepLink / getIsInitialDeepLinkResolved /
+            // completeInitialDeepLink) are served from AttriaxNativeRuntime's cache +
+            // the deep-link event streams rather than a per-call round-trip.
             result(FlutterMethodNotImplemented)
         }
     }
@@ -291,6 +327,95 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
         return ["uri": e.uri.raw, "status": e.status.name, "trigger": e.trigger.name,
                 "found": e.found, "handledBySdk": e.handledBySdk, "isDeferred": e.isDeferred,
                 "isColdStart": e.isColdStart, "isForeground": e.isForeground, "data": e.data]
+    }
+
+    // MARK: - residual command serializers
+
+    private func serializeReceiptResult(_ r: AttriaxRevenueReceiptValidationResult) -> [String: Any?] {
+        // Status entries are UPPERCASE in KMP (VERIFIED, PROVIDER_ERROR); lowercasing
+        // yields the exact Dart wire slugs (verified, provider_error, …).
+        return ["validationId": r.validationId, "status": r.status.name.lowercased(),
+                "requestVersion": r.requestVersion, "acceptedAt": self.iso(r.acceptedAtMs),
+                "provider": r.provider, "environment": r.environment,
+                "transactionId": r.transactionId, "originalTransactionId": r.originalTransactionId,
+                "productId": r.productId, "failureReason": r.failureReason,
+                "expiresAt": self.iso(r.expiresAtMs), "providerResult": r.providerResult,
+                "publicReceipt": r.publicReceipt]
+    }
+
+    private func serializeDynamicLinkResult(_ r: AttriaxCreateDynamicLinkResult) -> [String: Any?] {
+        // KMP exposes `record`; the Dart parser reads a nested `link` map.
+        return ["link": self.serializeDynamicLinkRecord(r.record)]
+    }
+
+    private func serializeDynamicLinkRecord(_ rec: AttriaxDynamicLinkRecord) -> [String: Any?] {
+        return ["id": rec.id, "path": rec.path, "shortUrl": rec.shortUrl, "name": rec.name,
+                "destinationUrl": rec.destinationUrl, "group": rec.group, "prefix": rec.prefix,
+                "data": rec.data]
+    }
+
+    private func serializeInstallReferrer(_ d: AttriaxInstallReferrerDetails?) -> [String: Any?]? {
+        guard let d = d else { return nil }
+        return ["rawPlatformInstallReferrer": d.rawPlatformInstallReferrer,
+                "source": d.source, "medium": d.medium, "campaign": d.campaign,
+                "term": d.term, "content": d.content, "adNetwork": d.adNetwork, "adClickId": d.adClickId,
+                "attributionType": d.attributionType.name, "deepLinkUrl": d.deepLinkUrl,
+                "deepLinkUri": d.deepLinkUri?.raw, "deepLinkData": d.deepLinkData,
+                "registeredAt": d.registeredAt,
+                "installBeginTimestampSeconds": d.installBeginTimestampSeconds?.int64Value,
+                "referrerClickTimestampSeconds": d.referrerClickTimestampSeconds?.int64Value,
+                "googlePlayInstantParam": d.googlePlayInstantParam?.boolValue,
+                "precision": d.precision]
+    }
+
+    private func serializeDeepLinkReferrer(_ d: AttriaxDeepLinkReferrerDetails?) -> [String: Any?]? {
+        guard let d = d else { return nil }
+        // receivedAt/clickedAt/consumedAt are REQUIRED ISO strings on the Dart side;
+        // browserAction is omitted (optional, richer object not needed by callers yet).
+        return ["uri": d.uri.raw, "receivedAt": self.iso(d.receivedAtMs),
+                "clickedAt": self.iso(d.clickedAtMs), "consumedAt": self.iso(d.consumedAtMs),
+                "trigger": d.trigger.name, "isAttriaxDomain": d.isAttriaxDomain, "found": d.found,
+                "data": d.data, "utm": d.utm]
+    }
+
+    private func socialPreview(_ m: [String: Any?]?) -> AttriaxDynamicLinkSocialPreview? {
+        guard let m = m else { return nil }
+        return AttriaxDynamicLinkSocialPreview(title: m["title"] as? String, description: m["description"] as? String)
+    }
+    private func utms(_ m: [String: Any?]?) -> AttriaxDynamicLinkUtms? {
+        guard let m = m else { return nil }
+        return AttriaxDynamicLinkUtms(source: m["source"] as? String, medium: m["medium"] as? String,
+                                      campaign: m["campaign"] as? String, term: m["term"] as? String,
+                                      content: m["content"] as? String)
+    }
+    private func redirects(_ m: [String: Any?]?) -> AttriaxDynamicLinkRedirects? {
+        guard let m = m else { return nil }
+        return AttriaxDynamicLinkRedirects(ios: self.kbool(m["ios"]), android: self.kbool(m["android"]))
+    }
+
+    private func attStatusWire(_ s: AttriaxAttStatus) -> String {
+        // KMP wireValue is camelCase (notDetermined); the Dart channel decoder
+        // expects snake_case (not_determined).
+        switch s.wireValue {
+        case "authorized": return "authorized"
+        case "denied": return "denied"
+        case "restricted": return "restricted"
+        case "notDetermined": return "not_determined"
+        default: return "unknown"
+        }
+    }
+
+    private static let isoFormatter: ISO8601DateFormatter = {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        return f
+    }()
+    private func iso(_ ms: Int64) -> String {
+        return Self.isoFormatter.string(from: Date(timeIntervalSince1970: Double(ms) / 1000.0))
+    }
+    private func iso(_ ms: KotlinLong?) -> String? {
+        guard let ms = ms else { return nil }
+        return self.iso(ms.int64Value)
     }
 
     // MARK: - helpers
