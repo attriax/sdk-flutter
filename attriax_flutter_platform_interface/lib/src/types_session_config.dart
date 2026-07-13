@@ -212,7 +212,7 @@ class AttriaxConfig {
   /// Optional local SKAN defaults used until dashboard runtime config loads.
   final AttriaxSkanConfig? skan;
 
-  /// Opts this SDK instance into device attestation (Epic 7.3b).
+  /// Opts this SDK instance into device attestation.
   ///
   /// Default `false`. When `false`, the SDK never requests an attestation nonce
   /// and never attaches an attestation envelope to the init request — behavior
@@ -242,13 +242,13 @@ class AttriaxConfig {
   /// fingerprints of the leaf/intermediate certificates you trust to enable
   /// pinning.
   ///
-  /// NOTE (Epic 7.3b): the enforcement seam is present but the real per-request
+  /// NOTE: the enforcement seam is present but the real per-request
   /// SHA-256 validation is a `TODO(live)` in the transport layer — pinning is
   /// device/OS/CA-rotation-sensitive and cannot be verified here, so no fake
   /// certificates are shipped. See the SDK transport setup for the seam.
   final List<String> pinnedCertificateSha256Fingerprints;
 
-  /// CCPA "do not sell / share" election (Epic 10.1).
+  /// CCPA "do not sell / share" election.
   ///
   /// Sent TOP-LEVEL on the app-open and identify requests (mirrors `attStatus`),
   /// NOT nested under device context. `null` (the default) omits the field
@@ -257,7 +257,7 @@ class AttriaxConfig {
   /// runtime via `setCcpaConsent`.
   final bool? doNotSell;
 
-  /// Raw IAB US-Privacy (USP) string, e.g. `1YYN` (Epic 10.1).
+  /// Raw IAB US-Privacy (USP) string, e.g. `1YYN`.
   ///
   /// Sent TOP-LEVEL alongside [doNotSell]; its sale opt-out flag also drives the
   /// backend do-not-sell latch. `null`/empty omits the field. Capped at 16 chars

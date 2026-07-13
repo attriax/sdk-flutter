@@ -66,7 +66,7 @@ export 'src/attriax_platform_attestation.dart'
 // The Apple Search Ads (AdServices) token provider lives in its own library so
 // the pure-model type surface above stays free of a `flutter/services`
 // dependency, mirroring the attestation channel provider above. The runtime
-// imports it explicitly to acquire the ASA token at startup (Epic 8.5).
+// imports it explicitly to acquire the ASA token at startup.
 export 'src/attriax_platform_asa.dart'
     show
         AttriaxAdServicesTokenProvider,

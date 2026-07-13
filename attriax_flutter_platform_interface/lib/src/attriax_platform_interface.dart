@@ -403,7 +403,7 @@ abstract class AttriaxPlatform extends PlatformInterface {
     throw UnimplementedError('setAnonymousTracking() has not been implemented.');
   }
 
-  /// Set the CCPA "do not sell / share" election (Epic 10.1; mirrors KMP
+  /// Set the CCPA "do not sell / share" election (mirrors KMP
   /// `consent.ccpa`).
   ///
   /// A non-null value is forwarded so the next app-open/identify carries it

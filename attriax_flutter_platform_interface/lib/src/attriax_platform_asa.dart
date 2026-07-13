@@ -18,7 +18,7 @@ const String attriaxAsaMethodChannelName = 'attriax/asa';
 const String attriaxAcquireAdServicesTokenMethod = 'acquireAdServicesToken';
 
 /// Acquires the Apple Search Ads (AdServices) attribution token over a platform
-/// method channel (Epic 8.5).
+/// method channel.
 ///
 /// Dart side (REAL, tested): on iOS it invokes the native
 /// `acquireAdServicesToken` method and returns the trimmed token string; on any

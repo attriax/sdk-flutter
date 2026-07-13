@@ -2,7 +2,7 @@ part of 'attriax.dart';
 
 /// SKAdNetwork helpers exposed by [Attriax].
 ///
-/// AdAttributionKit note (Epic 8.5): AdAttributionKit (AAK) postbacks flow
+/// AdAttributionKit note: AdAttributionKit (AAK) postbacks flow
 /// Apple → server (OS-driven, like SKAdNetwork), so the re-engagement /
 /// conversion postback path needs NO new Dart transport in the SDK. AAK
 /// re-engagement registration (`AppImpression` / `reengagementURL` handling) is

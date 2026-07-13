@@ -2,7 +2,7 @@ part of 'types.dart';
 
 /// Canonical Attriax device-attestation provider slugs.
 ///
-/// These match the server contract (Epic 7.3a): Play Integrity on Android and
+/// These match the server contract: Play Integrity on Android and
 /// App Attest on Apple platforms. The server treats any other/absent value as
 /// `attestation_missing`, so the SDK only ever emits these two slugs.
 abstract final class AttriaxAttestationProviderSlug {
@@ -39,7 +39,7 @@ String? attriaxAttestationProviderSlugForPlatform(
 
 /// The OPTIONAL device-attestation envelope attached to the SDK init request.
 ///
-/// Mirrors the server contract (Epic 7.3a): a partial or absent envelope is
+/// Mirrors the server contract: a partial or absent envelope is
 /// accepted and degrades to `attestation_missing`; it is only verified when the
 /// project opts into `requireAttestation`. An unattested client omits it
 /// entirely, so there is zero behavior change for existing integrations.
