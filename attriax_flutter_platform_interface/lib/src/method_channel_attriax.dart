@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../attriax_platform_types.dart';
 
 import 'attriax_platform_interface.dart';
+import 'marshalling/attriax_command_args.dart';
 
 /// EventChannel name for synchronization-state transitions.
 const String attriaxSynchronizationEventChannelName =
@@ -59,7 +60,7 @@ class MethodChannelAttriax extends AttriaxPlatform {
 
   @override
   Future<void> initialize(AttriaxConfig config) =>
-      _invokeVoid('initialize', <String, Object?>{'config': config.toJson()});
+      _invokeVoid('initialize', AttriaxInitializeArgs(config: config).toJson());
 
   @override
   Future<void> flush() => _invokeVoid('flush');
@@ -79,11 +80,14 @@ class MethodChannelAttriax extends AttriaxPlatform {
     String name, {
     Map<String, Object?>? eventData,
     bool flushImmediately = false,
-  }) => _invokeVoid('recordEvent', <String, Object?>{
-    'name': name,
-    'eventData': ?eventData,
-    'flushImmediately': flushImmediately,
-  });
+  }) => _invokeVoid(
+    'recordEvent',
+    AttriaxRecordEventArgs(
+      name: name,
+      eventData: eventData,
+      flushImmediately: flushImmediately,
+    ).toJson(),
+  );
 
   @override
   Future<void> recordPageView(
@@ -94,15 +98,18 @@ class MethodChannelAttriax extends AttriaxPlatform {
     Map<String, Object?>? parameters,
     String source = 'manual',
     bool flushImmediately = false,
-  }) => _invokeVoid('recordPageView', <String, Object?>{
-    'pageName': pageName,
-    'pageClass': ?pageClass,
-    'pageTitle': ?pageTitle,
-    'previousPageName': ?previousPageName,
-    'parameters': ?parameters,
-    'source': source,
-    'flushImmediately': flushImmediately,
-  });
+  }) => _invokeVoid(
+    'recordPageView',
+    AttriaxRecordPageViewArgs(
+      pageName: pageName,
+      pageClass: pageClass,
+      pageTitle: pageTitle,
+      previousPageName: previousPageName,
+      parameters: parameters,
+      source: source,
+      flushImmediately: flushImmediately,
+    ).toJson(),
+  );
 
   // ---------------------------------------------------------------------------
   // Tracking — revenue / ad events.
@@ -132,30 +139,33 @@ class MethodChannelAttriax extends AttriaxPlatform {
     String? validationId,
     Map<String, Object?>? metadata,
     bool flushImmediately = true,
-  }) => _invokeVoid('recordPurchase', <String, Object?>{
-    'revenue': revenue,
-    'currency': currency,
-    'revenueInMicros': revenueInMicros,
-    'purchaseType': ?purchaseType,
-    'productId': ?productId,
-    'transactionId': ?transactionId,
-    'originalTransactionId': ?originalTransactionId,
-    'validationProvider': ?validationProvider,
-    'validationEnvironment': ?validationEnvironment,
-    'purchaseToken': ?purchaseToken,
-    'receiptData': ?receiptData,
-    'signedPayload': ?signedPayload,
-    'receiptSignature': ?receiptSignature,
-    'isRenewal': ?isRenewal,
-    'quantity': quantity,
-    'store': ?store,
-    'packageName': ?packageName,
-    'voided': ?voided,
-    'test': ?test,
-    'validationId': ?validationId,
-    'metadata': ?metadata,
-    'flushImmediately': flushImmediately,
-  });
+  }) => _invokeVoid(
+    'recordPurchase',
+    AttriaxRecordPurchaseArgs(
+      revenue: revenue,
+      currency: currency,
+      revenueInMicros: revenueInMicros,
+      purchaseType: purchaseType,
+      productId: productId,
+      transactionId: transactionId,
+      originalTransactionId: originalTransactionId,
+      validationProvider: validationProvider,
+      validationEnvironment: validationEnvironment,
+      purchaseToken: purchaseToken,
+      receiptData: receiptData,
+      signedPayload: signedPayload,
+      receiptSignature: receiptSignature,
+      isRenewal: isRenewal,
+      quantity: quantity,
+      store: store,
+      packageName: packageName,
+      voided: voided,
+      test: test,
+      validationId: validationId,
+      metadata: metadata,
+      flushImmediately: flushImmediately,
+    ).toJson(),
+  );
 
   @override
   Future<void> recordRefund({
@@ -174,23 +184,26 @@ class MethodChannelAttriax extends AttriaxPlatform {
     String? reason,
     Map<String, Object?>? metadata,
     bool flushImmediately = true,
-  }) => _invokeVoid('recordRefund', <String, Object?>{
-    'revenue': revenue,
-    'currency': currency,
-    'revenueInMicros': revenueInMicros,
-    'purchaseType': ?purchaseType,
-    'productId': ?productId,
-    'transactionId': ?transactionId,
-    'originalTransactionId': ?originalTransactionId,
-    'quantity': quantity,
-    'store': ?store,
-    'packageName': ?packageName,
-    'voided': ?voided,
-    'test': ?test,
-    'reason': ?reason,
-    'metadata': ?metadata,
-    'flushImmediately': flushImmediately,
-  });
+  }) => _invokeVoid(
+    'recordRefund',
+    AttriaxRecordRefundArgs(
+      revenue: revenue,
+      currency: currency,
+      revenueInMicros: revenueInMicros,
+      purchaseType: purchaseType,
+      productId: productId,
+      transactionId: transactionId,
+      originalTransactionId: originalTransactionId,
+      quantity: quantity,
+      store: store,
+      packageName: packageName,
+      voided: voided,
+      test: test,
+      reason: reason,
+      metadata: metadata,
+      flushImmediately: flushImmediately,
+    ).toJson(),
+  );
 
   @override
   Future<void> recordAdRevenue({
@@ -204,18 +217,21 @@ class MethodChannelAttriax extends AttriaxPlatform {
     bool? test,
     Map<String, Object?>? metadata,
     bool flushImmediately = true,
-  }) => _invokeVoid('recordAdRevenue', <String, Object?>{
-    'revenue': revenue,
-    'currency': currency,
-    'revenueInMicros': revenueInMicros,
-    'adNetwork': ?adNetwork,
-    'adFormat': ?adFormat,
-    'adType': ?adType,
-    'adPlacement': ?adPlacement,
-    'test': ?test,
-    'metadata': ?metadata,
-    'flushImmediately': flushImmediately,
-  });
+  }) => _invokeVoid(
+    'recordAdRevenue',
+    AttriaxRecordAdRevenueArgs(
+      revenue: revenue,
+      currency: currency,
+      revenueInMicros: revenueInMicros,
+      adNetwork: adNetwork,
+      adFormat: adFormat,
+      adType: adType,
+      adPlacement: adPlacement,
+      test: test,
+      metadata: metadata,
+      flushImmediately: flushImmediately,
+    ).toJson(),
+  );
 
   @override
   Future<void> recordAdEvent({
@@ -233,22 +249,25 @@ class MethodChannelAttriax extends AttriaxPlatform {
     bool? test,
     Map<String, Object?>? metadata,
     bool flushImmediately = true,
-  }) => _invokeVoid('recordAdEvent', <String, Object?>{
-    'eventName': eventName,
-    'adNetwork': ?adNetwork,
-    'mediationNetwork': ?mediationNetwork,
-    'adUnitId': ?adUnitId,
-    'adPlacement': ?adPlacement,
-    'adFormat': ?adFormat,
-    'adType': ?adType,
-    'failureReason': ?failureReason,
-    'loadLatencyMs': ?loadLatencyMs,
-    'rewardType': ?rewardType,
-    'rewardAmount': ?rewardAmount,
-    'test': ?test,
-    'metadata': ?metadata,
-    'flushImmediately': flushImmediately,
-  });
+  }) => _invokeVoid(
+    'recordAdEvent',
+    AttriaxRecordAdEventArgs(
+      eventName: eventName,
+      adNetwork: adNetwork,
+      mediationNetwork: mediationNetwork,
+      adUnitId: adUnitId,
+      adPlacement: adPlacement,
+      adFormat: adFormat,
+      adType: adType,
+      failureReason: failureReason,
+      loadLatencyMs: loadLatencyMs,
+      rewardType: rewardType,
+      rewardAmount: rewardAmount,
+      test: test,
+      metadata: metadata,
+      flushImmediately: flushImmediately,
+    ).toJson(),
+  );
 
   // ---------------------------------------------------------------------------
   // Tracking — notifications / errors.
@@ -265,17 +284,20 @@ class MethodChannelAttriax extends AttriaxPlatform {
     Map<String, Object?>? payload,
     Map<String, Object?>? metadata,
     bool flushImmediately = false,
-  }) => _invokeVoid('recordNotification', <String, Object?>{
-    'type': type,
-    'notificationId': notificationId,
-    'linkId': ?linkId,
-    'campaignId': ?campaignId,
-    'title': ?title,
-    'source': ?source,
-    'payload': ?payload,
-    'metadata': ?metadata,
-    'flushImmediately': flushImmediately,
-  });
+  }) => _invokeVoid(
+    'recordNotification',
+    AttriaxRecordNotificationArgs(
+      type: type,
+      notificationId: notificationId,
+      linkId: linkId,
+      campaignId: campaignId,
+      title: title,
+      source: source,
+      payload: payload,
+      metadata: metadata,
+      flushImmediately: flushImmediately,
+    ).toJson(),
+  );
 
   @override
   Future<void> recordError({
@@ -286,56 +308,62 @@ class MethodChannelAttriax extends AttriaxPlatform {
     String source = 'manual',
     String? reason,
     Map<String, Object?>? metadata,
-  }) => _invokeVoid('recordError', <String, Object?>{
-    'message': message,
-    'exceptionType': exceptionType,
-    'stackTrace': ?stackTrace,
-    'fatal': fatal,
-    'source': source,
-    'reason': ?reason,
-    'metadata': ?metadata,
-  });
+  }) => _invokeVoid(
+    'recordError',
+    AttriaxRecordErrorArgs(
+      message: message,
+      exceptionType: exceptionType,
+      stackTrace: stackTrace,
+      fatal: fatal,
+      source: source,
+      reason: reason,
+      metadata: metadata,
+    ).toJson(),
+  );
 
   // ---------------------------------------------------------------------------
   // Tracking — identify / user properties.
   // ---------------------------------------------------------------------------
 
   @override
-  Future<void> setUser({String? userId, String? userName}) =>
-      _invokeVoid('setUser', <String, Object?>{
-        'userId': userId,
-        'userName': ?userName,
-      });
+  Future<void> setUser({String? userId, String? userName}) => _invokeVoid(
+    'setUser',
+    AttriaxSetUserArgs(userId: userId, userName: userName).toJson(),
+  );
 
   @override
-  Future<void> setUserProperty(String name, Object? value) =>
-      _invokeVoid('setUserProperty', <String, Object?>{
-        'name': name,
-        'value': value,
-      });
+  Future<void> setUserProperty(String name, Object? value) => _invokeVoid(
+    'setUserProperty',
+    AttriaxSetUserPropertyArgs(name: name, value: value).toJson(),
+  );
 
   @override
   Future<void> setUserProperties(Map<String, Object?> properties) =>
-      _invokeVoid('setUserProperties', <String, Object?>{
-        'properties': properties,
-      });
+      _invokeVoid(
+        'setUserProperties',
+        AttriaxSetUserPropertiesArgs(properties: properties).toJson(),
+      );
 
   @override
   Future<void> clearUserProperties({List<String>? propertyNames}) =>
-      _invokeVoid('clearUserProperties', <String, Object?>{
-        'propertyNames': ?propertyNames,
-      });
+      _invokeVoid(
+        'clearUserProperties',
+        AttriaxClearUserPropertiesArgs(propertyNames: propertyNames).toJson(),
+      );
 
   @override
   Future<void> registerPushToken({
     required AttriaxPushTokenProvider provider,
     String? token,
     Map<String, Object?>? metadata,
-  }) => _invokeVoid('registerPushToken', <String, Object?>{
-    'provider': provider.wireValue,
-    'token': token,
-    'metadata': ?metadata,
-  });
+  }) => _invokeVoid(
+    'registerPushToken',
+    AttriaxRegisterPushTokenArgs(
+      provider: provider,
+      token: token,
+      metadata: metadata,
+    ).toJson(),
+  );
 
   // ---------------------------------------------------------------------------
   // Deep links.
@@ -343,10 +371,13 @@ class MethodChannelAttriax extends AttriaxPlatform {
 
   @override
   Future<void> handleIncomingLink(String uri, {bool isInitialLink = false}) =>
-      _invokeVoid('handleIncomingLink', <String, Object?>{
-        'uri': uri,
-        'isInitialLink': isInitialLink,
-      });
+      _invokeVoid(
+        'handleIncomingLink',
+        AttriaxHandleIncomingLinkArgs(
+          uri: uri,
+          isInitialLink: isInitialLink,
+        ).toJson(),
+      );
 
   @override
   Future<void> completeInitialDeepLink() =>
@@ -361,11 +392,11 @@ class MethodChannelAttriax extends AttriaxPlatform {
     try {
       final result = await _channel.invokeMapMethod<String, Object?>(
         'recordDeepLink',
-        <String, Object?>{
-          'uri': uri.toString(),
-          'metadata': ?metadata,
-          'source': source,
-        },
+        AttriaxRecordDeepLinkArgs(
+          uri: uri.toString(),
+          metadata: metadata,
+          source: source,
+        ).toJson(),
       );
       return _deepLinkEventFromMap(result);
     } on MissingPluginException catch (error, stackTrace) {
@@ -400,7 +431,7 @@ class MethodChannelAttriax extends AttriaxPlatform {
     try {
       final result = await _channel.invokeMapMethod<String, Object?>(
         'waitForDeepLinkResolution',
-        <String, Object?>{'rawEvent': rawEvent.toJson()},
+        AttriaxWaitForDeepLinkResolutionArgs(rawEvent: rawEvent).toJson(),
       );
       return _deepLinkEventFromMap(result);
     } on MissingPluginException catch (error, stackTrace) {
@@ -425,32 +456,16 @@ class MethodChannelAttriax extends AttriaxPlatform {
   }) async {
     final result = await _channel.invokeMapMethod<String, Object?>(
       'createDynamicLink',
-      <String, Object?>{
-        'name': ?name,
-        'destinationUrl': ?destinationUrl,
-        'group': ?group,
-        'prefix': ?prefix,
-        if (socialPreview != null)
-          'socialPreview': <String, Object?>{
-            'title': ?socialPreview.title,
-            if (socialPreview.description != null)
-              'description': socialPreview.description,
-          },
-        if (utms != null)
-          'utms': <String, Object?>{
-            'source': ?utms.source,
-            'medium': ?utms.medium,
-            'campaign': ?utms.campaign,
-            'term': ?utms.term,
-            'content': ?utms.content,
-          },
-        if (redirects != null)
-          'redirects': <String, Object?>{
-            'ios': ?redirects.ios,
-            'android': ?redirects.android,
-          },
-        'data': ?data,
-      },
+      AttriaxCreateDynamicLinkArgs(
+        name: name,
+        destinationUrl: destinationUrl,
+        group: group,
+        prefix: prefix,
+        socialPreview: socialPreview,
+        utms: utms,
+        redirects: redirects,
+        data: data,
+      ).toJson(),
     );
     if (result == null) {
       throw StateError('Attriax createDynamicLink response was empty.');
@@ -473,14 +488,14 @@ class MethodChannelAttriax extends AttriaxPlatform {
   }) async {
     final result = await _channel.invokeMapMethod<String, Object?>(
       'validateReceipt',
-      <String, Object?>{
-        'receipt': receipt,
-        'test': test,
-        'provider': ?provider,
-        'environment': ?environment,
-        'productId': ?productId,
-        'transactionId': ?transactionId,
-      },
+      AttriaxValidateReceiptArgs(
+        receipt: receipt,
+        test: test,
+        provider: provider,
+        environment: environment,
+        productId: productId,
+        transactionId: transactionId,
+      ).toJson(),
     );
     if (result == null) {
       throw StateError('Attriax validateReceipt response was empty.');
@@ -497,11 +512,14 @@ class MethodChannelAttriax extends AttriaxPlatform {
     required bool analytics,
     required bool attribution,
     required bool adEvents,
-  }) => _invokeVoid('setGdprConsent', <String, Object?>{
-    'analytics': analytics,
-    'attribution': attribution,
-    'adEvents': adEvents,
-  });
+  }) => _invokeVoid(
+    'setGdprConsent',
+    AttriaxSetGdprConsentArgs(
+      analytics: analytics,
+      attribution: attribution,
+      adEvents: adEvents,
+    ).toJson(),
+  );
 
   @override
   Future<void> setGdprConsentNotRequired() =>
@@ -519,7 +537,7 @@ class MethodChannelAttriax extends AttriaxPlatform {
     try {
       final result = await _channel.invokeMethod<Object?>(
         'needsGdprConsent',
-        <String, Object?>{'localOnly': localOnly},
+        AttriaxNeedsGdprConsentArgs(localOnly: localOnly).toJson(),
       );
       return result == true;
     } on MissingPluginException catch (error, stackTrace) {
@@ -540,24 +558,31 @@ class MethodChannelAttriax extends AttriaxPlatform {
   // ---------------------------------------------------------------------------
 
   @override
-  Future<void> setAnonymousTracking({required bool enabled}) =>
-      _invokeVoid('setAnonymousTracking', <String, Object?>{'enabled': enabled});
+  Future<void> setAnonymousTracking({required bool enabled}) => _invokeVoid(
+    'setAnonymousTracking',
+    AttriaxEnabledArgs(enabled: enabled).toJson(),
+  );
 
   @override
   Future<void> setCcpaConsent({bool? doNotSell, String? usPrivacy}) =>
-      _invokeVoid('setCcpaConsent', <String, Object?>{
-        'doNotSell': ?doNotSell,
-        'usPrivacy': ?usPrivacy,
-      });
+      _invokeVoid(
+        'setCcpaConsent',
+        AttriaxSetCcpaConsentArgs(
+          doNotSell: doNotSell,
+          usPrivacy: usPrivacy,
+        ).toJson(),
+      );
 
   @override
-  Future<void> setSdkEnabled({required bool enabled}) =>
-      _invokeVoid('setSdkEnabled', <String, Object?>{'enabled': enabled});
+  Future<void> setSdkEnabled({required bool enabled}) => _invokeVoid(
+    'setSdkEnabled',
+    AttriaxEnabledArgs(enabled: enabled).toJson(),
+  );
 
   @override
   Future<void> setEventTrackingEnabled({required bool enabled}) => _invokeVoid(
     'setEventTrackingEnabled',
-    <String, Object?>{'enabled': enabled},
+    AttriaxEnabledArgs(enabled: enabled).toJson(),
   );
 
   // ---------------------------------------------------------------------------
@@ -565,15 +590,18 @@ class MethodChannelAttriax extends AttriaxPlatform {
   // ---------------------------------------------------------------------------
 
   @override
-  Future<void> submitAsaToken(String token) =>
-      _invokeVoid('submitAsaToken', <String, Object?>{'token': token});
+  Future<void> submitAsaToken(String token) => _invokeVoid(
+    'submitAsaToken',
+    AttriaxSubmitAsaTokenArgs(token: token).toJson(),
+  );
 
   @override
   Future<void> setTrackingAuthorizationStatus(
     AttriaxTrackingAuthorizationStatus status,
-  ) => _invokeVoid('setTrackingAuthorizationStatus', <String, Object?>{
-    'status': _trackingAuthorizationStatusToWire(status),
-  });
+  ) => _invokeVoid(
+    'setTrackingAuthorizationStatus',
+    AttriaxSetTrackingAuthorizationStatusArgs(status: status).toJson(),
+  );
 
   // ---------------------------------------------------------------------------
   // Engine reads.
@@ -723,7 +751,9 @@ class MethodChannelAttriax extends AttriaxPlatform {
     try {
       final result = await _channel.invokeMethod<Object?>(
         'collectNativeContext',
-        <String, Object?>{'collectAdvertisingId': collectAdvertisingId},
+        AttriaxCollectNativeContextArgs(
+          collectAdvertisingId: collectAdvertisingId,
+        ).toJson(),
       );
       return AttriaxNativeContext.fromPayload(result);
     } on MissingPluginException catch (error, stackTrace) {
@@ -817,7 +847,7 @@ class MethodChannelAttriax extends AttriaxPlatform {
     try {
       await _channel.invokeMethod<Object?>(
         'setAutomaticCrashReportingEnabled',
-        <String, Object?>{'enabled': enabled},
+        AttriaxEnabledArgs(enabled: enabled).toJson(),
       );
     } on MissingPluginException catch (error, stackTrace) {
       _logException('setAutomaticCrashReportingEnabled', error, stackTrace);
@@ -874,10 +904,10 @@ class MethodChannelAttriax extends AttriaxPlatform {
     try {
       final result = await _channel.invokeMethod<Object?>(
         'openBrowserUrl',
-        <String, Object?>{
-          'url': uri.toString(),
-          'openMode': _browserOpenModeValue(openMode),
-        },
+        AttriaxOpenBrowserUrlArgs(
+          url: uri.toString(),
+          openMode: openMode,
+        ).toJson(),
       );
       return result == true;
     } on MissingPluginException catch (error, stackTrace) {
@@ -896,12 +926,14 @@ class MethodChannelAttriax extends AttriaxPlatform {
     bool lockWindow = false,
   }) async {
     try {
-      final result = await _channel
-          .invokeMethod<Object?>('updateSkanConversionValue', <String, Object?>{
-            'fineValue': fineValue,
-            if (coarseValue != null) 'coarseValue': coarseValue.name,
-            'lockWindow': lockWindow,
-          });
+      final result = await _channel.invokeMethod<Object?>(
+        'updateSkanConversionValue',
+        AttriaxUpdateSkanConversionValueArgs(
+          fineValue: fineValue,
+          coarseValue: coarseValue,
+          lockWindow: lockWindow,
+        ).toJson(),
+      );
       return AttriaxSkanUpdateResult.fromPayload(result);
     } on MissingPluginException catch (error, stackTrace) {
       _logException('updateSkanConversionValue', error, stackTrace);
@@ -1100,19 +1132,6 @@ class MethodChannelAttriax extends AttriaxPlatform {
         _ => AttriaxSynchronizationState.initializing,
       };
 
-  String _trackingAuthorizationStatusToWire(
-    AttriaxTrackingAuthorizationStatus status,
-  ) => switch (status) {
-    AttriaxTrackingAuthorizationStatus.notSupported => 'not_supported',
-    AttriaxTrackingAuthorizationStatus.disabled => 'disabled',
-    AttriaxTrackingAuthorizationStatus.notDetermined => 'not_determined',
-    AttriaxTrackingAuthorizationStatus.restricted => 'restricted',
-    AttriaxTrackingAuthorizationStatus.denied => 'denied',
-    AttriaxTrackingAuthorizationStatus.authorized => 'authorized',
-    AttriaxTrackingAuthorizationStatus.timedOut => 'timed_out',
-    AttriaxTrackingAuthorizationStatus.unknown => 'unknown',
-  };
-
   void _logException(String method, Object error, StackTrace stackTrace) {
     developer.log(
       '$runtimeType.$method failed: ${error.runtimeType}',
@@ -1133,11 +1152,4 @@ class MethodChannelAttriax extends AttriaxPlatform {
     'timed_out' => AttriaxTrackingAuthorizationStatus.timedOut,
     _ => AttriaxTrackingAuthorizationStatus.unknown,
   };
-
-  String _browserOpenModeValue(AttriaxResolvedUrlOpenMode openMode) =>
-      switch (openMode) {
-        AttriaxResolvedUrlOpenMode.external => 'external',
-        AttriaxResolvedUrlOpenMode.inApp ||
-        AttriaxResolvedUrlOpenMode.unknown => 'in_app',
-      };
 }
