@@ -118,6 +118,13 @@ abstract class AttriaxRuntimeInterface {
   Future<void> requestGdprDataErasure();
   Future<bool> needsGdprConsent({bool localOnly = false});
 
+  // --- CCPA consent ---
+  bool? get ccpaDoNotSell;
+  String? get ccpaUsPrivacy;
+  // ignore: avoid_positional_boolean_parameters
+  void setCcpaDoNotSell(bool? doNotSell);
+  void setCcpaUsPrivacy(String? usPrivacy);
+
   // --- deep links ---
   Future<AttriaxDeepLinkEvent?> recordDeepLink({
     required Uri uri,

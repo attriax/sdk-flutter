@@ -41,6 +41,8 @@ class AttriaxNativeRuntime implements AttriaxRuntimeInterface {
   }) : _logger = logger,
        _deepLinkListener = deepLinkListener {
     _anonymousTracking = config.anonymousTracking;
+    _ccpaDoNotSell = config.doNotSell;
+    _ccpaUsPrivacy = config.usPrivacy;
   }
 
   final AttriaxConfig config;
@@ -83,6 +85,12 @@ class AttriaxNativeRuntime implements AttriaxRuntimeInterface {
   AttriaxGdprConsentValues? _gdprConsentValues;
   bool _isWaitingForGdprConsent = false;
 
+  // CCPA election, seeded from config and overridable at runtime. Held in
+  // memory: the authoritative latch lives server-side, the native engine only
+  // reports the current value, so these caches back the `consent.ccpa` getters.
+  bool? _ccpaDoNotSell;
+  String? _ccpaUsPrivacy;
+
   // ---------------------------------------------------------------------------
   // Lifecycle
   // ---------------------------------------------------------------------------
@@ -109,6 +117,8 @@ class AttriaxNativeRuntime implements AttriaxRuntimeInterface {
     _synchronizationState = AttriaxSynchronizationState.initializing;
     _gdprConsentState = AttriaxGdprConsentState.unknown;
     _gdprConsentValues = null;
+    _ccpaDoNotSell = config.doNotSell;
+    _ccpaUsPrivacy = config.usPrivacy;
   }
 
   @override
@@ -477,6 +487,34 @@ class AttriaxNativeRuntime implements AttriaxRuntimeInterface {
   @override
   Future<bool> needsGdprConsent({bool localOnly = false}) =>
       _readOr(() => _platform.needsGdprConsent(localOnly: localOnly), false);
+
+  @override
+  bool? get ccpaDoNotSell => _ccpaDoNotSell;
+
+  @override
+  String? get ccpaUsPrivacy => _ccpaUsPrivacy;
+
+  @override
+  void setCcpaDoNotSell(bool? doNotSell) {
+    _ccpaDoNotSell = doNotSell;
+    unawaited(
+      _fireAndForget(
+        () => _platform.setCcpaConsent(doNotSell: doNotSell),
+        'setCcpaConsent',
+      ),
+    );
+  }
+
+  @override
+  void setCcpaUsPrivacy(String? usPrivacy) {
+    _ccpaUsPrivacy = usPrivacy;
+    unawaited(
+      _fireAndForget(
+        () => _platform.setCcpaConsent(usPrivacy: usPrivacy),
+        'setCcpaConsent',
+      ),
+    );
+  }
 
   // ---------------------------------------------------------------------------
   // Deep links
