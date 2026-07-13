@@ -1,16 +1,12 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.INTERNET" />
-    <!-- Required by the Google Play Install Referrer client. -->
-    <uses-permission android:name="com.android.vending.INSTALL_REFERRER" />
     <!--
-        AD_ID is a normal-protection permission introduced in Android 13.
-        It is granted at install time and is required for the SDK's
-        dependency-free GAID lookup (AdvertisingIdProvider) to return a
-        real advertising id on Android 13+. Apps built against API 32 or
-        below do not need this permission.
+        Runtime permissions (INTERNET / ACCESS_NETWORK_STATE / INSTALL_REFERRER /
+        AD_ID) are declared by the shared KMP core AAR (com.attriax:core) and
+        inherited here via Gradle manifest merging. Only genuinely Flutter-plugin
+        concerns remain below: the deep-linking opt-out and the in-app WebView
+        browser Activity backing the plugin's openBrowserUrl API (the engine only
+        fires an external ACTION_VIEW; the in-app WebView is wrapper-owned UX).
     -->
-    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
-
     <application>
         <meta-data android:name="flutter_deeplinking_enabled" android:value="false" />
         <activity
