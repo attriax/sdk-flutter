@@ -38,7 +38,7 @@ final class AdvertisingIdProvider {
 
     private AdvertisingIdProvider() {}
 
-    static String fetch(Context context) {
+    public static String fetch(Context context) {
         if (context == null) return null;
 
         AdvertisingIdConnection connection = new AdvertisingIdConnection();

@@ -1,20 +1,15 @@
 import 'dart:async';
 
 import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
-import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import 'attriax_ad_event_type.dart';
 import 'attriax_analytics_keys.dart';
 import 'attriax_consent.dart';
-import 'attriax_deep_link_source.dart';
 import 'attriax_notification_event.dart';
-import 'internal/attriax_context_collector.dart';
-import 'internal/attriax_deep_link_listener.dart';
 import 'internal/attriax_logger.dart';
-import 'internal/attriax_runtime.dart';
+import 'internal/attriax_native_runtime.dart';
+import 'internal/attriax_runtime_interface.dart';
 import 'attriax_synchronization.dart';
 
 part 'attriax_deep_links.dart';
@@ -44,6 +39,7 @@ part 'attriax_tracking.dart';
 /// }
 /// ```
 class Attriax {
+
   /// Creates the production SDK instance.
   ///
   /// Construct this once at application level and reuse it for the whole app
@@ -61,49 +57,28 @@ class Attriax {
   Attriax._withLogger({
     required AttriaxConfig config,
     required AttriaxLogger logger,
-  }) : _runtime = AttriaxRuntime(
-         config: config,
-         deepLinkListener: AttriaxDeepLinkListener(
-           deepLinkSource: createDefaultAttriaxDeepLinkSource(),
-         ),
-         contextCollector: AttriaxContextCollector(
-           config: config,
-           logger: logger,
-         ),
-         connectivity: Connectivity(),
-         client: http.Client(),
-         logger: logger,
-       );
+  }) : _runtime = _buildRuntime(config: config, logger: logger);
 
-  /// Creates a test-friendly SDK instance with injected dependencies.
+  /// Builds the native engine behind the shared runtime interface.
   ///
-  /// Use this constructor in widget, integration, or package tests when you
-  /// need full control over HTTP, deep-link, connectivity, or preference state.
-  @visibleForTesting
-  Attriax.test({
+  /// Every supported target runs the native engine via
+  /// `attriax_flutter_platform_interface`. iOS and macOS drive the `AttriaxCore`
+  /// KMP XCFramework through the Swift plugin; Windows and Linux drive the same
+  /// KMP core through its C-ABI shared library over `dart:ffi` (the
+  /// `attriax_flutter_windows` / `attriax_flutter_linux` plugins, over
+  /// `attriax_core.dll` / `libattriax_core.so`); the web drives the sdk-js
+  /// engine (`@attriax/js`) through the `attriax_flutter_web` plugin; Android
+  /// drives the KMP core through its AAR (the `attriax_flutter_android` Kotlin
+  /// plugin). All route through `AttriaxPlatform.instance`. The native engine
+  /// owns deep-link capture and resolution, surfacing events through the
+  /// platform interface's `attriax/events/*` streams (bridged by
+  /// `AttriaxNativeRuntime`).
+  static AttriaxRuntimeInterface _buildRuntime({
     required AttriaxConfig config,
-    required http.Client client,
-    required AttriaxDeepLinkSource deepLinkSource,
-    required Connectivity connectivity,
-    required AttriaxContextCollector contextCollector,
-    SharedPreferences? prefs,
-    bool? enableDebugLogs,
-  }) : _runtime = AttriaxRuntime(
-         config: config,
-         deepLinkListener: AttriaxDeepLinkListener(
-           deepLinkSource: deepLinkSource,
-         ),
-         contextCollector: contextCollector,
-         connectivity: connectivity,
-         client: client,
-         logger: AttriaxLogger(
-           enableDebugLogs:
-               enableDebugLogs ?? config.enableDebugLogs ?? kDebugMode,
-         ),
-         prefsOverride: prefs,
-       );
+    required AttriaxLogger logger,
+  }) => AttriaxNativeRuntime(config: config, logger: logger);
 
-  final AttriaxRuntime _runtime;
+  final AttriaxRuntimeInterface _runtime;
 
   /// Whether [init] has completed successfully.
   ///
@@ -177,6 +152,16 @@ class Attriax {
   ///
   /// After calling [reset], call [init] again before using the instance.
   Future<void> reset() => _runtime.reset();
+
+  /// Requests a best-effort flush of any queued events to the backend.
+  ///
+  /// Events are normally batched and delivered on the SDK's own schedule; call
+  /// this to nudge delivery of what is currently queued (for example just before
+  /// the app is expected to go to the background). This is best-effort: it does
+  /// not guarantee delivery, and it is safe to call before synchronization has
+  /// completed. Prefer the per-call `flushImmediately` flag on tracking methods
+  /// when you only need one specific event delivered promptly.
+  Future<void> flush() => _runtime.flush();
 
   /// Validates a purchase receipt immediately and returns the public result.
   ///

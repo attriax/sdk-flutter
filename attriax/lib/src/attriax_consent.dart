@@ -1,6 +1,6 @@
 import 'package:attriax_flutter_platform_interface/attriax_platform_types.dart';
 
-import 'internal/attriax_runtime.dart';
+import 'internal/attriax_runtime_interface.dart';
 
 /// Local GDPR consent state for the current SDK device.
 enum AttriaxGdprConsentState {
@@ -56,20 +56,69 @@ class AttriaxGdprConsentValues {
 class AttriaxConsent {
   AttriaxConsent(this._runtime);
 
-  final AttriaxRuntime _runtime;
+  final AttriaxRuntimeInterface _runtime;
 
   /// GDPR-specific consent state and actions.
   late final AttriaxGdprConsent gdpr = AttriaxGdprConsent(_runtime);
 
   /// Apple App Tracking Transparency helpers.
   late final AttriaxAttConsent att = AttriaxAttConsent(_runtime);
+
+  /// CCPA "do not sell / share" election and US-Privacy string helpers.
+  late final AttriaxCcpaConsent ccpa = AttriaxCcpaConsent(_runtime);
+}
+
+/// CCPA "do not sell / share" election and raw IAB US-Privacy string helpers.
+///
+/// The election is latched server-side; the SDK only reports the current value.
+/// [doNotSell] / [usPrivacy] are seeded from [AttriaxConfig.doNotSell] /
+/// [AttriaxConfig.usPrivacy] and overridable at runtime via [setDoNotSell] /
+/// [setUsPrivacy] / [set]; a runtime change is reflected on the next app-open /
+/// identify request. A `null` [doNotSell] and a `null`/blank [usPrivacy] are
+/// omitted from the wire entirely (a no-CCPA app is byte-identical to before);
+/// an explicit `false` [doNotSell] is still emitted (it may clear a prior
+/// server-side latch).
+class AttriaxCcpaConsent {
+  AttriaxCcpaConsent(this._runtime);
+
+  final AttriaxRuntimeInterface _runtime;
+
+  /// Current CCPA do-not-sell election: the value supplied via
+  /// [AttriaxConfig.doNotSell] or [setDoNotSell] / [set], else `null` (unset →
+  /// omitted from the wire).
+  bool? get doNotSell => _runtime.ccpaDoNotSell;
+
+  /// Current raw IAB US-Privacy string: the value supplied via
+  /// [AttriaxConfig.usPrivacy] or [setUsPrivacy] / [set], else `null`
+  /// (unset/blank → omitted from the wire).
+  String? get usPrivacy => _runtime.ccpaUsPrivacy;
+
+  /// Sets the CCPA do-not-sell election. It is emitted (unless `null`) top-level
+  /// on the next app-open / identify request. An explicit `false` is sent (it
+  /// may clear a prior server-side latch); `null` returns to the omitted (unset)
+  /// state.
+  // ignore: avoid_positional_boolean_parameters
+  void setDoNotSell(bool? doNotSell) => _runtime.setCcpaDoNotSell(doNotSell);
+
+  /// Sets the raw IAB US-Privacy string (for example `1YYN`). It is emitted
+  /// (unless `null`/blank) top-level on the next app-open / identify request,
+  /// capped at 16 characters. `null`/blank returns to the omitted state.
+  void setUsPrivacy(String? usPrivacy) => _runtime.setCcpaUsPrivacy(usPrivacy);
+
+  /// Combined setter for both CCPA fields (see [setDoNotSell] / [setUsPrivacy]).
+  // ignore: avoid_positional_boolean_parameters
+  void set(bool? doNotSell, String? usPrivacy) {
+    _runtime
+      ..setCcpaDoNotSell(doNotSell)
+      ..setCcpaUsPrivacy(usPrivacy);
+  }
 }
 
 /// Apple App Tracking Transparency actions.
 class AttriaxAttConsent {
   AttriaxAttConsent(this._runtime);
 
-  final AttriaxRuntime _runtime;
+  final AttriaxRuntimeInterface _runtime;
 
   Future<AttriaxTrackingAuthorizationStatus> requestTrackingAuthorization({
     Duration? timeout,
@@ -87,7 +136,7 @@ class AttriaxAttConsent {
 class AttriaxGdprConsent {
   AttriaxGdprConsent(this._runtime);
 
-  final AttriaxRuntime _runtime;
+  final AttriaxRuntimeInterface _runtime;
 
   /// Last stored category values, or `null` before consent is granted.
   AttriaxGdprConsentValues? get values => _runtime.gdprConsentValues;

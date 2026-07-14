@@ -1,0 +1,42 @@
+name: attriax_flutter_web
+description: Web implementation of the Attriax plugin, backed by the sdk-js engine.
+version: 0.6.0
+homepage: https://attriax.com
+repository: https://github.com/attriax/sdk-flutter
+issue_tracker: https://github.com/attriax/sdk-flutter/issues
+topics:
+  - attribution
+  - web
+  - sdk-flutter
+
+environment:
+  sdk: ^3.8.0
+  flutter: ">=3.29.0"
+
+resolution: workspace
+
+flutter:
+  plugin:
+    implements: attriax_flutter
+    platforms:
+      web:
+        pluginClass: AttriaxWeb
+        fileName: attriax_flutter_web.dart
+  assets:
+    # Vendored sdk-js IIFE bundle (built from sibling repo `sdk-js`,
+    # `dist/index.global.js`). Loaded at runtime via a <script> tag; it assigns
+    # the SDK to `globalThis.AttriaxJs`.
+    - assets/attriax_js.js
+
+dependencies:
+  attriax_flutter_platform_interface: ^0.6.0
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  web: ^1.1.1
+
+dev_dependencies:
+  flutter_lints: ^6.0.0
+  flutter_test:
+    sdk: flutter

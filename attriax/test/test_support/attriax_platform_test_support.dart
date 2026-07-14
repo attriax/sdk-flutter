@@ -1,2 +1,0 @@
-export 'package:attriax_flutter_platform_interface/attriax_platform_interface.dart';
-export 'package:attriax_flutter_platform_interface/attriax_runtime_types.dart';

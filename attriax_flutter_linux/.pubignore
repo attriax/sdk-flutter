@@ -1,0 +1,10 @@
+# Generated Flutter package artifacts.
+.dart_tool/
+build/
+coverage/
+
+# Example app generated outputs.
+example/.dart_tool/
+example/build/
+example/linux/flutter/ephemeral/
+example/.flutter-plugins-dependencies

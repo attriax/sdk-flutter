@@ -128,7 +128,7 @@ When adding a new feature:
 
 3. **Handle the method natively** in the platform plugin classes:
    - Android: `attriax_flutter_android/android/src/main/java/.../AttriaxAndroidPlugin.java`
-   - iOS: `attriax_flutter_ios/ios/Classes/AttriaxIosPlugin.swift`
+   - iOS: `attriax_flutter_ios/ios/attriax_flutter_ios/Sources/attriax_flutter_ios/AttriaxIosPlugin.swift`
    - Windows: `attriax_flutter_windows/windows/attriax_flutter_windows_plugin.cpp`
 
 4. **Expose in main package** in `attriax/lib/attriax.dart` or `attriax/lib/src/attriax.dart`:

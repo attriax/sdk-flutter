@@ -41,6 +41,33 @@ class AttriaxDeepLinkReferrerDetails {
     this.handledBySdk = false,
   });
 
+  factory AttriaxDeepLinkReferrerDetails.fromJson(Map<String, Object?> json) {
+    final utmJson = _jsonObject(json['utm']);
+    final browserActionJson = _jsonObject(json['browserAction']);
+
+    return AttriaxDeepLinkReferrerDetails(
+      uri: _jsonUri(json['uri']) ?? Uri(path: _jsonString(json['path']) ?? '/'),
+      receivedAt: _requireJsonDateTime(json, 'receivedAt'),
+      clickedAt: _requireJsonDateTime(json, 'clickedAt'),
+      consumedAt: _requireJsonDateTime(json, 'consumedAt'),
+      trigger: _parseDeepLinkTrigger(_jsonString(json['trigger'])),
+      isAttriaxDomain:
+          _jsonBool(json['isAttriaxDomain']) ??
+          _jsonBool(json['isAttriaxSubDomain']) ??
+          false,
+      found: _jsonBool(json['found']) ?? false,
+      data: _jsonStringMap(json['data']),
+      utm: utmJson == null ? null : AttriaxUtmParameters.fromJson(utmJson),
+      browserAction: browserActionJson == null
+          ? null
+          : AttriaxResolvedUrlAction.fromJson(browserActionJson),
+      handledBySdk: _jsonBool(json['handledBySdk']) ?? false,
+    );
+  }
+
+  factory AttriaxDeepLinkReferrerDetails.fromPayload(Object? payload) =>
+      AttriaxDeepLinkReferrerDetails.fromJson(_jsonObjectOrEmpty(payload));
+
   final Uri uri;
   final DateTime receivedAt;
   final DateTime clickedAt;

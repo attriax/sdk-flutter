@@ -1,5 +1,5 @@
 PODS:
-  - attriax_flutter_ios (0.3.0):
+  - attriax_flutter_ios (0.5.0):
     - FlutterMacOS
   - connectivity_plus (0.0.1):
     - FlutterMacOS
@@ -25,7 +25,7 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin
 
 SPEC CHECKSUMS:
-  attriax_flutter_ios: 07983f3b5d2017be19acb4872f0c2b95f5e960cc
+  attriax_flutter_ios: 9d7a8c60a1a9c89ca81b8ddff8b8776dd3ff3f7b
   connectivity_plus: 0a976dfd033b59192912fa3c6c7b54aab5093802
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   shared_preferences_foundation: 5086985c1d43c5ba4d5e69a4e8083a389e2909e6

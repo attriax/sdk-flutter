@@ -1,10 +1,17 @@
 part of 'attriax.dart';
 
 /// SKAdNetwork helpers exposed by [Attriax].
+///
+/// AdAttributionKit note: AdAttributionKit (AAK) postbacks flow
+/// Apple → server (OS-driven, like SKAdNetwork), so the re-engagement /
+/// conversion postback path needs NO new Dart transport in the SDK. AAK
+/// re-engagement registration (`AppImpression` / `reengagementURL` handling) is
+/// a future `TODO(live)` native seam only; nothing on the Dart side sends AAK
+/// postbacks.
 class AttriaxSkan {
   AttriaxSkan._(this._runtime);
 
-  final AttriaxRuntime _runtime;
+  final AttriaxRuntimeInterface _runtime;
 
   /// Latest locally persisted SKAdNetwork state tracked by the SDK.
   AttriaxSkanState? get state => _runtime.skanState;

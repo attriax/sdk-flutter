@@ -643,6 +643,28 @@ The Apple implementation package now bundles `PrivacyInfo.xcprivacy` files for i
 
 Android apps that allow advertising ID collection must account for the AD_ID permission and Play Console Data Safety answers. iOS apps that enable tracking or IDFA collection still own the App Store privacy labels, ATT purpose string, and any app-level tracking domains or privacy-manifest declarations that match the configuration they actually ship.
 
+## Device Attestation
+
+`attestationEnabled` defaults to `false`. Existing integrations are unaffected: when it is `false`, the SDK never requests an attestation nonce and never attaches an attestation envelope to the app-open/init request.
+
+Attestation is opt-in and defensive — enabling it never blocks or fails `init()`. When enabled, the SDK fetches a single-use nonce, asks the configured provider for a Play Integrity (Android) or App Attest (iOS) token, and attaches the resulting envelope. Server-side verification is itself inert unless the project opts into `requireAttestation` in the dashboard, so an unverified project sees no change.
+
+```dart
+final attriax = Attriax(
+  config: AttriaxConfig(
+    projectToken: 'ax_your_app_token',
+    attestationEnabled: true,
+    attestationProvider: AttriaxPlatformAttestationProvider(
+      currentPlatform: () => AttriaxPlatformType.android,
+    ),
+  ),
+);
+```
+
+- When `attestationEnabled` is `true` but `attestationProvider` is `null`, the SDK uses a no-op provider (no envelope is sent).
+- A failed challenge fetch or a provider that returns no token sends the init request with no envelope; attestation never throws into `init()`.
+- The native Play Integrity / App Attest token acquisition is a platform seam that ships as a no-op stub today, so the SDK degrades to "unattested" until the native providers are wired for your app.
+
 ## Deep Links
 
 - Read `attriax.deepLinks.stream` as a broadcast stream with no buffering.

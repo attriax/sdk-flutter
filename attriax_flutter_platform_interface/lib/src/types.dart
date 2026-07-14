@@ -2,7 +2,9 @@ part 'types_skan.dart';
 part 'types_platform_runtime.dart';
 part 'types_links.dart';
 part 'types_deep_link_lifecycle.dart';
+part 'types_attestation.dart';
 part 'types_session_config.dart';
+part 'types_engine_commands.dart';
 
 const String attriaxSdkApiVersion = 'v1';
 const String attriaxSdkPackageVersion = '0.5.0';

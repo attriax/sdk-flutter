@@ -1,0 +1,22 @@
+PODS:
+  - attriax_flutter_ios (0.5.0):
+    - FlutterMacOS
+  - FlutterMacOS (1.0.0)
+
+DEPENDENCIES:
+  - attriax_flutter_ios (from `Flutter/ephemeral/.symlinks/plugins/attriax_flutter_ios/macos`)
+  - FlutterMacOS (from `Flutter/ephemeral`)
+
+EXTERNAL SOURCES:
+  attriax_flutter_ios:
+    :path: Flutter/ephemeral/.symlinks/plugins/attriax_flutter_ios/macos
+  FlutterMacOS:
+    :path: Flutter/ephemeral
+
+SPEC CHECKSUMS:
+  attriax_flutter_ios: 9d7a8c60a1a9c89ca81b8ddff8b8776dd3ff3f7b
+  FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
+
+PODFILE CHECKSUM: 346bfb2deb41d4a6ebd6f6799f92188bde2d246f
+
+COCOAPODS: 1.16.2

@@ -123,6 +123,11 @@ class AttriaxConfig {
     this.sessionHeartbeatInterval = const Duration(minutes: 5),
     this.firstLaunchSessionHeartbeatInterval = const Duration(seconds: 30),
     this.skan,
+    this.attestationEnabled = false,
+    this.attestationProvider,
+    this.pinnedCertificateSha256Fingerprints = const <String>[],
+    this.doNotSell,
+    this.usPrivacy,
   });
 
   /// Project token from the Attriax dashboard.
@@ -206,4 +211,97 @@ class AttriaxConfig {
 
   /// Optional local SKAN defaults used until dashboard runtime config loads.
   final AttriaxSkanConfig? skan;
+
+  /// Opts this SDK instance into device attestation.
+  ///
+  /// Default `false`. When `false`, the SDK never requests an attestation nonce
+  /// and never attaches an attestation envelope to the init request — behavior
+  /// is identical to earlier SDK versions.
+  ///
+  /// When `true`, before the app-open/init request the SDK fetches a single-use
+  /// nonce from the challenge endpoint, asks [attestationProvider] to produce a
+  /// token, and attaches the resulting envelope. Server-side verification is
+  /// itself inert unless the project opts into `requireAttestation`, so enabling
+  /// this is safe and never blocks or fails init: a failed challenge fetch or a
+  /// `null` provider result simply sends init with no envelope.
+  final bool attestationEnabled;
+
+  /// The provider that acquires the platform attestation token.
+  ///
+  /// Ignored unless [attestationEnabled] is `true`. When attestation is enabled
+  /// and this is `null`, the SDK uses [AttriaxNoopAttestationProvider] (always
+  /// `null`), so no envelope is attached. Supply an
+  /// `AttriaxPlatformAttestationProvider` (or a custom implementation) to attach
+  /// a real Play Integrity / App Attest envelope.
+  final AttriaxAttestationProvider? attestationProvider;
+
+  /// SHA-256 certificate fingerprints to pin the SDK transport against.
+  ///
+  /// Empty by default → certificate pinning is DISABLED and the default system
+  /// trust store is used (no behavior change). Provide the hex-encoded SHA-256
+  /// fingerprints of the leaf/intermediate certificates you trust to enable
+  /// pinning.
+  ///
+  /// NOTE: the enforcement seam is present but the real per-request
+  /// SHA-256 validation is a `TODO(live)` in the transport layer — pinning is
+  /// device/OS/CA-rotation-sensitive and cannot be verified here, so no fake
+  /// certificates are shipped. See the SDK transport setup for the seam.
+  final List<String> pinnedCertificateSha256Fingerprints;
+
+  /// CCPA "do not sell / share" election.
+  ///
+  /// Sent TOP-LEVEL on the app-open and identify requests (mirrors `attStatus`),
+  /// NOT nested under device context. `null` (the default) omits the field
+  /// entirely; an explicit `true` durably suppresses this user's outbound and an
+  /// explicit `false` may clear a prior server-side latch. Can also be changed at
+  /// runtime via `setCcpaConsent`.
+  final bool? doNotSell;
+
+  /// Raw IAB US-Privacy (USP) string, e.g. `1YYN`.
+  ///
+  /// Sent TOP-LEVEL alongside [doNotSell]; its sale opt-out flag also drives the
+  /// backend do-not-sell latch. `null`/empty omits the field. Capped at 16 chars
+  /// on the wire.
+  final String? usPrivacy;
+
+  /// Serializes the JSON-representable config surface for the native engine
+  /// `initialize` command.
+  ///
+  /// Durations are emitted as integer milliseconds to match the KMP
+  /// `AttriaxConfig` `*Ms` fields. The runtime-only [clock] and
+  /// [attestationProvider] are NOT serialized — they are Dart-side objects a
+  /// native engine cannot consume; a native binding sources its own clock and
+  /// attaches its platform attestation provider from [attestationEnabled].
+  Map<String, Object?> toJson() => <String, Object?>{
+    'projectToken': projectToken,
+    'apiBaseUrl': apiBaseUrl,
+    if (appVersion != null) 'appVersion': appVersion,
+    if (appBuildNumber != null) 'appBuildNumber': appBuildNumber,
+    if (appPackageName != null) 'appPackageName': appPackageName,
+    if (sdkMetadata.isNotEmpty) 'sdkMetadata': _normalizeJsonMap(sdkMetadata),
+    if (enableDebugLogs != null) 'enableDebugLogs': enableDebugLogs,
+    'requestTimeoutMs': requestTimeout.inMilliseconds,
+    'maxQueueSize': maxQueueSize,
+    'eventFlushIntervalMs': eventFlushInterval.inMilliseconds,
+    'flushEventsImmediatelyOnFirstLaunch': flushEventsImmediatelyOnFirstLaunch,
+    'collectAdvertisingId': collectAdvertisingId,
+    'automaticCrashReportingEnabled': automaticCrashReportingEnabled,
+    'requestTrackingAuthorizationOnInit': requestTrackingAuthorizationOnInit,
+    'trackingAuthorizationStatusTimeoutMs':
+        trackingAuthorizationStatusTimeout.inMilliseconds,
+    'automaticBrowserHandling': automaticBrowserHandling,
+    'gdprEnabled': gdprEnabled,
+    'anonymousTracking': anonymousTracking,
+    'sessionTrackingEnabled': sessionTrackingEnabled,
+    'sessionHeartbeatIntervalMs': sessionHeartbeatInterval.inMilliseconds,
+    'firstLaunchSessionHeartbeatIntervalMs':
+        firstLaunchSessionHeartbeatInterval.inMilliseconds,
+    if (skan != null) 'skan': skan!.toJson(),
+    'attestationEnabled': attestationEnabled,
+    if (pinnedCertificateSha256Fingerprints.isNotEmpty)
+      'pinnedCertificateSha256Fingerprints':
+          List<String>.from(pinnedCertificateSha256Fingerprints),
+    if (doNotSell != null) 'doNotSell': doNotSell,
+    if (usPrivacy != null && usPrivacy!.isNotEmpty) 'usPrivacy': usPrivacy,
+  };
 }

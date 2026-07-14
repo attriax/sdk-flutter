@@ -153,6 +153,17 @@ class AttriaxSdkSnapshot {
     this.metadata = const <String, Object?>{},
   });
 
+  factory AttriaxSdkSnapshot.fromJson(Map<String, Object?> json) =>
+      AttriaxSdkSnapshot(
+        apiVersion: _jsonString(json['apiVersion']) ?? attriaxSdkApiVersion,
+        packageVersion:
+            _jsonString(json['packageVersion']) ?? attriaxSdkPackageVersion,
+        metadata: _jsonObject(json['metadata']) ?? const <String, Object?>{},
+      );
+
+  factory AttriaxSdkSnapshot.fromPayload(Object? payload) =>
+      AttriaxSdkSnapshot.fromJson(_jsonObjectOrEmpty(payload));
+
   final String apiVersion;
   final String packageVersion;
   final Map<String, Object?> metadata;
