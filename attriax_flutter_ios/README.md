@@ -27,8 +27,8 @@ and the privacy-manifest/runtime setup documented in the main `attriax_flutter` 
 - Platforms: iOS 13.0+, macOS
 - Language: Swift
 - Dart wrapper: `lib/src/attriax_flutter_ios.dart`
-- Native handlers: `ios/Classes/AttriaxIosPlugin.swift`, `macos/Classes/AttriaxIosPlugin.swift`
-- Bundled privacy manifests: `ios/Resources/PrivacyInfo.xcprivacy`, `macos/Resources/PrivacyInfo.xcprivacy`
+- Native handlers: `ios/attriax_flutter_ios/Sources/attriax_flutter_ios/AttriaxIosPlugin.swift`, `macos/attriax_flutter_ios/Sources/attriax_flutter_ios/AttriaxIosPlugin.swift`
+- Bundled privacy manifests: `ios/attriax_flutter_ios/Sources/attriax_flutter_ios/PrivacyInfo.xcprivacy`, `macos/attriax_flutter_ios/Sources/attriax_flutter_ios/PrivacyInfo.xcprivacy`
 
 ## Privacy Manifest And Store Disclosures
 
@@ -79,13 +79,19 @@ and device-context collection.
 
 ```
 ios/
-  ├── attriax_flutter_ios.podspec    # CocoaPods specification
-  ├── Classes/              # Swift implementation
-  └── Resources/PrivacyInfo.xcprivacy
+  ├── attriax_flutter_ios.podspec              # CocoaPods fallback (Flutter < 3.44)
+  └── attriax_flutter_ios/                     # SwiftPM package (Flutter 3.44+ default)
+      ├── Package.swift
+      ├── Sources/attriax_flutter_ios/AttriaxIosPlugin.swift   # Swift implementation
+      ├── Sources/attriax_flutter_ios/PrivacyInfo.xcprivacy
+      └── Frameworks/AttriaxCore.xcframework   # vendored KMP core (git-ignored)
 macos/
-  ├── attriax_flutter_ios.podspec    # CocoaPods specification
-  ├── Classes/               # Swift implementation
-  └── Resources/PrivacyInfo.xcprivacy
+  ├── attriax_flutter_ios.podspec              # CocoaPods fallback (Flutter < 3.44)
+  └── attriax_flutter_ios/                     # SwiftPM package (Flutter 3.44+ default)
+      ├── Package.swift
+      ├── Sources/attriax_flutter_ios/AttriaxIosPlugin.swift   # Swift implementation
+      ├── Sources/attriax_flutter_ios/PrivacyInfo.xcprivacy
+      └── Frameworks/AttriaxCore.xcframework   # vendored KMP core (git-ignored)
 lib/
   ├── attriax_flutter_ios.dart
   └── src/attriax_flutter_ios.dart
