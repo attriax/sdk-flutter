@@ -6,11 +6,11 @@ import AttriaxCore
 ///
 /// The engine lives in the KMP core (shipped as the `AttriaxCore` XCFramework). This
 /// plugin is a THIN shim: it holds the KMP `Attriax` engine — built via `AttriaxApple`
-/// — and implements the expanded platform-interface command surface by delegating to
-/// the engine (and its `tracking` / `consent` / `skan` / `deepLinks` sub-surfaces) OFF
-/// the platform thread, bridging the engine's synchronization-state + deep-link events
-/// to their `EventChannel`s. The old native signal-provider code is superseded by the
-/// KMP Apple adapters (transport, store, ATT/SKAN/ASA/App-Attest, the real WKWebView UA).
+/// — and forwards the dispatchable command surface to the core's canonical
+/// `AttriaxDispatcher.execute(engine:method:params:)` table (the same table the Android
+/// JNI wrapper and the C-ABI shared library forward to), OFF the platform thread,
+/// bridging the engine's synchronization-state + deep-link events to their
+/// `EventChannel`s. A handful of methods stay engine-direct on purpose (see `handle`).
 public class AttriaxIosPlugin: NSObject, FlutterPlugin {
 
     private var engine: Attriax?
@@ -48,10 +48,10 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
         let a = call.arguments as? [String: Any?] ?? [:]
 
         switch call.method {
-        // ---- lifecycle ----
+        // ---- lifecycle: engine construction / teardown stay plugin-side ----
+        // `execute` operates on an already-built engine, so it can neither create
+        // (initialize) nor tear down (dispose) it.
         case "initialize": initialize(a, result)
-        case "flush": run(result) { $0.flush(); return nil }
-        case "reset": run(result) { $0.reset(); return nil }
         case "dispose":
             run(result) { engine in
                 self.detachListeners(engine)
@@ -59,135 +59,62 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
                 self.engine = nil
                 return nil
             }
-        case "submitAsaToken":
-            run(result) { $0.submitAsaToken(token: a["token"] as? String ?? ""); return nil }
 
-        // ---- primitive getters / setters ----
-        case "getDeviceId": run(result) { $0.deviceId }
-        case "getIsInitialized": run(result) { $0.isInitialized }
-        case "getIsFirstLaunch": run(result) { $0.isFirstLaunch }
-        case "getSdkEnabled": run(result) { $0.enabled }
-        case "setSdkEnabled": run(result) { $0.enabled = self.bool(a, "enabled", true); return nil }
-        case "getAnonymousTracking": run(result) { $0.anonymousTrackingEnabled }
-        case "setAnonymousTracking": run(result) { $0.anonymousTrackingEnabled = self.bool(a, "enabled", true); return nil }
-        case "getEventTrackingEnabled": run(result) { $0.tracking.enabled }
-        case "getIsSynchronized": run(result) { $0.synchronization.isSynchronized }
-        case "getIsWaitingForGdprConsent": run(result) { $0.consent.gdpr.isWaitingForConsent }
-        case "getSdkSnapshot": run(result) { self.serializeSnapshot($0.sdkSnapshot) }
-        case "getSkanState": run(result) { self.serializeSkanState($0.skan.state) }
+        // ---- Dart command names that ARE the canonical dispatch key ----
+        // The arg map flows straight through and the canonical `Ok.value` shape is
+        // exactly what the Dart parsers consume (snapshot / skan-state / skan-update /
+        // receipt / referrer maps are produced inside AttriaxDispatcher).
+        case "flush", "reset",
+             "getDeviceId", "getIsInitialized", "getIsFirstLaunch",
+             "getAnonymousTracking", "setAnonymousTracking",
+             "getIsSynchronized", "getIsWaitingForGdprConsent",
+             "getSdkSnapshot", "getSkanState", "getSynchronizationState",
+             "recordEvent", "recordPageView", "recordPurchase", "recordRefund",
+             "recordAdRevenue", "recordNotification", "recordError",
+             "setUser", "setUserProperty", "setUserProperties", "clearUserProperties",
+             "setGdprConsent", "setGdprConsentNotRequired", "resetGdprConsent",
+             "requestGdprDataErasure", "setCcpaConsent",
+             "updateSkanConversionValue", "handleIncomingLink", "submitAsaToken",
+             "validateReceipt",
+             "getOriginalInstallReferrer", "getReinstallReferrer", "getRawInstallReferrer",
+             "getSessionReferrer", "getLatestDeepLinkReferrer":
+            forward(result, call.method, a)
 
-        // ---- tracking ----
-        case "recordEvent":
-            run(result) { $0.recordEvent(name: a["name"] as? String ?? "",
-                                         eventData: a["eventData"] as? [String: Any],
-                                         flushImmediately: self.bool(a, "flushImmediately", false)); return nil }
-        case "recordPageView":
-            run(result) { $0.tracking.recordPageView(
-                pageName: a["pageName"] as? String ?? "",
-                pageClass: a["pageClass"] as? String,
-                pageTitle: a["pageTitle"] as? String,
-                previousPageName: a["previousPageName"] as? String,
-                parameters: a["parameters"] as? [String: Any],
-                source: a["source"] as? String ?? "manual",
-                flushImmediately: self.bool(a, "flushImmediately", false)); return nil }
-        case "recordPurchase":
-            run(result) { $0.tracking.recordPurchase(
-                revenue: self.double(a, "revenue", 0), currency: a["currency"] as? String ?? "",
-                revenueInMicros: self.bool(a, "revenueInMicros", false),
-                purchaseType: a["purchaseType"] as? String, productId: a["productId"] as? String,
-                transactionId: a["transactionId"] as? String, originalTransactionId: a["originalTransactionId"] as? String,
-                validationProvider: a["validationProvider"] as? String, validationEnvironment: a["validationEnvironment"] as? String,
-                purchaseToken: a["purchaseToken"] as? String, receiptData: a["receiptData"] as? String,
-                signedPayload: a["signedPayload"] as? String, receiptSignature: a["receiptSignature"] as? String,
-                isRenewal: self.kbool(a["isRenewal"]), quantity: self.int32(a, "quantity", 1),
-                store: a["store"] as? String, packageName: a["packageName"] as? String,
-                voided: self.kbool(a["voided"]), test: self.kbool(a["test"]),
-                validationId: a["validationId"] as? String, metadata: a["metadata"] as? [String: Any],
-                flushImmediately: self.bool(a, "flushImmediately", false)); return nil }
-        case "recordRefund":
-            run(result) { $0.tracking.recordRefund(
-                revenue: self.double(a, "revenue", 0), currency: a["currency"] as? String ?? "",
-                revenueInMicros: self.bool(a, "revenueInMicros", false),
-                purchaseType: a["purchaseType"] as? String, productId: a["productId"] as? String,
-                transactionId: a["transactionId"] as? String, originalTransactionId: a["originalTransactionId"] as? String,
-                quantity: self.int32(a, "quantity", 1), store: a["store"] as? String, packageName: a["packageName"] as? String,
-                voided: self.kbool(a["voided"]), test: self.kbool(a["test"]), reason: a["reason"] as? String,
-                metadata: a["metadata"] as? [String: Any], flushImmediately: self.bool(a, "flushImmediately", false)); return nil }
-        case "recordAdRevenue":
-            run(result) { $0.tracking.recordAdRevenue(
-                revenue: self.double(a, "revenue", 0), currency: a["currency"] as? String ?? "",
-                revenueInMicros: self.bool(a, "revenueInMicros", false),
-                adNetwork: a["adNetwork"] as? String, adFormat: a["adFormat"] as? String, adType: a["adType"] as? String,
-                adPlacement: a["adPlacement"] as? String, test: self.kbool(a["test"]),
-                metadata: a["metadata"] as? [String: Any], flushImmediately: self.bool(a, "flushImmediately", false)); return nil }
+        // ---- Dart command names that differ from the dispatch key ----
+        case "getSdkEnabled": forward(result, "getEnabled", a)
+        case "setSdkEnabled": forward(result, "setEnabled", a)
+        // The platform interface sends the resolved reserved event name under
+        // `eventName`; the dispatch table reads it under `type` (it resolves the enum by
+        // name OR eventName), so alias it across before forwarding.
         case "recordAdEvent":
-            run(result) { $0.tracking.recordAdEvent(
-                type: self.adEventType(a["eventName"] as? String),
-                adNetwork: a["adNetwork"] as? String, mediationNetwork: a["mediationNetwork"] as? String,
-                adUnitId: a["adUnitId"] as? String, adPlacement: a["adPlacement"] as? String,
-                adFormat: a["adFormat"] as? String, adType: a["adType"] as? String,
-                failureReason: a["failureReason"] as? String, loadLatencyMs: self.kdouble(a["loadLatencyMs"]),
-                rewardType: a["rewardType"] as? String, rewardAmount: self.kdouble(a["rewardAmount"]),
-                test: self.kbool(a["test"]), metadata: a["metadata"] as? [String: Any],
-                flushImmediately: self.bool(a, "flushImmediately", false)); return nil }
-        case "recordNotification":
-            run(result) { $0.tracking.recordNotification(
-                type: self.notificationType(a["type"] as? String),
-                notificationId: a["notificationId"] as? String ?? "",
-                linkId: a["linkId"] as? String, campaignId: a["campaignId"] as? String, title: a["title"] as? String,
-                source: self.notificationSource(a["source"] as? String), payload: a["payload"] as? [String: Any],
-                metadata: a["metadata"] as? [String: Any], flushImmediately: self.bool(a, "flushImmediately", false)); return nil }
-        case "recordError":
-            run(result) { $0.tracking.recordError(
-                error: KotlinThrowable(message: a["message"] as? String ?? (a["error"] as? String ?? "error")),
-                stackTrace: a["stackTrace"] as? String, fatal: self.bool(a, "fatal", false),
-                source: a["source"] as? String ?? "manual", reason: a["reason"] as? String,
-                metadata: a["metadata"] as? [String: Any]); return nil }
-        case "setUser":
-            run(result) { $0.tracking.setUser(userId: a["userId"] as? String, userName: a["userName"] as? String); return nil }
-        case "setUserProperty":
-            run(result) { $0.tracking.setUserProperty(name: a["name"] as? String ?? "", value: a["value"] ?? nil); return nil }
-        case "setUserProperties":
-            run(result) { $0.tracking.setUserProperties(properties: a["properties"] as? [String: Any] ?? [:]); return nil }
-        case "clearUserProperties":
-            run(result) { $0.tracking.clearUserProperties(propertyNames: a["propertyNames"] as? [String]); return nil }
+            var p = a; p["type"] = a["eventName"] ?? nil
+            forward(result, "recordAdEvent", p)
+        // One Dart command → the provider-split registration dispatch keys.
         case "registerPushToken":
-            run(result) { engine in
-                let token = a["token"] as? String
-                let metadata = a["metadata"] as? [String: Any]
-                if (a["provider"] as? String) == "apns" {
-                    engine.tracking.registerApplePushToken(token: token, metadata: metadata)
-                } else {
-                    engine.tracking.registerFirebaseMessagingToken(token: token, metadata: metadata)
-                }
-                return nil
-            }
+            forward(result,
+                    (a["provider"] as? String) == "apns" ? "registerApplePushToken" : "registerFirebaseMessagingToken",
+                    a)
 
-        // ---- consent (GDPR / CCPA / ATT) ----
-        case "setGdprConsent":
-            run(result) { $0.consent.gdpr.setConsent(
-                analytics: self.bool(a, "analytics", false),
-                attribution: self.bool(a, "attribution", false),
-                adEvents: self.bool(a, "adEvents", false)); return nil }
-        case "setGdprConsentNotRequired": run(result) { $0.consent.gdpr.setNotRequired(); return nil }
-        case "resetGdprConsent": run(result) { $0.consent.gdpr.reset(); return nil }
-        case "requestGdprDataErasure": run(result) { $0.consent.gdpr.requestDataErasure(); return nil }
-        case "setCcpaConsent":
-            run(result) { $0.consent.ccpa.set(doNotSell: self.kbool(a["doNotSell"]), usPrivacy: a["usPrivacy"] as? String); return nil }
+        // ---- kept engine-direct: genuinely wrapper-specific, not duplication ----
+        // `tracking.enabled` has no dispatch key.
+        case "getEventTrackingEnabled": run(result) { $0.tracking.enabled }
+        // ATT stays direct on purpose: the Dart `AttriaxTrackingAuthorizationStatus` is a
+        // RICHER enum (8 values incl. notSupported / disabled / timedOut) than the
+        // engine's canonical 5-value `AttriaxAttStatus`, and snake_cased (`not_determined`)
+        // vs the engine wireValue (`notDetermined`). The wrapper's tolerant mapper
+        // normalizes 8→5 inbound and 5→snake outbound; the dispatch keys
+        // (get/setAttStatus, requestAttAuthorization) emit the canonical camelCase
+        // wireValue, so forwarding would relocate wrapper-only logic.
         case "setTrackingAuthorizationStatus":
             run(result) { $0.consent.att.setStatus(status: self.attStatus(a["status"] as? String)); return nil }
+        case "getTrackingAuthorizationStatus":
+            run(result) { self.attStatusWire($0.consent.att.status) }
+        case "requestTrackingAuthorization":
+            run(result) { self.attStatusWire($0.consent.att.requestAuthorization(timeoutMs: nil)) }
 
-        // ---- SKAN ----
-        case "updateSkanConversionValue":
-            run(result) { self.serializeSkanResult($0.skan.updateConversionValue(
-                fineValue: self.int32(a, "fineValue", 0),
-                coarseValue: self.coarse(a["coarseValue"] as? String),
-                lockWindow: self.bool(a, "lockWindow", false))) }
-
-        // ---- deep links ----
-        case "handleIncomingLink":
-            run(result) { $0.deepLinks.handleUri(rawUri: a["uri"] as? String ?? "",
-                                                 isInitialLink: self.bool(a, "isInitialLink", false)); return nil }
+        // ---- kept engine-direct: not a canonical dispatch key ----
+        // createDynamicLink takes richer typed inputs (social preview / utms / redirects)
+        // and is not in the command table, so the wrapper builds the call directly.
         case "createDynamicLink":
             run(result) { self.serializeDynamicLinkResult($0.deepLinks.createDynamicLink(
                 name: a["name"] as? String, destinationUrl: a["destinationUrl"] as? String,
@@ -196,35 +123,6 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
                 utms: self.utms(a["utms"] as? [String: Any?]),
                 redirects: self.redirects(a["redirects"] as? [String: Any?]),
                 data: a["data"] as? [String: Any])) }
-
-        // ---- receipt validation ----
-        case "validateReceipt":
-            run(result) { self.serializeReceiptResult($0.validateReceipt(
-                receipt: a["receipt"] as? String ?? "", test: self.bool(a, "test", false),
-                provider: a["provider"] as? String, environment: a["environment"] as? String,
-                productId: a["productId"] as? String, transactionId: a["transactionId"] as? String)) }
-
-        // ---- referrers ----
-        case "getOriginalInstallReferrer":
-            run(result) { self.serializeInstallReferrer($0.referrer.getOriginalInstallReferrer()) }
-        case "getReinstallReferrer":
-            run(result) { self.serializeInstallReferrer($0.referrer.getReinstallReferrer()) }
-        case "getRawInstallReferrer":
-            run(result) { $0.referrer.getRawInstallReferrer() }
-        case "getSessionReferrer":
-            run(result) { self.serializeDeepLinkReferrer($0.referrer.getSessionReferrer()) }
-        case "getLatestDeepLinkReferrer":
-            run(result) { self.serializeDeepLinkReferrer($0.referrer.getLatestDeepLinkReferrer()) }
-
-        // ---- App Tracking Transparency ----
-        case "requestTrackingAuthorization":
-            run(result) { self.attStatusWire($0.consent.att.requestAuthorization(timeoutMs: nil)) }
-        case "getTrackingAuthorizationStatus":
-            run(result) { self.attStatusWire($0.consent.att.status) }
-
-        // ---- synchronization ----
-        case "getSynchronizationState":
-            run(result) { $0.synchronization.state.name }
 
         default:
             // The remaining deep-link snapshot getters (getInitialDeepLink /
@@ -283,7 +181,7 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
             doNotSell: kbool(m["doNotSell"]), usPrivacy: m["usPrivacy"] as? String)
     }
 
-    // MARK: - engine event listeners
+    // MARK: - engine event listeners (out-of-band; NOT routed through execute)
 
     private func attachListeners(_ engine: Attriax) {
         let sync = SyncStateListener { [weak self] state in self?.syncStream.emit(state.name) }
@@ -293,7 +191,7 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
         engine.deepLinks.addListener(listener: deep); deepLinkListener = deep
 
         let raw = RawDeepLinkListener { [weak self] event in
-            self?.rawDeepLinkStream.emit(["uri": event.uri, "receivedAtMs": event.receivedAtMs])
+            self?.rawDeepLinkStream.emit(["uri": event.uri.raw, "receivedAtMs": event.receivedAtMs])
         }
         engine.deepLinks.addRawListener(listener: raw); rawDeepLinkListener = raw
     }
@@ -305,23 +203,9 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
         syncListener = nil; deepLinkListener = nil; rawDeepLinkListener = nil
     }
 
-    // MARK: - serialization (best-effort; validated against the Dart parsers when the
-    // facade rewire activates the native runtime path)
-
-    private func serializeSkanResult(_ r: AttriaxSkanUpdateResult) -> [String: Any?] {
-        return ["status": r.status.wireValue, "message": r.message,
-                "fineValue": r.fineValue, "coarseValue": r.coarseValue?.wireValue, "lockWindow": r.lockWindow]
-    }
-
-    private func serializeSkanState(_ s: AttriaxSkanState?) -> [String: Any?]? {
-        guard let s = s else { return nil }
-        return ["enabled": s.enabled, "fineValue": s.fineValue,
-                "coarseValue": s.coarseValue?.wireValue, "lockWindow": s.lockWindow]
-    }
-
-    private func serializeSnapshot(_ s: AttriaxSdkSnapshot) -> [String: Any?] {
-        return ["apiVersion": s.apiVersion, "packageVersion": s.packageVersion, "metadata": s.metadata]
-    }
+    // MARK: - deep-link event serialization for the EventChannel
+    // (Command-result shaping — snapshot / skan-state / skan-update / receipt / referrer
+    // — now lives inside AttriaxDispatcher.)
 
     private func serializeDeepLinkEvent(_ e: AttriaxDeepLinkEvent) -> [String: Any?] {
         return ["uri": e.uri.raw, "status": e.status.name, "trigger": e.trigger.name,
@@ -329,19 +213,7 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
                 "isColdStart": e.isColdStart, "isForeground": e.isForeground, "data": e.data]
     }
 
-    // MARK: - residual command serializers
-
-    private func serializeReceiptResult(_ r: AttriaxRevenueReceiptValidationResult) -> [String: Any?] {
-        // Status entries are UPPERCASE in KMP (VERIFIED, PROVIDER_ERROR); lowercasing
-        // yields the exact Dart wire slugs (verified, provider_error, …).
-        return ["validationId": r.validationId, "status": r.status.name.lowercased(),
-                "requestVersion": r.requestVersion, "acceptedAt": self.iso(r.acceptedAtMs),
-                "provider": r.provider, "environment": r.environment,
-                "transactionId": r.transactionId, "originalTransactionId": r.originalTransactionId,
-                "productId": r.productId, "failureReason": r.failureReason,
-                "expiresAt": self.iso(r.expiresAtMs), "providerResult": r.providerResult,
-                "publicReceipt": r.publicReceipt]
-    }
+    // MARK: - createDynamicLink shaping (kept engine-direct — not a dispatch key)
 
     private func serializeDynamicLinkResult(_ r: AttriaxCreateDynamicLinkResult) -> [String: Any?] {
         // KMP exposes `record`; the Dart parser reads a nested `link` map.
@@ -352,30 +224,6 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
         return ["id": rec.id, "path": rec.path, "shortUrl": rec.shortUrl, "name": rec.name,
                 "destinationUrl": rec.destinationUrl, "group": rec.group, "prefix": rec.prefix,
                 "data": rec.data]
-    }
-
-    private func serializeInstallReferrer(_ d: AttriaxInstallReferrerDetails?) -> [String: Any?]? {
-        guard let d = d else { return nil }
-        return ["rawPlatformInstallReferrer": d.rawPlatformInstallReferrer,
-                "source": d.source, "medium": d.medium, "campaign": d.campaign,
-                "term": d.term, "content": d.content, "adNetwork": d.adNetwork, "adClickId": d.adClickId,
-                "attributionType": d.attributionType.name, "deepLinkUrl": d.deepLinkUrl,
-                "deepLinkUri": d.deepLinkUri?.raw, "deepLinkData": d.deepLinkData,
-                "registeredAt": d.registeredAt,
-                "installBeginTimestampSeconds": d.installBeginTimestampSeconds?.int64Value,
-                "referrerClickTimestampSeconds": d.referrerClickTimestampSeconds?.int64Value,
-                "googlePlayInstantParam": d.googlePlayInstantParam?.boolValue,
-                "precision": d.precision]
-    }
-
-    private func serializeDeepLinkReferrer(_ d: AttriaxDeepLinkReferrerDetails?) -> [String: Any?]? {
-        guard let d = d else { return nil }
-        // receivedAt/clickedAt/consumedAt are REQUIRED ISO strings on the Dart side;
-        // browserAction is omitted (optional, richer object not needed by callers yet).
-        return ["uri": d.uri.raw, "receivedAt": self.iso(d.receivedAtMs),
-                "clickedAt": self.iso(d.clickedAtMs), "consumedAt": self.iso(d.consumedAtMs),
-                "trigger": d.trigger.name, "isAttriaxDomain": d.isAttriaxDomain, "found": d.found,
-                "data": d.data, "utm": d.utm]
     }
 
     private func socialPreview(_ m: [String: Any?]?) -> AttriaxDynamicLinkSocialPreview? {
@@ -393,9 +241,11 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
         return AttriaxDynamicLinkRedirects(ios: self.kbool(m["ios"]), android: self.kbool(m["android"]))
     }
 
+    // MARK: - ATT wire mapping (kept engine-direct)
+
     private func attStatusWire(_ s: AttriaxAttStatus) -> String {
-        // KMP wireValue is camelCase (notDetermined); the Dart channel decoder
-        // expects snake_case (not_determined).
+        // KMP wireValue is camelCase (notDetermined); the Dart channel decoder expects
+        // snake_case (not_determined).
         switch s.wireValue {
         case "authorized": return "authorized"
         case "denied": return "denied"
@@ -405,21 +255,21 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
         }
     }
 
-    private static let isoFormatter: ISO8601DateFormatter = {
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return f
-    }()
-    private func iso(_ ms: Int64) -> String {
-        return Self.isoFormatter.string(from: Date(timeIntervalSince1970: Double(ms) / 1000.0))
-    }
-    private func iso(_ ms: KotlinLong?) -> String? {
-        guard let ms = ms else { return nil }
-        return self.iso(ms.int64Value)
+    private func attStatus(_ w: String?) -> AttriaxAttStatus {
+        switch w {
+        case "authorized": return .authorized
+        case "denied": return .denied
+        case "restricted": return .restricted
+        case "notDetermined", "not_determined": return .notDetermined
+        default: return .unknown
+        }
     }
 
     // MARK: - helpers
 
+    /// Run an engine-direct command OFF the platform thread. Used for the handful of
+    /// methods that are NOT canonical dispatch keys (ATT normalization, createDynamicLink,
+    /// tracking.enabled) and for lifecycle teardown.
     private func run(_ result: @escaping FlutterResult, _ block: @escaping (Attriax) -> Any?) {
         workQueue.async {
             guard let engine = self.engine else {
@@ -433,43 +283,39 @@ public class AttriaxIosPlugin: NSObject, FlutterPlugin {
         }
     }
 
+    /// Forward a command to the KMP core's canonical `AttriaxDispatcher.execute` OFF the
+    /// platform thread and map its `AttriaxDispatchResult` onto the reply. `execute` does
+    /// not catch engine exceptions — same as the old per-method dispatch — so behavior is
+    /// preserved.
+    private func forward(_ result: @escaping FlutterResult, _ method: String, _ args: [String: Any?]) {
+        workQueue.async {
+            guard let engine = self.engine else {
+                DispatchQueue.main.async {
+                    result(FlutterError(code: "not_initialized", message: "Attriax is not initialized", details: nil))
+                }
+                return
+            }
+            // Flutter delivers Dart null as NSNull, so dropping nil values keeps key
+            // presence identical to the previous per-method extraction; the dispatch table
+            // reads via `as?`, treating NSNull like an absent value.
+            let params = args.compactMapValues { $0 }
+            let outcome = AttriaxDispatcher.shared.execute(engine: engine, method: method, params: params)
+            DispatchQueue.main.async {
+                switch outcome {
+                case let ok as AttriaxDispatchResultOk: result(ok.value)
+                case let err as AttriaxDispatchResultErr: result(FlutterError(code: "error", message: err.message, details: nil))
+                default: result(FlutterMethodNotImplemented)
+                }
+            }
+        }
+    }
+
     private func bool(_ m: [String: Any?], _ k: String, _ d: Bool) -> Bool {
         (m[k] as? NSNumber)?.boolValue ?? (m[k] as? Bool) ?? d
     }
     private func int64(_ m: [String: Any?], _ k: String, _ d: Int64) -> Int64 { (m[k] as? NSNumber)?.int64Value ?? d }
     private func int32(_ m: [String: Any?], _ k: String, _ d: Int32) -> Int32 { (m[k] as? NSNumber)?.int32Value ?? d }
-    private func double(_ m: [String: Any?], _ k: String, _ d: Double) -> Double { (m[k] as? NSNumber)?.doubleValue ?? d }
     private func kbool(_ v: Any??) -> KotlinBoolean? { (v as? NSNumber).map { KotlinBoolean(bool: $0.boolValue) } }
-    private func kdouble(_ v: Any??) -> KotlinDouble? { (v as? NSNumber).map { KotlinDouble(double: $0.doubleValue) } }
-
-    private func attStatus(_ w: String?) -> AttriaxAttStatus {
-        switch w {
-        case "authorized": return .authorized
-        case "denied": return .denied
-        case "restricted": return .restricted
-        case "notDetermined", "not_determined": return .notDetermined
-        default: return .unknown
-        }
-    }
-    private func coarse(_ w: String?) -> AttriaxSkanCoarseValue? {
-        switch w?.lowercased() { case "low": return .low; case "medium": return .medium; case "high": return .high; default: return nil }
-    }
-    private func adEventType(_ eventName: String?) -> AttriaxAdEventType {
-        // The platform interface sends the reserved `eventName` wire slug
-        // (e.g. "ad_show_failed"); resolve the enum whose `eventName` matches,
-        // mirroring the Android/web/Windows bindings. Defaults to `.request`.
-        if let eventName = eventName,
-           let match = AttriaxAdEventType.entries.first(where: { $0.eventName == eventName }) {
-            return match
-        }
-        return .request
-    }
-    private func notificationType(_ w: String?) -> AttriaxNotificationEventType {
-        switch w { case "opened": return .opened; case "dismissed": return .dismissed; default: return .received }
-    }
-    private func notificationSource(_ w: String?) -> AttriaxNotificationEventSource? {
-        switch w { case "fcm": return .fcm; case "apns": return .apns; case "other": return .other; default: return nil }
-    }
 }
 
 /// A reusable `FlutterStreamHandler` that buffers the latest value until a listener
