@@ -77,7 +77,8 @@ shape on web. The wire DTOs already match (both cores were built to the same API
 
 ### Native bindings
 
-- **Android** (`attriax_flutter_android`): depend on `com.attriax:core-android`;
+- **Android** (`attriax_flutter_android`): depend on `com.attriax:core-android`
+  (resolved from Maven Central);
   the plugin holds one `com.attriax.sdk.Attriax` (via `AttriaxSdk.create(context,
   config)`); method-channel handlers delegate to it off the platform thread;
   register listeners → EventChannels. The existing signal code (install-referrer,
