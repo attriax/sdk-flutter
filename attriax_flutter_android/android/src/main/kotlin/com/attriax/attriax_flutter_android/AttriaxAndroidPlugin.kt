@@ -120,7 +120,10 @@ class AttriaxAndroidPlugin : FlutterPlugin, MethodCallHandler {
             "setUser", "setUserProperty", "setUserProperties", "clearUserProperties",
             "setGdprConsent", "setGdprConsentNotRequired", "resetGdprConsent",
             "requestGdprDataErasure",
-            "updateSkanConversionValue", "handleIncomingLink", "submitAsaToken" ->
+            "updateSkanConversionValue", "handleIncomingLink", "submitAsaToken",
+            // Paired CCPA setter now has a dispatch key (execute() calls ccpa.set with
+            // the same clear-omitted semantics), so it forwards like the rest.
+            "setCcpaConsent" ->
                 forward(result, call.method, a)
 
             // ---- Dart command names that differ from the dispatch key ----
@@ -137,19 +140,14 @@ class AttriaxAndroidPlugin : FlutterPlugin, MethodCallHandler {
                 a,
             )
 
-            // ---- kept engine-direct: no faithful single dispatch mapping ----
+            // ---- kept engine-direct: genuinely wrapper-specific, not duplication ----
             // `tracking.enabled` has no dispatch key.
             "getEventTrackingEnabled" -> run(result) { it.tracking.enabled }
-            // The dispatch table splits CCPA into setDoNotSell / setUsPrivacy; the
-            // wrapper's combined set() (which also clears the omitted field) has no
-            // single-key equivalent, so keep calling it directly.
-            "setCcpaConsent" -> run(result) {
-                it.consent.ccpa.set(doNotSell = kbool(a, "doNotSell"), usPrivacy = str(a, "usPrivacy"))
-                null
-            }
-            // The Dart ATT wire vocabulary (`not_determined`) differs from the engine's
-            // `AttriaxAttStatus.wireValue` (`notDetermined`); the wrapper's tolerant
-            // mapper preserves the inputs the dispatch parser would reject.
+            // ATT stays direct on purpose: the Dart `AttriaxTrackingAuthorizationStatus`
+            // is a RICHER enum (8 values incl. notSupported / disabled / timedOut) than
+            // the engine's canonical 5-value `AttriaxAttStatus`, and snake_cased
+            // (`not_determined`) vs the engine wireValue (`notDetermined`). The wrapper's
+            // tolerant mapper normalizes 8→5; forwarding would relocate wrapper-only logic.
             "setTrackingAuthorizationStatus" -> run(result) {
                 it.consent.att.setStatus(attStatus(str(a, "status")))
                 null
