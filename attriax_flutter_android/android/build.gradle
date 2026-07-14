@@ -30,9 +30,6 @@ rootProject.allprojects {
     repositories {
         google()
         mavenCentral()
-        // The Attriax KMP engine is consumed from the local Maven repo produced by
-        // `sdk-kmp` (`./gradlew :core:publishToMavenLocal`).
-        mavenLocal()
     }
 }
 
