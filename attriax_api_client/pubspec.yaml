@@ -1,6 +1,6 @@
 name: attriax_api_client
 version: 0.5.0
-description: Generated Attriax SDK API client.
+description: "DEPRECATED — retained for pub.dev/federation compatibility only. The Attriax Flutter SDK now runs on the native engine and no longer depends on this generated client; do not use it in new code."
 homepage: https://attriax.com
 resolution: workspace
 repository: https://github.com/attriax/sdk-flutter
