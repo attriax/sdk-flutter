@@ -6,20 +6,15 @@ import android.net.Uri
 import android.os.Handler
 import android.os.Looper
 import com.attriax.sdk.Attriax
-import com.attriax.sdk.AttriaxAdEventType
 import com.attriax.sdk.AttriaxAttStatus
 import com.attriax.sdk.AttriaxConfig
 import com.attriax.sdk.AttriaxDeepLinkEvent
 import com.attriax.sdk.AttriaxDeepLinkListener
-import com.attriax.sdk.AttriaxNotificationEventSource
-import com.attriax.sdk.AttriaxNotificationEventType
+import com.attriax.sdk.AttriaxDispatchResult
+import com.attriax.sdk.AttriaxDispatcher
 import com.attriax.sdk.AttriaxRawDeepLinkEvent
 import com.attriax.sdk.AttriaxRawDeepLinkListener
 import com.attriax.sdk.AttriaxSdk
-import com.attriax.sdk.AttriaxSdkSnapshot
-import com.attriax.sdk.AttriaxSkanCoarseValue
-import com.attriax.sdk.AttriaxSkanState
-import com.attriax.sdk.AttriaxSkanUpdateResult
 import com.attriax.sdk.AttriaxSynchronizationState
 import com.attriax.sdk.AttriaxSynchronizationStateListener
 import io.flutter.embedding.engine.plugins.FlutterPlugin
@@ -35,13 +30,16 @@ import java.util.concurrent.Executors
  *
  * The engine lives in the KMP core (shipped as the `com.attriax:core` Android AAR).
  * This plugin is a THIN shim: it holds the KMP [Attriax] engine — built via
- * [AttriaxSdk] — and implements the expanded platform-interface command surface by
- * delegating to the engine (and its `tracking` / `consent` / `skan` / `deepLinks`
- * sub-surfaces) OFF the platform thread, bridging the engine's synchronization-state
- * + deep-link events to their [EventChannel]s. The old native signal-provider code
- * (device context, install-referrer, crash reporting, UA) is superseded by the KMP
- * androidMain adapters; only genuinely wrapper-side Android concerns remain — the
- * Play-Services advertising-id supplier and the in-app browser Activity.
+ * [AttriaxSdk] — and forwards the platform-interface command surface to the core's
+ * canonical [AttriaxDispatcher.execute] OFF the platform thread, mapping its
+ * [AttriaxDispatchResult] onto the method-channel reply. Engine construction
+ * (`initialize`) and teardown (`dispose`), the handful of commands whose Dart wire
+ * shape has no faithful single dispatch mapping, and the Android-only browser open
+ * stay hand-wired; the engine's synchronization-state + deep-link events are bridged
+ * to their [EventChannel]s. The old native signal-provider code (device context,
+ * install-referrer, crash reporting, UA) is superseded by the KMP androidMain
+ * adapters; only genuinely wrapper-side Android concerns remain — the Play-Services
+ * advertising-id supplier and the in-app browser Activity.
  *
  * This mirrors the iOS binding (`AttriaxIosPlugin.swift`) method-for-method.
  */
@@ -93,231 +91,67 @@ class AttriaxAndroidPlugin : FlutterPlugin, MethodCallHandler {
     // ---------------------------------------------------------------------------
 
     override fun onMethodCall(call: MethodCall, result: Result) {
-        val a = call.arguments as? Map<*, *> ?: emptyMap<String, Any?>()
+        @Suppress("UNCHECKED_CAST")
+        val a = (call.arguments as? Map<String, Any?>) ?: emptyMap()
 
         when (call.method) {
-            // ---- lifecycle ----
+            // ---- lifecycle: engine construction / teardown stay plugin-side ----
+            // `execute` operates on an already-built engine, so it can neither create
+            // (initialize) nor tear down (dispose) it.
             "initialize" -> initialize(a, result)
-            "flush" -> run(result) { it.flush(); null }
-            "reset" -> run(result) { it.reset(); null }
             "dispose" -> run(result) {
                 detachListeners(it)
                 it.dispose()
                 engine = null
                 null
             }
-            "submitAsaToken" -> run(result) { it.submitAsaToken(str(a, "token") ?: ""); null }
 
-            // ---- primitive getters / setters ----
-            "getDeviceId" -> run(result) { it.deviceId }
-            "getIsInitialized" -> run(result) { it.isInitialized }
-            "getIsFirstLaunch" -> run(result) { it.isFirstLaunch }
-            "getSdkEnabled" -> run(result) { it.enabled }
-            "setSdkEnabled" -> run(result) { it.enabled = bool(a, "enabled", true); null }
-            "getAnonymousTracking" -> run(result) { it.anonymousTrackingEnabled }
-            "setAnonymousTracking" -> run(result) { it.anonymousTrackingEnabled = bool(a, "enabled", true); null }
+            // ---- Dart command names that ARE the canonical dispatch key ----
+            // The arg Map flows straight through and the canonical `Ok.value` shape is
+            // exactly what the Dart parsers already consume (snapshot / skan-state /
+            // skan-update maps are byte-identical to the removed serializers).
+            "flush", "reset",
+            "getDeviceId", "getIsInitialized", "getIsFirstLaunch",
+            "getAnonymousTracking", "setAnonymousTracking",
+            "getIsSynchronized", "getIsWaitingForGdprConsent",
+            "getSdkSnapshot", "getSkanState",
+            "recordEvent", "recordPageView", "recordPurchase", "recordRefund",
+            "recordAdRevenue", "recordNotification", "recordError",
+            "setUser", "setUserProperty", "setUserProperties", "clearUserProperties",
+            "setGdprConsent", "setGdprConsentNotRequired", "resetGdprConsent",
+            "requestGdprDataErasure",
+            "updateSkanConversionValue", "handleIncomingLink", "submitAsaToken" ->
+                forward(result, call.method, a)
+
+            // ---- Dart command names that differ from the dispatch key ----
+            "getSdkEnabled" -> forward(result, "getEnabled", a)
+            "setSdkEnabled" -> forward(result, "setEnabled", a)
+            // The platform-interface sends the resolved reserved event name under
+            // `eventName`; the dispatch table reads it under `type` (it resolves the
+            // enum by name OR eventName), so alias it across before forwarding.
+            "recordAdEvent" -> forward(result, "recordAdEvent", a + ("type" to a["eventName"]))
+            // One Dart command → the provider-split registration dispatch keys.
+            "registerPushToken" -> forward(
+                result,
+                if (str(a, "provider") == "apns") "registerApplePushToken" else "registerFirebaseMessagingToken",
+                a,
+            )
+
+            // ---- kept engine-direct: no faithful single dispatch mapping ----
+            // `tracking.enabled` has no dispatch key.
             "getEventTrackingEnabled" -> run(result) { it.tracking.enabled }
-            "getIsSynchronized" -> run(result) { it.synchronization.isSynchronized }
-            "getIsWaitingForGdprConsent" -> run(result) { it.consent.gdpr.isWaitingForConsent }
-            "getSdkSnapshot" -> run(result) { serializeSnapshot(it.sdkSnapshot) }
-            "getSkanState" -> run(result) { serializeSkanState(it.skan.state) }
-
-            // ---- tracking ----
-            "recordEvent" -> run(result) {
-                it.recordEvent(
-                    name = str(a, "name") ?: "",
-                    eventData = map(a, "eventData"),
-                    flushImmediately = bool(a, "flushImmediately", false),
-                )
-                null
-            }
-            "recordPageView" -> run(result) {
-                it.tracking.recordPageView(
-                    pageName = str(a, "pageName") ?: "",
-                    pageClass = str(a, "pageClass"),
-                    pageTitle = str(a, "pageTitle"),
-                    previousPageName = str(a, "previousPageName"),
-                    parameters = map(a, "parameters"),
-                    source = str(a, "source") ?: "manual",
-                    flushImmediately = bool(a, "flushImmediately", false),
-                )
-                null
-            }
-            "recordPurchase" -> run(result) {
-                it.tracking.recordPurchase(
-                    revenue = double(a, "revenue", 0.0),
-                    currency = str(a, "currency") ?: "USD",
-                    revenueInMicros = bool(a, "revenueInMicros", false),
-                    purchaseType = str(a, "purchaseType"),
-                    productId = str(a, "productId"),
-                    transactionId = str(a, "transactionId"),
-                    originalTransactionId = str(a, "originalTransactionId"),
-                    validationProvider = str(a, "validationProvider"),
-                    validationEnvironment = str(a, "validationEnvironment"),
-                    purchaseToken = str(a, "purchaseToken"),
-                    receiptData = str(a, "receiptData"),
-                    signedPayload = str(a, "signedPayload"),
-                    receiptSignature = str(a, "receiptSignature"),
-                    isRenewal = kbool(a, "isRenewal"),
-                    quantity = int(a, "quantity", 1),
-                    store = str(a, "store"),
-                    packageName = str(a, "packageName"),
-                    voided = kbool(a, "voided"),
-                    test = kbool(a, "test"),
-                    validationId = str(a, "validationId"),
-                    metadata = map(a, "metadata"),
-                    flushImmediately = bool(a, "flushImmediately", true),
-                )
-                null
-            }
-            "recordRefund" -> run(result) {
-                it.tracking.recordRefund(
-                    revenue = double(a, "revenue", 0.0),
-                    currency = str(a, "currency") ?: "USD",
-                    revenueInMicros = bool(a, "revenueInMicros", false),
-                    purchaseType = str(a, "purchaseType"),
-                    productId = str(a, "productId"),
-                    transactionId = str(a, "transactionId"),
-                    originalTransactionId = str(a, "originalTransactionId"),
-                    quantity = int(a, "quantity", 1),
-                    store = str(a, "store"),
-                    packageName = str(a, "packageName"),
-                    voided = kbool(a, "voided"),
-                    test = kbool(a, "test"),
-                    reason = str(a, "reason"),
-                    metadata = map(a, "metadata"),
-                    flushImmediately = bool(a, "flushImmediately", true),
-                )
-                null
-            }
-            "recordAdRevenue" -> run(result) {
-                it.tracking.recordAdRevenue(
-                    revenue = double(a, "revenue", 0.0),
-                    currency = str(a, "currency") ?: "USD",
-                    revenueInMicros = bool(a, "revenueInMicros", false),
-                    adNetwork = str(a, "adNetwork"),
-                    adFormat = str(a, "adFormat"),
-                    adType = str(a, "adType"),
-                    adPlacement = str(a, "adPlacement"),
-                    test = kbool(a, "test"),
-                    metadata = map(a, "metadata"),
-                    flushImmediately = bool(a, "flushImmediately", true),
-                )
-                null
-            }
-            "recordAdEvent" -> run(result) {
-                // The platform-interface sends the resolved reserved event name
-                // (`eventName`, e.g. "ad_show_failed"); resolve it back to the enum
-                // whose `eventName` matches so the engine's field->eventData lowering
-                // runs. Unknown names fall back to REQUEST.
-                it.tracking.recordAdEvent(
-                    type = adEventType(str(a, "eventName")),
-                    adNetwork = str(a, "adNetwork"),
-                    mediationNetwork = str(a, "mediationNetwork"),
-                    adUnitId = str(a, "adUnitId"),
-                    adPlacement = str(a, "adPlacement"),
-                    adFormat = str(a, "adFormat"),
-                    adType = str(a, "adType"),
-                    failureReason = str(a, "failureReason"),
-                    loadLatencyMs = kdouble(a, "loadLatencyMs"),
-                    rewardType = str(a, "rewardType"),
-                    rewardAmount = kdouble(a, "rewardAmount"),
-                    test = kbool(a, "test"),
-                    metadata = map(a, "metadata"),
-                    flushImmediately = bool(a, "flushImmediately", true),
-                )
-                null
-            }
-            "recordNotification" -> run(result) {
-                it.tracking.recordNotification(
-                    type = notificationType(str(a, "type")),
-                    notificationId = str(a, "notificationId") ?: "",
-                    linkId = str(a, "linkId"),
-                    campaignId = str(a, "campaignId"),
-                    title = str(a, "title"),
-                    source = notificationSource(str(a, "source")),
-                    payload = map(a, "payload"),
-                    metadata = map(a, "metadata"),
-                    flushImmediately = bool(a, "flushImmediately", false),
-                )
-                null
-            }
-            "recordError" -> run(result) {
-                it.tracking.recordError(
-                    error = Throwable(str(a, "message") ?: str(a, "error") ?: "error"),
-                    stackTrace = str(a, "stackTrace"),
-                    fatal = bool(a, "fatal", false),
-                    source = str(a, "source") ?: "manual",
-                    reason = str(a, "reason"),
-                    metadata = map(a, "metadata"),
-                )
-                null
-            }
-            "setUser" -> run(result) {
-                it.tracking.setUser(userId = str(a, "userId"), userName = str(a, "userName"))
-                null
-            }
-            "setUserProperty" -> run(result) {
-                it.tracking.setUserProperty(str(a, "name") ?: "", a["value"])
-                null
-            }
-            "setUserProperties" -> run(result) {
-                it.tracking.setUserProperties(map(a, "properties") ?: emptyMap())
-                null
-            }
-            "clearUserProperties" -> run(result) {
-                it.tracking.clearUserProperties(strList(a, "propertyNames"))
-                null
-            }
-            "registerPushToken" -> run(result) {
-                val token = str(a, "token")
-                val metadata = map(a, "metadata")
-                if (str(a, "provider") == "apns") {
-                    it.tracking.registerApplePushToken(token, metadata)
-                } else {
-                    it.tracking.registerFirebaseMessagingToken(token, metadata)
-                }
-                null
-            }
-
-            // ---- consent (GDPR / CCPA / ATT) ----
-            "setGdprConsent" -> run(result) {
-                it.consent.gdpr.setConsent(
-                    analytics = bool(a, "analytics", false),
-                    attribution = bool(a, "attribution", false),
-                    adEvents = bool(a, "adEvents", false),
-                )
-                null
-            }
-            "setGdprConsentNotRequired" -> run(result) { it.consent.gdpr.setNotRequired(); null }
-            "resetGdprConsent" -> run(result) { it.consent.gdpr.reset(); null }
-            "requestGdprDataErasure" -> run(result) { it.consent.gdpr.requestDataErasure(); null }
+            // The dispatch table splits CCPA into setDoNotSell / setUsPrivacy; the
+            // wrapper's combined set() (which also clears the omitted field) has no
+            // single-key equivalent, so keep calling it directly.
             "setCcpaConsent" -> run(result) {
                 it.consent.ccpa.set(doNotSell = kbool(a, "doNotSell"), usPrivacy = str(a, "usPrivacy"))
                 null
             }
+            // The Dart ATT wire vocabulary (`not_determined`) differs from the engine's
+            // `AttriaxAttStatus.wireValue` (`notDetermined`); the wrapper's tolerant
+            // mapper preserves the inputs the dispatch parser would reject.
             "setTrackingAuthorizationStatus" -> run(result) {
                 it.consent.att.setStatus(attStatus(str(a, "status")))
-                null
-            }
-
-            // ---- SKAN ----
-            "updateSkanConversionValue" -> run(result) {
-                serializeSkanResult(
-                    it.skan.updateConversionValue(
-                        fineValue = int(a, "fineValue", 0),
-                        coarseValue = coarse(str(a, "coarseValue")),
-                        lockWindow = bool(a, "lockWindow", false),
-                    ),
-                )
-            }
-
-            // ---- deep links ----
-            "handleIncomingLink" -> run(result) {
-                it.deepLinks.handleUri(
-                    rawUri = str(a, "uri") ?: "",
-                    isInitialLink = bool(a, "isInitialLink", false),
-                )
                 null
             }
 
@@ -467,33 +301,9 @@ class AttriaxAndroidPlugin : FlutterPlugin, MethodCallHandler {
     }
 
     // ---------------------------------------------------------------------------
-    // Serialization (best-effort; validated against the Dart parsers when the facade
-    // rewire activates the native runtime path — mirrors the iOS binding).
+    // Deep-link event serialization for the EventChannel. (Command-result shaping —
+    // snapshot / skan-state / skan-update — now lives inside AttriaxDispatcher.)
     // ---------------------------------------------------------------------------
-
-    private fun serializeSkanResult(r: AttriaxSkanUpdateResult): Map<String, Any?> = mapOf(
-        "status" to r.status.wireValue,
-        "message" to r.message,
-        "fineValue" to r.fineValue,
-        "coarseValue" to r.coarseValue?.wireValue,
-        "lockWindow" to r.lockWindow,
-    )
-
-    private fun serializeSkanState(s: AttriaxSkanState?): Map<String, Any?>? {
-        if (s == null) return null
-        return mapOf(
-            "enabled" to s.enabled,
-            "fineValue" to s.fineValue,
-            "coarseValue" to s.coarseValue?.wireValue,
-            "lockWindow" to s.lockWindow,
-        )
-    }
-
-    private fun serializeSnapshot(s: AttriaxSdkSnapshot): Map<String, Any?> = mapOf(
-        "apiVersion" to s.apiVersion,
-        "packageVersion" to s.packageVersion,
-        "metadata" to s.metadata,
-    )
 
     private fun serializeDeepLinkEvent(e: AttriaxDeepLinkEvent): Map<String, Any?> = mapOf(
         "uri" to e.uri.raw,
@@ -527,6 +337,31 @@ class AttriaxAndroidPlugin : FlutterPlugin, MethodCallHandler {
         }
     }
 
+    /**
+     * Forward a command to the KMP core's canonical [AttriaxDispatcher.execute] off the
+     * platform thread and map its [AttriaxDispatchResult] onto the reply. `execute` does
+     * NOT catch engine exceptions, so — like the old hand-written dispatch — we wrap it
+     * and convert a throw into the same `error` reply.
+     */
+    private fun forward(result: Result, method: String, args: Map<String, Any?>) {
+        worker.execute {
+            val e = engine
+            if (e == null) {
+                reply { result.error("not_initialized", "Attriax is not initialized", null) }
+                return@execute
+            }
+            try {
+                when (val outcome = AttriaxDispatcher.execute(e, method, args)) {
+                    is AttriaxDispatchResult.Ok -> reply { result.success(outcome.value) }
+                    is AttriaxDispatchResult.Err -> reply { result.error("error", outcome.message, null) }
+                    is AttriaxDispatchResult.Unimplemented -> reply { result.notImplemented() }
+                }
+            } catch (t: Throwable) {
+                reply { result.error("error", t.message, null) }
+            }
+        }
+    }
+
     private fun reply(action: () -> Unit) = mainHandler.post(action)
 
     private fun str(m: Map<*, *>, key: String): String? = m[key] as? String
@@ -538,11 +373,6 @@ class AttriaxAndroidPlugin : FlutterPlugin, MethodCallHandler {
     private fun int(m: Map<*, *>, key: String, default: Int): Int = (m[key] as? Number)?.toInt() ?: default
 
     private fun long(m: Map<*, *>, key: String, default: Long): Long = (m[key] as? Number)?.toLong() ?: default
-
-    private fun double(m: Map<*, *>, key: String, default: Double): Double =
-        (m[key] as? Number)?.toDouble() ?: default
-
-    private fun kdouble(m: Map<*, *>, key: String): Double? = (m[key] as? Number)?.toDouble()
 
     @Suppress("UNCHECKED_CAST")
     private fun map(m: Map<*, *>, key: String): Map<String, Any?>? = m[key] as? Map<String, Any?>
@@ -556,23 +386,6 @@ class AttriaxAndroidPlugin : FlutterPlugin, MethodCallHandler {
         "restricted" -> AttriaxAttStatus.RESTRICTED
         "not_determined", "notDetermined" -> AttriaxAttStatus.NOT_DETERMINED
         else -> AttriaxAttStatus.UNKNOWN
-    }
-
-    private fun coarse(wire: String?): AttriaxSkanCoarseValue? {
-        val normalized = wire?.lowercase() ?: return null
-        return AttriaxSkanCoarseValue.entries.firstOrNull { it.wireValue == normalized }
-    }
-
-    private fun adEventType(eventName: String?): AttriaxAdEventType =
-        AttriaxAdEventType.entries.firstOrNull { it.eventName == eventName } ?: AttriaxAdEventType.REQUEST
-
-    private fun notificationType(wire: String?): AttriaxNotificationEventType =
-        AttriaxNotificationEventType.entries.firstOrNull { it.wireValue == wire }
-            ?: AttriaxNotificationEventType.RECEIVED
-
-    private fun notificationSource(wire: String?): AttriaxNotificationEventSource? {
-        if (wire == null) return null
-        return AttriaxNotificationEventSource.entries.firstOrNull { it.wireValue == wire }
     }
 
     /**
