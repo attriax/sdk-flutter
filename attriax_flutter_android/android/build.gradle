@@ -65,7 +65,7 @@ dependencies {
     // The KMP core: hosts the Attriax engine + all Android platform adapters
     // (transport, store, install-referrer, connectivity, lifecycle). Variant-aware
     // root module — Gradle resolves the release AAR automatically.
-    implementation 'com.attriax:core:0.5.0'
+    implementation 'com.attriax:core:0.6.0'
     // Backs AttriaxInAppBrowserActivity (ComponentActivity + the back-press dispatcher).
     implementation 'androidx.activity:activity:1.9.0'
     testImplementation 'junit:junit:4.13.2'
