@@ -1,4 +1,4 @@
-platform :osx, '10.15'
+platform :osx, '11.0'
 
 minimum_macos_deployment_target = '10.15'
 
