@@ -8,10 +8,15 @@ import android.os.Looper
 import com.attriax.sdk.Attriax
 import com.attriax.sdk.AttriaxAttStatus
 import com.attriax.sdk.AttriaxConfig
+import com.attriax.sdk.AttriaxCreateDynamicLinkResult
 import com.attriax.sdk.AttriaxDeepLinkEvent
 import com.attriax.sdk.AttriaxDeepLinkListener
 import com.attriax.sdk.AttriaxDispatchResult
 import com.attriax.sdk.AttriaxDispatcher
+import com.attriax.sdk.AttriaxDynamicLinkRecord
+import com.attriax.sdk.AttriaxDynamicLinkRedirects
+import com.attriax.sdk.AttriaxDynamicLinkSocialPreview
+import com.attriax.sdk.AttriaxDynamicLinkUtms
 import com.attriax.sdk.AttriaxRawDeepLinkEvent
 import com.attriax.sdk.AttriaxRawDeepLinkListener
 import com.attriax.sdk.AttriaxSdk
@@ -41,7 +46,14 @@ import java.util.concurrent.Executors
  * adapters; only genuinely wrapper-side Android concerns remain — the Play-Services
  * advertising-id supplier and the in-app browser Activity.
  *
- * This mirrors the iOS binding (`AttriaxIosPlugin.swift`) method-for-method.
+ * This tracks the iOS binding (`AttriaxIosPlugin.swift`) closely, but not
+ * method-for-method: each wrapper keeps a few platform-specific seams the other
+ * lacks (Android owns `openBrowserUrl` + the in-app browser Activity; iOS owns
+ * ATT `get`/`requestTrackingAuthorization`). The shared dispatchable command
+ * surface — including `validateReceipt` — is forwarded identically, and
+ * `createDynamicLink` is hand-wired here the same way iOS wires it (it is not a
+ * canonical dispatch key). When adding a command, mirror it against the iOS
+ * `handle` switch so the two bindings stay aligned.
  */
 class AttriaxAndroidPlugin : FlutterPlugin, MethodCallHandler {
 
@@ -121,6 +133,10 @@ class AttriaxAndroidPlugin : FlutterPlugin, MethodCallHandler {
             "setGdprConsent", "setGdprConsentNotRequired", "resetGdprConsent",
             "requestGdprDataErasure",
             "updateSkanConversionValue", "handleIncomingLink", "submitAsaToken",
+            // validateReceipt is a canonical dispatch key (AttriaxDispatcher builds the
+            // receipt-result map the Dart parser consumes); forward it like iOS does so
+            // it works on Android instead of throwing MissingPluginException.
+            "validateReceipt",
             // Paired CCPA setter now has a dispatch key (execute() calls ccpa.set with
             // the same clear-omitted semantics), so it forwards like the rest.
             "setCcpaConsent" ->
@@ -151,6 +167,26 @@ class AttriaxAndroidPlugin : FlutterPlugin, MethodCallHandler {
             "setTrackingAuthorizationStatus" -> run(result) {
                 it.consent.att.setStatus(attStatus(str(a, "status")))
                 null
+            }
+
+            // ---- kept engine-direct: not a canonical dispatch key ----
+            // createDynamicLink takes richer typed inputs (social preview / utms /
+            // redirects) and is not in the command table, so — like iOS — the wrapper
+            // builds the call directly on the engine. `run` executes it off the platform
+            // thread (createDynamicLink performs blocking backend I/O).
+            "createDynamicLink" -> run(result) {
+                serializeDynamicLinkResult(
+                    it.deepLinks.createDynamicLink(
+                        name = str(a, "name"),
+                        destinationUrl = str(a, "destinationUrl"),
+                        group = str(a, "group"),
+                        prefix = str(a, "prefix"),
+                        socialPreview = socialPreview(map(a, "socialPreview")),
+                        utms = utms(map(a, "utms")),
+                        redirects = redirects(map(a, "redirects")),
+                        data = map(a, "data"),
+                    ),
+                )
             }
 
             // ---- Android-specific: in-app / external browser open ----
@@ -314,6 +350,46 @@ class AttriaxAndroidPlugin : FlutterPlugin, MethodCallHandler {
         "isForeground" to e.isForeground,
         "data" to e.data,
     )
+
+    // ---------------------------------------------------------------------------
+    // createDynamicLink shaping (kept engine-direct — not a dispatch key). Mirrors
+    // the iOS binding: the Dart parser reads a nested `link` map.
+    // ---------------------------------------------------------------------------
+
+    private fun serializeDynamicLinkResult(r: AttriaxCreateDynamicLinkResult): Map<String, Any?> =
+        mapOf("link" to serializeDynamicLinkRecord(r.record))
+
+    private fun serializeDynamicLinkRecord(rec: AttriaxDynamicLinkRecord): Map<String, Any?> = mapOf(
+        "id" to rec.id,
+        "path" to rec.path,
+        "shortUrl" to rec.shortUrl,
+        "name" to rec.name,
+        "destinationUrl" to rec.destinationUrl,
+        "group" to rec.group,
+        "prefix" to rec.prefix,
+        "data" to rec.data,
+    )
+
+    private fun socialPreview(m: Map<String, Any?>?): AttriaxDynamicLinkSocialPreview? {
+        if (m == null) return null
+        return AttriaxDynamicLinkSocialPreview(title = str(m, "title"), description = str(m, "description"))
+    }
+
+    private fun utms(m: Map<String, Any?>?): AttriaxDynamicLinkUtms? {
+        if (m == null) return null
+        return AttriaxDynamicLinkUtms(
+            source = str(m, "source"),
+            medium = str(m, "medium"),
+            campaign = str(m, "campaign"),
+            term = str(m, "term"),
+            content = str(m, "content"),
+        )
+    }
+
+    private fun redirects(m: Map<String, Any?>?): AttriaxDynamicLinkRedirects? {
+        if (m == null) return null
+        return AttriaxDynamicLinkRedirects(ios = kbool(m, "ios"), android = kbool(m, "android"))
+    }
 
     // ---------------------------------------------------------------------------
     // Helpers.

@@ -153,6 +153,16 @@ class Attriax {
   /// After calling [reset], call [init] again before using the instance.
   Future<void> reset() => _runtime.reset();
 
+  /// Requests a best-effort flush of any queued events to the backend.
+  ///
+  /// Events are normally batched and delivered on the SDK's own schedule; call
+  /// this to nudge delivery of what is currently queued (for example just before
+  /// the app is expected to go to the background). This is best-effort: it does
+  /// not guarantee delivery, and it is safe to call before synchronization has
+  /// completed. Prefer the per-call `flushImmediately` flag on tracking methods
+  /// when you only need one specific event delivered promptly.
+  Future<void> flush() => _runtime.flush();
+
   /// Validates a purchase receipt immediately and returns the public result.
   ///
   /// Use this during a purchase flow when the app needs an immediate receipt

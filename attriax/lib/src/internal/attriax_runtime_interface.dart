@@ -25,6 +25,7 @@ abstract class AttriaxRuntimeInterface {
   Future<void> init();
   Future<void> reset();
   Future<void> dispose();
+  Future<void> flush();
 
   // --- synchronous state getters (native impls cache these) ---
   bool get isInitialized;

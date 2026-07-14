@@ -122,6 +122,9 @@ class AttriaxNativeRuntime implements AttriaxRuntimeInterface {
   }
 
   @override
+  Future<void> flush() => _fireAndForget(() => _platform.flush(), 'flush');
+
+  @override
   Future<void> dispose() async {
     await _deepLinkListener?.stop();
     await _syncSub?.cancel();
@@ -155,6 +158,11 @@ class AttriaxNativeRuntime implements AttriaxRuntimeInterface {
 
     _rawDeepLinkSub ??= _platform.rawDeepLinkEvents.listen(
       (event) {
+        // The first raw event of the session is the launch (cold-start) link;
+        // cache it so the `rawInitialDeepLink` getter can surface it. `??=` keeps
+        // only the first, mirroring how `_initialDeepLink` captures the launch
+        // link from the initial-resolution stream.
+        _rawInitialDeepLink ??= event;
         if (!_rawDeepLinkController.isClosed) {
           _rawDeepLinkController.add(event);
         }
@@ -198,6 +206,14 @@ class AttriaxNativeRuntime implements AttriaxRuntimeInterface {
       _anonymousTracking,
     );
     _skanState = await _readOr(() => _platform.getSkanState(), _skanState);
+    // Seed the raw launch link from the engine snapshot when the binding serves
+    // it (bindings that only stream raw links fall through to the stream capture
+    // in `_subscribeToNativeStreams`). Don't clobber a value the stream already
+    // cached before this seed ran.
+    _rawInitialDeepLink ??= await _readOr(
+      () => _platform.getRawInitialDeepLink(),
+      _rawInitialDeepLink,
+    );
     _isWaitingForGdprConsent = await _readOr(
       () => _platform.getIsWaitingForGdprConsent(),
       _isWaitingForGdprConsent,

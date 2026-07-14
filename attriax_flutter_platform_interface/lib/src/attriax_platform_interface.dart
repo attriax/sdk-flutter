@@ -15,11 +15,27 @@ import 'method_channel_attriax.dart';
 /// these by delegating to their native engine; the web plugin bridges to
 /// `@attriax/js`.
 ///
-/// The legacy signal methods (`collectNativeContext`, `collectInstallReferrer`,
-/// `readAttributionClipboard`, `collectWebViewUserAgent`,
-/// `setAutomaticCrashReportingEnabled`, `consumePendingCrashReport`,
-/// `openBrowserUrl`) are retained unchanged — they are superseded in a later
-/// phase, not now.
+/// This interface is an INTENTIONAL SUPERSET of what the public `Attriax` facade
+/// currently invokes. It is deliberately broader for two reasons, and members
+/// the facade never calls today should NOT be pruned on that basis alone:
+///
+///  1. Native signal-collection seams. The legacy signal methods
+///     (`collectNativeContext`, `collectInstallReferrer`,
+///     `readAttributionClipboard`, `collectWebViewUserAgent`,
+///     `consumePendingCrashReport`, `setAutomaticCrashReportingEnabled`,
+///     `openBrowserUrl`) are consumed by the native engine's own context /
+///     attribution / crash collection rather than by a facade call. They keep
+///     benign defaults so a binding can omit them safely.
+///  2. Cache-seeding + forward reads. The deep-link snapshot getters
+///     (`getInitialDeepLink`, `getRawInitialDeepLink`, `getLatestDeepLink`,
+///     `getIsInitialDeepLinkResolved`) let a native runtime seed its
+///     synchronous caches on init; most launch state also arrives via the
+///     `attriax/events/*` streams, so a binding may serve these from the stream
+///     instead and leave the getter unimplemented.
+///
+/// Because the facade does not exercise every member, this surface is verified
+/// against the KMP core / iOS + Android bindings, not against facade call sites —
+/// keep that in mind before assuming an "unused" method is dead.
 ///
 /// Default implementations follow the established pattern: required engine
 /// commands + getters throw [UnimplementedError]; event streams default to
@@ -603,7 +619,9 @@ abstract class AttriaxPlatform extends PlatformInterface {
       const Stream<AttriaxInitialDeepLinkResolution>.empty();
 
   // ---------------------------------------------------------------------------
-  // Retained legacy signal surface (superseded in a later phase, not now).
+  // Retained legacy signal surface. Intentional superset (see the class doc):
+  // these back native context / attribution / crash collection, NOT facade
+  // calls, so they keep benign defaults and are not dead code.
   // ---------------------------------------------------------------------------
 
   Future<AttriaxNativeContext> collectNativeContext({
