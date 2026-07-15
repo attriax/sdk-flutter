@@ -1,0 +1,19 @@
+# Line-ending policy for sdk-flutter.
+#
+# NOTE: .gitattributes do not cross repository boundaries, so this submodule
+# does not inherit the workspace-root .gitattributes. It needs its own.
+#
+# Git for Windows ships core.autocrlf=true by default, which makes Git check
+# these files out as CRLF and record the CRLF-expanded size in the index stat
+# cache. Flutter's tooling always (re)writes them with LF on `flutter pub get`,
+# so the cached size never matches the file on disk again. The result is a
+# permanent phantom "modified" entry in `git status` whose content is in fact
+# byte-identical to the index (`git diff` is empty, and not even
+# `git update-index --really-refresh` can clear it).
+#
+# Pinning these generated files to eol=lf makes Git check them out exactly as
+# Flutter writes them, so the stat cache matches and the phantom churn stops.
+generated_plugin_registrant.cc  text eol=lf
+generated_plugin_registrant.h   text eol=lf
+generated_plugins.cmake         text eol=lf
+GeneratedPluginRegistrant.swift text eol=lf
