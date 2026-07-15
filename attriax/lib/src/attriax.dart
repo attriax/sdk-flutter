@@ -39,7 +39,6 @@ part 'attriax_tracking.dart';
 /// }
 /// ```
 class Attriax {
-
   /// Creates the production SDK instance.
   ///
   /// Construct this once at application level and reuse it for the whole app

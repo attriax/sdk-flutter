@@ -36,11 +36,7 @@ class AttriaxCoreBindings {
           >('attriax_create'),
       dispatch = library
           .lookupFunction<
-            Pointer<Utf8> Function(
-              Pointer<Void>,
-              Pointer<Utf8>,
-              Pointer<Utf8>,
-            ),
+            Pointer<Utf8> Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>),
             Pointer<Utf8> Function(Pointer<Void>, Pointer<Utf8>, Pointer<Utf8>)
           >('attriax_dispatch'),
       registerEventCallback = library

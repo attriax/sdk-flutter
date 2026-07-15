@@ -45,32 +45,38 @@ void main() {
       expect(await provider.acquireToken(), 'asa_token');
     });
 
-    test('returns null on non-iOS platforms without hitting the channel', () async {
-      var handlerCalls = 0;
-      messenger.setMockMethodCallHandler(channel, (methodCall) async {
-        handlerCalls += 1;
-        return 'unexpected';
-      });
+    test(
+      'returns null on non-iOS platforms without hitting the channel',
+      () async {
+        var handlerCalls = 0;
+        messenger.setMockMethodCallHandler(channel, (methodCall) async {
+          handlerCalls += 1;
+          return 'unexpected';
+        });
 
-      for (final platform in <AttriaxPlatformType>[
-        AttriaxPlatformType.android,
-        AttriaxPlatformType.macos,
-        AttriaxPlatformType.web,
-        AttriaxPlatformType.windows,
-        AttriaxPlatformType.linux,
-        AttriaxPlatformType.unknown,
-      ]) {
-        final provider = providerForPlatform(platform);
+        for (final platform in <AttriaxPlatformType>[
+          AttriaxPlatformType.android,
+          AttriaxPlatformType.macos,
+          AttriaxPlatformType.web,
+          AttriaxPlatformType.windows,
+          AttriaxPlatformType.linux,
+          AttriaxPlatformType.unknown,
+        ]) {
+          final provider = providerForPlatform(platform);
+          expect(await provider.acquireToken(), isNull);
+        }
+        expect(handlerCalls, 0);
+      },
+    );
+
+    test(
+      'returns null (degrades) when the native handler is missing',
+      () async {
+        // No mock handler registered → MissingPluginException.
+        final provider = providerForPlatform(AttriaxPlatformType.ios);
         expect(await provider.acquireToken(), isNull);
-      }
-      expect(handlerCalls, 0);
-    });
-
-    test('returns null (degrades) when the native handler is missing', () async {
-      // No mock handler registered → MissingPluginException.
-      final provider = providerForPlatform(AttriaxPlatformType.ios);
-      expect(await provider.acquireToken(), isNull);
-    });
+      },
+    );
 
     test('returns null when the native handler returns null (stub)', () async {
       messenger.setMockMethodCallHandler(channel, (methodCall) async => null);
@@ -79,12 +85,18 @@ void main() {
       expect(await provider.acquireToken(), isNull);
     });
 
-    test('returns null when the native handler returns a blank token', () async {
-      messenger.setMockMethodCallHandler(channel, (methodCall) async => '   ');
+    test(
+      'returns null when the native handler returns a blank token',
+      () async {
+        messenger.setMockMethodCallHandler(
+          channel,
+          (methodCall) async => '   ',
+        );
 
-      final provider = providerForPlatform(AttriaxPlatformType.ios);
-      expect(await provider.acquireToken(), isNull);
-    });
+        final provider = providerForPlatform(AttriaxPlatformType.ios);
+        expect(await provider.acquireToken(), isNull);
+      },
+    );
 
     test('returns null when the native handler throws', () async {
       messenger.setMockMethodCallHandler(

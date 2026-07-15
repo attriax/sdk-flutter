@@ -58,9 +58,8 @@ void main() {
 
     test('engine commands throw UnimplementedError by default', () {
       expect(
-        () => platform.initialize(
-          const AttriaxConfig(projectToken: 'ax_token'),
-        ),
+        () =>
+            platform.initialize(const AttriaxConfig(projectToken: 'ax_token')),
         throwsUnimplementedError,
       );
       expect(() => platform.recordEvent('tap'), throwsUnimplementedError);

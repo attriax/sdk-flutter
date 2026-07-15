@@ -713,9 +713,9 @@ class MethodChannelAttriax extends AttriaxPlatform {
 
   @override
   Stream<AttriaxSynchronizationState> get synchronizationStates =>
-      _synchronizationEventChannel
-          .receiveBroadcastStream()
-          .map(_synchronizationStateFromWire);
+      _synchronizationEventChannel.receiveBroadcastStream().map(
+        _synchronizationStateFromWire,
+      );
 
   @override
   Stream<AttriaxDeepLinkEvent> get deepLinkEvents => _deepLinkEventChannel
@@ -1119,13 +1119,13 @@ class MethodChannelAttriax extends AttriaxPlatform {
 
   AttriaxSynchronizationState _synchronizationStateFromWire(Object? wire) =>
       switch (wire) {
-        'initializing' || 'INITIALIZING' =>
-          AttriaxSynchronizationState.initializing,
-        'synchronizing' || 'SYNCHRONIZING' =>
-          AttriaxSynchronizationState.synchronizing,
+        'initializing' ||
+        'INITIALIZING' => AttriaxSynchronizationState.initializing,
+        'synchronizing' ||
+        'SYNCHRONIZING' => AttriaxSynchronizationState.synchronizing,
         'deferred' || 'DEFERRED' => AttriaxSynchronizationState.deferred,
-        'synchronized' || 'SYNCHRONIZED' =>
-          AttriaxSynchronizationState.synchronized,
+        'synchronized' ||
+        'SYNCHRONIZED' => AttriaxSynchronizationState.synchronized,
         'offline' || 'OFFLINE' => AttriaxSynchronizationState.offline,
         'failed' || 'FAILED' => AttriaxSynchronizationState.failed,
         'disabled' || 'DISABLED' => AttriaxSynchronizationState.disabled,

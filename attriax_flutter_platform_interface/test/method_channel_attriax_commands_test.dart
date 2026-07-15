@@ -39,8 +39,8 @@ void main() {
     );
 
     expect(capturedCall!.method, 'initialize');
-    final config = (capturedCall!.arguments
-        as Map)['config'] as Map<Object?, Object?>;
+    final config =
+        (capturedCall!.arguments as Map)['config'] as Map<Object?, Object?>;
     expect(config['projectToken'], 'ax_test');
     expect(config['gdprEnabled'], true);
     expect(config['requestTimeoutMs'], isA<int>());
@@ -143,8 +143,10 @@ void main() {
     expect(capturedCall!.method, 'setCcpaConsent');
     expect(capturedCall!.arguments, <String, Object?>{'doNotSell': true});
 
-    await MethodChannelAttriax()
-        .setCcpaConsent(doNotSell: false, usPrivacy: '1YYN');
+    await MethodChannelAttriax().setCcpaConsent(
+      doNotSell: false,
+      usPrivacy: '1YYN',
+    );
     expect(capturedCall!.arguments, <String, Object?>{
       'doNotSell': false,
       'usPrivacy': '1YYN',

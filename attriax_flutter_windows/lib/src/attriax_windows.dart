@@ -374,18 +374,16 @@ class AttriaxWindows extends AttriaxPlatform {
   // ---------------------------------------------------------------------------
 
   @override
-  Future<void> setUser({String? userId, String? userName}) async =>
-      _invokeVoid('setUser', <String, Object?>{
-        'userId': userId,
-        'userName': userName,
-      });
+  Future<void> setUser({String? userId, String? userName}) async => _invokeVoid(
+    'setUser',
+    <String, Object?>{'userId': userId, 'userName': userName},
+  );
 
   @override
-  Future<void> setUserProperty(String name, Object? value) async =>
-      _invokeVoid('setUserProperty', <String, Object?>{
-        'name': name,
-        'value': value,
-      });
+  Future<void> setUserProperty(String name, Object? value) async => _invokeVoid(
+    'setUserProperty',
+    <String, Object?>{'name': name, 'value': value},
+  );
 
   @override
   Future<void> setUserProperties(Map<String, Object?> properties) async =>
@@ -598,12 +596,10 @@ class AttriaxWindows extends AttriaxPlatform {
   Future<String?> getDeviceId() async => _tryDispatchString('getDeviceId');
 
   @override
-  Future<bool> getIsFirstLaunch() async =>
-      _tryDispatchBool('getIsFirstLaunch');
+  Future<bool> getIsFirstLaunch() async => _tryDispatchBool('getIsFirstLaunch');
 
   @override
-  Future<bool> getIsInitialized() async =>
-      _tryDispatchBool('getIsInitialized');
+  Future<bool> getIsInitialized() async => _tryDispatchBool('getIsInitialized');
 
   @override
   Future<AttriaxSdkSnapshot?> getSdkSnapshot() async {
@@ -695,11 +691,12 @@ class AttriaxWindows extends AttriaxPlatform {
     AttriaxSkanCoarseValue? coarseValue,
     bool lockWindow = false,
   }) async {
-    final result = _tryDispatchMap('updateSkanConversionValue', <String, Object?>{
-      'fineValue': fineValue,
-      if (coarseValue != null) 'coarseValue': coarseValue.name,
-      'lockWindow': lockWindow,
-    });
+    final result =
+        _tryDispatchMap('updateSkanConversionValue', <String, Object?>{
+          'fineValue': fineValue,
+          if (coarseValue != null) 'coarseValue': coarseValue.name,
+          'lockWindow': lockWindow,
+        });
     if (result == null) {
       return const AttriaxSkanUpdateResult(
         status: AttriaxSkanUpdateStatus.notSupported,
@@ -726,8 +723,7 @@ class AttriaxWindows extends AttriaxPlatform {
       _syncController.stream;
 
   @override
-  Stream<AttriaxDeepLinkEvent> get deepLinkEvents =>
-      _deepLinkController.stream;
+  Stream<AttriaxDeepLinkEvent> get deepLinkEvents => _deepLinkController.stream;
 
   // ---------------------------------------------------------------------------
   // Native event callback.
@@ -756,9 +752,7 @@ class AttriaxWindows extends AttriaxPlatform {
       final type = decoded['type'];
       if (type == 'synchronizationState') {
         if (!_syncController.isClosed) {
-          _syncController.add(
-            _synchronizationStateFromWire(decoded['state']),
-          );
+          _syncController.add(_synchronizationStateFromWire(decoded['state']));
         }
       } else if (type == 'deepLink') {
         final event = _deepLinkEventFromMap(
@@ -793,8 +787,9 @@ class AttriaxWindows extends AttriaxPlatform {
     }
 
     final methodPtr = method.toNativeUtf8();
-    final argsPtr = jsonEncode(args ?? const <String, Object?>{})
-        .toNativeUtf8();
+    final argsPtr = jsonEncode(
+      args ?? const <String, Object?>{},
+    ).toNativeUtf8();
     Pointer<Utf8> resultPtr = nullptr;
     try {
       resultPtr = bindings.dispatch(handle, methodPtr, argsPtr);
@@ -921,13 +916,13 @@ class AttriaxWindows extends AttriaxPlatform {
 
   AttriaxSynchronizationState _synchronizationStateFromWire(Object? wire) =>
       switch (wire) {
-        'initializing' || 'INITIALIZING' =>
-          AttriaxSynchronizationState.initializing,
-        'synchronizing' || 'SYNCHRONIZING' =>
-          AttriaxSynchronizationState.synchronizing,
+        'initializing' ||
+        'INITIALIZING' => AttriaxSynchronizationState.initializing,
+        'synchronizing' ||
+        'SYNCHRONIZING' => AttriaxSynchronizationState.synchronizing,
         'deferred' || 'DEFERRED' => AttriaxSynchronizationState.deferred,
-        'synchronized' || 'SYNCHRONIZED' =>
-          AttriaxSynchronizationState.synchronized,
+        'synchronized' ||
+        'SYNCHRONIZED' => AttriaxSynchronizationState.synchronized,
         'offline' || 'OFFLINE' => AttriaxSynchronizationState.offline,
         'failed' || 'FAILED' => AttriaxSynchronizationState.failed,
         'disabled' || 'DISABLED' => AttriaxSynchronizationState.disabled,

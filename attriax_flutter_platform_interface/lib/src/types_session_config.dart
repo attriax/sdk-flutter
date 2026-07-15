@@ -299,8 +299,9 @@ class AttriaxConfig {
     if (skan != null) 'skan': skan!.toJson(),
     'attestationEnabled': attestationEnabled,
     if (pinnedCertificateSha256Fingerprints.isNotEmpty)
-      'pinnedCertificateSha256Fingerprints':
-          List<String>.from(pinnedCertificateSha256Fingerprints),
+      'pinnedCertificateSha256Fingerprints': List<String>.from(
+        pinnedCertificateSha256Fingerprints,
+      ),
     if (doNotSell != null) 'doNotSell': doNotSell,
     if (usPrivacy != null && usPrivacy!.isNotEmpty) 'usPrivacy': usPrivacy,
   };

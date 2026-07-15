@@ -77,28 +77,25 @@ void main() {
       },
     );
 
-    test(
-      'ios forwards app_attest and carries the native keyId',
-      () async {
-        MethodCall? seenCall;
-        messenger.setMockMethodCallHandler(channel, (methodCall) async {
-          seenCall = methodCall;
-          return <String, Object?>{
-            'token': 'app_attest_token',
-            'keyId': 'key_abc',
-          };
-        });
+    test('ios forwards app_attest and carries the native keyId', () async {
+      MethodCall? seenCall;
+      messenger.setMockMethodCallHandler(channel, (methodCall) async {
+        seenCall = methodCall;
+        return <String, Object?>{
+          'token': 'app_attest_token',
+          'keyId': 'key_abc',
+        };
+      });
 
-        final provider = providerForPlatform(AttriaxPlatformType.ios);
-        final envelope = await provider.attest('server_nonce');
+      final provider = providerForPlatform(AttriaxPlatformType.ios);
+      final envelope = await provider.attest('server_nonce');
 
-        expect((seenCall?.arguments as Map)['provider'], 'app_attest');
-        expect(envelope!.provider, 'app_attest');
-        expect(envelope.token, 'app_attest_token');
-        expect(envelope.nonce, 'server_nonce');
-        expect(envelope.keyId, 'key_abc');
-      },
-    );
+      expect((seenCall?.arguments as Map)['provider'], 'app_attest');
+      expect(envelope!.provider, 'app_attest');
+      expect(envelope.token, 'app_attest_token');
+      expect(envelope.nonce, 'server_nonce');
+      expect(envelope.keyId, 'key_abc');
+    });
 
     test('returns null when the native result carries no token', () async {
       messenger.setMockMethodCallHandler(
@@ -110,11 +107,14 @@ void main() {
       expect(await provider.attest('server_nonce'), isNull);
     });
 
-    test('returns null (degrades) when the native handler is missing', () async {
-      // No mock handler registered → MissingPluginException.
-      final provider = providerForPlatform(AttriaxPlatformType.android);
-      expect(await provider.attest('server_nonce'), isNull);
-    });
+    test(
+      'returns null (degrades) when the native handler is missing',
+      () async {
+        // No mock handler registered → MissingPluginException.
+        final provider = providerForPlatform(AttriaxPlatformType.android);
+        expect(await provider.attest('server_nonce'), isNull);
+      },
+    );
 
     test('returns null when the native handler throws', () async {
       messenger.setMockMethodCallHandler(
@@ -127,28 +127,34 @@ void main() {
       expect(await provider.attest('server_nonce'), isNull);
     });
 
-    test('returns null on unsupported platforms without hitting the channel', () async {
-      var handlerCalls = 0;
-      messenger.setMockMethodCallHandler(channel, (methodCall) async {
-        handlerCalls += 1;
-        return <String, Object?>{'token': 'unexpected'};
-      });
+    test(
+      'returns null on unsupported platforms without hitting the channel',
+      () async {
+        var handlerCalls = 0;
+        messenger.setMockMethodCallHandler(channel, (methodCall) async {
+          handlerCalls += 1;
+          return <String, Object?>{'token': 'unexpected'};
+        });
 
-      final provider = providerForPlatform(AttriaxPlatformType.web);
-      expect(await provider.attest('server_nonce'), isNull);
-      expect(handlerCalls, 0);
-    });
+        final provider = providerForPlatform(AttriaxPlatformType.web);
+        expect(await provider.attest('server_nonce'), isNull);
+        expect(handlerCalls, 0);
+      },
+    );
 
-    test('returns null for a blank nonce without hitting the channel', () async {
-      var handlerCalls = 0;
-      messenger.setMockMethodCallHandler(channel, (methodCall) async {
-        handlerCalls += 1;
-        return <String, Object?>{'token': 'unexpected'};
-      });
+    test(
+      'returns null for a blank nonce without hitting the channel',
+      () async {
+        var handlerCalls = 0;
+        messenger.setMockMethodCallHandler(channel, (methodCall) async {
+          handlerCalls += 1;
+          return <String, Object?>{'token': 'unexpected'};
+        });
 
-      final provider = providerForPlatform(AttriaxPlatformType.android);
-      expect(await provider.attest('   '), isNull);
-      expect(handlerCalls, 0);
-    });
+        final provider = providerForPlatform(AttriaxPlatformType.android);
+        expect(await provider.attest('   '), isNull);
+        expect(handlerCalls, 0);
+      },
+    );
   });
 }

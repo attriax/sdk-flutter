@@ -33,6 +33,9 @@ void main() {
     expect(await platform.getIsInitialized(), isTrue);
     expect(await platform.getDeviceId(), isNotNull);
 
-    await platform.recordEvent('integration_test_event', flushImmediately: true);
+    await platform.recordEvent(
+      'integration_test_event',
+      flushImmediately: true,
+    );
   });
 }

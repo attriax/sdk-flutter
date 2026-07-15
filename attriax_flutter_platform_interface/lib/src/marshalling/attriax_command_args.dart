@@ -517,10 +517,8 @@ class AttriaxDynamicLinkRedirectsArgs {
 
   factory AttriaxDynamicLinkRedirectsArgs.from(
     AttriaxDynamicLinkRedirects source,
-  ) => AttriaxDynamicLinkRedirectsArgs(
-    ios: source.ios,
-    android: source.android,
-  );
+  ) =>
+      AttriaxDynamicLinkRedirectsArgs(ios: source.ios, android: source.android);
 
   final bool? ios;
   final bool? android;

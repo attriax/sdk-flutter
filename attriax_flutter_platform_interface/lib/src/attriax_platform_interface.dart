@@ -416,7 +416,9 @@ abstract class AttriaxPlatform extends PlatformInterface {
   /// Toggle GDPR-safe anonymous tracking (mirrors KMP
   /// `Attriax.anonymousTrackingEnabled`).
   Future<void> setAnonymousTracking({required bool enabled}) {
-    throw UnimplementedError('setAnonymousTracking() has not been implemented.');
+    throw UnimplementedError(
+      'setAnonymousTracking() has not been implemented.',
+    );
   }
 
   /// Set the CCPA "do not sell / share" election (mirrors KMP
@@ -502,7 +504,9 @@ abstract class AttriaxPlatform extends PlatformInterface {
   /// Whether GDPR-safe anonymous tracking is allowed (mirrors KMP
   /// `Attriax.anonymousTrackingEnabled`).
   Future<bool> getAnonymousTracking() {
-    throw UnimplementedError('getAnonymousTracking() has not been implemented.');
+    throw UnimplementedError(
+      'getAnonymousTracking() has not been implemented.',
+    );
   }
 
   /// Current synchronization state (mirrors KMP `AttriaxSynchronization.state`).
@@ -532,7 +536,9 @@ abstract class AttriaxPlatform extends PlatformInterface {
   Future<AttriaxInstallReferrerDetails?> getReinstallReferrer({
     Duration? timeout,
   }) {
-    throw UnimplementedError('getReinstallReferrer() has not been implemented.');
+    throw UnimplementedError(
+      'getReinstallReferrer() has not been implemented.',
+    );
   }
 
   /// Raw platform install-referrer string (mirrors KMP

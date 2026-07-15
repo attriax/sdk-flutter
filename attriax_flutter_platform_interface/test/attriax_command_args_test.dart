@@ -354,10 +354,9 @@ void main() {
 
   group('identify — the "emit even when null" fields', () {
     test('setUser keeps userId when null, omits userName', () {
-      expect(
-        const AttriaxSetUserArgs().toJson(),
-        <String, Object?>{'userId': null},
-      );
+      expect(const AttriaxSetUserArgs().toJson(), <String, Object?>{
+        'userId': null,
+      });
     });
 
     test('setUser full', () {
@@ -469,10 +468,7 @@ void main() {
     });
 
     test('createDynamicLink with everything null is an empty map', () {
-      expect(
-        AttriaxCreateDynamicLinkArgs().toJson(),
-        <String, Object?>{},
-      );
+      expect(AttriaxCreateDynamicLinkArgs().toJson(), <String, Object?>{});
     });
 
     test('createDynamicLink full with nested objects', () {
