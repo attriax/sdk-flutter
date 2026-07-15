@@ -1,0 +1,4 @@
+# Generated Flutter package artifacts.
+.dart_tool/
+build/
+coverage/

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0
+
+### Changed
+- Re-wrapped as a thin binding over the shared Attriax Kotlin Multiplatform core; the Android-specific engine implementation was retired. No Android-only public API changes are required.
+- The core is now resolved from Maven Central (`com.attriax:core:0.6.0`), so no local publish step is needed to build the plugin.
+- Runtime permissions are inherited from the core AAR manifest instead of being declared here.
+
+### Fixed
+- `validateReceipt(...)` and `createDynamicLink(...)` threw on Android; the plugin now forwards both to the engine.
+
 ## 0.5.0
 
 ### Changed

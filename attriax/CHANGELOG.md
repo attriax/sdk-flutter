@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.6.0
+
+### Added
+- `attriax.consent.ccpa` (`AttriaxCcpaConsent`): `doNotSell` / `usPrivacy` getters plus `setDoNotSell`, `setUsPrivacy`, and `set`, seeded from `AttriaxConfig.doNotSell` / `usPrivacy` and overridable at runtime — mirroring the existing GDPR consent facade.
+- Public `Attriax.flush()` to force delivery of everything currently queued.
+- Linux desktop support through the new federated `attriax_flutter_linux` implementation.
+- Swift Package Manager support for the iOS/macOS plugin. Flutter 3.44 makes SwiftPM the default; CocoaPods remains supported as a fallback for older Flutter versions.
+
+### Changed
+- Every supported platform now runs the shared Attriax native engine instead of a Flutter-only Dart engine: Android, iOS, macOS, Windows, and Linux bind to the shared Kotlin Multiplatform core, and web binds to the `@attriax/js` engine. The public Dart API is unchanged — no migration is required.
+- `attriax_api_client` is no longer a dependency of this package and is now deprecated; the native engine performs its own transport.
+
+### Fixed
+- `deepLinks.rawInitialDeepLink` always returned `null`; it now caches the first raw deep-link event and seeds from the initial raw deep link.
+- `validateReceipt(...)` and `createDynamicLink(...)` threw on Android; both are now handled by the Android implementation.
+
 ## 0.5.0
 
 ### Added

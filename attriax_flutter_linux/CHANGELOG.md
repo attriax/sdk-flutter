@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.0
+## 0.6.0
 
 - First Linux desktop platform release for the Attriax Flutter plugin.
 - Added the federated `attriax_flutter_linux` package: a `dart:ffi` binding over

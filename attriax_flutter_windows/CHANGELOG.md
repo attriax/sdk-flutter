@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0
+
+### Changed
+- Windows desktop is now a real platform implementation rather than a passthrough: the package binds to the shared Attriax Kotlin Multiplatform core through its C-ABI over `dart:ffi`, and the prebuilt `attriax_core.dll` is bundled with the app. No Windows-only public API changes are required.
+
+### Fixed
+- Event strings handed to the FFI callback are now freed via `attriax_free_string`, honoring the C-ABI caller-frees contract and removing a per-event leak.
+
 ## 0.5.0
 
 ### Changed

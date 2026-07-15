@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0
+
+### Added
+- Expanded the federated contract to the full engine surface so platform implementations can host the shared native engine rather than a Dart one.
+- CCPA consent on the shared contract: `doNotSell` / `usPrivacy` config fields and a `setCcpaConsent` platform method.
+- `flush()` on the platform contract, backing the new public `Attriax.flush()`.
+
+### Changed
+- MethodChannel command arguments are now marshalled through generated `json_serializable` DTOs instead of hand-built maps. The wire shape is unchanged.
+- Bumped the shared `attriaxSdkPackageVersion` metadata to `0.6.0`.
+
 ## 0.5.0
 
 ### Changed

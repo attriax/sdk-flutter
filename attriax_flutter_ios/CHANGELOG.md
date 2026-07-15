@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0
+
+### Added
+- Swift Package Manager support: `Package.swift` manifests for the iOS and macOS plugins. Flutter 3.44 makes SwiftPM the default; the podspecs are kept as the CocoaPods fallback for older Flutter versions.
+
+### Changed
+- Re-wrapped as a thin binding over the shared Attriax Kotlin Multiplatform core; the Apple-specific engine implementation was retired. No Apple-only public API changes are required.
+
+### Fixed
+- `recordAdEvent` was not resolved from the `eventName` wire key and did not reach the engine.
+
 ## 0.5.0
 
 ### Changed
