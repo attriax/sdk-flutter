@@ -32,6 +32,48 @@ Local SDK development happens through the `sdk-flutter/` Dart workspace.
 The sibling `flutter-internal-tester/` repository uses `pubspec_overrides.yaml`
 to point at the local workspace packages.
 
+## Pinned Release Toolchain
+
+Releases are cut with a pinned Flutter/Dart toolchain:
+
+| Tool    | Pinned version |
+| ------- | -------------- |
+| Flutter | 3.41.4 (stable) |
+| Dart    | 3.11.1         |
+
+`dart format --set-exit-if-changed` is version-sensitive: its output changes
+between Dart SDK releases, so a different local Dart flags already-committed,
+already-formatted files. (Dart 3.11.1 spuriously flagged 13 such files.)
+`npm run flutter:release:check` verifies `flutter --version` and `dart --version`
+against this pin and fails with an explicit message on mismatch, so a toolchain
+skew is never mistaken for a real formatting problem.
+
+The pin lives in `EXPECTED_FLUTTER_VERSION` / `EXPECTED_DART_VERSION` at the top
+of `scripts/flutter-release.mjs` (workspace root). Deliberately a documented pin
+plus a check rather than `fvm`: publishing is manual and local, so a version
+manager would add a dependency for every contributor without preventing anything
+the check does not already catch.
+
+To bump the toolchain: install the new SDK, run `dart format` across the
+workspace, commit that reformat as its own change, then update both constants
+and the table above. To run the checks knowingly on a different SDK, set
+`ATTRIAX_ALLOW_TOOLCHAIN_MISMATCH=1` to downgrade the failure to a warning.
+
+## Vendored `@attriax/js` Bundle
+
+`attriax_flutter_web` does not depend on `@attriax/js` — it **embeds** a built
+copy at `attriax_flutter_web/assets/attriax_js.js`. The same bundle is embedded
+again by the Unity WebGL package. Nothing resolves the npm package at build
+time, so a `sdk-js` release leaves both copies stale until someone re-vendors
+(both shipped 0.5.1 after `sdk-js` reached 0.6.0).
+
+`npm run flutter:release:check` and `npm run unity:release:check` both run
+`npm run sdk:js:vendored:check`, which reads the version embedded in each bundle
+and fails when it does not match `sdk-js/package.json`. Re-vendor from the
+**published npm tarball** (`npm pack @attriax/js@<version>` → `dist/index.global.js`),
+not a local build, so the embedded artifact is byte-identical to what npm
+consumers install. The failure message spells out the per-consumer transform.
+
 ## Required Release Checks
 
 Run these commands before every release:
